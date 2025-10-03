@@ -1,0 +1,12 @@
+workflows:
+  android-build:
+    name: Build Android APK
+    scripts:
+      - name: Set up Flutter
+        script: |
+          apk_name="app-release.apk"
+          flutter pub get
+          flutter build apk --release --split-per-abi
+      - name: Archive APK
+        script: |
+          echo "Artifacts will be in build/app/outputs/flutter-apk"
