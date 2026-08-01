@@ -30,7 +30,7 @@
         <item quantity="many">%d секунд</item>
         <item quantity="other">%d секунд</item>
     </plurals>
-    <string name="allows_for_sync_witch_youtube">ПРИМЕЧАНИЕ: Эта опция включает синхронизацию с YouTube Music, и её НЕЛЬЗЯ изменить позже</string>
+    <string name="allows_for_sync_witch_youtube">ПРИМЕЧАНИЕ: Этот параметр включает синхронизацию с YouTube Music, и его НЕЛЬЗЯ изменить позже</string>
     <string name="player_background_blur">Размытие</string>
     <string name="slim_navbar">Тонкая панель навигации</string>
     <string name="dislikes">Дизлайки</string>
@@ -192,7 +192,7 @@
     <string name="start_radio_desc">Запустить радио на основе этого элемента</string>
     <string name="play_next_desc">Воспроизвести следующим в очереди</string>
     <string name="add_to_queue_desc">Добавить в конец очереди</string>
-    <string name="add_to_library_desc">Сохранить в вашу библиотеку</string>
+    <string name="add_to_library_desc">Сохранить в библиотеку</string>
     <string name="download_desc">Скачать для офлайн-прослушивания</string>
     <string name="add_to_playlist_desc">Добавить в плейлист</string>
     <string name="refetch_desc">Обновить метаданные из YouTube Music</string>
@@ -482,7 +482,7 @@
     <string name="map_csv_columns">Сопоставление столбцов CSV</string>
     <string name="column_label">Столбец %d</string>
     <string name="recognition_error">Ошибка распознавания</string>
-    <string name="enable_high_refresh_rate_desc">Принудительно использует максимальную поддерживаемую частоту обновления экрана (напр., 120 Гц)</string>
+    <string name="enable_high_refresh_rate_desc">Принудительно использует максимальную поддерживаемую частоту обновления экрана (например, 120 Гц)</string>
     <string name="first_row_is_header">Первая строка — заголовок</string>
     <string name="try_again">Попробовать снова</string>
     <string name="tap_to_recognize">Нажмите, чтобы распознать</string>
@@ -770,7 +770,7 @@
     <string name="ai_system_prompt_default">По умолчанию</string>
     <string name="ai_system_prompt_reset">Сбросить по умолчанию</string>
     <string name="recognition_notification_channel_name">Распознавание музыки</string>
-    <string name="recognition_notification_channel_desc">Показывать уведомление во время распознавания трека из панели быстрых настроек</string>
+    <string name="recognition_notification_channel_desc">Показывает уведомление во время распознавания трека из панели быстрых настроек</string>
     <string name="recognition_notification_listening">Слушаем музыку…</string>
     <string name="recognition_notification_processing">Определяем…</string>
     <string name="recognition_notification_no_match">Совпадений не найдено</string>
@@ -793,10 +793,10 @@
     <string name="lyrics_from_provider">Текст песни из %s</string>
     <string name="hide_status_bar_fullscreen">Скрывать строку состояния в полноэкранном режиме</string>
     <string name="hide_status_bar_fullscreen_desc">Скрывать строку состояния, когда включён полноэкранный режим текста</string>
-    <string name="show_interval_indicator">Показывать индикатор пауз</string>
-    <string name="show_interval_indicator_desc">Показывает полосу прогресса во время длинных инструментальных пауз</string>
+    <string name="show_interval_indicator">Показывать индикатор проигрыша</string>
+    <string name="show_interval_indicator_desc">Показывает индикатор прогресса во время длинных инструментальных проигрышей</string>
     <string name="respect_agent_positioning">Учитывать позиционирование исполнителя</string>
-    <string name="respect_agent_positioning_desc">Выравнивать текст в зависимости от роли исполнителя (напр., бэк-вокал)</string>
+    <string name="respect_agent_positioning_desc">Выравнивать текст в зависимости от роли исполнителя (например, бэк-вокал)</string>
     <string name="lyrics_animation_none">Нет</string>
     <string name="lyrics_animation_fade">Затухание</string>
     <string name="lyrics_animation_glow">Свечение</string>
@@ -909,4 +909,8 @@
     <string name="dynamic_theme">Динамическая тема</string>
     <string name="enable_dynamic_icon">Динамические цвета значка</string>
     <string name="enable_dynamic_icon_desc">Использовать динамические цвета темы для значка приложения. Если отключено, используются сплошные цвета.</string>
+    <string name="kmp_upgrade_title">Доступен Metrolist KMP %s</string>
+    <string name="kmp_upgrade_warning">Metrolist KMP находится в раннем доступе. Функции могут работать нестабильно, быть неполными или изменяться без предупреждения.</string>
+    <string name="kmp_upgrade_action">Обновить до KMP</string>
+    <string name="kmp_upgrade_later">Не сейчас</string>
 </resources>
