@@ -53,7 +53,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
-import com.jay.glossy.lastfm.LastFM
+import com.metrolist.lastfm.LastFM
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.constants.EnableLastFMScrobblingKey
 import com.jay.glossy.constants.LastFMSessionKey

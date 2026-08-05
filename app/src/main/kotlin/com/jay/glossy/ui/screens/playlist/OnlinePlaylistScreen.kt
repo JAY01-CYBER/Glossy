@@ -80,8 +80,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-import com.jay.glossy.innertube.models.PlaylistItem
-import com.jay.glossy.innertube.models.SongItem
+import com.metrolist.innertube.models.PlaylistItem
+import com.metrolist.innertube.models.SongItem
 import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalListenTogetherManager
 import com.jay.glossy.LocalNavController

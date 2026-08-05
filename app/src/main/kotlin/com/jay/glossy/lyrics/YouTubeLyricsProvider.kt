@@ -8,8 +8,8 @@ package com.jay.glossy.lyrics
 import com.jay.glossy.R
 
 import android.content.Context
-import com.jay.glossy.innertube.YouTube
-import com.jay.glossy.innertube.models.WatchEndpoint
+import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.models.WatchEndpoint
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

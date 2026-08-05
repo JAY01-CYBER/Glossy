@@ -22,11 +22,11 @@ import coil3.memory.MemoryCache
 import coil3.request.CachePolicy
 import coil3.request.allowHardware
 import coil3.request.crossfade
-import com.jay.glossy.innertube.YouTube
-import com.jay.glossy.innertube.models.ArtistConjunctions
-import com.jay.glossy.innertube.models.YouTubeLocale
-import com.jay.glossy.kugou.KuGou
-import com.jay.glossy.lastfm.LastFM
+import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.models.ArtistConjunctions
+import com.metrolist.innertube.models.YouTubeLocale
+import com.metrolist.kugou.KuGou
+import com.metrolist.lastfm.LastFM
 import com.jay.glossy.BuildConfig
 import com.jay.glossy.constants.*
 import com.jay.glossy.di.ApplicationScope

@@ -25,9 +25,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.jay.glossy.innertube.models.ArtistItem
-import com.jay.glossy.innertube.models.SongItem
-import com.jay.glossy.innertube.models.YTItem
+import com.metrolist.innertube.models.ArtistItem
+import com.metrolist.innertube.models.SongItem
+import com.metrolist.innertube.models.YTItem
 import com.jay.glossy.constants.ThumbnailCornerRadius
 import com.jay.glossy.ui.utils.resize
 

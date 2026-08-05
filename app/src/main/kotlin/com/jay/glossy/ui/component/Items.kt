@@ -91,14 +91,14 @@ import androidx.media3.exoplayer.offline.Download.STATE_DOWNLOADING
 import androidx.media3.exoplayer.offline.Download.STATE_QUEUED
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-import com.jay.glossy.innertube.YouTube
-import com.jay.glossy.innertube.models.AlbumItem
-import com.jay.glossy.innertube.models.ArtistItem
-import com.jay.glossy.innertube.models.EpisodeItem
-import com.jay.glossy.innertube.models.PlaylistItem
-import com.jay.glossy.innertube.models.PodcastItem
-import com.jay.glossy.innertube.models.SongItem
-import com.jay.glossy.innertube.models.YTItem
+import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.models.AlbumItem
+import com.metrolist.innertube.models.ArtistItem
+import com.metrolist.innertube.models.EpisodeItem
+import com.metrolist.innertube.models.PlaylistItem
+import com.metrolist.innertube.models.PodcastItem
+import com.metrolist.innertube.models.SongItem
+import com.metrolist.innertube.models.YTItem
 import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalDownloadUtil
 import com.jay.glossy.LocalNavController
@@ -191,7 +191,7 @@ fun ClickableArtistText(
 @JvmName("ClickableArtistTextInnerTube")
 @Composable
 fun ClickableArtistText(
-    artists: List<com.jay.glossy.innertube.models.Artist>,
+    artists: List<com.metrolist.innertube.models.Artist>,
     modifier: Modifier = Modifier,
     style: TextStyle = MaterialTheme.typography.bodySmall,
     maxLines: Int = 1,

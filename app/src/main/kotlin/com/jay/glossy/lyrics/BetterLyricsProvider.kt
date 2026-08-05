@@ -8,7 +8,7 @@ package com.jay.glossy.lyrics
 import com.jay.glossy.R
 
 import android.content.Context
-import com.jay.glossy.betterlyrics.BetterLyrics
+import com.metrolist.betterlyrics.BetterLyrics
 import com.jay.glossy.constants.EnableBetterLyricsKey
 import com.jay.glossy.utils.dataStore
 import com.jay.glossy.utils.get

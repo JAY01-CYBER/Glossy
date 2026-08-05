@@ -10,8 +10,8 @@ import com.jay.glossy.R
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.jay.glossy.innertube.YouTube
-import com.jay.glossy.innertube.pages.HistoryPage
+import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.pages.HistoryPage
 import com.jay.glossy.constants.HideVideoSongsKey
 import com.jay.glossy.constants.HistorySource
 import com.jay.glossy.db.MusicDatabase

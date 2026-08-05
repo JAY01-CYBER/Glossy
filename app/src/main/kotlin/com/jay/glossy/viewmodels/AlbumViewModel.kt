@@ -10,8 +10,8 @@ import com.jay.glossy.R
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.jay.glossy.innertube.YouTube
-import com.jay.glossy.innertube.models.AlbumItem
+import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.models.AlbumItem
 import com.jay.glossy.db.MusicDatabase
 import com.jay.glossy.utils.reportException
 import dagger.hilt.android.lifecycle.HiltViewModel

@@ -11,7 +11,7 @@ import android.os.Bundle
 import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata.MEDIA_TYPE_MUSIC
-import com.jay.glossy.innertube.models.SongItem
+import com.metrolist.innertube.models.SongItem
 import com.jay.glossy.db.entities.Song
 import com.metrolist.models.MediaMetadata
 import com.metrolist.models.toMediaMetadata
