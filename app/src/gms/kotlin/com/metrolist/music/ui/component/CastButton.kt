@@ -3,7 +3,7 @@
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
-package com.metrolist.music.ui.component
+package com.jay.glossy.ui.component
 
 import android.widget.Toast
 import androidx.compose.foundation.Image
@@ -34,10 +34,10 @@ import androidx.mediarouter.media.MediaRouteSelector
 import androidx.mediarouter.media.MediaRouter
 import com.google.android.gms.cast.CastMediaControlIntent
 import com.google.android.gms.cast.framework.CastContext
-import com.metrolist.music.LocalPlayerConnection
-import com.metrolist.music.R
-import com.metrolist.music.constants.EnableGoogleCastKey
-import com.metrolist.music.utils.rememberPreference
+import com.jay.glossy.LocalPlayerConnection
+import com.jay.glossy.R
+import com.jay.glossy.constants.EnableGoogleCastKey
+import com.jay.glossy.utils.rememberPreference
 import timber.log.Timber
 
 /**

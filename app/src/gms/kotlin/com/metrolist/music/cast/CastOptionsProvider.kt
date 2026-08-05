@@ -1,4 +1,4 @@
-package com.metrolist.music.cast
+package com.jay.glossy.cast
 
 import android.content.Context
 import com.google.android.gms.cast.CastMediaControlIntent

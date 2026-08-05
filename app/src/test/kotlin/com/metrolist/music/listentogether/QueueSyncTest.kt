@@ -1,4 +1,4 @@
-package com.metrolist.music.listentogether
+package com.jay.glossy.listentogether
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

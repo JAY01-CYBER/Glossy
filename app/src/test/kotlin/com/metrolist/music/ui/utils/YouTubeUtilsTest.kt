@@ -1,4 +1,4 @@
-package com.metrolist.music.ui.utils
+package com.jay.glossy.ui.utils
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

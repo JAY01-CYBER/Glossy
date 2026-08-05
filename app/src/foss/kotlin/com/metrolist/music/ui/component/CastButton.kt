@@ -1,4 +1,4 @@
-package com.metrolist.music.ui.component
+package com.jay.glossy.ui.component
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable

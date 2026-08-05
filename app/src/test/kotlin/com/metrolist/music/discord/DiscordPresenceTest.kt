@@ -1,4 +1,4 @@
-package com.metrolist.music.discord
+package com.jay.glossy.discord
 
 import org.json.JSONObject
 import org.junit.Assert.assertEquals

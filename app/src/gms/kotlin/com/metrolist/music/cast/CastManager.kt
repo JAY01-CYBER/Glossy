@@ -1,4 +1,4 @@
-package com.metrolist.music.cast
+package com.jay.glossy.cast
 
 import android.content.Context
 import androidx.media3.cast.CastPlayer

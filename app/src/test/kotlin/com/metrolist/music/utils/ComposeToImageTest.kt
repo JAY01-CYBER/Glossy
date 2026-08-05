@@ -1,4 +1,4 @@
-package com.metrolist.music.utils
+package com.jay.glossy.utils
 
 import android.content.Context
 import android.content.ContextWrapper
@@ -8,7 +8,7 @@ import android.graphics.Color
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import androidx.test.core.app.ApplicationProvider
-import com.metrolist.music.ui.component.LyricsBackgroundStyle
+import com.jay.glossy.ui.component.LyricsBackgroundStyle
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test

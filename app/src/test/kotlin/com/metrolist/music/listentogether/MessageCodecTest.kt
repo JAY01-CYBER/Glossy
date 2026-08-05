@@ -1,7 +1,7 @@
-package com.metrolist.music.listentogether
+package com.jay.glossy.listentogether
 
 import com.google.protobuf.ByteString
-import com.metrolist.music.listentogether.proto.Listentogether
+import com.jay.glossy.listentogether.proto.Listentogether
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

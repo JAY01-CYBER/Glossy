@@ -1,4 +1,4 @@
-package com.metrolist.music.utils.cipher
+package com.jay.glossy.utils.cipher
 
 import org.junit.After
 import org.junit.Assert.assertFalse

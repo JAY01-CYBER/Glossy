@@ -1,4 +1,4 @@
-package com.metrolist.music.discord
+package com.jay.glossy.discord
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
