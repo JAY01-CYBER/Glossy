@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.component
+import com.jay.glossy.R
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box

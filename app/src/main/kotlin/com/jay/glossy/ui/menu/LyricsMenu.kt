@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.menu
+import com.jay.glossy.R
 
 import android.app.SearchManager
 import android.content.ClipData

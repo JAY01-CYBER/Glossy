@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.listentogether
+import com.jay.glossy.R
 
 import com.google.protobuf.MessageLite
 import com.jay.glossy.listentogether.proto.Listentogether

@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens
+import com.jay.glossy.R
 
 import android.app.Activity
 import androidx.compose.animation.core.tween

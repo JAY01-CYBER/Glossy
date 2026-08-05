@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.component
+import com.jay.glossy.R
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image

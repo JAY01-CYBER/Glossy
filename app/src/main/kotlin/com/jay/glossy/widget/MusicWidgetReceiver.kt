@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.widget
+import com.jay.glossy.R
 
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider

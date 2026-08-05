@@ -1,4 +1,5 @@
 package com.jay.glossy.utils.cipher
+import com.jay.glossy.R
 
 /**
  * Pure (no Android deps) policy for recovering from WebView renderer deaths.

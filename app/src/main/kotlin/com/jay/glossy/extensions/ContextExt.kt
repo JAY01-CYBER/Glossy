@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.extensions
+import com.jay.glossy.R
 
 import android.content.Context
 import android.net.ConnectivityManager

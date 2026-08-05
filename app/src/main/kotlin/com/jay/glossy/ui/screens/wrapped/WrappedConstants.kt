@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.wrapped
+import com.jay.glossy.R
 
 object WrappedConstants {
     // This is intentionally hardcoded to 2025 and should not be changed.

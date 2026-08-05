@@ -1,4 +1,5 @@
 package com.jay.glossy.quicksettings
+import com.jay.glossy.R
 
 import android.app.PendingIntent
 import android.content.Intent

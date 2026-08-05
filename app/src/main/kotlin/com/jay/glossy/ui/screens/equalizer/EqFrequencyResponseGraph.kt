@@ -1,4 +1,5 @@
 package com.jay.glossy.ui.screens.equalizer
+import com.jay.glossy.R
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxWidth

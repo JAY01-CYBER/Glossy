@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.viewmodels
+import com.jay.glossy.R
 
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf

@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.theme
+import com.jay.glossy.R
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle

@@ -6,6 +6,7 @@
 @file:Suppress("DEPRECATION")
 
 package com.jay.glossy.playback
+import com.jay.glossy.R
 
 import android.app.ForegroundServiceStartNotAllowedException
 import android.app.Notification

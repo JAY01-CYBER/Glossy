@@ -1,4 +1,5 @@
 package com.jay.glossy.recognition
+import com.jay.glossy.R
 
 /**
  * Audio fingerprint generator for Shazam-compatible signatures.

@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.component
+import com.jay.glossy.R
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable

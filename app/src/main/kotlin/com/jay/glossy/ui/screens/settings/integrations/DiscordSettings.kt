@@ -1,4 +1,5 @@
 package com.jay.glossy.ui.screens.settings.integrations
+import com.jay.glossy.R
 
 import android.app.Activity
 import android.content.Intent

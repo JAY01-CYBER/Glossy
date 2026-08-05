@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.theme
+import com.jay.glossy.R
 
 import android.graphics.Bitmap
 import android.os.Build

@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.db.entities
+import com.jay.glossy.R
 
 sealed class LocalItem {
     abstract val id: String

@@ -5,6 +5,7 @@
  */
 
 package com.jay.glossy.ui.menu
+import com.jay.glossy.R
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement

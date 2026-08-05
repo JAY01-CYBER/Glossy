@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.playback
+import com.jay.glossy.R
 
 import android.app.Notification
 import android.app.PendingIntent

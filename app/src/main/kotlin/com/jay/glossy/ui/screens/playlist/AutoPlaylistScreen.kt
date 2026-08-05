@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.playlist
+import com.jay.glossy.R
 
 import android.net.Uri
 import android.provider.OpenableColumns

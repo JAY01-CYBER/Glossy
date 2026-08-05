@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.search
+import com.jay.glossy.R
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background

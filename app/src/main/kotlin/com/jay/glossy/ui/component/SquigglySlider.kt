@@ -7,6 +7,7 @@
  */
 
 package com.jay.glossy.ui.component
+import com.jay.glossy.R
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing

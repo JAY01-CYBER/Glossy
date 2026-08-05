@@ -1,4 +1,5 @@
 package com.jay.glossy.cast
+import com.jay.glossy.R
 
 /**
  * Stub CastOptionsProvider for Izzy builds.

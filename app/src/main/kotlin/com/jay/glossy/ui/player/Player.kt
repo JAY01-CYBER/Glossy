@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.player
+import com.jay.glossy.R
 
 import androidx.activity.compose.BackHandler
 import android.content.ClipData

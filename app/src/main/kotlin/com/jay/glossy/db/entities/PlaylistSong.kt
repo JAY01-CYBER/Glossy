@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.db.entities
+import com.jay.glossy.R
 
 import androidx.room.Embedded
 import androidx.room.Relation

@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.wrapped.pages
+import com.jay.glossy.R
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing

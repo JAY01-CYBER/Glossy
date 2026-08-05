@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.library
+import com.jay.glossy.R
 
 import android.content.Intent
 import androidx.compose.foundation.ExperimentalFoundationApi

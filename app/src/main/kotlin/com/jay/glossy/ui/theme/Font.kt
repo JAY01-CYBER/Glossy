@@ -1,4 +1,5 @@
 package com.jay.glossy.ui.theme
+import com.jay.glossy.R
 
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily

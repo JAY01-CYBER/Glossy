@@ -5,6 +5,7 @@
  */
 
 package com.jay.glossy.utils
+import com.jay.glossy.R
 
 import android.content.Context
 import com.metrolist.innertube.YouTube

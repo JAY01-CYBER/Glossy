@@ -1,4 +1,5 @@
 package com.jay.glossy.discord
+import com.jay.glossy.R
 
 import org.json.JSONObject
 import org.junit.Assert.assertEquals

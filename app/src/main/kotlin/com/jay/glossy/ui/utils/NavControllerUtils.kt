@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.utils
+import com.jay.glossy.R
 
 import androidx.navigation.NavController
 import com.jay.glossy.ui.screens.Screens

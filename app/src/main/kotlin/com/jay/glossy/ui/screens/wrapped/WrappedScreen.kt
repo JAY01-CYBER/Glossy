@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.wrapped
+import com.jay.glossy.R
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi

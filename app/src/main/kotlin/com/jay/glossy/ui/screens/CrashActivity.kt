@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens
+import com.jay.glossy.R
 
 import android.content.Intent
 import android.os.Bundle

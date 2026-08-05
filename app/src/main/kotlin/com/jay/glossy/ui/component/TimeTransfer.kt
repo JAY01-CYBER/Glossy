@@ -1,4 +1,5 @@
 package com.jay.glossy.ui.component
+import com.jay.glossy.R
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row

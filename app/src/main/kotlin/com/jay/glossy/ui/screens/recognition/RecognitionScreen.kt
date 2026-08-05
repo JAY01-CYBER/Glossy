@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.recognition
+import com.jay.glossy.R
 
 import android.Manifest
 import android.content.pm.PackageManager

@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.player
+import com.jay.glossy.R
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn

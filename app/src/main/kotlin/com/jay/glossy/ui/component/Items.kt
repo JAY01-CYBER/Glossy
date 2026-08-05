@@ -6,6 +6,7 @@
  */
 
 package com.jay.glossy.ui.component
+import com.jay.glossy.R
 
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility

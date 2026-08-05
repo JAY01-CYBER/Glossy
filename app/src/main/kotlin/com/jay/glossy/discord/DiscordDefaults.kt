@@ -1,4 +1,5 @@
 package com.jay.glossy.discord
+import com.jay.glossy.R
 
 object DiscordDefaults {
     const val YOUTUBE_WATCH_URL = "https://music.youtube.com/watch?v="

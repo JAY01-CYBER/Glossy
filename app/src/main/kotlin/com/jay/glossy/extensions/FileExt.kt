@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.extensions
+import com.jay.glossy.R
 
 import java.io.File
 import java.io.InputStream

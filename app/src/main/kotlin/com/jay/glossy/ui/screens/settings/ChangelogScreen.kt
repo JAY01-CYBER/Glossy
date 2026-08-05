@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.settings
+import com.jay.glossy.R
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.layout.*

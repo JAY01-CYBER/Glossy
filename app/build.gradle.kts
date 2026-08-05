@@ -94,7 +94,7 @@ abstract class GenerateProtoTask : DefaultTask() {
 }
 
 android {
-    namespace = "com.metrolist.music"
+    namespace = "com.jay.glossy"
     compileSdk = 37
 
     defaultConfig {

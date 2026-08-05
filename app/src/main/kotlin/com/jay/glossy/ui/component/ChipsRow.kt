@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.component
+import com.jay.glossy.R
 
 import android.annotation.SuppressLint
 import androidx.compose.animation.AnimatedContent

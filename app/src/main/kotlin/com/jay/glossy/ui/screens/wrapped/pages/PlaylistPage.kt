@@ -1,4 +1,5 @@
 package com.jay.glossy.ui.screens.wrapped.pages
+import com.jay.glossy.R
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween

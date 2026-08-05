@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.constants
+import com.jay.glossy.R
 
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.floatPreferencesKey

@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.extensions
+import com.jay.glossy.R
 
 import com.metrolist.models.MediaMetadata
 import com.metrolist.models.PersistQueue

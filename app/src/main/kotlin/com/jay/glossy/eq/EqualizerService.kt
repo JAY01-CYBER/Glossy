@@ -1,4 +1,5 @@
 package com.jay.glossy.eq
+import com.jay.glossy.R
 
 
 import android.annotation.SuppressLint

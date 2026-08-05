@@ -1,4 +1,5 @@
 package com.jay.glossy.ui.screens.equalizer
+import com.jay.glossy.R
 
 import com.jay.glossy.eq.data.SavedEQProfile
 

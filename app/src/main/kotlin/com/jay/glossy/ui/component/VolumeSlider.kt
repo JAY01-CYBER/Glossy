@@ -12,6 +12,7 @@
  */
 
 package com.jay.glossy.ui.component
+import com.jay.glossy.R
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.height

@@ -1,4 +1,5 @@
 package com.jay.glossy.cast
+import com.jay.glossy.R
 
 import android.content.Context
 import com.google.android.gms.cast.CastMediaControlIntent

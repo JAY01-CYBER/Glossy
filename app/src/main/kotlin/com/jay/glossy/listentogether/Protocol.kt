@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.listentogether
+import com.jay.glossy.R
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

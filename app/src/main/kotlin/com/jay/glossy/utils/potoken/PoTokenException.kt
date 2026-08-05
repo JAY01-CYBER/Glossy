@@ -1,4 +1,5 @@
 package com.jay.glossy.utils.potoken
+import com.jay.glossy.R
 
 class PoTokenException(message: String) : Exception(message)
 

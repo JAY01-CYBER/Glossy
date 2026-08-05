@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.extensions
+import com.jay.glossy.R
 
 import com.jay.glossy.db.entities.Album
 import com.jay.glossy.db.entities.Playlist

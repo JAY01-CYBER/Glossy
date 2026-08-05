@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens
+import com.jay.glossy.R
 
 import android.content.res.Configuration.ORIENTATION_LANDSCAPE
 import androidx.compose.foundation.background

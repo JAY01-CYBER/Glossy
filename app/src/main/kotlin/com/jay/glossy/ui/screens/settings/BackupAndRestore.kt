@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.settings
+import com.jay.glossy.R
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts

@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.menu
+import com.jay.glossy.R
 
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text

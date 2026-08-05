@@ -1,4 +1,5 @@
 package com.jay.glossy.utils
+import com.jay.glossy.R
 
 import android.content.ContentValues
 import android.content.Context

@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.constants
+import com.jay.glossy.R
 
 import android.os.Bundle
 import androidx.media3.session.SessionCommand

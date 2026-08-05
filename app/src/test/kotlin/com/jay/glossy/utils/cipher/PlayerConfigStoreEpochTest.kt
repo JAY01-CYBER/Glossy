@@ -1,4 +1,5 @@
 package com.jay.glossy.utils.cipher
+import com.jay.glossy.R
 
 import org.junit.After
 import org.junit.Assert.assertEquals

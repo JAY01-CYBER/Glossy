@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.constants
+import com.jay.glossy.R
 
 import com.jay.glossy.ui.screens.OptionStats
 import java.time.LocalDateTime

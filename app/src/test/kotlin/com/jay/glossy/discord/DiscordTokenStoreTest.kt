@@ -1,4 +1,5 @@
 package com.jay.glossy.discord
+import com.jay.glossy.R
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider

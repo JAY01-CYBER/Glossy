@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy
+import com.jay.glossy.R
 
 import android.app.Application
 import android.app.NotificationChannel

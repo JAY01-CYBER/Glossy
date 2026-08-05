@@ -1,4 +1,5 @@
 package com.jay.glossy.eq.data
+import com.jay.glossy.R
 
 import android.content.Context
 import android.content.SharedPreferences

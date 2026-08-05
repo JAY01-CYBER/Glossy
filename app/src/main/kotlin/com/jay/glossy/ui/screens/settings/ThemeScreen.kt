@@ -1,4 +1,5 @@
 package com.jay.glossy.ui.screens.settings
+import com.jay.glossy.R
 
 import android.content.res.Configuration
 import android.os.Build

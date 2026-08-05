@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.artist
+import com.jay.glossy.R
 
 import android.content.ClipData
 import android.content.ClipboardManager

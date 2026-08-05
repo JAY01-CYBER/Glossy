@@ -1,4 +1,5 @@
 package com.jay.glossy.ui.component
+import com.jay.glossy.R
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box

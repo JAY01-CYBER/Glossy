@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.db
+import com.jay.glossy.R
 
 import androidx.room.TypeConverter
 import java.time.Instant

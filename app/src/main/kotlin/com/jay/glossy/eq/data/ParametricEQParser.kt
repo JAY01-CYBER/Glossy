@@ -1,4 +1,5 @@
 package com.jay.glossy.eq.data
+import com.jay.glossy.R
 
 import timber.log.Timber
 import java.io.File

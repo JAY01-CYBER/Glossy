@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.component.shimmer
+import com.jay.glossy.R
 
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode

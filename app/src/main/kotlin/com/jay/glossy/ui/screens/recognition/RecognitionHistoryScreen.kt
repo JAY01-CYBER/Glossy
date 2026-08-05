@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.recognition
+import com.jay.glossy.R
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box

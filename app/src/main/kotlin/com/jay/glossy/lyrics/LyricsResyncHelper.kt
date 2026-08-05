@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.lyrics
+import com.jay.glossy.R
 
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow

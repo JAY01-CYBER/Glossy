@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.utils
+import com.jay.glossy.R
 
 fun makeTimeString(duration: Long?): String {
     if (duration == null || duration < 0) return ""

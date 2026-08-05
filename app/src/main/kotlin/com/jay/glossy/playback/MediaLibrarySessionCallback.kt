@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.playback
+import com.jay.glossy.R
 
 import android.content.ContentResolver
 import android.content.Context

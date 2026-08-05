@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.constants
+import com.jay.glossy.R
 
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring

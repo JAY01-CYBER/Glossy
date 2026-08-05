@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.player
+import com.jay.glossy.R
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

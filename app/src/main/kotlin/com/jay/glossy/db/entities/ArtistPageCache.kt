@@ -1,4 +1,5 @@
 package com.jay.glossy.db.entities
+import com.jay.glossy.R
 
 import com.metrolist.innertube.models.ArtistItem
 import com.metrolist.innertube.models.AlbumItem

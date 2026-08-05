@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.menu
+import com.jay.glossy.R
 
 import android.annotation.SuppressLint
 import android.content.res.Configuration

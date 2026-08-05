@@ -6,6 +6,7 @@
  */
 
 package com.jay.glossy.ui.player
+import com.jay.glossy.R
 
 import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility

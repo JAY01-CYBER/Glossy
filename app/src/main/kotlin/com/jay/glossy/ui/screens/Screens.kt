@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens
+import com.jay.glossy.R
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
