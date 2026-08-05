@@ -1,4 +1,5 @@
 package com.jay.glossy.recognition
+
 import com.jay.glossy.R
 
 import android.app.NotificationChannel
@@ -15,7 +16,6 @@ import timber.log.Timber
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.jay.glossy.MainActivity
-import com.jay.glossy.R
 import com.metrolist.shazamkit.models.RecognitionResult
 import com.metrolist.shazamkit.models.RecognitionStatus
 import kotlinx.coroutines.CoroutineScope

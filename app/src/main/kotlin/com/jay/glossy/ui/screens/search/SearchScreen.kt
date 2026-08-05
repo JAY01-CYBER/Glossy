@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.search
+
 import com.jay.glossy.R
 
 import androidx.compose.foundation.layout.Box
@@ -59,7 +60,6 @@ import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalIsPlayerExpanded
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.LocalPlayerConnection
-import com.jay.glossy.R
 import com.jay.glossy.constants.PauseSearchHistoryKey
 import com.jay.glossy.constants.SearchSource
 import com.jay.glossy.constants.SearchSourceKey

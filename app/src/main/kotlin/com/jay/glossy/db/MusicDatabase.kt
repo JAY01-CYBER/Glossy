@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.db
+
 import com.jay.glossy.R
 
 import android.annotation.SuppressLint

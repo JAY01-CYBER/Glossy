@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.wrapped
+
 import com.jay.glossy.R
 
 data class MessagePair(val range: LongRange, val tease: String, val reveal: String)

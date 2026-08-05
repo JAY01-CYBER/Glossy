@@ -1,4 +1,5 @@
 package com.jay.glossy.ui.component
+
 import com.jay.glossy.R
 
 import androidx.compose.foundation.layout.Column
@@ -19,7 +20,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.jay.glossy.R
 import com.jay.glossy.db.entities.SongWithStats
 import com.jay.glossy.viewmodels.StatsViewModel
 import java.util.Locale

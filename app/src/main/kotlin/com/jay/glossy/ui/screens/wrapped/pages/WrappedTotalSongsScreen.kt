@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.wrapped.pages
+
 import com.jay.glossy.R
 
 import androidx.compose.animation.core.Animatable
@@ -34,7 +35,6 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.jay.glossy.R
 import com.jay.glossy.ui.screens.wrapped.components.AnimatedBackground
 import com.jay.glossy.ui.screens.wrapped.components.ShapeType
 import com.jay.glossy.ui.theme.bbh_bartle

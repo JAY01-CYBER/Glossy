@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.settings
+
 import com.jay.glossy.R
 
 import androidx.compose.animation.*
@@ -31,7 +32,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import com.jay.glossy.R
 import com.jay.glossy.BuildConfig
 import com.jay.glossy.utils.ReleaseInfo
 import com.jay.glossy.utils.Updater

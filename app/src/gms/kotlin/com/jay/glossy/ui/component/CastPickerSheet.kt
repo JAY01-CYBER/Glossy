@@ -1,4 +1,5 @@
 package com.jay.glossy.ui.component
+
 import com.jay.glossy.R
 
 import androidx.compose.foundation.clickable
@@ -23,7 +24,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.mediarouter.media.MediaRouter
-import com.jay.glossy.R
 
 @Composable
 fun CastPickerSheet(

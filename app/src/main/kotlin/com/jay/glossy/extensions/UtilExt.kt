@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.extensions
+
 import com.jay.glossy.R
 
 fun <T> tryOrNull(block: () -> T): T? =

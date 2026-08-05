@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.artist
+
 import com.jay.glossy.R
 
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -45,7 +46,6 @@ import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.WatchEndpoint
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.LocalPlayerConnection
-import com.jay.glossy.R
 import com.jay.glossy.constants.GridItemSize
 import com.jay.glossy.constants.GridItemsSizeKey
 import com.jay.glossy.constants.GridThumbnailHeight

@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.component
+
 import com.jay.glossy.R
 
 import android.annotation.SuppressLint
@@ -88,7 +89,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalListenTogetherManager
 import com.jay.glossy.LocalPlayerConnection
-import com.jay.glossy.R
 import com.jay.glossy.constants.AiProviderKey
 import com.jay.glossy.constants.AiSystemPromptKey
 import com.jay.glossy.constants.DeeplApiKey

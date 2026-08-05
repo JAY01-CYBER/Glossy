@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.recognition
+
 import com.jay.glossy.R
 
 import android.Manifest
@@ -82,7 +83,6 @@ import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.jay.glossy.LocalDatabase
-import com.jay.glossy.R
 import com.jay.glossy.db.entities.RecognitionHistory
 import com.jay.glossy.ui.component.IconButton
 import com.jay.glossy.ui.utils.backToMain

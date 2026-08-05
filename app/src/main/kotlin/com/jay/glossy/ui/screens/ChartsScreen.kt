@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens
+
 import com.jay.glossy.R
 
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -65,7 +66,6 @@ import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.WatchEndpoint
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.LocalPlayerConnection
-import com.jay.glossy.R
 import com.jay.glossy.constants.ListItemHeight
 import com.metrolist.models.toMediaMetadata
 import com.jay.glossy.playback.queues.YouTubeQueue

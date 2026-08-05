@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.player
+
 import com.jay.glossy.R
 
 import androidx.activity.compose.BackHandler
@@ -138,7 +139,6 @@ import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalDownloadUtil
 import com.jay.glossy.LocalListenTogetherManager
 import com.jay.glossy.LocalPlayerConnection
-import com.jay.glossy.R
 import com.jay.glossy.constants.CropAlbumArtKey
 import com.jay.glossy.constants.DarkModeKey
 import com.jay.glossy.constants.HidePlayerThumbnailKey

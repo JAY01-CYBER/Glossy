@@ -5,6 +5,8 @@
 
 package com.metrolist.models
 
+import com.jay.glossy.R
+
 import androidx.compose.runtime.Immutable
 import com.metrolist.innertube.models.EpisodeItem
 import com.metrolist.innertube.models.SongItem

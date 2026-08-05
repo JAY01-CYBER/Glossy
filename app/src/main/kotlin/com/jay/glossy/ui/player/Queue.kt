@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.player
+
 import com.jay.glossy.R
 
 import android.annotation.SuppressLint
@@ -103,7 +104,6 @@ import androidx.media3.exoplayer.source.ShuffleOrder.DefaultShuffleOrder
 import com.jay.glossy.LocalNavController
 import com.jay.glossy.LocalListenTogetherManager
 import com.jay.glossy.LocalPlayerConnection
-import com.jay.glossy.R
 import com.jay.glossy.constants.ListItemHeight
 import com.jay.glossy.constants.PlayerBackgroundStyle
 import com.jay.glossy.constants.QueueEditLockKey

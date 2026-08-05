@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.settings.integrations
+
 import com.jay.glossy.R
 
 import android.widget.Toast
@@ -77,7 +78,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.jay.glossy.LocalPlayerAwareWindowInsets
-import com.jay.glossy.R
 import com.jay.glossy.constants.ListenTogetherAutoApprovalKey
 import com.jay.glossy.constants.ListenTogetherAutoApproveSuggestionsKey
 import com.jay.glossy.constants.ListenTogetherServerUrlKey

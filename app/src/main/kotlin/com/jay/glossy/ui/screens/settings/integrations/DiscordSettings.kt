@@ -1,4 +1,5 @@
 package com.jay.glossy.ui.screens.settings.integrations
+
 import com.jay.glossy.R
 
 import android.app.Activity
@@ -77,7 +78,6 @@ import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.LocalPlayerConnection
-import com.jay.glossy.R
 import com.jay.glossy.constants.DiscordActivityNameKey
 import com.jay.glossy.constants.DiscordActivityTypeKey
 import com.jay.glossy.constants.DiscordAdvancedModeKey

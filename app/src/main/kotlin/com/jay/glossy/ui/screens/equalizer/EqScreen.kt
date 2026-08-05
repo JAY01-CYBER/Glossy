@@ -1,4 +1,5 @@
 package com.jay.glossy.ui.screens.equalizer
+
 import com.jay.glossy.R
 
 import android.annotation.SuppressLint
@@ -48,7 +49,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jay.glossy.LocalNavController
 import com.jay.glossy.LocalPlayerAwareWindowInsets
-import com.jay.glossy.R
 import com.jay.glossy.eq.data.SavedEQProfile
 import timber.log.Timber
 

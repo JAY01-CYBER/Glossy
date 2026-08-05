@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.settings
+
 import com.jay.glossy.R
 
 import android.app.Activity
@@ -56,7 +57,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import androidx.navigation.NavController
 import com.jay.glossy.LocalPlayerAwareWindowInsets
-import com.jay.glossy.R
 import com.jay.glossy.constants.ChipSortTypeKey
 import com.jay.glossy.constants.CropAlbumArtKey
 import com.jay.glossy.constants.DefaultOpenTabKey

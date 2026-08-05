@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.widget
+
 import com.jay.glossy.R
 
 import android.app.PendingIntent
@@ -18,7 +19,6 @@ import android.os.Bundle
 import android.view.View
 import android.widget.RemoteViews
 import com.jay.glossy.MainActivity
-import com.jay.glossy.R
 import com.jay.glossy.recognition.MusicRecognitionService
 import com.jay.glossy.widget.MusicRecognizerWidgetService.Companion.ALBUM_ART_CACHE_FILE
 import com.jay.glossy.widget.MusicRecognizerWidgetService.Companion.PREF_ARTIST_NAME

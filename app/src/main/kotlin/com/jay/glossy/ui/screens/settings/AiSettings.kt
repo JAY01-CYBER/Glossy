@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.settings
+
 import com.jay.glossy.R
 
 import androidx.compose.foundation.layout.Arrangement
@@ -44,7 +45,6 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.jay.glossy.LocalPlayerAwareWindowInsets
-import com.jay.glossy.R
 import com.jay.glossy.constants.AiProviderKey
 import com.jay.glossy.constants.AiSystemPromptKey
 import com.jay.glossy.constants.DEFAULT_AI_SYSTEM_PROMPT

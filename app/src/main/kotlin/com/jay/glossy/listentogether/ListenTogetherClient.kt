@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.listentogether
+
 import com.jay.glossy.R
 
 import android.Manifest
@@ -24,7 +25,6 @@ import androidx.core.content.getSystemService
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
-import com.jay.glossy.R
 import com.jay.glossy.constants.ListenTogetherAutoApprovalKey
 import com.jay.glossy.constants.ListenTogetherAutoApproveSuggestionsKey
 import com.jay.glossy.constants.ListenTogetherIsHostKey

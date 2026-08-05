@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.lyrics
+
 import com.jay.glossy.R
 
 object LyricsProviderRegistry {

@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.menu
+
 import com.jay.glossy.R
 
 import android.annotation.SuppressLint
@@ -66,7 +67,6 @@ import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalDownloadUtil
 import com.jay.glossy.LocalListenTogetherManager
 import com.jay.glossy.LocalPlayerConnection
-import com.jay.glossy.R
 import com.jay.glossy.constants.ListThumbnailSize
 import com.jay.glossy.constants.ThumbnailCornerRadius
 import com.jay.glossy.db.entities.PlaylistEntity

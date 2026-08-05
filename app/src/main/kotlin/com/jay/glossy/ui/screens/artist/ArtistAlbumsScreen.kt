@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.artist
+
 import com.jay.glossy.R
 
 import androidx.activity.compose.BackHandler
@@ -48,7 +49,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.LocalPlayerConnection
-import com.jay.glossy.R
 import com.jay.glossy.constants.CONTENT_TYPE_ALBUM
 import com.jay.glossy.constants.CONTENT_TYPE_HEADER
 import com.jay.glossy.constants.GridItemSize

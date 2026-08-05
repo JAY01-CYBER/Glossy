@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.settings
+
 import com.jay.glossy.R
 
 import androidx.compose.foundation.background
@@ -57,7 +58,6 @@ import coil3.compose.AsyncImage
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.utils.parseCookieString
 import com.jay.glossy.BuildConfig
-import com.jay.glossy.R
 import com.jay.glossy.constants.AccountChannelHandleKey
 import com.jay.glossy.constants.AccountEmailKey
 import com.jay.glossy.constants.AccountNameKey

@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.wrapped.pages
+
 import com.jay.glossy.R
 
 import androidx.compose.animation.AnimatedVisibility
@@ -39,7 +40,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-import com.jay.glossy.R
 import com.jay.glossy.db.entities.SongWithStats
 import com.jay.glossy.ui.screens.wrapped.components.AnimatedDecorativeElement
 import kotlin.random.Random

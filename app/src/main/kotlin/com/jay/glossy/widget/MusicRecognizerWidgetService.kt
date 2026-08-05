@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.widget
+
 import com.jay.glossy.R
 
 import android.app.NotificationChannel
@@ -27,7 +28,6 @@ import coil3.request.allowHardware
 import coil3.request.crossfade
 import coil3.toBitmap
 import com.jay.glossy.MainActivity
-import com.jay.glossy.R
 import com.jay.glossy.db.DatabaseDao
 import com.jay.glossy.db.entities.RecognitionHistory
 import com.jay.glossy.recognition.MusicRecognitionService

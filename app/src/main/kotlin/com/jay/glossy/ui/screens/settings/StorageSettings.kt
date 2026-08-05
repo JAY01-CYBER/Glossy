@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.settings
+
 import com.jay.glossy.R
 
 import androidx.compose.animation.core.animateFloatAsState
@@ -50,7 +51,6 @@ import coil3.imageLoader
 import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.LocalPlayerConnection
-import com.jay.glossy.R
 import com.jay.glossy.constants.EnableSongCacheKey
 import com.jay.glossy.constants.MaxImageCacheSizeKey
 import com.jay.glossy.constants.MaxSongCacheSizeKey

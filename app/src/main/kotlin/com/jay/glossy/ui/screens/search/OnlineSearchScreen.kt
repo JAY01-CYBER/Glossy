@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.search
+
 import com.jay.glossy.R
 
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -63,7 +64,6 @@ import com.metrolist.innertube.models.PodcastItem
 import com.metrolist.innertube.models.SongItem
 import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalPlayerConnection
-import com.jay.glossy.R
 import com.jay.glossy.constants.AutoRadioQueueKey
 import com.jay.glossy.constants.SuggestionItemHeight
 import com.jay.glossy.extensions.toMediaItem

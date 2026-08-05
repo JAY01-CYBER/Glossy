@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.settings
+
 import com.jay.glossy.R
 
 import androidx.annotation.StringRes
@@ -39,7 +40,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.jay.glossy.LocalPlayerAwareWindowInsets
-import com.jay.glossy.R
 import com.jay.glossy.constants.StreamSourceAndroidVRKey
 import com.jay.glossy.constants.StreamSourceTVHTML5Key
 import com.jay.glossy.constants.StreamSourceVisionOSKey

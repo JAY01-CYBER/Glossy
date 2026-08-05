@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.player
+
 import com.jay.glossy.R
 
 import androidx.compose.foundation.layout.Arrangement
@@ -31,7 +32,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.PlaybackException
-import com.jay.glossy.R
 
 @Composable
 fun PlaybackError(

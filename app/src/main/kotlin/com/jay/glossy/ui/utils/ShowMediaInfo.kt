@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.utils
+
 import com.jay.glossy.R
 
 import android.content.ClipData
@@ -44,7 +45,6 @@ import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.MediaInfo
 import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalPlayerConnection
-import com.jay.glossy.R
 import com.jay.glossy.constants.LoudnessLevel
 import com.jay.glossy.constants.LoudnessLevelKey
 import com.jay.glossy.db.entities.FormatEntity

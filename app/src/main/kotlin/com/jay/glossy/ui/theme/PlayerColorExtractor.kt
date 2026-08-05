@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.theme
+
 import com.jay.glossy.R
 
 import androidx.compose.ui.graphics.Color

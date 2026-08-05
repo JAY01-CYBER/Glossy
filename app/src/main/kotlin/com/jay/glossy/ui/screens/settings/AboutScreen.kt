@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.settings
+
 import com.jay.glossy.R
 
 import androidx.compose.foundation.Image
@@ -74,7 +75,6 @@ import com.metrolist.innertube.models.WatchEndpoint
 import com.jay.glossy.BuildConfig
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.LocalPlayerConnection
-import com.jay.glossy.R
 import com.jay.glossy.playback.PlayerConnection
 import com.jay.glossy.playback.queues.YouTubeQueue
 import com.jay.glossy.ui.component.IconButton

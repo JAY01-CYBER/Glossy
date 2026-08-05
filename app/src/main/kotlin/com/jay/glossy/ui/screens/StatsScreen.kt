@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens
+
 import com.jay.glossy.R
 
 import androidx.activity.compose.BackHandler
@@ -67,7 +68,6 @@ import com.metrolist.innertube.models.WatchEndpoint
 import com.metrolist.innertube.utils.parseCookieString
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.LocalPlayerConnection
-import com.jay.glossy.R
 import com.jay.glossy.constants.CONTENT_TYPE_ARTIST
 import com.jay.glossy.constants.InnerTubeCookieKey
 import com.jay.glossy.constants.StatPeriod

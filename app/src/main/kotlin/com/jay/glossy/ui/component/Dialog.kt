@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.component
+
 import com.jay.glossy.R
 
 import androidx.compose.foundation.clickable
@@ -59,7 +60,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.jay.glossy.LocalNavController
-import com.jay.glossy.R
 import com.jay.glossy.ui.screens.settings.AccountSettings
 import kotlinx.coroutines.delay
 

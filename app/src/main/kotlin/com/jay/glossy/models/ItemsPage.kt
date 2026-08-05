@@ -5,6 +5,8 @@
 
 package com.metrolist.models
 
+import com.jay.glossy.R
+
 import com.metrolist.innertube.models.YTItem
 
 data class ItemsPage(

@@ -12,6 +12,7 @@
  */
 
 package com.jay.glossy.ui.component
+
 import com.jay.glossy.R
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -34,7 +35,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import com.jay.glossy.R
 
 /**
  * Material 3 Expressive Volume Slider dimensions (Size M)

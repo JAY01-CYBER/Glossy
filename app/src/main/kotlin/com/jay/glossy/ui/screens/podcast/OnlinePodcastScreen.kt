@@ -1,4 +1,5 @@
 package com.jay.glossy.ui.screens.podcast
+
 import com.jay.glossy.R
 
 import androidx.activity.compose.BackHandler
@@ -76,7 +77,6 @@ import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.db.entities.PodcastEntity
 import com.jay.glossy.LocalPlayerConnection
-import com.jay.glossy.R
 import com.metrolist.models.toMediaMetadata
 import com.jay.glossy.extensions.toMediaItem
 import com.jay.glossy.playback.queues.ListQueue

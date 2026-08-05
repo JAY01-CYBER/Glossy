@@ -1,5 +1,7 @@
 package com.dpi
 
+import com.jay.glossy.R
+
 import android.content.Context
 import timber.log.Timber
 

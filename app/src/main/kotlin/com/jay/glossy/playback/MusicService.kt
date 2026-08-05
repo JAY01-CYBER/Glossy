@@ -6,6 +6,7 @@
 @file:Suppress("DEPRECATION")
 
 package com.jay.glossy.playback
+
 import com.jay.glossy.R
 
 import android.app.ForegroundServiceStartNotAllowedException
@@ -99,7 +100,6 @@ import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.WatchEndpoint
 import com.metrolist.lastfm.LastFM
 import com.jay.glossy.MainActivity
-import com.jay.glossy.R
 import com.jay.glossy.constants.AndroidAutoTargetPlaylistKey
 import com.jay.glossy.constants.AudioNormalizationKey
 import com.jay.glossy.constants.AudioOffload

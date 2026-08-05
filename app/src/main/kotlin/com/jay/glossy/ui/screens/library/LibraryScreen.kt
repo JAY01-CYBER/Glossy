@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.library
+
 import com.jay.glossy.R
 
 import androidx.compose.foundation.layout.Box
@@ -15,7 +16,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.jay.glossy.LocalNavController
-import com.jay.glossy.R
 import com.jay.glossy.constants.ChipSortTypeKey
 import com.jay.glossy.constants.LibraryFilter
 import com.jay.glossy.ui.component.ChipsRow

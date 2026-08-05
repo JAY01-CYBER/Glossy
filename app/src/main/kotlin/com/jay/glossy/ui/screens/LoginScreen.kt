@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens
+
 import com.jay.glossy.R
 
 import android.annotation.SuppressLint
@@ -33,7 +34,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavController
 import com.metrolist.innertube.YouTube
 import com.jay.glossy.LocalPlayerAwareWindowInsets
-import com.jay.glossy.R
 import com.jay.glossy.constants.AccountChannelHandleKey
 import com.jay.glossy.constants.AccountEmailKey
 import com.jay.glossy.constants.AccountNameKey

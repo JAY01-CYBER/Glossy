@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.component
+
 import com.jay.glossy.R
 
 import android.widget.Toast
@@ -36,7 +37,6 @@ import androidx.mediarouter.media.MediaRouter
 import com.google.android.gms.cast.CastMediaControlIntent
 import com.google.android.gms.cast.framework.CastContext
 import com.jay.glossy.LocalPlayerConnection
-import com.jay.glossy.R
 import com.jay.glossy.constants.EnableGoogleCastKey
 import com.jay.glossy.utils.rememberPreference
 import timber.log.Timber

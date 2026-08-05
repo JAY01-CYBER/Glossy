@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.search
+
 import com.jay.glossy.R
 
 import androidx.activity.compose.BackHandler
@@ -86,7 +87,6 @@ import com.metrolist.innertube.models.WatchEndpoint
 import com.metrolist.innertube.models.YTItem
 import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalPlayerConnection
-import com.jay.glossy.R
 import com.jay.glossy.constants.AutoRadioQueueKey
 import com.jay.glossy.constants.HideVideoSongsKey
 import com.jay.glossy.constants.MiniPlayerBottomSpacing

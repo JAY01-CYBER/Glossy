@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.settings.integrations
+
 import com.jay.glossy.R
 
 import androidx.compose.foundation.layout.Arrangement
@@ -54,7 +55,6 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
 import com.metrolist.lastfm.LastFM
 import com.jay.glossy.LocalPlayerAwareWindowInsets
-import com.jay.glossy.R
 import com.jay.glossy.constants.EnableLastFMScrobblingKey
 import com.jay.glossy.constants.LastFMSessionKey
 import com.jay.glossy.constants.LastFMUseNowPlaying

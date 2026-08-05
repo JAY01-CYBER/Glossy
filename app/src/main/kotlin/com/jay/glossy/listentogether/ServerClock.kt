@@ -1,4 +1,5 @@
 package com.jay.glossy.listentogether
+
 import com.jay.glossy.R
 
 import kotlin.math.max

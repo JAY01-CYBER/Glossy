@@ -1,4 +1,5 @@
 package com.jay.glossy.discord
+
 import com.jay.glossy.R
 
 import timber.log.Timber

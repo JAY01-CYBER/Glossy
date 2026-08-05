@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.component
+
 import com.jay.glossy.R
 
 import androidx.compose.animation.animateContentSize
@@ -28,7 +29,6 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import com.jay.glossy.R
 
 data class LinkSegment(
     val text: String,

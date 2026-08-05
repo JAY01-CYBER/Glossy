@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.menu
+
 import com.jay.glossy.R
 
 import android.content.Intent
@@ -33,7 +34,6 @@ import androidx.compose.ui.unit.dp
 import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalListenTogetherManager
 import com.jay.glossy.LocalPlayerConnection
-import com.jay.glossy.R
 import com.jay.glossy.constants.ArtistSongSortType
 import com.jay.glossy.db.entities.SpeedDialItem
 import com.jay.glossy.db.entities.Artist

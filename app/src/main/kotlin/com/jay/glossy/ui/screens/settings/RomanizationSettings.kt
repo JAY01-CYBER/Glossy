@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.settings
+
 import com.jay.glossy.R
 
 import androidx.compose.foundation.layout.Column
@@ -32,7 +33,6 @@ import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.jay.glossy.LocalPlayerAwareWindowInsets
-import com.jay.glossy.R
 import com.jay.glossy.constants.LyricsRomanizeAsMainKey
 import com.jay.glossy.constants.LyricsRomanizeCyrillicByLineKey
 import com.jay.glossy.constants.LyricsRomanizeList

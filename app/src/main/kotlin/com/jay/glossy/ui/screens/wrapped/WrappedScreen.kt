@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.wrapped
+
 import com.jay.glossy.R
 
 import androidx.activity.compose.BackHandler
@@ -41,7 +42,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.jay.glossy.LocalNavController
-import com.jay.glossy.R
 import com.jay.glossy.ui.screens.wrapped.pages.ConclusionPage
 import com.jay.glossy.ui.screens.wrapped.pages.PlaylistPage
 import com.jay.glossy.ui.screens.wrapped.pages.WrappedIntro

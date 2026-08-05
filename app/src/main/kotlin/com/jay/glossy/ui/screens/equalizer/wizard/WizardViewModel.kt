@@ -1,4 +1,5 @@
 package com.jay.glossy.ui.screens.equalizer.wizard
+
 import com.jay.glossy.R
 
 import android.content.Context

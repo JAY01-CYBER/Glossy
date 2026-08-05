@@ -1,4 +1,5 @@
 package com.jay.glossy.ui.screens.settings
+
 import com.jay.glossy.R
 
 import android.content.res.Configuration
@@ -73,7 +74,6 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.materialkolor.PaletteStyle
 import com.materialkolor.rememberDynamicColorScheme
-import com.jay.glossy.R
 import com.jay.glossy.constants.DarkModeKey
 import com.jay.glossy.constants.DynamicThemeKey
 import com.jay.glossy.constants.PureBlackKey

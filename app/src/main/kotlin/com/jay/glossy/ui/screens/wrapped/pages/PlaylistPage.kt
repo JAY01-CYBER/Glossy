@@ -1,4 +1,5 @@
 package com.jay.glossy.ui.screens.wrapped.pages
+
 import com.jay.glossy.R
 
 import androidx.compose.animation.core.animateFloatAsState
@@ -37,7 +38,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.jay.glossy.R
 import com.jay.glossy.ui.screens.wrapped.LocalWrappedManager
 import com.jay.glossy.ui.screens.wrapped.PlaylistCreationState
 import com.jay.glossy.ui.screens.wrapped.WrappedConstants

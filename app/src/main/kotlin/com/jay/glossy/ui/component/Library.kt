@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.component
+
 import com.jay.glossy.R
 
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -17,7 +18,6 @@ import androidx.compose.ui.res.painterResource
 import com.metrolist.innertube.models.PlaylistItem
 import com.jay.glossy.LocalNavController
 import com.metrolist.innertube.models.WatchEndpoint
-import com.jay.glossy.R
 import com.jay.glossy.db.entities.Album
 import com.jay.glossy.db.entities.Artist
 import com.jay.glossy.db.entities.Playlist

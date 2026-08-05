@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.component
+
 import com.jay.glossy.R
 
 import android.content.Context
@@ -76,7 +77,6 @@ import coil3.ImageLoader
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import coil3.toBitmap
-import com.jay.glossy.R
 import com.jay.glossy.lyrics.LyricsTranslationHelper
 import com.metrolist.models.MediaMetadata
 import com.jay.glossy.ui.screens.settings.LyricsPosition

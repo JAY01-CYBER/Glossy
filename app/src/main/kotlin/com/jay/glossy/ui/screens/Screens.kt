@@ -4,12 +4,12 @@
  */
 
 package com.jay.glossy.ui.screens
+
 import com.jay.glossy.R
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Immutable
-import com.jay.glossy.R
 
 @Immutable
 sealed class Screens(

@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.player
+
 import com.jay.glossy.R
 
 import androidx.compose.animation.AnimatedVisibility
@@ -73,7 +74,6 @@ import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import com.jay.glossy.LocalListenTogetherManager
 import com.jay.glossy.LocalPlayerConnection
-import com.jay.glossy.R
 import com.jay.glossy.constants.CropAlbumArtKey
 import com.jay.glossy.constants.HidePlayerThumbnailKey
 import com.jay.glossy.constants.PlayerBackgroundStyle

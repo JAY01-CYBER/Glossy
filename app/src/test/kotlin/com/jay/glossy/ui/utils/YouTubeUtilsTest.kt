@@ -1,4 +1,5 @@
 package com.jay.glossy.ui.utils
+
 import com.jay.glossy.R
 
 import org.junit.Assert.assertEquals

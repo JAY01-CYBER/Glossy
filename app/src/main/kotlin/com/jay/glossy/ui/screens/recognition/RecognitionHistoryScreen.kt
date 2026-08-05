@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.recognition
+
 import com.jay.glossy.R
 
 import androidx.compose.foundation.clickable
@@ -54,7 +55,6 @@ import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalPlayerAwareWindowInsets
-import com.jay.glossy.R
 import com.jay.glossy.constants.ThumbnailCornerRadius
 import com.jay.glossy.db.entities.RecognitionHistory
 import com.jay.glossy.ui.component.DefaultDialog

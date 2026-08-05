@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens
+
 import com.jay.glossy.R
 
 import androidx.activity.compose.BackHandler
@@ -110,7 +111,6 @@ import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalListenTogetherManager
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.LocalPlayerConnection
-import com.jay.glossy.R
 import com.jay.glossy.constants.AutoRadioQueueKey
 import com.jay.glossy.constants.GridItemSize
 import com.jay.glossy.constants.GridItemsSizeKey

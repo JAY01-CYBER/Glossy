@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.component
+
 import com.jay.glossy.R
 
 import android.widget.Toast
@@ -30,7 +31,6 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.metrolist.innertube.YouTube
 import com.jay.glossy.LocalDatabase
-import com.jay.glossy.R
 import com.jay.glossy.constants.InnerTubeCookieKey
 import com.jay.glossy.db.entities.PlaylistEntity
 import com.jay.glossy.extensions.isSyncEnabled

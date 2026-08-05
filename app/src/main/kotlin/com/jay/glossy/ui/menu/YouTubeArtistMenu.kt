@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.menu
+
 import com.jay.glossy.R
 
 import android.content.Intent
@@ -35,7 +36,6 @@ import com.metrolist.innertube.models.ArtistItem
 import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalListenTogetherManager
 import com.jay.glossy.LocalPlayerConnection
-import com.jay.glossy.R
 import com.jay.glossy.db.entities.SpeedDialItem
 import com.jay.glossy.db.entities.ArtistEntity
 import com.jay.glossy.playback.queues.YouTubeQueue

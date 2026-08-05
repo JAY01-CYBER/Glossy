@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.component
+
 import com.jay.glossy.R
 
 import android.annotation.SuppressLint
@@ -53,7 +54,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.jay.glossy.R
 import com.jay.glossy.ui.screens.OptionStats
 
 @Composable

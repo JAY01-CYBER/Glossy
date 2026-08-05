@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.menu
+
 import com.jay.glossy.R
 
 import android.content.Context
@@ -85,7 +86,6 @@ import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalDownloadUtil
 import com.jay.glossy.LocalListenTogetherManager
 import com.jay.glossy.LocalPlayerConnection
-import com.jay.glossy.R
 import com.jay.glossy.constants.ListItemHeight
 import com.jay.glossy.constants.VarispeedKey
 import com.jay.glossy.listentogether.ConnectionState

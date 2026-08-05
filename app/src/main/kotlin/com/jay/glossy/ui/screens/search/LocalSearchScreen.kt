@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.search
+
 import com.jay.glossy.R
 
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -48,7 +49,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jay.glossy.LocalNavController
 import com.jay.glossy.LocalPlayerConnection
-import com.jay.glossy.R
 import com.jay.glossy.constants.CONTENT_TYPE_LIST
 import com.jay.glossy.constants.ListItemHeight
 import com.jay.glossy.db.entities.Album

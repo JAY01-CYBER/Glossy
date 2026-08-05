@@ -1,5 +1,7 @@
 package com.dpi
 
+import com.jay.glossy.R
+
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context

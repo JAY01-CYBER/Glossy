@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens
+
 import com.jay.glossy.R
 
 import android.content.Context
@@ -88,7 +89,6 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.jay.glossy.LocalListenTogetherManager
 import com.jay.glossy.LocalPlayerAwareWindowInsets
-import com.jay.glossy.R
 import com.jay.glossy.constants.AppBarHeight
 import com.jay.glossy.constants.ListenTogetherInTopBarKey
 import com.jay.glossy.constants.ListenTogetherUsernameKey

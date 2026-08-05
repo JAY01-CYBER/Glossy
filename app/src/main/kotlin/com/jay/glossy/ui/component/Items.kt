@@ -6,6 +6,7 @@
  */
 
 package com.jay.glossy.ui.component
+
 import com.jay.glossy.R
 
 import android.widget.Toast
@@ -102,7 +103,6 @@ import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalDownloadUtil
 import com.jay.glossy.LocalNavController
 import com.jay.glossy.LocalPlayerConnection
-import com.jay.glossy.R
 import com.jay.glossy.constants.CropAlbumArtKey
 import com.jay.glossy.constants.GridItemSize
 import com.jay.glossy.constants.GridItemsSizeKey

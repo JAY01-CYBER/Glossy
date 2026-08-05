@@ -1,4 +1,5 @@
 package com.jay.glossy.ui.screens.equalizer.wizard
+
 import com.jay.glossy.R
 
 import androidx.compose.animation.*
@@ -20,7 +21,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.res.stringResource
 import com.jay.glossy.LocalPlayerAwareWindowInsets
-import com.jay.glossy.R
 
 /**
  * EQ Wizard - Device Setup Flow

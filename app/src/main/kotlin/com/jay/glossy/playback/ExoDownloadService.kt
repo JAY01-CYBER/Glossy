@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.playback
+
 import com.jay.glossy.R
 
 import android.app.Notification
@@ -19,7 +20,6 @@ import androidx.media3.exoplayer.offline.DownloadNotificationHelper
 import androidx.media3.exoplayer.offline.DownloadService
 import androidx.media3.exoplayer.scheduler.PlatformScheduler
 import androidx.media3.exoplayer.scheduler.Scheduler
-import com.jay.glossy.R
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 

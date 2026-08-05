@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.wrapped.pages
+
 import com.jay.glossy.R
 
 
@@ -40,7 +41,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import com.jay.glossy.R
 import com.jay.glossy.db.entities.SongWithStats
 import com.jay.glossy.ui.screens.wrapped.components.AnimatedBackground
 import com.jay.glossy.ui.screens.wrapped.components.ShapeType

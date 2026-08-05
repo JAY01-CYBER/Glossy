@@ -1,4 +1,5 @@
 package com.jay.glossy.ui.component
+
 import com.jay.glossy.R
 
 import androidx.compose.foundation.background
@@ -27,7 +28,6 @@ import androidx.compose.ui.unit.dp
 import com.metrolist.innertube.models.ArtistItem
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.YTItem
-import com.jay.glossy.R
 import com.jay.glossy.constants.ThumbnailCornerRadius
 import com.jay.glossy.ui.utils.resize
 

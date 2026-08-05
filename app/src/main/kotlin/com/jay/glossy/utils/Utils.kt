@@ -4,11 +4,11 @@
  */
 
 package com.jay.glossy.utils
+
 import com.jay.glossy.R
 
 import android.content.Context
 import android.content.res.Configuration
-import com.jay.glossy.R
 import java.util.Locale
 
 fun getArtistSeparator(context: Context): String = " ${context.getString(R.string.and)} "

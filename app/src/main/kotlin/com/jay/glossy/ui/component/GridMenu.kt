@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.component
+
 import com.jay.glossy.R
 
 import androidx.annotation.DrawableRes
@@ -38,7 +39,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.media3.exoplayer.offline.Download
-import com.jay.glossy.R
 import com.jay.glossy.utils.makeTimeString
 
 val GridMenuItemHeight = 108.dp

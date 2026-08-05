@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.lyrics
+
 import com.jay.glossy.R
 
 import android.text.format.DateUtils

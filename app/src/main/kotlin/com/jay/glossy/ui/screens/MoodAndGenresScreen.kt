@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens
+
 import com.jay.glossy.R
 
 import android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -37,7 +38,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.jay.glossy.LocalPlayerAwareWindowInsets
-import com.jay.glossy.R
 import com.jay.glossy.ui.component.IconButton
 import com.jay.glossy.ui.component.NavigationTitle
 import com.jay.glossy.ui.component.shimmer.ListItemPlaceHolder

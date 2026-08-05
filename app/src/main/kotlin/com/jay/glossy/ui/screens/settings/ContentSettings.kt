@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.settings
+
 import com.jay.glossy.R
 
 import android.content.Intent
@@ -55,7 +56,6 @@ import androidx.core.net.toUri
 import androidx.navigation.NavController
 import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalPlayerAwareWindowInsets
-import com.jay.glossy.R
 import com.jay.glossy.constants.AppLanguageKey
 import com.jay.glossy.constants.ContentCountryKey
 import com.jay.glossy.constants.ContentLanguageKey

@@ -6,6 +6,7 @@
 @file:Suppress("LocalVariableName")
 
 package com.jay.glossy.ui.utils
+
 import com.jay.glossy.R
 
 fun String.resize(

@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.menu
+
 import com.jay.glossy.R
 
 import android.content.Context
@@ -34,7 +35,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.media3.exoplayer.offline.Download
 import com.jay.glossy.LocalListenTogetherManager
-import com.jay.glossy.R
 import com.jay.glossy.db.entities.Playlist
 import com.jay.glossy.db.entities.PlaylistSong
 import com.jay.glossy.db.entities.Song

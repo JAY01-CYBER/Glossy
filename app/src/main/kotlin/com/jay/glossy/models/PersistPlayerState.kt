@@ -5,6 +5,8 @@
 
 package com.metrolist.models
 
+import com.jay.glossy.R
+
 import java.io.Serializable
 
 data class PersistPlayerState(

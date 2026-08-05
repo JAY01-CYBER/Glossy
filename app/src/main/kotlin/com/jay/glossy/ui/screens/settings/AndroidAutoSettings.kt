@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.settings
+
 import com.jay.glossy.R
 
 import androidx.compose.foundation.clickable
@@ -45,7 +46,6 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalPlayerAwareWindowInsets
-import com.jay.glossy.R
 import com.jay.glossy.constants.AndroidAutoSearchLocalLimitKey
 import com.jay.glossy.constants.AndroidAutoSectionsOrderKey
 import com.jay.glossy.constants.AndroidAutoTargetPlaylistKey

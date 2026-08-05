@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.wrapped.pages
+
 import com.jay.glossy.R
 
 import androidx.compose.animation.AnimatedVisibility
@@ -51,7 +52,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.jay.glossy.R
 import com.jay.glossy.ui.theme.bbhBartle
 import kotlinx.coroutines.delay
 

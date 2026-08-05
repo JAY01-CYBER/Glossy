@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.settings
+
 import com.jay.glossy.R
 
 import android.content.ActivityNotFoundException
@@ -32,7 +33,6 @@ import androidx.core.net.toUri
 import androidx.navigation.NavController
 import com.jay.glossy.BuildConfig
 import com.jay.glossy.LocalPlayerAwareWindowInsets
-import com.jay.glossy.R
 import com.jay.glossy.ui.component.IconButton
 import com.jay.glossy.ui.component.Material3SettingsGroup
 import com.jay.glossy.ui.component.Material3SettingsItem

@@ -1,4 +1,5 @@
 package com.jay.glossy.eq.audio
+
 import com.jay.glossy.R
 
 import com.jay.glossy.eq.data.FilterType

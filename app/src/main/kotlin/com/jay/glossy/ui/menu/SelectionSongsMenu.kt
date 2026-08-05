@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.menu
+
 import com.jay.glossy.R
 
 import android.annotation.SuppressLint
@@ -52,7 +53,6 @@ import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalDownloadUtil
 import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.LocalSyncUtils
-import com.jay.glossy.R
 import com.jay.glossy.db.entities.PlaylistSongMap
 import com.jay.glossy.db.entities.Song
 import com.jay.glossy.extensions.toMediaItem

@@ -1,4 +1,5 @@
 package com.jay.glossy.ui.component
+
 import com.jay.glossy.R
 
 import androidx.compose.foundation.horizontalScroll
@@ -30,7 +31,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupProperties
-import com.jay.glossy.R
 import com.jay.glossy.db.entities.SongWithStats
 
 

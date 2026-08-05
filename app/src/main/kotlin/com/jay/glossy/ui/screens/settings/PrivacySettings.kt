@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.settings
+
 import com.jay.glossy.R
 
 import androidx.compose.foundation.layout.Column
@@ -35,7 +36,6 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalPlayerAwareWindowInsets
-import com.jay.glossy.R
 import com.jay.glossy.constants.DisableScreenshotKey
 import com.jay.glossy.constants.PauseListenHistoryKey
 import com.jay.glossy.constants.PauseSearchHistoryKey

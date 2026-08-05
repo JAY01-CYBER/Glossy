@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens
+
 import com.jay.glossy.R
 
 import android.content.Intent
@@ -43,7 +44,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
-import com.jay.glossy.R
 import com.jay.glossy.ui.theme.MetrolistTheme
 import com.jay.glossy.utils.CrashHandler
 import java.io.File

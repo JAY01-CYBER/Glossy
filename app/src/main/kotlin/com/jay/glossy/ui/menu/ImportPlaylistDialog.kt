@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.menu
+
 import com.jay.glossy.R
 
 import androidx.compose.material3.Icon
@@ -18,7 +19,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
 import com.jay.glossy.LocalDatabase
-import com.jay.glossy.R
 import com.jay.glossy.db.entities.PlaylistEntity
 import com.jay.glossy.ui.component.TextFieldDialog
 import kotlinx.coroutines.Dispatchers

@@ -1,4 +1,5 @@
 package com.jay.glossy.recognition
+
 import com.jay.glossy.R
 
 import android.util.Base64

@@ -1,4 +1,5 @@
 package com.jay.glossy.db.daos
+
 import com.jay.glossy.R
 
 import androidx.room.Dao

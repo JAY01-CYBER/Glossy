@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.artist
+
 import com.jay.glossy.R
 
 import android.content.ClipData
@@ -91,7 +92,6 @@ import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalListenTogetherManager
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.LocalPlayerConnection
-import com.jay.glossy.R
 import com.jay.glossy.constants.AppBarHeight
 import com.jay.glossy.constants.HideExplicitKey
 import com.jay.glossy.constants.ShowArtistDescriptionKey

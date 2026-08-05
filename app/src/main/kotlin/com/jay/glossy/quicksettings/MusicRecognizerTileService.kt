@@ -1,4 +1,5 @@
 package com.jay.glossy.quicksettings
+
 import com.jay.glossy.R
 
 import android.app.PendingIntent
@@ -7,7 +8,6 @@ import android.graphics.drawable.Icon
 import android.os.Build
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
-import com.jay.glossy.R
 import com.jay.glossy.recognition.RecognitionLaunchActivity
 
 class MusicRecognizerTileService : TileService() {

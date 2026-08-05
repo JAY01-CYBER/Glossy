@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.viewmodels
+
 import com.jay.glossy.R
 
 import android.content.Context
@@ -25,7 +26,6 @@ import com.jay.glossy.ui.screens.OptionStats
 import com.jay.glossy.utils.dataStore
 import com.jay.glossy.utils.safeDataStoreEdit
 import com.jay.glossy.utils.reportException
-import com.jay.glossy.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers

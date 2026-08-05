@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.utils
+
 import com.jay.glossy.R
 
 import android.content.ContentValues
@@ -36,7 +37,6 @@ import coil3.ImageLoader
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import coil3.toBitmap
-import com.jay.glossy.R
 import com.jay.glossy.ui.component.LyricsBackgroundStyle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

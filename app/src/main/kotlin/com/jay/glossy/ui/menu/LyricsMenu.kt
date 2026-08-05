@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.menu
+
 import com.jay.glossy.R
 
 import android.app.SearchManager
@@ -63,7 +64,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jay.glossy.LocalDatabase
-import com.jay.glossy.R
 import com.jay.glossy.db.entities.LyricsEntity
 import com.jay.glossy.db.entities.SongEntity
 import com.jay.glossy.lyrics.LyricsTranslationHelper

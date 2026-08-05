@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.artist
+
 import com.jay.glossy.R
 
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -40,7 +41,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.LocalPlayerConnection
-import com.jay.glossy.R
 import com.jay.glossy.constants.ArtistSongSortDescendingKey
 import com.jay.glossy.constants.ArtistSongSortType
 import com.jay.glossy.constants.ArtistSongSortTypeKey

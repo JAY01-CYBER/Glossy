@@ -1,4 +1,5 @@
 package com.jay.glossy.ui.screens.wrapped.pages
+
 import com.jay.glossy.R
 
 import androidx.compose.foundation.layout.Arrangement
@@ -23,7 +24,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.jay.glossy.R
 import com.jay.glossy.ui.screens.wrapped.components.AnimatedBackground
 import com.jay.glossy.ui.screens.wrapped.components.ShapeType
 

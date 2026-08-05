@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.ui.screens.settings.integrations
+
 import com.jay.glossy.R
 
 import androidx.compose.foundation.layout.Column
@@ -22,7 +23,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.jay.glossy.LocalPlayerAwareWindowInsets
-import com.jay.glossy.R
 import com.jay.glossy.ui.component.IconButton
 import com.jay.glossy.ui.component.IntegrationCard
 import com.jay.glossy.ui.component.IntegrationCardItem

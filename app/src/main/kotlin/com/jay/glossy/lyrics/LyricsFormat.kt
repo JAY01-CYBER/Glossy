@@ -4,6 +4,7 @@
  */
 
 package com.jay.glossy.lyrics
+
 import com.jay.glossy.R
 
 private val LRC_TIMESTAMP_HINT = Regex("""\[\d{1,2}:\d{2}""")
