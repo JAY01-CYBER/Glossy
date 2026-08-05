@@ -11,10 +11,10 @@ import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.metrolist.innertube.YouTube
-import com.metrolist.innertube.models.BrowseEndpoint
-import com.metrolist.innertube.models.filterExplicit
-import com.metrolist.innertube.models.filterVideoSongs
+import com.jay.glossy.innertube.YouTube
+import com.jay.glossy.innertube.models.BrowseEndpoint
+import com.jay.glossy.innertube.models.filterExplicit
+import com.jay.glossy.innertube.models.filterVideoSongs
 import com.jay.glossy.constants.HideExplicitKey
 import com.jay.glossy.constants.HideVideoSongsKey
 import com.metrolist.models.ItemsPage

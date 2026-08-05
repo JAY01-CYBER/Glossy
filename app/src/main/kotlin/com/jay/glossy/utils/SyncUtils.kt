@@ -9,15 +9,15 @@ package com.jay.glossy.utils
 import com.jay.glossy.R
 
 import android.content.Context
-import com.metrolist.innertube.YouTube
-import com.metrolist.innertube.models.AlbumItem
-import com.metrolist.innertube.models.ArtistItem
-import com.metrolist.innertube.models.PlaylistItem
-import com.metrolist.innertube.models.PodcastItem
-import com.metrolist.innertube.models.SongItem
-import com.metrolist.innertube.utils.completed
-import com.metrolist.innertube.utils.parseCookieString
-import com.metrolist.lastfm.LastFM
+import com.jay.glossy.innertube.YouTube
+import com.jay.glossy.innertube.models.AlbumItem
+import com.jay.glossy.innertube.models.ArtistItem
+import com.jay.glossy.innertube.models.PlaylistItem
+import com.jay.glossy.innertube.models.PodcastItem
+import com.jay.glossy.innertube.models.SongItem
+import com.jay.glossy.innertube.utils.completed
+import com.jay.glossy.innertube.utils.parseCookieString
+import com.jay.glossy.lastfm.LastFM
 import com.jay.glossy.constants.InnerTubeCookieKey
 import com.jay.glossy.constants.LastFMUseSendLikes
 import com.jay.glossy.constants.LastFullSyncKey

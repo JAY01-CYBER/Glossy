@@ -10,8 +10,8 @@ import com.jay.glossy.R
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import com.metrolist.innertube.YouTube
-import com.metrolist.innertube.models.AccountInfo
+import com.jay.glossy.innertube.YouTube
+import com.jay.glossy.innertube.models.AccountInfo
 import com.jay.glossy.constants.ArtistSongSortType
 import com.jay.glossy.db.DatabaseDao
 import com.jay.glossy.db.entities.Artist

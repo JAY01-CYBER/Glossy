@@ -32,7 +32,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavController
-import com.metrolist.innertube.YouTube
+import com.jay.glossy.innertube.YouTube
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.constants.AccountChannelHandleKey
 import com.jay.glossy.constants.AccountEmailKey

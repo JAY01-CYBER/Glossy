@@ -36,8 +36,8 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.metrolist.innertube.YouTube
-import com.metrolist.innertube.models.SongItem
+import com.jay.glossy.innertube.YouTube
+import com.jay.glossy.innertube.models.SongItem
 import com.jay.glossy.LocalDatabase
 import com.jay.glossy.constants.AddToPlaylistSortDescendingKey
 import com.jay.glossy.constants.AddToPlaylistSortTypeKey

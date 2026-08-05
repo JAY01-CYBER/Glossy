@@ -71,7 +71,7 @@ import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.jay.glossy.ui.utils.resize
-import com.metrolist.innertube.models.PodcastItem
+import com.jay.glossy.innertube.models.PodcastItem
 import timber.log.Timber
 import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalPlayerAwareWindowInsets

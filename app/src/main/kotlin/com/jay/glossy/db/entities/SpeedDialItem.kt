@@ -4,14 +4,14 @@ import com.jay.glossy.R
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.metrolist.innertube.models.AlbumItem
-import com.metrolist.innertube.models.Artist
-import com.metrolist.innertube.models.ArtistItem
-import com.metrolist.innertube.models.EpisodeItem
-import com.metrolist.innertube.models.PlaylistItem
-import com.metrolist.innertube.models.PodcastItem
-import com.metrolist.innertube.models.SongItem
-import com.metrolist.innertube.models.YTItem
+import com.jay.glossy.innertube.models.AlbumItem
+import com.jay.glossy.innertube.models.Artist
+import com.jay.glossy.innertube.models.ArtistItem
+import com.jay.glossy.innertube.models.EpisodeItem
+import com.jay.glossy.innertube.models.PlaylistItem
+import com.jay.glossy.innertube.models.PodcastItem
+import com.jay.glossy.innertube.models.SongItem
+import com.jay.glossy.innertube.models.YTItem
 
 @Entity(tableName = "speed_dial_item")
 data class SpeedDialItem(
@@ -35,7 +35,7 @@ data class SpeedDialItem(
                 artists = subtitle?.split(", ")?.mapIndexed { index, name ->
                     Artist(name = name, id = subtitleIds?.split(", ")?.getOrNull(index))
                 } ?: emptyList(),
-                album = if (albumId != null && albumName != null) com.metrolist.innertube.models.Album(name = albumName, id = albumId) else null,
+                album = if (albumId != null && albumName != null) com.jay.glossy.innertube.models.Album(name = albumName, id = albumId) else null,
                 thumbnail = thumbnailUrl ?: "",
                 explicit = explicit
             )

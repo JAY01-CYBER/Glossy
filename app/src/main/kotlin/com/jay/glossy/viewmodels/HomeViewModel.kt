@@ -10,22 +10,22 @@ import com.jay.glossy.R
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.metrolist.innertube.YouTube
-import com.metrolist.innertube.models.AlbumItem
-import com.metrolist.innertube.models.Artist
-import com.metrolist.innertube.models.ArtistItem
-import com.metrolist.innertube.models.PlaylistItem
-import com.metrolist.innertube.models.SongItem
+import com.jay.glossy.innertube.YouTube
+import com.jay.glossy.innertube.models.AlbumItem
+import com.jay.glossy.innertube.models.Artist
+import com.jay.glossy.innertube.models.ArtistItem
+import com.jay.glossy.innertube.models.PlaylistItem
+import com.jay.glossy.innertube.models.SongItem
 import kotlinx.coroutines.flow.combine
-import com.metrolist.innertube.models.WatchEndpoint
-import com.metrolist.innertube.models.BrowseEndpoint
-import com.metrolist.innertube.models.YTItem
-import com.metrolist.innertube.models.filterExplicit
-import com.metrolist.innertube.models.filterVideoSongs
-import com.metrolist.innertube.models.filterYoutubeShorts
-import com.metrolist.innertube.pages.ExplorePage
-import com.metrolist.innertube.pages.HomePage
-import com.metrolist.innertube.utils.completed
+import com.jay.glossy.innertube.models.WatchEndpoint
+import com.jay.glossy.innertube.models.BrowseEndpoint
+import com.jay.glossy.innertube.models.YTItem
+import com.jay.glossy.innertube.models.filterExplicit
+import com.jay.glossy.innertube.models.filterVideoSongs
+import com.jay.glossy.innertube.models.filterYoutubeShorts
+import com.jay.glossy.innertube.pages.ExplorePage
+import com.jay.glossy.innertube.pages.HomePage
+import com.jay.glossy.innertube.utils.completed
 import com.jay.glossy.constants.HideExplicitKey
 import com.jay.glossy.constants.HideVideoSongsKey
 import com.jay.glossy.constants.HideYoutubeShortsKey
@@ -107,7 +107,7 @@ class HomeViewModel @Inject constructor(
     private val previousHomePage = MutableStateFlow<HomePage?>(null)
 
     // Official API data for podcast sections
-    val savedPodcastShows = MutableStateFlow<List<com.metrolist.innertube.models.PodcastItem>>(emptyList())
+    val savedPodcastShows = MutableStateFlow<List<com.jay.glossy.innertube.models.PodcastItem>>(emptyList())
     val episodesForLater = MutableStateFlow<List<SongItem>>(emptyList())
 
     val allLocalItems = MutableStateFlow<List<LocalItem>>(emptyList())

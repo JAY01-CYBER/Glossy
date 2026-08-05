@@ -55,7 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
-import com.metrolist.innertube.utils.parseCookieString
+import com.jay.glossy.innertube.utils.parseCookieString
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.constants.CONTENT_TYPE_HEADER
 import com.jay.glossy.constants.CONTENT_TYPE_PLAYLIST

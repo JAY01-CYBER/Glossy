@@ -7,7 +7,7 @@ package com.metrolist.models
 
 import com.jay.glossy.R
 
-import com.metrolist.innertube.models.YTItem
+import com.jay.glossy.innertube.models.YTItem
 
 data class ItemsPage(
     val items: List<YTItem>,

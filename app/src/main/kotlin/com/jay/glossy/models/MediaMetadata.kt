@@ -8,9 +8,9 @@ package com.metrolist.models
 import com.jay.glossy.R
 
 import androidx.compose.runtime.Immutable
-import com.metrolist.innertube.models.EpisodeItem
-import com.metrolist.innertube.models.SongItem
-import com.metrolist.innertube.models.WatchEndpoint.WatchEndpointMusicSupportedConfigs.WatchEndpointMusicConfig.Companion.MUSIC_VIDEO_TYPE_ATV
+import com.jay.glossy.innertube.models.EpisodeItem
+import com.jay.glossy.innertube.models.SongItem
+import com.jay.glossy.innertube.models.WatchEndpoint.WatchEndpointMusicSupportedConfigs.WatchEndpointMusicConfig.Companion.MUSIC_VIDEO_TYPE_ATV
 import com.jay.glossy.db.entities.Song
 import com.jay.glossy.db.entities.SongEntity
 import com.jay.glossy.ui.utils.resize
@@ -72,8 +72,8 @@ data class MediaMetadata(
     fun toYTItem() = SongItem(
         id = id,
         title = title,
-        artists = artists.map { com.metrolist.innertube.models.Artist(name = it.name, id = it.id) },
-        album = album?.let { com.metrolist.innertube.models.Album(name = it.title, id = it.id) },
+        artists = artists.map { com.jay.glossy.innertube.models.Artist(name = it.name, id = it.id) },
+        album = album?.let { com.jay.glossy.innertube.models.Album(name = it.title, id = it.id) },
         duration = duration,
         musicVideoType = musicVideoType,
         thumbnail = thumbnailUrl ?: "",

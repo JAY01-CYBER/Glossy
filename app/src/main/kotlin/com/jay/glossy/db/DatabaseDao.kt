@@ -19,10 +19,10 @@ import androidx.room.Transaction
 import androidx.room.Update
 import androidx.room.Upsert
 import androidx.sqlite.db.SupportSQLiteQuery
-import com.metrolist.innertube.models.PlaylistItem
-import com.metrolist.innertube.models.SongItem
-import com.metrolist.innertube.pages.AlbumPage
-import com.metrolist.innertube.pages.ArtistPage
+import com.jay.glossy.innertube.models.PlaylistItem
+import com.jay.glossy.innertube.models.SongItem
+import com.jay.glossy.innertube.pages.AlbumPage
+import com.jay.glossy.innertube.pages.ArtistPage
 import com.jay.glossy.constants.AlbumSortType
 import com.jay.glossy.constants.ArtistSongSortType
 import com.jay.glossy.constants.ArtistSortType

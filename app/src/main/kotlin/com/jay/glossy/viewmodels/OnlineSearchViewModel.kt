@@ -15,11 +15,11 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.metrolist.innertube.YouTube
-import com.metrolist.innertube.models.filterExplicit
-import com.metrolist.innertube.models.filterVideoSongs
-import com.metrolist.innertube.models.filterYoutubeShorts
-import com.metrolist.innertube.pages.SearchSummaryPage
+import com.jay.glossy.innertube.YouTube
+import com.jay.glossy.innertube.models.filterExplicit
+import com.jay.glossy.innertube.models.filterVideoSongs
+import com.jay.glossy.innertube.models.filterYoutubeShorts
+import com.jay.glossy.innertube.pages.SearchSummaryPage
 import com.jay.glossy.constants.HideExplicitKey
 import com.jay.glossy.constants.HideVideoSongsKey
 import com.jay.glossy.constants.HideYoutubeShortsKey

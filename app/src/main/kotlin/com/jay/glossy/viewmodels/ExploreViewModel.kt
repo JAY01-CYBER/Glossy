@@ -10,9 +10,9 @@ import com.jay.glossy.R
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.metrolist.innertube.YouTube
-import com.metrolist.innertube.models.filterExplicit
-import com.metrolist.innertube.pages.ExplorePage
+import com.jay.glossy.innertube.YouTube
+import com.jay.glossy.innertube.models.filterExplicit
+import com.jay.glossy.innertube.pages.ExplorePage
 import com.jay.glossy.constants.HideExplicitKey
 import com.jay.glossy.db.MusicDatabase
 import com.jay.glossy.utils.dataStore

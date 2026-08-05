@@ -31,7 +31,7 @@ import com.jay.glossy.MainActivity
 import com.jay.glossy.db.DatabaseDao
 import com.jay.glossy.db.entities.RecognitionHistory
 import com.jay.glossy.recognition.MusicRecognitionService
-import com.metrolist.shazamkit.models.RecognitionStatus
+import com.jay.glossy.shazamkit.models.RecognitionStatus
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
