@@ -15,8 +15,8 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.jay.glossy.MainActivity
 import com.jay.glossy.R
-import com.metrolist.shazamkit.models.RecognitionResult
-import com.metrolist.shazamkit.models.RecognitionStatus
+import com.jay.glossy.shazamkit.models.RecognitionResult
+import com.jay.glossy.shazamkit.models.RecognitionStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

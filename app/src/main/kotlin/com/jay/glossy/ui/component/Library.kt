@@ -13,9 +13,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
-import com.metrolist.innertube.models.PlaylistItem
+import com.jay.glossy.innertube.models.PlaylistItem
 import com.jay.glossy.LocalNavController
-import com.metrolist.innertube.models.WatchEndpoint
+import com.jay.glossy.innertube.models.WatchEndpoint
 import com.jay.glossy.R
 import com.jay.glossy.db.entities.Album
 import com.jay.glossy.db.entities.Artist

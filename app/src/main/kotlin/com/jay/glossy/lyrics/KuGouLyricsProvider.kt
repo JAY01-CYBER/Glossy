@@ -6,7 +6,7 @@
 package com.jay.glossy.lyrics
 
 import android.content.Context
-import com.metrolist.kugou.KuGou
+import com.jay.glossy.kugou.KuGou
 import com.jay.glossy.constants.EnableKugouKey
 import com.jay.glossy.utils.dataStore
 import com.jay.glossy.utils.get

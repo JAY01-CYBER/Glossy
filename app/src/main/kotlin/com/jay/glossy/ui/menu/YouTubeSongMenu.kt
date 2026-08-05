@@ -56,9 +56,9 @@ import androidx.media3.exoplayer.offline.Download
 import androidx.media3.exoplayer.offline.DownloadRequest
 import androidx.media3.exoplayer.offline.DownloadService
 import coil3.compose.AsyncImage
-import com.metrolist.innertube.YouTube
+import com.jay.glossy.innertube.YouTube
 import com.jay.glossy.LocalNavController
-import com.metrolist.innertube.models.SongItem
+import com.jay.glossy.innertube.models.SongItem
 import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalDownloadUtil
 import com.jay.glossy.LocalListenTogetherManager

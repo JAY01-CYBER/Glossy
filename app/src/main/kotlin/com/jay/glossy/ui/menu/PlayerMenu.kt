@@ -78,7 +78,7 @@ import androidx.media3.common.PlaybackParameters
 import androidx.media3.exoplayer.offline.Download
 import androidx.media3.exoplayer.offline.DownloadRequest
 import androidx.media3.exoplayer.offline.DownloadService
-import com.metrolist.innertube.YouTube
+import com.jay.glossy.innertube.YouTube
 import com.jay.glossy.LocalNavController
 import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalDownloadUtil

@@ -27,11 +27,11 @@ import coil3.imageLoader
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
-import com.metrolist.innertube.YouTube
-import com.metrolist.innertube.models.PlaylistItem
-import com.metrolist.innertube.models.SongItem
-import com.metrolist.innertube.models.filterExplicit
-import com.metrolist.innertube.models.filterVideoSongs
+import com.jay.glossy.innertube.YouTube
+import com.jay.glossy.innertube.models.PlaylistItem
+import com.jay.glossy.innertube.models.SongItem
+import com.jay.glossy.innertube.models.filterExplicit
+import com.jay.glossy.innertube.models.filterVideoSongs
 import com.jay.glossy.R
 import com.jay.glossy.constants.AndroidAutoSearchLocalLimitKey
 import com.jay.glossy.constants.HideExplicitKey
@@ -299,7 +299,7 @@ constructor(
                             emptyList()
                         } else {
                             try {
-                                val allSections = mutableListOf<com.metrolist.innertube.pages.HomePage.Section>()
+                                val allSections = mutableListOf<com.jay.glossy.innertube.pages.HomePage.Section>()
                                 var continuation: String? = null
                                 val maxPages = 4
 

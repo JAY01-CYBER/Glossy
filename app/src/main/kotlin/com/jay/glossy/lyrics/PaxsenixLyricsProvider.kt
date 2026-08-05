@@ -6,7 +6,7 @@
 package com.jay.glossy.lyrics
 
 import android.content.Context
-import com.metrolist.paxsenix.Paxsenix
+import com.jay.glossy.paxsenix.Paxsenix
 import com.jay.glossy.constants.EnablePaxsenixKey
 import com.jay.glossy.utils.dataStore
 import com.jay.glossy.utils.get

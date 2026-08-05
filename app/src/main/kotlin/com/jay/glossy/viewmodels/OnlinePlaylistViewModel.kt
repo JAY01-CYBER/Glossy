@@ -9,10 +9,10 @@ import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.metrolist.innertube.YouTube
-import com.metrolist.innertube.models.PlaylistItem
-import com.metrolist.innertube.models.SongItem
-import com.metrolist.innertube.models.filterVideoSongs
+import com.jay.glossy.innertube.YouTube
+import com.jay.glossy.innertube.models.PlaylistItem
+import com.jay.glossy.innertube.models.SongItem
+import com.jay.glossy.innertube.models.filterVideoSongs
 import com.jay.glossy.constants.HideVideoSongsKey
 import com.jay.glossy.db.MusicDatabase
 import com.jay.glossy.utils.dataStore
@@ -30,8 +30,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import com.jay.glossy.constants.SongSortType
-import com.metrolist.innertube.models.Artist
-import com.metrolist.innertube.models.Album
+import com.jay.glossy.innertube.models.Artist
+import com.jay.glossy.innertube.models.Album
 import javax.inject.Inject
 
 @HiltViewModel
@@ -174,7 +174,7 @@ class OnlinePlaylistViewModel @Inject constructor(
                     id = song.song.id,
                     title = song.song.title,
                     artists = song.artists.map { Artist(it.id, it.name) },
-                    album = song.album?.let { com.metrolist.innertube.models.Album(it.id, it.title) },
+                    album = song.album?.let { com.jay.glossy.innertube.models.Album(it.id, it.title) },
                     duration = song.song.duration,
                     thumbnail = song.song.thumbnailUrl ?: "",
                     explicit = song.song.explicit,

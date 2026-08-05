@@ -12,16 +12,16 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.metrolist.innertube.YouTube
-import com.metrolist.innertube.models.AlbumItem
-import com.metrolist.innertube.models.EpisodeItem
-import com.metrolist.innertube.models.PlaylistItem
-import com.metrolist.innertube.models.PodcastItem
-import com.metrolist.innertube.models.SongItem
-import com.metrolist.innertube.models.filterExplicit
-import com.metrolist.innertube.models.filterVideoSongs
-import com.metrolist.innertube.models.filterYoutubeShorts
-import com.metrolist.innertube.pages.ArtistPage
+import com.jay.glossy.innertube.YouTube
+import com.jay.glossy.innertube.models.AlbumItem
+import com.jay.glossy.innertube.models.EpisodeItem
+import com.jay.glossy.innertube.models.PlaylistItem
+import com.jay.glossy.innertube.models.PodcastItem
+import com.jay.glossy.innertube.models.SongItem
+import com.jay.glossy.innertube.models.filterExplicit
+import com.jay.glossy.innertube.models.filterVideoSongs
+import com.jay.glossy.innertube.models.filterYoutubeShorts
+import com.jay.glossy.innertube.pages.ArtistPage
 import com.jay.glossy.constants.HideExplicitKey
 import com.jay.glossy.constants.HideVideoSongsKey
 import com.jay.glossy.constants.HideYoutubeShortsKey
@@ -154,7 +154,7 @@ class ArtistViewModel @Inject constructor(
                         emptyMap()
                     }
 
-                    fun com.metrolist.innertube.models.Artist.resolve() =
+                    fun com.jay.glossy.innertube.models.Artist.resolve() =
                         if (id == null) resolvedIdMap[name]?.let { copy(id = it) } ?: this else this
 
                     // Resolve artist IDs and fetch durations from more endpoint

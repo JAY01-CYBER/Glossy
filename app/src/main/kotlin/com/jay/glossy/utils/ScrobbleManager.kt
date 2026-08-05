@@ -5,7 +5,7 @@
 
 package com.jay.glossy.utils
 
-import com.metrolist.lastfm.LastFM
+import com.jay.glossy.lastfm.LastFM
 import com.jay.glossy.models.MediaMetadata
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job

@@ -6,8 +6,8 @@
 package com.jay.glossy.playback.queues
 
 import androidx.media3.common.MediaItem
-import com.metrolist.innertube.YouTube
-import com.metrolist.innertube.models.WatchEndpoint
+import com.jay.glossy.innertube.YouTube
+import com.jay.glossy.innertube.models.WatchEndpoint
 import com.jay.glossy.db.entities.AlbumWithSongs
 import com.jay.glossy.extensions.toMediaItem
 import com.jay.glossy.models.MediaMetadata

@@ -10,8 +10,8 @@ import android.os.SystemClock
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
-import com.metrolist.innertube.YouTube
-import com.metrolist.innertube.models.WatchEndpoint
+import com.jay.glossy.innertube.YouTube
+import com.jay.glossy.innertube.models.WatchEndpoint
 import com.jay.glossy.constants.ListenTogetherSyncVolumeKey
 import com.jay.glossy.extensions.currentMetadata
 import com.jay.glossy.extensions.metadata

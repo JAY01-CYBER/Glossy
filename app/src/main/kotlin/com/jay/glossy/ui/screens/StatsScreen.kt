@@ -61,9 +61,9 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.metrolist.innertube.models.Artist
-import com.metrolist.innertube.models.WatchEndpoint
-import com.metrolist.innertube.utils.parseCookieString
+import com.jay.glossy.innertube.models.Artist
+import com.jay.glossy.innertube.models.WatchEndpoint
+import com.jay.glossy.innertube.utils.parseCookieString
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.R

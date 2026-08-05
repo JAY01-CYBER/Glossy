@@ -92,11 +92,11 @@ import androidx.media3.session.MediaSessionService
 import androidx.media3.session.SessionToken
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.MoreExecutors
-import com.metrolist.innertube.YouTube
-import com.metrolist.innertube.strategy.ContentHints
-import com.metrolist.innertube.models.SongItem
-import com.metrolist.innertube.models.WatchEndpoint
-import com.metrolist.lastfm.LastFM
+import com.jay.glossy.innertube.YouTube
+import com.jay.glossy.innertube.strategy.ContentHints
+import com.jay.glossy.innertube.models.SongItem
+import com.jay.glossy.innertube.models.WatchEndpoint
+import com.jay.glossy.lastfm.LastFM
 import com.jay.glossy.MainActivity
 import com.jay.glossy.R
 import com.jay.glossy.constants.AndroidAutoTargetPlaylistKey

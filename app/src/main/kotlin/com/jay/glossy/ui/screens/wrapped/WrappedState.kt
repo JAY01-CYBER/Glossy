@@ -5,7 +5,7 @@
 
 package com.jay.glossy.ui.screens.wrapped
 
-import com.metrolist.innertube.models.AccountInfo
+import com.jay.glossy.innertube.models.AccountInfo
 import com.jay.glossy.db.entities.Album
 import com.jay.glossy.db.entities.Artist
 import com.jay.glossy.db.entities.SongWithStats

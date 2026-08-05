@@ -5,7 +5,7 @@
 
 package com.jay.glossy.models
 
-import com.metrolist.innertube.models.YTItem
+import com.jay.glossy.innertube.models.YTItem
 import com.jay.glossy.db.entities.LocalItem
 
 data class SimilarRecommendation(

@@ -13,8 +13,8 @@ import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
-import com.metrolist.innertube.utils.parseCookieString
-import com.metrolist.innertube.utils.sha1
+import com.jay.glossy.innertube.utils.parseCookieString
+import com.jay.glossy.innertube.utils.sha1
 import com.jay.glossy.R
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
