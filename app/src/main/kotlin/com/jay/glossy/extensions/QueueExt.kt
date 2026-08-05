@@ -5,10 +5,10 @@
 
 package com.jay.glossy.extensions
 
-import com.jay.glossy.models.MediaMetadata
-import com.jay.glossy.models.PersistQueue
-import com.jay.glossy.models.QueueData
-import com.jay.glossy.models.QueueType
+import com.metrolist.models.MediaMetadata
+import com.metrolist.models.PersistQueue
+import com.metrolist.models.QueueData
+import com.metrolist.models.QueueType
 import com.jay.glossy.playback.queues.ListQueue
 import com.jay.glossy.playback.queues.LocalAlbumRadio
 import com.jay.glossy.playback.queues.Queue

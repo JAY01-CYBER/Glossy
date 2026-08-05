@@ -17,9 +17,9 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import androidx.core.content.ContextCompat
-import com.jay.glossy.shazamkit.Shazam
-import com.jay.glossy.shazamkit.models.RecognitionResult
-import com.jay.glossy.shazamkit.models.RecognitionStatus
+import com.metrolist.shazamkit.Shazam
+import com.metrolist.shazamkit.models.RecognitionResult
+import com.metrolist.shazamkit.models.RecognitionStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

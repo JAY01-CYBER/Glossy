@@ -56,7 +56,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.util.fastForEachReversed
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.jay.glossy.innertube.utils.parseCookieString
+import com.metrolist.innertube.utils.parseCookieString
 import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.LocalPlayerConnection
@@ -65,7 +65,7 @@ import com.jay.glossy.constants.HistorySource
 import com.jay.glossy.constants.InnerTubeCookieKey
 import com.jay.glossy.extensions.metadata
 import com.jay.glossy.extensions.toMediaItem
-import com.jay.glossy.models.toMediaMetadata
+import com.metrolist.models.toMediaMetadata
 import com.jay.glossy.playback.queues.ListQueue
 import com.jay.glossy.playback.queues.YouTubeQueue
 import com.jay.glossy.ui.component.ChipsRow

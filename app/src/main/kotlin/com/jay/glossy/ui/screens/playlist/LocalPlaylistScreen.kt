@@ -102,10 +102,10 @@ import androidx.media3.exoplayer.offline.DownloadRequest
 import androidx.media3.exoplayer.offline.DownloadService
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
-import com.jay.glossy.innertube.YouTube
-import com.jay.glossy.innertube.models.PlaylistItem
-import com.jay.glossy.innertube.models.SongItem
-import com.jay.glossy.innertube.utils.completed
+import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.models.PlaylistItem
+import com.metrolist.innertube.models.SongItem
+import com.metrolist.innertube.utils.completed
 import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalDownloadUtil
 import com.jay.glossy.LocalNavController
@@ -124,7 +124,7 @@ import com.jay.glossy.db.entities.PlaylistSong
 import com.jay.glossy.db.entities.PlaylistSongMap
 import com.jay.glossy.extensions.move
 import com.jay.glossy.extensions.toMediaItem
-import com.jay.glossy.models.toMediaMetadata
+import com.metrolist.models.toMediaMetadata
 import com.jay.glossy.playback.ExoDownloadService
 import com.jay.glossy.playback.queues.ListQueue
 import com.jay.glossy.ui.component.ActionPromptDialog

@@ -14,7 +14,7 @@ import com.jay.glossy.db.entities.LyricsEntity
 import com.jay.glossy.db.entities.Song
 import com.jay.glossy.lyrics.LyricsHelper
 import com.jay.glossy.lyrics.LyricsResult
-import com.jay.glossy.models.MediaMetadata
+import com.metrolist.models.MediaMetadata
 import com.jay.glossy.utils.NetworkConnectivityObserver
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers

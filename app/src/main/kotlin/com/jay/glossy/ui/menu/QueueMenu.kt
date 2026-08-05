@@ -57,7 +57,7 @@ import androidx.media3.exoplayer.offline.DownloadRequest
 import androidx.media3.exoplayer.offline.DownloadService
 import coil3.compose.AsyncImage
 import com.jay.glossy.LocalNavController
-import com.jay.glossy.innertube.YouTube
+import com.metrolist.innertube.YouTube
 import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalDownloadUtil
 import com.jay.glossy.LocalPlayerConnection
@@ -66,8 +66,8 @@ import com.jay.glossy.R
 import com.jay.glossy.constants.ListItemHeight
 import com.jay.glossy.constants.ListThumbnailSize
 import com.jay.glossy.extensions.toMediaItem
-import com.jay.glossy.models.MediaMetadata
-import com.jay.glossy.models.toMediaMetadata
+import com.metrolist.models.MediaMetadata
+import com.metrolist.models.toMediaMetadata
 import com.jay.glossy.playback.ExoDownloadService
 import com.jay.glossy.playback.queues.YouTubeQueue
 import com.jay.glossy.ui.component.BottomSheetState

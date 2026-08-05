@@ -67,7 +67,7 @@ import com.jay.glossy.db.entities.LyricsEntity
 import com.jay.glossy.db.entities.SongEntity
 import com.jay.glossy.lyrics.LyricsTranslationHelper
 import com.jay.glossy.lyrics.LyricsUtils
-import com.jay.glossy.models.MediaMetadata
+import com.metrolist.models.MediaMetadata
 import com.jay.glossy.ui.component.DefaultDialog
 import com.jay.glossy.ui.component.ListDialog
 import com.jay.glossy.ui.component.Material3MenuGroup

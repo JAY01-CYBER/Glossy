@@ -7,7 +7,7 @@ package com.jay.glossy.playback.queues
 
 import androidx.media3.common.MediaItem
 import com.jay.glossy.extensions.metadata
-import com.jay.glossy.models.MediaMetadata
+import com.metrolist.models.MediaMetadata
 
 interface Queue {
     val preloadItem: MediaMetadata?

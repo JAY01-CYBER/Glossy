@@ -52,8 +52,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.SavedStateHandle
 import com.jay.glossy.LocalNavController
-import com.jay.glossy.innertube.models.WatchEndpoint
-import com.jay.glossy.innertube.utils.YouTubeUrlParser
+import com.metrolist.innertube.models.WatchEndpoint
+import com.metrolist.innertube.utils.YouTubeUrlParser
 import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalIsPlayerExpanded
 import com.jay.glossy.LocalPlayerAwareWindowInsets

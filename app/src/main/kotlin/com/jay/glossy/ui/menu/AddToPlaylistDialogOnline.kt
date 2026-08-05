@@ -34,8 +34,8 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.jay.glossy.innertube.YouTube
-import com.jay.glossy.innertube.models.SongItem
+import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.models.SongItem
 import com.jay.glossy.LocalDatabase
 import com.jay.glossy.R
 import com.jay.glossy.constants.AddToPlaylistSortDescendingKey
@@ -44,8 +44,8 @@ import com.jay.glossy.constants.ListThumbnailSize
 import com.jay.glossy.constants.PlaylistSortType
 import com.jay.glossy.db.entities.Playlist
 import com.jay.glossy.db.entities.Song
-import com.jay.glossy.models.ItemsPage
-import com.jay.glossy.models.toMediaMetadata
+import com.metrolist.models.ItemsPage
+import com.metrolist.models.toMediaMetadata
 import com.jay.glossy.ui.component.CreatePlaylistDialog
 import com.jay.glossy.ui.component.DefaultDialog
 import com.jay.glossy.ui.component.ListDialog

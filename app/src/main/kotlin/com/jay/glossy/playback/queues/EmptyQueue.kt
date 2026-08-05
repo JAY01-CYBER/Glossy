@@ -6,7 +6,7 @@
 package com.jay.glossy.playback.queues
 
 import androidx.media3.common.MediaItem
-import com.jay.glossy.models.MediaMetadata
+import com.metrolist.models.MediaMetadata
 
 object EmptyQueue : Queue {
     override val preloadItem: MediaMetadata? = null

@@ -6,7 +6,7 @@
 package com.jay.glossy.lyrics
 
 import android.content.Context
-import com.jay.glossy.innertube.YouTube
+import com.metrolist.innertube.YouTube
 
 object YouTubeSubtitleLyricsProvider : LyricsProvider {
     override val name = "YouTube Subtitle"

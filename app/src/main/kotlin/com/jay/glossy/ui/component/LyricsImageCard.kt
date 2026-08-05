@@ -53,7 +53,7 @@ import coil3.compose.rememberAsyncImagePainter
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.jay.glossy.R
-import com.jay.glossy.models.MediaMetadata
+import com.metrolist.models.MediaMetadata
 
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Brush

@@ -111,7 +111,7 @@ import com.jay.glossy.extensions.metadata
 import com.jay.glossy.extensions.move
 import com.jay.glossy.extensions.toggleRepeatMode
 import com.jay.glossy.listentogether.RoomRole
-import com.jay.glossy.models.MediaMetadata
+import com.metrolist.models.MediaMetadata
 import com.jay.glossy.ui.component.ActionPromptDialog
 import com.jay.glossy.ui.component.BottomSheet
 import com.jay.glossy.ui.component.BottomSheetState

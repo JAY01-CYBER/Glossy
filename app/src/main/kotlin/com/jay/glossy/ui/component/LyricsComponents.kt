@@ -77,7 +77,7 @@ import coil3.request.allowHardware
 import coil3.toBitmap
 import com.jay.glossy.R
 import com.jay.glossy.lyrics.LyricsTranslationHelper
-import com.jay.glossy.models.MediaMetadata
+import com.metrolist.models.MediaMetadata
 import com.jay.glossy.ui.screens.settings.LyricsPosition
 import com.jay.glossy.utils.ComposeToImage
 import kotlinx.coroutines.CoroutineScope

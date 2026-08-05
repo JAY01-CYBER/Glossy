@@ -58,13 +58,13 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
-import com.jay.glossy.innertube.models.SongItem
-import com.jay.glossy.innertube.models.WatchEndpoint
+import com.metrolist.innertube.models.SongItem
+import com.metrolist.innertube.models.WatchEndpoint
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.R
 import com.jay.glossy.constants.ListItemHeight
-import com.jay.glossy.models.toMediaMetadata
+import com.metrolist.models.toMediaMetadata
 import com.jay.glossy.playback.queues.YouTubeQueue
 import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.component.NavigationTitle

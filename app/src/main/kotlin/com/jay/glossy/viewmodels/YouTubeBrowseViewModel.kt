@@ -9,9 +9,9 @@ import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.jay.glossy.innertube.YouTube
-import com.jay.glossy.innertube.models.filterYoutubeShorts
-import com.jay.glossy.innertube.pages.BrowseResult
+import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.models.filterYoutubeShorts
+import com.metrolist.innertube.pages.BrowseResult
 import com.jay.glossy.constants.HideExplicitKey
 import com.jay.glossy.constants.HideVideoSongsKey
 import com.jay.glossy.constants.HideYoutubeShortsKey

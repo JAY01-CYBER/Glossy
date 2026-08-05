@@ -3,9 +3,9 @@
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
-package com.jay.glossy.models
+package com.metrolist.models
 
-import com.jay.glossy.innertube.models.YTItem
+import com.metrolist.innertube.models.YTItem
 import com.jay.glossy.db.entities.LocalItem
 
 data class SimilarRecommendation(

@@ -3,12 +3,12 @@
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
-package com.jay.glossy.models
+package com.metrolist.models
 
 import androidx.compose.runtime.Immutable
-import com.jay.glossy.innertube.models.EpisodeItem
-import com.jay.glossy.innertube.models.SongItem
-import com.jay.glossy.innertube.models.WatchEndpoint.WatchEndpointMusicSupportedConfigs.WatchEndpointMusicConfig.Companion.MUSIC_VIDEO_TYPE_ATV
+import com.metrolist.innertube.models.EpisodeItem
+import com.metrolist.innertube.models.SongItem
+import com.metrolist.innertube.models.WatchEndpoint.WatchEndpointMusicSupportedConfigs.WatchEndpointMusicConfig.Companion.MUSIC_VIDEO_TYPE_ATV
 import com.jay.glossy.db.entities.Song
 import com.jay.glossy.db.entities.SongEntity
 import com.jay.glossy.ui.utils.resize
@@ -70,8 +70,8 @@ data class MediaMetadata(
     fun toYTItem() = SongItem(
         id = id,
         title = title,
-        artists = artists.map { com.jay.glossy.innertube.models.Artist(name = it.name, id = it.id) },
-        album = album?.let { com.jay.glossy.innertube.models.Album(name = it.title, id = it.id) },
+        artists = artists.map { com.metrolist.innertube.models.Artist(name = it.name, id = it.id) },
+        album = album?.let { com.metrolist.innertube.models.Album(name = it.title, id = it.id) },
         duration = duration,
         musicVideoType = musicVideoType,
         thumbnail = thumbnailUrl ?: "",

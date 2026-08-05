@@ -53,8 +53,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
-import com.jay.glossy.innertube.YouTube
-import com.jay.glossy.innertube.utils.parseCookieString
+import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.utils.parseCookieString
 import com.jay.glossy.BuildConfig
 import com.jay.glossy.R
 import com.jay.glossy.constants.AccountChannelHandleKey

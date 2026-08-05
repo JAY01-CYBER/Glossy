@@ -17,8 +17,8 @@ import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.offline.Download
 import androidx.media3.exoplayer.offline.DownloadManager
 import androidx.media3.exoplayer.offline.DownloadNotificationHelper
-import com.jay.glossy.innertube.YouTube
-import com.jay.glossy.innertube.strategy.ContentHints
+import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.strategy.ContentHints
 import com.jay.glossy.constants.AudioQuality
 import com.jay.glossy.constants.AudioQualityKey
 import com.jay.glossy.db.MusicDatabase

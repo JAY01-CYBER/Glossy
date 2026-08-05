@@ -3,9 +3,9 @@ package com.jay.glossy.viewmodels
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.jay.glossy.innertube.YouTube
-import com.jay.glossy.innertube.models.EpisodeItem
-import com.jay.glossy.innertube.models.PodcastItem
+import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.models.EpisodeItem
+import com.metrolist.innertube.models.PodcastItem
 import com.jay.glossy.db.MusicDatabase
 import com.jay.glossy.db.entities.PodcastEntity
 import com.jay.glossy.utils.SyncUtils

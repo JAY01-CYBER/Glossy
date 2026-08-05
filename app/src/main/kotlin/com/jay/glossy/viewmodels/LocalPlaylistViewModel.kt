@@ -9,8 +9,8 @@ import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.jay.glossy.innertube.YouTube
-import com.jay.glossy.innertube.models.PlaylistItem
+import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.models.PlaylistItem
 import com.jay.glossy.constants.HideVideoSongsKey
 import com.jay.glossy.constants.PlaylistSongSortDescendingKey
 import com.jay.glossy.constants.PlaylistSongSortType

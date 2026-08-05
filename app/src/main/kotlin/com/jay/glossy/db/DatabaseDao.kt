@@ -17,10 +17,10 @@ import androidx.room.Transaction
 import androidx.room.Update
 import androidx.room.Upsert
 import androidx.sqlite.db.SupportSQLiteQuery
-import com.jay.glossy.innertube.models.PlaylistItem
-import com.jay.glossy.innertube.models.SongItem
-import com.jay.glossy.innertube.pages.AlbumPage
-import com.jay.glossy.innertube.pages.ArtistPage
+import com.metrolist.innertube.models.PlaylistItem
+import com.metrolist.innertube.models.SongItem
+import com.metrolist.innertube.pages.AlbumPage
+import com.metrolist.innertube.pages.ArtistPage
 import com.jay.glossy.constants.AlbumSortType
 import com.jay.glossy.constants.ArtistSongSortType
 import com.jay.glossy.constants.ArtistSortType
@@ -53,8 +53,8 @@ import com.jay.glossy.db.entities.SongEntity
 import com.jay.glossy.db.entities.SongWithStats
 import com.jay.glossy.extensions.reversed
 import com.jay.glossy.extensions.toSQLiteQuery
-import com.jay.glossy.models.MediaMetadata
-import com.jay.glossy.models.toMediaMetadata
+import com.metrolist.models.MediaMetadata
+import com.metrolist.models.toMediaMetadata
 import com.jay.glossy.ui.utils.resize
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first

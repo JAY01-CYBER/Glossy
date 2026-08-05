@@ -3,7 +3,7 @@
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
-package com.jay.glossy.models
+package com.metrolist.models
 
 import java.io.Serializable
 

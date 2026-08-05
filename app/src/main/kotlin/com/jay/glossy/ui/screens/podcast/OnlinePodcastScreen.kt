@@ -69,14 +69,14 @@ import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.jay.glossy.ui.utils.resize
-import com.jay.glossy.innertube.models.PodcastItem
+import com.metrolist.innertube.models.PodcastItem
 import timber.log.Timber
 import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.db.entities.PodcastEntity
 import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.R
-import com.jay.glossy.models.toMediaMetadata
+import com.metrolist.models.toMediaMetadata
 import com.jay.glossy.extensions.toMediaItem
 import com.jay.glossy.playback.queues.ListQueue
 import com.jay.glossy.ui.component.IconButton

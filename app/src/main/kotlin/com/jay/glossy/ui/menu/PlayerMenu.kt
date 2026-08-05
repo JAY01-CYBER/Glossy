@@ -78,7 +78,7 @@ import androidx.media3.common.PlaybackParameters
 import androidx.media3.exoplayer.offline.Download
 import androidx.media3.exoplayer.offline.DownloadRequest
 import androidx.media3.exoplayer.offline.DownloadService
-import com.jay.glossy.innertube.YouTube
+import com.metrolist.innertube.YouTube
 import com.jay.glossy.LocalNavController
 import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalDownloadUtil
@@ -89,7 +89,7 @@ import com.jay.glossy.constants.ListItemHeight
 import com.jay.glossy.constants.VarispeedKey
 import com.jay.glossy.listentogether.ConnectionState
 import com.jay.glossy.listentogether.ListenTogetherEvent
-import com.jay.glossy.models.MediaMetadata
+import com.metrolist.models.MediaMetadata
 import com.jay.glossy.playback.ExoDownloadService
 import com.jay.glossy.db.entities.Song
 import com.jay.glossy.db.entities.SpeedDialItem

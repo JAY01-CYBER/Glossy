@@ -86,8 +86,8 @@ import com.jay.glossy.db.entities.RecognitionHistory
 import com.jay.glossy.ui.component.IconButton
 import com.jay.glossy.ui.utils.backToMain
 import com.jay.glossy.utils.SearchRoutes
-import com.jay.glossy.shazamkit.models.RecognitionResult
-import com.jay.glossy.shazamkit.models.RecognitionStatus
+import com.metrolist.shazamkit.models.RecognitionResult
+import com.metrolist.shazamkit.models.RecognitionStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime

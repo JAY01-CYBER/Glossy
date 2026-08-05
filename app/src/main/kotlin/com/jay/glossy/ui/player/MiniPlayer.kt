@@ -96,7 +96,7 @@ import com.jay.glossy.constants.ThumbnailCornerRadius
 import com.jay.glossy.constants.UseNewMiniPlayerDesignKey
 import com.jay.glossy.db.entities.ArtistEntity
 import com.jay.glossy.listentogether.ListenTogetherManager
-import com.jay.glossy.models.MediaMetadata
+import com.metrolist.models.MediaMetadata
 import com.jay.glossy.playback.CastConnectionHandler
 import com.jay.glossy.playback.PlayerConnection
 import com.jay.glossy.ui.screens.settings.DarkMode

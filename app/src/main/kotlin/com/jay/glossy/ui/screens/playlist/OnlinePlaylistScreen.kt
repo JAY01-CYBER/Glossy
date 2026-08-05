@@ -78,8 +78,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-import com.jay.glossy.innertube.models.PlaylistItem
-import com.jay.glossy.innertube.models.SongItem
+import com.metrolist.innertube.models.PlaylistItem
+import com.metrolist.innertube.models.SongItem
 import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalListenTogetherManager
 import com.jay.glossy.LocalNavController
@@ -91,7 +91,7 @@ import com.jay.glossy.constants.HideExplicitKey
 import com.jay.glossy.db.entities.Playlist
 import com.jay.glossy.db.entities.PlaylistEntity
 import com.jay.glossy.db.entities.PlaylistSongMap
-import com.jay.glossy.models.toMediaMetadata
+import com.metrolist.models.toMediaMetadata
 import com.jay.glossy.playback.queues.YouTubePlaylistQueue
 import com.jay.glossy.ui.component.ExpandableText
 import com.jay.glossy.ui.component.IconButton

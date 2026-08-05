@@ -6,10 +6,10 @@
 package com.jay.glossy.playback.queues
 
 import androidx.media3.common.MediaItem
-import com.jay.glossy.innertube.YouTube
-import com.jay.glossy.innertube.models.SongItem
+import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.models.SongItem
 import com.jay.glossy.extensions.toMediaItem
-import com.jay.glossy.models.MediaMetadata
+import com.metrolist.models.MediaMetadata
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.withContext
 

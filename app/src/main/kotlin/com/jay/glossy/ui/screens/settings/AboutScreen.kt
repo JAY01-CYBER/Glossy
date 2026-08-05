@@ -69,7 +69,7 @@ import androidx.compose.ui.unit.sp
 import androidx.graphics.shapes.RoundedPolygon
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
-import com.jay.glossy.innertube.models.WatchEndpoint
+import com.metrolist.innertube.models.WatchEndpoint
 import com.jay.glossy.BuildConfig
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.LocalPlayerConnection

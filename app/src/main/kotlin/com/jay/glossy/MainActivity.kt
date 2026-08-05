@@ -129,9 +129,9 @@ import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import coil3.request.crossfade
 import coil3.toBitmap
-import com.jay.glossy.innertube.YouTube
-import com.jay.glossy.innertube.models.SongItem
-import com.jay.glossy.innertube.models.WatchEndpoint
+import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.models.SongItem
+import com.metrolist.innertube.models.WatchEndpoint
 import com.jay.glossy.constants.AppBarHeight
 import com.jay.glossy.constants.AppLanguageKey
 import com.jay.glossy.constants.CheckForUpdatesKey
@@ -167,7 +167,7 @@ import com.jay.glossy.db.MusicDatabase
 import com.jay.glossy.db.entities.SearchHistory
 import com.jay.glossy.extensions.toEnum
 import com.jay.glossy.lyrics.LyricsProviderRegistry
-import com.jay.glossy.models.toMediaMetadata
+import com.metrolist.models.toMediaMetadata
 import com.jay.glossy.playback.DownloadUtil
 import com.jay.glossy.playback.MusicService
 import com.jay.glossy.playback.MusicService.MusicBinder

@@ -6,7 +6,7 @@
 package com.jay.glossy.lyrics
 
 import android.content.Context
-import com.jay.glossy.betterlyrics.TTMLParser
+import com.metrolist.betterlyrics.TTMLParser
 import com.jay.glossy.constants.EnableLyricsPlus
 import com.jay.glossy.utils.dataStore
 import com.jay.glossy.utils.get

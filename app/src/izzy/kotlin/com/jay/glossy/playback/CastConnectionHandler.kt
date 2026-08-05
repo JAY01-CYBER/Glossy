@@ -44,7 +44,7 @@ class CastConnectionHandler(
     fun initialize(): Boolean = false
     fun disconnect() {}
     fun loadCurrentMedia() {}
-    fun loadMedia(metadata: com.jay.glossy.models.MediaMetadata) {}
+    fun loadMedia(metadata: com.metrolist.models.MediaMetadata) {}
     fun play() {}
     fun pause() {}
     fun seekTo(position: Long) {}

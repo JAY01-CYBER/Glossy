@@ -8,7 +8,7 @@ package com.jay.glossy.extensions
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import com.jay.glossy.innertube.utils.parseCookieString
+import com.metrolist.innertube.utils.parseCookieString
 import com.jay.glossy.constants.InnerTubeCookieKey
 import com.jay.glossy.constants.YtmSyncKey
 import com.jay.glossy.utils.dataStore

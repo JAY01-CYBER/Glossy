@@ -9,7 +9,7 @@ import android.content.Context
 import android.util.LruCache
 import com.jay.glossy.constants.LyricsProviderOrderKey
 import com.jay.glossy.db.entities.LyricsEntity.Companion.LYRICS_NOT_FOUND
-import com.jay.glossy.models.MediaMetadata
+import com.metrolist.models.MediaMetadata
 import com.jay.glossy.utils.NetworkConnectivityObserver
 import com.jay.glossy.utils.dataStore
 import com.jay.glossy.utils.reportException

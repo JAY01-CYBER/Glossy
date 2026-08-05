@@ -1,7 +1,7 @@
 package com.jay.glossy.utils.cipher
 
 import android.content.Context
-import com.jay.glossy.innertube.YouTube
+import com.metrolist.innertube.YouTube
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

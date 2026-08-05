@@ -6,7 +6,7 @@
 package com.jay.glossy.lyrics
 
 import android.content.Context
-import com.jay.glossy.lrclib.LrcLib
+import com.metrolist.lrclib.LrcLib
 import com.jay.glossy.constants.EnableLrcLibKey
 import com.jay.glossy.utils.dataStore
 import com.jay.glossy.utils.get
