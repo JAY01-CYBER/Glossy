@@ -393,7 +393,7 @@ fun AboutScreen(
                 Spacer(Modifier.height(16.dp))
                 
                 Button(
-                    onClick = { uriHandler.openUri("https://buymeacoffee.com/jayantic108") },
+                    onClick = { uriHandler.openUri("https://buymeacoffee.com/jayantic101") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = CircleShape,
                     colors = ButtonDefaults.buttonColors(
