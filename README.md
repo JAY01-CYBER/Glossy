@@ -8,9 +8,9 @@
 
 <br/>
 
-[![Latest release](https://img.shields.io/github/v/release/your-username/Glossy?style=for-the-badge&labelColor=0d1117)](https://github.com/your-username/Glossy/releases)
-[![License](https://img.shields.io/github/license/your-username/Glossy?style=for-the-badge&labelColor=0d1117)](https://github.com/your-username/Glossy/blob/main/LICENSE)
-[![Downloads](https://img.shields.io/github/downloads/your-username/Glossy/total?style=for-the-badge&labelColor=0d1117)](https://github.com/your-username/Glossy/releases)
+[![Latest release](https://img.shields.io/github/v/release/JAY01-CYBER/Glossy?style=for-the-badge&labelColor=0d1117)](https://github.com/JAY01-CYBER/Glossy/releases)
+[![License](https://img.shields.io/github/license/JAY01-CYBER/Glossy?style=for-the-badge&labelColor=0d1117)](https://github.com/JAY01-CYBER/Glossy/blob/main/LICENSE)
+[![Downloads](https://img.shields.io/github/downloads/JAY01-CYBER/Glossy/total?style=for-the-badge&labelColor=0d1117)](https://github.com/JAY01-CYBER/Glossy/releases)
 
 <br/>
 
@@ -27,12 +27,12 @@
 
 <h1><a id="screenshots"></a>Screenshots</h1>
 
-<img src="https://github.com/your-username/Glossy/blob/main/fastlane/metadata/android/en-US/images/screenshots/screenshot_1.png" alt="Home screen" width="30%" />
-<img src="https://github.com/your-username/Glossy/blob/main/fastlane/metadata/android/en-US/images/screenshots/screenshot_2.png" alt="Artist screen" width="30%" />
-<img src="https://github.com/your-username/Glossy/blob/main/fastlane/metadata/android/en-US/images/screenshots/screenshot_3.png" alt="Recognize music screen" width="30%" />
-<img src="https://github.com/your-username/Glossy/blob/main/fastlane/metadata/android/en-US/images/screenshots/screenshot_4.png" alt="Listen together screen" width="30%" />
-<img src="https://github.com/your-username/Glossy/blob/main/fastlane/metadata/android/en-US/images/screenshots/screenshot_5.png" alt="Player screen" width="30%" />
-<img src="https://github.com/your-username/Glossy/blob/main/fastlane/metadata/android/en-US/images/screenshots/screenshot_6.png" alt="Player lyrics screen" width="30%" />
+<img src="https://github.com/JAY01-CYBER/Glossy/blob/main/fastlane/metadata/android/en-US/images/screenshots/screenshot_1.png" alt="Home screen" width="30%" />
+<img src="https://github.com/JAY01-CYBER/Glossy/blob/main/fastlane/metadata/android/en-US/images/screenshots/screenshot_2.png" alt="Artist screen" width="30%" />
+<img src="https://github.com/JAY01-CYBER/Glossy/blob/main/fastlane/metadata/android/en-US/images/screenshots/screenshot_3.png" alt="Recognize music screen" width="30%" />
+<img src="https://github.com/JAY01-CYBER/Glossy/blob/main/fastlane/metadata/android/en-US/images/screenshots/screenshot_4.png" alt="Listen together screen" width="30%" />
+<img src="https://github.com/JAY01-CYBER/Glossy/blob/main/fastlane/metadata/android/en-US/images/screenshots/screenshot_5.png" alt="Player screen" width="30%" />
+<img src="https://github.com/JAY01-CYBER/Glossy/blob/main/fastlane/metadata/android/en-US/images/screenshots/screenshot_6.png" alt="Player lyrics screen" width="30%" />
 
 </div>
 
@@ -121,12 +121,12 @@
   </tr>
   <tr>
     <td align="center">
-      <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/your-username/Glossy/">
+      <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/JAY01-CYBER/Glossy/">
         <img src="https://github.com/ImranR98/Obtainium/blob/main/assets/graphics/badge_obtainium.png" alt="Download from Obtainium" height="40">
       </a>
     </td>
     <td align="center">
-      <a href="https://github.com/your-username/Glossy/releases/latest/download/Glossy.apk">
+      <a href="https://github.com/JAY01-CYBER/Glossy/releases/latest/download/Glossy.apk">
         <img src="https://github.com/machiav3lli/oandbackupx/blob/034b226cea5c1b30eb4f6a6f313e4dadcbb0ece4/badge_github.png" alt="Download from GitHub" height="60">
       </a>
     </td>
@@ -162,6 +162,10 @@
 <h1><a id="support-the-project"></a>Support the Project</h1>
 
 <h3>Glossy is free and open-source. If it brings you joy, consider supporting its development!</h3>
+
+<a href="https://buymeacoffee.com/jayantic101">
+  <img src="https://raw.githubusercontent.com/JAY01-CYBER/Glossy/main/assets/buymeacoffee.png" alt="Buy Me A Coffee" height="50">
+</a>
 
 </div>
 
@@ -247,6 +251,6 @@ All trademarks, service marks, and intellectual property rights referenced in th
 
 <br/>
 
-**Developed with ❤️ by JAY
+**Developed with ❤️ by JAY**
 
 </div>
