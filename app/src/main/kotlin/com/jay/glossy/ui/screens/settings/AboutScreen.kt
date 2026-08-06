@@ -104,24 +104,25 @@ private data class CommunityLink(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 private val leadDeveloper = Contributor(
-    name = "Mo Agamy",
+    name = "Jay Chaudhary",
     roleRes = R.string.credits_lead_developer,
-    githubHandle = "mostafaalagamy",
+    githubHandle = "JAY01-CYBER",
     polygon = MaterialShapes.Cookie9Sided,
     favoriteSongVideoId = "Mh2JWGWvy_Y"
 )
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 private val collaborators = listOf(
+    Contributor(name = "Mo Agamy", roleRes = R.string.credits_metrolist_dev, githubHandle = "mostafaalagamy", sponsorUrl = "https://buymeacoffee.com/mostafaalagamy", polygon = MaterialShapes.Cookie9Sided, favoriteSongVideoId = "Mh2JWGWvy_Y"),
     Contributor(name = "Adriel O'Connel", roleRes = R.string.credits_collaborator, githubHandle = "adrielGGmotion", sponsorUrl = "https://github.com/sponsors/adrielGGmotion", polygon = MaterialShapes.Cookie4Sided, favoriteSongVideoId = "m2zUrruKjDQ"),
     Contributor(name = "Nyx", roleRes = R.string.credits_collaborator, githubHandle = "nyxiereal", sponsorUrl = "https://github.com/sponsors/nyxiereal", polygon = MaterialShapes.Cookie12Sided, favoriteSongVideoId = "zselaN6zPXw"),
 )
 
 private val communityLinks = listOf(
-    CommunityLink(R.string.credits_discord, R.drawable.discord, "https://discord.com/invite/zrdbeRG2Mt"),
-    CommunityLink(R.string.credits_telegram, R.drawable.telegram, "https://t.me/metrolistapp"),
-    CommunityLink(R.string.credits_view_repo, R.drawable.github, "https://github.com/MetrolistGroup/Metrolist"),
-    CommunityLink(R.string.credits_license_name, R.drawable.info, "https://github.com/MetrolistGroup/Metrolist/blob/main/LICENSE")
+    CommunityLink(R.string.credits_discord, R.drawable.discord, ""),
+    CommunityLink(R.string.credits_telegram, R.drawable.telegram, "https://t.me/glossyplayer"),
+    CommunityLink(R.string.credits_view_repo, R.drawable.github, "https://github.com/JAY01-CYBER/Glossy"),
+    CommunityLink(R.string.credits_license_name, R.drawable.info, "https://github.com/JAY01-CYBER/Glossy/blob/main/LICENSE")
 )
 
 private fun handleEasterEggClick(
@@ -198,13 +199,13 @@ private fun DeveloperSocials(
             Icon(painterResource(R.drawable.language), contentDescription = null)
         }
         FilledTonalButton(
-            onClick = { uriHandler.openUri("https://github.com/mostafaalagamy") },
+            onClick = { uriHandler.openUri("https://github.com/JAY01-CYBER") },
             modifier = Modifier.weight(1f).height(48.dp)
         ) {
             Icon(painterResource(R.drawable.github), contentDescription = null)
         }
         FilledTonalButton(
-            onClick = { uriHandler.openUri("https://www.instagram.com/mostafaalagamy") },
+            onClick = { uriHandler.openUri("https://www.instagram.com/fluxxleox") },
             modifier = Modifier.weight(1f).height(48.dp)
         ) {
             Icon(painterResource(R.drawable.instagram), contentDescription = null)
@@ -261,7 +262,7 @@ fun AboutScreen(
                     )
                     Image(
                         painter = painterResource(R.drawable.about_icon),
-                        contentDescription = stringResource(R.string.metrolist),
+                        contentDescription = "Glossy",
                         modifier = Modifier.size(64.dp)
                     )
                 }
@@ -269,9 +270,7 @@ fun AboutScreen(
                 Spacer(Modifier.width(20.dp))
         
                 Column {
-                    val metrolistName = stringResource(R.string.metrolist)
-                        .lowercase(Locale.getDefault())
-                        .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+                    val metrolistName = "Glossy"
 
                     Text(
                         text = metrolistName,
@@ -394,7 +393,7 @@ fun AboutScreen(
                 Spacer(Modifier.height(16.dp))
                 
                 Button(
-                    onClick = { uriHandler.openUri("https://buymeacoffee.com/mostafaalagamy") },
+                    onClick = { uriHandler.openUri("https://buymeacoffee.com/jayantic108") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = CircleShape,
                     colors = ButtonDefaults.buttonColors(
@@ -404,7 +403,7 @@ fun AboutScreen(
                 ) {
                     Icon(painterResource(R.drawable.buymeacoffee), contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(12.dp))
-                    Text(stringResource(R.string.buy_mo_a_coffee), fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+                    Text("Buy me a coffee!", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
                 }
             }
         }
@@ -413,7 +412,7 @@ fun AboutScreen(
         
         // Collaborators section - back to Material3SettingsGroup
         Material3SettingsGroup(
-            title = stringResource(R.string.credits_collaborators_section),
+            title = "Metrolist Devs",
             items = collaborators.map { contributor ->
                 Material3SettingsItem(
                     leadingContent = {
@@ -486,21 +485,16 @@ fun AboutScreen(
                     description = if (link.labelRes == R.string.credits_license_name) {
                         { Text(stringResource(R.string.credits_license_desc)) }
                     } else null,
-                    onClick = { uriHandler.openUri(link.url) }
+                    onClick = { 
+                        if (link.url.isNotEmpty()) {
+                            uriHandler.openUri(link.url) 
+                        }
+                    }
                 )
             }
         )
 
-        Spacer(Modifier.height(48.dp))
         
-        Text(
-            text = stringResource(R.string.stands_with_palestine),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        
-        Spacer(Modifier.height(48.dp))
     }
 
     TopAppBar(
