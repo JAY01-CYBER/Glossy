@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -734,3 +734,14 @@ val CountryCodeToName =
         "YE" to "Yemen",
         "ZW" to "Zimbabwe",
     )
+
+// Quick Picks Shape Option
+val QuickPickShapeKey = stringPreferencesKey("quickPickShape")
+
+enum class QuickPickShape {
+    DEFAULT,
+    CIRCLE,
+    LEAF,
+    CUT_CORNER,
+    DYNAMIC
+}
