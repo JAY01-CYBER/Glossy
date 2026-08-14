@@ -11,6 +11,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -762,6 +763,17 @@ fun HomeScreen(
 
     var randomSeed by rememberSaveable { mutableLongStateOf(System.currentTimeMillis()) }
 
+    // Dhyan rakhein ki variables ko LazyColumn se pehle initialize karein
+    val spotlightItems = remember(homePage, randomSeed) {
+        homePage?.sections
+            ?.flatMap { it.items }
+            ?.filterIsInstance<SongItem>()
+            ?.distinctBy { it.id }
+            ?.shuffled(Random(randomSeed))
+            ?.take(8)
+            ?: emptyList()
+    }
+
     LaunchedEffect(isRefreshing) {
         if (isRefreshing) {
             randomSeed = System.currentTimeMillis()
@@ -1443,16 +1455,6 @@ fun HomeScreen(
                     }
                     
                     // --- FEATURED SPOTLIGHT CAROUSEL ---
-                    val spotlightItems = remember(homePage, randomSeed) {
-                        homePage?.sections
-                            ?.flatMap { it.items }
-                            ?.filterIsInstance<SongItem>()
-                            ?.distinctBy { it.id }
-                            ?.shuffled(Random(randomSeed))
-                            ?.take(8)
-                            ?: emptyList()
-                    }
-
                     if (showFeaturedCarouselPref && spotlightItems.isNotEmpty()) {
                         item(key = "featured_spotlight_carousel") {
                             Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 16.dp)) {
@@ -1557,17 +1559,19 @@ fun HomeScreen(
                                                     .padding(16.dp)
                                                     .size(48.dp)
                                                     .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f), CircleShape)
-                                                    .clickable {
-                                                        if (!isListenTogetherGuest) {
-                                                            playerConnection.playQueue(
-                                                                if (autoRadioQueue) {
-                                                                    YouTubeQueue(item.endpoint ?: WatchEndpoint(videoId = item.id), item.toMediaMetadata())
-                                                                } else {
-                                                                    ListQueue(title = item.title, items = listOf(item.toMediaItem()))
-                                                                }
-                                                            )
+                                                    .clickable(
+                                                        onClick = {
+                                                            if (!isListenTogetherGuest) {
+                                                                playerConnection.playQueue(
+                                                                    if (autoRadioQueue) {
+                                                                        YouTubeQueue(item.endpoint ?: WatchEndpoint(videoId = item.id), item.toMediaMetadata())
+                                                                    } else {
+                                                                        ListQueue(title = item.title, items = listOf(item.toMediaItem()))
+                                                                    }
+                                                                )
+                                                            }
                                                         }
-                                                    },
+                                                    ),
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 Icon(
@@ -1583,6 +1587,7 @@ fun HomeScreen(
                             }
                         }
                     }
+                    // --- END OF FEATURED CAROUSEL ---
                 }
 
                 homeSections.forEach { section ->
@@ -2114,12 +2119,14 @@ fun HomeScreen(
                                                         }
                                                         Box(
                                                             modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp).size(40.dp).background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f), CircleShape)
-                                                                .clickable {
-                                                                    if (!isListenTogetherGuest) {
-                                                                        if (song!!.id == mediaMetadata?.id) playerConnection.togglePlayPause()
-                                                                        else playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue.radio(song!!.toMediaMetadata()) else ListQueue(title = song!!.title, items = listOf(song!!.toMediaItem())))
+                                                                .clickable(
+                                                                    onClick = {
+                                                                        if (!isListenTogetherGuest) {
+                                                                            if (song!!.id == mediaMetadata?.id) playerConnection.togglePlayPause()
+                                                                            else playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue.radio(song!!.toMediaMetadata()) else ListQueue(title = song!!.title, items = listOf(song!!.toMediaItem())))
+                                                                        }
                                                                     }
-                                                                },
+                                                                ),
                                                             contentAlignment = Alignment.Center
                                                         ) {
                                                             Icon(painter = painterResource(if (song!!.id == mediaMetadata?.id && isPlaying) R.drawable.pause else R.drawable.play), contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(20.dp))
@@ -2605,112 +2612,182 @@ fun HomeScreen(
                                 if (isSongsOnlySection) {
                                     // Render songs as a horizontal scrollable list (like Quick picks in YouTube Music)
                                     item(key = "home_section_list_${section.index}") {
-                                        LazyHorizontalGrid(
-                                            state = remember("section_${section.index}_grid") { LazyGridState() },
-                                            rows = GridCells.Fixed(4),
-                                            contentPadding =
-                                                WindowInsets.systemBars
-                                                    .only(WindowInsetsSides.Horizontal)
-                                                    .asPaddingValues(),
-                                            modifier =
-                                                Modifier
-                                                    .fillMaxWidth()
-                                                    .height(ListItemHeight * 4),
-                                        ) {
-                                            itemsIndexed(
-                                                items = sectionSongs.distinctBy { it.id },
-                                                key = { _, song -> "home_section_${section.index}_song_${song.id}" },
-                                            ) { index, song ->
+                                        when (quickPicksStylePref) {
+                                            QuickPicksStyle.GRID, QuickPicksStyle.LIST -> {
+                                                val rowsCount = if (quickPicksStylePref == QuickPicksStyle.GRID) 4 else 1
+                                                LazyHorizontalGrid(
+                                                    state = remember("section_${section.index}_grid") { LazyGridState() },
+                                                    rows = GridCells.Fixed(rowsCount),
+                                                    contentPadding = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal).asPaddingValues(),
+                                                    modifier = Modifier.fillMaxWidth().height(ListItemHeight * rowsCount),
+                                                ) {
+                                                    itemsIndexed(
+                                                        items = sectionSongs.distinctBy { it.id },
+                                                        key = { _, song -> "home_section_${section.index}_song_${song.id}" },
+                                                    ) { index, song ->
 
-                                                val currentShape = when (quickPickShapePref) {
-                                                    QuickPickShape.DEFAULT -> RoundedCornerShape(ThumbnailCornerRadius)
-                                                    QuickPickShape.CIRCLE -> CircleShape
-                                                    QuickPickShape.SQUIRCLE -> RoundedCornerShape(percent = 35)
-                                                    QuickPickShape.LEAF -> RoundedCornerShape(topStartPercent = 50, bottomEndPercent = 50)
-                                                    QuickPickShape.INVERTED_LEAF -> RoundedCornerShape(topEndPercent = 50, bottomStartPercent = 50)
-                                                    QuickPickShape.TEARDROP -> RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomStartPercent = 50, bottomEndPercent = 0)
-                                                    QuickPickShape.MESSAGE_BUBBLE -> RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomEndPercent = 50, bottomStartPercent = 0)
-                                                    QuickPickShape.TICKET -> RoundedCornerShape(topStartPercent = 25, topEndPercent = 25, bottomStartPercent = 0, bottomEndPercent = 0)
-                                                    QuickPickShape.INVERTED_TICKET -> RoundedCornerShape(topStartPercent = 0, topEndPercent = 0, bottomStartPercent = 25, bottomEndPercent = 25)
-                                                    QuickPickShape.CUT_CORNER -> CutCornerShape(12.dp)
-                                                    QuickPickShape.OCTAGON -> CutCornerShape(percent = 25)
-                                                    QuickPickShape.DIAMOND -> CutCornerShape(percent = 50)
-                                                    QuickPickShape.BOOKMARK -> CutCornerShape(topStartPercent = 0, topEndPercent = 0, bottomStartPercent = 25, bottomEndPercent = 25)
-                                                    QuickPickShape.FOLDER -> CutCornerShape(topStartPercent = 25, topEndPercent = 25, bottomStartPercent = 0, bottomEndPercent = 0)
-                                                    QuickPickShape.DYNAMIC -> {
-                                                        val shapes = listOf(
-                                                            RoundedCornerShape(ThumbnailCornerRadius),
-                                                            CircleShape,
-                                                            RoundedCornerShape(percent = 35),
-                                                            RoundedCornerShape(topStartPercent = 50, bottomEndPercent = 50),
-                                                            RoundedCornerShape(topEndPercent = 50, bottomStartPercent = 50),
-                                                            RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomStartPercent = 50, bottomEndPercent = 0),
-                                                            RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomEndPercent = 50, bottomStartPercent = 0),
-                                                            RoundedCornerShape(topStartPercent = 25, topEndPercent = 25, bottomStartPercent = 0, bottomEndPercent = 0),
-                                                            CutCornerShape(12.dp),
-                                                            CutCornerShape(percent = 25),
-                                                            CutCornerShape(percent = 50),
-                                                            CutCornerShape(topStartPercent = 25, topEndPercent = 25, bottomStartPercent = 0, bottomEndPercent = 0)
-                                                        )
-                                                        shapes[index % shapes.size]
-                                                    }
-                                                }
+                                                        val currentShape = when (quickPickShapePref) {
+                                                            QuickPickShape.DEFAULT -> RoundedCornerShape(ThumbnailCornerRadius)
+                                                            QuickPickShape.CIRCLE -> CircleShape
+                                                            QuickPickShape.SQUIRCLE -> RoundedCornerShape(percent = 35)
+                                                            QuickPickShape.LEAF -> RoundedCornerShape(topStartPercent = 50, bottomEndPercent = 50)
+                                                            QuickPickShape.INVERTED_LEAF -> RoundedCornerShape(topEndPercent = 50, bottomStartPercent = 50)
+                                                            QuickPickShape.TEARDROP -> RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomStartPercent = 50, bottomEndPercent = 0)
+                                                            QuickPickShape.MESSAGE_BUBBLE -> RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomEndPercent = 50, bottomStartPercent = 0)
+                                                            QuickPickShape.TICKET -> RoundedCornerShape(topStartPercent = 25, topEndPercent = 25, bottomStartPercent = 0, bottomEndPercent = 0)
+                                                            QuickPickShape.INVERTED_TICKET -> RoundedCornerShape(topStartPercent = 0, topEndPercent = 0, bottomStartPercent = 25, bottomEndPercent = 25)
+                                                            QuickPickShape.CUT_CORNER -> CutCornerShape(12.dp)
+                                                            QuickPickShape.OCTAGON -> CutCornerShape(percent = 25)
+                                                            QuickPickShape.DIAMOND -> CutCornerShape(percent = 50)
+                                                            QuickPickShape.BOOKMARK -> CutCornerShape(topStartPercent = 0, topEndPercent = 0, bottomStartPercent = 25, bottomEndPercent = 25)
+                                                            QuickPickShape.FOLDER -> CutCornerShape(topStartPercent = 25, topEndPercent = 25, bottomStartPercent = 0, bottomEndPercent = 0)
+                                                            QuickPickShape.DYNAMIC -> {
+                                                                val shapes = listOf(
+                                                                    RoundedCornerShape(ThumbnailCornerRadius), CircleShape, RoundedCornerShape(percent = 35),
+                                                                    RoundedCornerShape(topStartPercent = 50, bottomEndPercent = 50), RoundedCornerShape(topEndPercent = 50, bottomStartPercent = 50),
+                                                                    RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomStartPercent = 50, bottomEndPercent = 0),
+                                                                    RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomEndPercent = 50, bottomStartPercent = 0),
+                                                                    RoundedCornerShape(topStartPercent = 25, topEndPercent = 25, bottomStartPercent = 0, bottomEndPercent = 0),
+                                                                    CutCornerShape(12.dp), CutCornerShape(percent = 25), CutCornerShape(percent = 50),
+                                                                    CutCornerShape(topStartPercent = 25, topEndPercent = 25, bottomStartPercent = 0, bottomEndPercent = 0)
+                                                                )
+                                                                shapes[index % shapes.size]
+                                                            }
+                                                        }
 
-                                                YouTubeListItem(
-                                                    item = song,
-                                                    thumbnailShape = currentShape, 
-                                                    isActive = song.id == mediaMetadata?.id,
-                                                    isPlaying = isPlaying,
-                                                    isSwipeable = false,
-                                                    trailingContent = {
-                                                        IconButton(
-                                                            onClick = {
-                                                                menuState.show {
-                                                                    YouTubeSongMenu(
-                                                                        song = song,
-                                                                        onDismiss = menuState::dismiss,
-                                                                    )
+                                                        YouTubeListItem(
+                                                            item = song,
+                                                            thumbnailShape = currentShape, 
+                                                            isActive = song.id == mediaMetadata?.id,
+                                                            isPlaying = isPlaying,
+                                                            isSwipeable = false,
+                                                            trailingContent = {
+                                                                IconButton(
+                                                                    onClick = {
+                                                                        menuState.show { YouTubeSongMenu(song = song, onDismiss = menuState::dismiss) }
+                                                                    },
+                                                                ) {
+                                                                    Icon(painter = painterResource(R.drawable.more_vert), contentDescription = null)
                                                                 }
                                                             },
-                                                        ) {
-                                                            Icon(
-                                                                painter = painterResource(R.drawable.more_vert),
-                                                                contentDescription = null,
+                                                            modifier = Modifier
+                                                                .width(horizontalLazyGridItemWidth)
+                                                                .combinedClickable(
+                                                                    onClick = {
+                                                                        if (!isListenTogetherGuest) {
+                                                                            playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue(song.endpoint ?: WatchEndpoint(videoId = song.id), song.toMediaMetadata()) else ListQueue(title = song.title, items = listOf(song.toMediaItem())))
+                                                                        }
+                                                                    },
+                                                                    onLongClick = {
+                                                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                                        menuState.show { YouTubeSongMenu(song = song, onDismiss = menuState::dismiss) }
+                                                                    },
+                                                                ),
+                                                        )
+                                                    }
+                                                }
+                                            }
+
+                                            QuickPicksStyle.CAROUSEL -> {
+                                                val uniqueSongs = sectionSongs.distinctBy { it.id }
+                                                val carouselState = rememberCarouselState { uniqueSongs.size }
+
+                                                HorizontalMultiBrowseCarousel(
+                                                    state = carouselState,
+                                                    preferredItemWidth = 260.dp,
+                                                    itemSpacing = 16.dp,
+                                                    contentPadding = PaddingValues(horizontal = 16.dp),
+                                                    modifier = Modifier.fillMaxWidth().height(260.dp)
+                                                ) { i ->
+                                                    val song = uniqueSongs[i]
+
+                                                    val currentShape = when (quickPickShapePref) {
+                                                        QuickPickShape.DEFAULT -> RoundedCornerShape(24.dp)
+                                                        QuickPickShape.CIRCLE -> CircleShape
+                                                        QuickPickShape.SQUIRCLE -> RoundedCornerShape(percent = 35)
+                                                        QuickPickShape.LEAF -> RoundedCornerShape(topStartPercent = 50, bottomEndPercent = 50)
+                                                        QuickPickShape.INVERTED_LEAF -> RoundedCornerShape(topEndPercent = 50, bottomStartPercent = 50)
+                                                        QuickPickShape.TEARDROP -> RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomStartPercent = 50, bottomEndPercent = 0)
+                                                        QuickPickShape.MESSAGE_BUBBLE -> RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomEndPercent = 50, bottomStartPercent = 0)
+                                                        QuickPickShape.TICKET -> RoundedCornerShape(topStartPercent = 25, topEndPercent = 25, bottomStartPercent = 0, bottomEndPercent = 0)
+                                                        QuickPickShape.INVERTED_TICKET -> RoundedCornerShape(topStartPercent = 0, topEndPercent = 0, bottomStartPercent = 25, bottomEndPercent = 25)
+                                                        QuickPickShape.CUT_CORNER -> CutCornerShape(12.dp)
+                                                        QuickPickShape.OCTAGON -> CutCornerShape(percent = 25)
+                                                        QuickPickShape.DIAMOND -> CutCornerShape(percent = 50)
+                                                        QuickPickShape.BOOKMARK -> CutCornerShape(topStartPercent = 0, topEndPercent = 0, bottomStartPercent = 25, bottomEndPercent = 25)
+                                                        QuickPickShape.FOLDER -> CutCornerShape(topStartPercent = 25, topEndPercent = 25, bottomStartPercent = 0, bottomEndPercent = 0)
+                                                        QuickPickShape.DYNAMIC -> {
+                                                            val shapes = listOf(
+                                                                RoundedCornerShape(24.dp), CircleShape, RoundedCornerShape(percent = 35), RoundedCornerShape(topStartPercent = 50, bottomEndPercent = 50),
+                                                                RoundedCornerShape(topEndPercent = 50, bottomStartPercent = 50), RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomStartPercent = 50, bottomEndPercent = 0),
+                                                                RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomEndPercent = 50, bottomStartPercent = 0), RoundedCornerShape(topStartPercent = 25, topEndPercent = 25, bottomStartPercent = 0, bottomEndPercent = 0),
+                                                                CutCornerShape(12.dp), CutCornerShape(percent = 25), CutCornerShape(percent = 50), CutCornerShape(topStartPercent = 25, topEndPercent = 25, bottomStartPercent = 0, bottomEndPercent = 0)
                                                             )
+                                                            shapes[i % shapes.size]
                                                         }
-                                                    },
-                                                    modifier =
-                                                        Modifier
-                                                            .width(horizontalLazyGridItemWidth)
+                                                    }
+
+                                                    Card(
+                                                        modifier = Modifier
+                                                            .fillMaxSize()
+                                                            .clip(currentShape)
                                                             .combinedClickable(
                                                                 onClick = {
                                                                     if (!isListenTogetherGuest) {
-                                                                        playerConnection.playQueue(
-                                                                            if (autoRadioQueue) {
-                                                                                YouTubeQueue(
-                                                                                    song.endpoint ?: WatchEndpoint(videoId = song.id),
-                                                                                    song.toMediaMetadata(),
-                                                                                )
-                                                                            } else {
-                                                                                ListQueue(
-                                                                                    title = song.title,
-                                                                                    items = listOf(song.toMediaItem())
-                                                                                )
-                                                                            }
-                                                                        )
+                                                                        playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue(song.endpoint ?: WatchEndpoint(videoId = song.id), song.toMediaMetadata()) else ListQueue(title = song.title, items = listOf(song.toMediaItem())))
                                                                     }
                                                                 },
                                                                 onLongClick = {
                                                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                                    menuState.show {
-                                                                        YouTubeSongMenu(
-                                                                            song = song,
-                                                                            onDismiss = menuState::dismiss,
-                                                                        )
-                                                                    }
-                                                                },
+                                                                    menuState.show { YouTubeSongMenu(song = song, onDismiss = menuState::dismiss) }
+                                                                }
                                                             ),
-                                                )
+                                                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                                                        shape = currentShape
+                                                    ) {
+                                                        Box(modifier = Modifier.fillMaxSize()) {
+                                                            AsyncImage(
+                                                                model = ImageRequest.Builder(LocalContext.current)
+                                                                    .data(song.thumbnail.resize(1080, 1080))
+                                                                    .crossfade(true)
+                                                                    .build(),
+                                                                contentDescription = null,
+                                                                contentScale = ContentScale.Crop,
+                                                                modifier = Modifier.fillMaxSize()
+                                                            )
+                                                            Box(
+                                                                modifier = Modifier
+                                                                    .fillMaxSize()
+                                                                    .background(
+                                                                        Brush.verticalGradient(
+                                                                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.5f), Color.Black.copy(alpha = 0.9f)),
+                                                                            startY = 50f
+                                                                        )
+                                                                    )
+                                                            )
+                                                            Column(
+                                                                modifier = Modifier.align(Alignment.BottomStart).padding(16.dp).padding(end = 56.dp)
+                                                            ) {
+                                                                Text(text = song.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                                                Spacer(modifier = Modifier.height(4.dp))
+                                                                Text(text = song.artists.joinToArtistString(" & ") { it.name }, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.8f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                                            }
+                                                            Box(
+                                                                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp).size(40.dp).background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f), CircleShape)
+                                                                    .clickable(
+                                                                        onClick = {
+                                                                            if (!isListenTogetherGuest) {
+                                                                                playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue(song.endpoint ?: WatchEndpoint(videoId = song.id), song.toMediaMetadata()) else ListQueue(title = song.title, items = listOf(song.toMediaItem())))
+                                                                            }
+                                                                        }
+                                                                    ),
+                                                                contentAlignment = Alignment.Center
+                                                            ) {
+                                                                Icon(painter = painterResource(if (song.id == mediaMetadata?.id && isPlaying) R.drawable.pause else R.drawable.play), contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(20.dp))
+                                                            }
+                                                        }
+                                                    }
+                                                }
                                             }
                                         }
                                     }
