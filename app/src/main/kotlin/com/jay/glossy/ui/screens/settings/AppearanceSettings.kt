@@ -395,9 +395,19 @@ fun AppearanceSettings(
                 when (it) {
                     QuickPickShape.DEFAULT -> "Default (Rounded)"
                     QuickPickShape.CIRCLE -> "Circle"
-                    QuickPickShape.LEAF -> "Expressive Leaf"
+                    QuickPickShape.SQUIRCLE -> "Squircle (Smooth Apple Style)"
+                    QuickPickShape.LEAF -> "Leaf"
+                    QuickPickShape.INVERTED_LEAF -> "Inverted Leaf"
+                    QuickPickShape.TEARDROP -> "Teardrop"
+                    QuickPickShape.MESSAGE_BUBBLE -> "Message Bubble"
+                    QuickPickShape.TICKET -> "Ticket Style"
+                    QuickPickShape.INVERTED_TICKET -> "Inverted Ticket"
                     QuickPickShape.CUT_CORNER -> "Cut Corners"
-                    QuickPickShape.DYNAMIC -> "Dynamic (Mixed)"
+                    QuickPickShape.OCTAGON -> "Octagon"
+                    QuickPickShape.DIAMOND -> "Diamond"
+                    QuickPickShape.BOOKMARK -> "Bookmark Style"
+                    QuickPickShape.FOLDER -> "Folder Style"
+                    QuickPickShape.DYNAMIC -> "Dynamic (All Mixed)"
                 }
             },
         )
@@ -1661,9 +1671,19 @@ fun AppearanceSettings(
                                 when (quickPickShape) {
                                     QuickPickShape.DEFAULT -> "Default (Rounded)"
                                     QuickPickShape.CIRCLE -> "Circle"
-                                    QuickPickShape.LEAF -> "Expressive Leaf"
+                                    QuickPickShape.SQUIRCLE -> "Squircle (Smooth Apple Style)"
+                                    QuickPickShape.LEAF -> "Leaf"
+                                    QuickPickShape.INVERTED_LEAF -> "Inverted Leaf"
+                                    QuickPickShape.TEARDROP -> "Teardrop"
+                                    QuickPickShape.MESSAGE_BUBBLE -> "Message Bubble"
+                                    QuickPickShape.TICKET -> "Ticket Style"
+                                    QuickPickShape.INVERTED_TICKET -> "Inverted Ticket"
                                     QuickPickShape.CUT_CORNER -> "Cut Corners"
-                                    QuickPickShape.DYNAMIC -> "Dynamic (Mixed)"
+                                    QuickPickShape.OCTAGON -> "Octagon"
+                                    QuickPickShape.DIAMOND -> "Diamond"
+                                    QuickPickShape.BOOKMARK -> "Bookmark Style"
+                                    QuickPickShape.FOLDER -> "Folder Style"
+                                    QuickPickShape.DYNAMIC -> "Dynamic (All Mixed)"
                                 }
                             )
                         },
