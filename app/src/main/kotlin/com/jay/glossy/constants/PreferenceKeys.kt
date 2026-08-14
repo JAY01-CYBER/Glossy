@@ -1,5 +1,5 @@
 /**
- * Glossy Project (C) 2026
+ * Metrolist Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -754,4 +754,12 @@ enum class QuickPickShape {
     BOOKMARK,
     FOLDER,
     DYNAMIC
+}
+
+// Quick Picks Layout Option
+val QuickPickLayoutKey = stringPreferencesKey("quickPickLayout")
+
+enum class QuickPickLayout {
+    GRID,
+    CAROUSEL
 }
