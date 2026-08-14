@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  * 
  * Optimized for minimal recomposition during navigation
@@ -1168,6 +1168,7 @@ fun YouTubeListItem(
     isPlaying: Boolean = false,
     isSwipeable: Boolean = true,
     trailingContent: @Composable RowScope.() -> Unit = {},
+    thumbnailShape: Shape = if (item is ArtistItem) CircleShape else RoundedCornerShape(ThumbnailCornerRadius),
     badges: @Composable RowScope.() -> Unit = {
         val database = LocalDatabase.current
         val song by produceState<Song?>(initialValue = null, item.id) {
@@ -1210,7 +1211,7 @@ fun YouTubeListItem(
                     isSelected = isSelected,
                     isActive = isActive,
                     isPlaying = isPlaying,
-                    shape = if (item is ArtistItem) CircleShape else RoundedCornerShape(ThumbnailCornerRadius),
+                    shape = thumbnailShape,
                     modifier = Modifier.size(ListThumbnailSize)
                 )
             },
