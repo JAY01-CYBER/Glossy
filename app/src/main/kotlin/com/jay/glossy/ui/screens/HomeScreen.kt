@@ -1805,14 +1805,32 @@ fun HomeScreen(
                                             val currentShape = when (quickPickShapePref) {
                                                 QuickPickShape.DEFAULT -> RoundedCornerShape(ThumbnailCornerRadius)
                                                 QuickPickShape.CIRCLE -> CircleShape
-                                                QuickPickShape.LEAF -> RoundedCornerShape(topStart = 24.dp, bottomEnd = 24.dp)
+                                                QuickPickShape.SQUIRCLE -> RoundedCornerShape(percent = 35)
+                                                QuickPickShape.LEAF -> RoundedCornerShape(topStartPercent = 50, bottomEndPercent = 50)
+                                                QuickPickShape.INVERTED_LEAF -> RoundedCornerShape(topEndPercent = 50, bottomStartPercent = 50)
+                                                QuickPickShape.TEARDROP -> RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomStartPercent = 50, bottomEndPercent = 0)
+                                                QuickPickShape.MESSAGE_BUBBLE -> RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomEndPercent = 50, bottomStartPercent = 0)
+                                                QuickPickShape.TICKET -> RoundedCornerShape(topStartPercent = 25, topEndPercent = 25, bottomStartPercent = 0, bottomEndPercent = 0)
+                                                QuickPickShape.INVERTED_TICKET -> RoundedCornerShape(topStartPercent = 0, topEndPercent = 0, bottomStartPercent = 25, bottomEndPercent = 25)
                                                 QuickPickShape.CUT_CORNER -> CutCornerShape(12.dp)
+                                                QuickPickShape.OCTAGON -> CutCornerShape(percent = 25)
+                                                QuickPickShape.DIAMOND -> CutCornerShape(percent = 50)
+                                                QuickPickShape.BOOKMARK -> CutCornerShape(topStartPercent = 0, topEndPercent = 0, bottomStartPercent = 25, bottomEndPercent = 25)
+                                                QuickPickShape.FOLDER -> CutCornerShape(topStartPercent = 25, topEndPercent = 25, bottomStartPercent = 0, bottomEndPercent = 0)
                                                 QuickPickShape.DYNAMIC -> {
                                                     val shapes = listOf(
                                                         RoundedCornerShape(ThumbnailCornerRadius),
                                                         CircleShape,
-                                                        RoundedCornerShape(topStart = 24.dp, bottomEnd = 24.dp),
-                                                        CutCornerShape(12.dp)
+                                                        RoundedCornerShape(percent = 35),
+                                                        RoundedCornerShape(topStartPercent = 50, bottomEndPercent = 50),
+                                                        RoundedCornerShape(topEndPercent = 50, bottomStartPercent = 50),
+                                                        RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomStartPercent = 50, bottomEndPercent = 0),
+                                                        RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomEndPercent = 50, bottomStartPercent = 0),
+                                                        RoundedCornerShape(topStartPercent = 25, topEndPercent = 25, bottomStartPercent = 0, bottomEndPercent = 0),
+                                                        CutCornerShape(12.dp),
+                                                        CutCornerShape(percent = 25),
+                                                        CutCornerShape(percent = 50),
+                                                        CutCornerShape(topStartPercent = 25, topEndPercent = 25, bottomStartPercent = 0, bottomEndPercent = 0)
                                                     )
                                                     shapes[index % shapes.size]
                                                 }
@@ -2380,14 +2398,32 @@ fun HomeScreen(
                                                 val currentShape = when (quickPickShapePref) {
                                                     QuickPickShape.DEFAULT -> RoundedCornerShape(ThumbnailCornerRadius)
                                                     QuickPickShape.CIRCLE -> CircleShape
-                                                    QuickPickShape.LEAF -> RoundedCornerShape(topStart = 24.dp, bottomEnd = 24.dp)
+                                                    QuickPickShape.SQUIRCLE -> RoundedCornerShape(percent = 35)
+                                                    QuickPickShape.LEAF -> RoundedCornerShape(topStartPercent = 50, bottomEndPercent = 50)
+                                                    QuickPickShape.INVERTED_LEAF -> RoundedCornerShape(topEndPercent = 50, bottomStartPercent = 50)
+                                                    QuickPickShape.TEARDROP -> RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomStartPercent = 50, bottomEndPercent = 0)
+                                                    QuickPickShape.MESSAGE_BUBBLE -> RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomEndPercent = 50, bottomStartPercent = 0)
+                                                    QuickPickShape.TICKET -> RoundedCornerShape(topStartPercent = 25, topEndPercent = 25, bottomStartPercent = 0, bottomEndPercent = 0)
+                                                    QuickPickShape.INVERTED_TICKET -> RoundedCornerShape(topStartPercent = 0, topEndPercent = 0, bottomStartPercent = 25, bottomEndPercent = 25)
                                                     QuickPickShape.CUT_CORNER -> CutCornerShape(12.dp)
+                                                    QuickPickShape.OCTAGON -> CutCornerShape(percent = 25)
+                                                    QuickPickShape.DIAMOND -> CutCornerShape(percent = 50)
+                                                    QuickPickShape.BOOKMARK -> CutCornerShape(topStartPercent = 0, topEndPercent = 0, bottomStartPercent = 25, bottomEndPercent = 25)
+                                                    QuickPickShape.FOLDER -> CutCornerShape(topStartPercent = 25, topEndPercent = 25, bottomStartPercent = 0, bottomEndPercent = 0)
                                                     QuickPickShape.DYNAMIC -> {
                                                         val shapes = listOf(
                                                             RoundedCornerShape(ThumbnailCornerRadius),
                                                             CircleShape,
-                                                            RoundedCornerShape(topStart = 24.dp, bottomEnd = 24.dp),
-                                                            CutCornerShape(12.dp)
+                                                            RoundedCornerShape(percent = 35),
+                                                            RoundedCornerShape(topStartPercent = 50, bottomEndPercent = 50),
+                                                            RoundedCornerShape(topEndPercent = 50, bottomStartPercent = 50),
+                                                            RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomStartPercent = 50, bottomEndPercent = 0),
+                                                            RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomEndPercent = 50, bottomStartPercent = 0),
+                                                            RoundedCornerShape(topStartPercent = 25, topEndPercent = 25, bottomStartPercent = 0, bottomEndPercent = 0),
+                                                            CutCornerShape(12.dp),
+                                                            CutCornerShape(percent = 25),
+                                                            CutCornerShape(percent = 50),
+                                                            CutCornerShape(topStartPercent = 25, topEndPercent = 25, bottomStartPercent = 0, bottomEndPercent = 0)
                                                         )
                                                         shapes[index % shapes.size]
                                                     }
@@ -2395,7 +2431,7 @@ fun HomeScreen(
 
                                                 YouTubeListItem(
                                                     item = song,
-                                                    thumbnailShape = currentShape, // <-- Shape Yahan Pass Hogi
+                                                    thumbnailShape = currentShape, 
                                                     isActive = song.id == mediaMetadata?.id,
                                                     isPlaying = isPlaying,
                                                     isSwipeable = false,
