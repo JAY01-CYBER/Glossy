@@ -1,5 +1,5 @@
 /**
- * Glossy Project (C) 2026
+ * Metrolist Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -109,6 +109,9 @@ import com.jay.glossy.constants.UseNewMiniPlayerDesignKey
 import com.jay.glossy.constants.UseNewPlayerDesignKey
 import com.jay.glossy.constants.QuickPickShape
 import com.jay.glossy.constants.QuickPickShapeKey
+import com.jay.glossy.constants.QuickPicksStyle
+import com.jay.glossy.constants.QuickPicksStyleKey
+import com.jay.glossy.constants.ShowFeaturedCarouselKey
 import com.jay.glossy.ui.component.DefaultDialog
 import com.jay.glossy.ui.component.EnumDialog
 import com.jay.glossy.ui.component.IconButton
@@ -244,7 +247,11 @@ fun AppearanceSettings(
     val (lyricsTextSize, onLyricsTextSizeChange) = rememberPreference(LyricsTextSizeKey, defaultValue = 24f)
     val (lyricsLineSpacing, onLyricsLineSpacingChange) = rememberPreference(LyricsLineSpacingKey, defaultValue = 1.2f)
 
-    // NEW PREFERENCE FOR QUICK PICKS SHAPE
+    // HOME SCREEN LAYOUT PREFERENCES
+    val (showFeaturedCarousel, onShowFeaturedCarouselChange) = rememberPreference(ShowFeaturedCarouselKey, defaultValue = true)
+    val (quickPicksStyle, onQuickPicksStyleChange) = rememberEnumPreference(QuickPicksStyleKey, defaultValue = QuickPicksStyle.GRID)
+    var showQuickPicksStyleDialog by rememberSaveable { mutableStateOf(false) }
+
     val (quickPickShape, onQuickPickShapeChange) =
         rememberEnumPreference(
             QuickPickShapeKey,
@@ -380,7 +387,26 @@ fun AppearanceSettings(
         mutableStateOf(false)
     }
 
-    // NEW QUICK PICK SHAPE DIALOG
+    if (showQuickPicksStyleDialog) {
+        EnumDialog(
+            onDismiss = { showQuickPicksStyleDialog = false },
+            onSelect = {
+                onQuickPicksStyleChange(it)
+                showQuickPicksStyleDialog = false
+            },
+            title = "Quick Picks Layout Style",
+            current = quickPicksStyle,
+            values = QuickPicksStyle.values().toList(),
+            valueText = {
+                when (it) {
+                    QuickPicksStyle.GRID -> "Grid (4 Rows)"
+                    QuickPicksStyle.LIST -> "List (1 Row)"
+                    QuickPicksStyle.CAROUSEL -> "Carousel Banner"
+                }
+            },
+        )
+    }
+
     if (showQuickPickShapeDialog) {
         EnumDialog(
             onDismiss = { showQuickPickShapeDialog = false },
@@ -1007,6 +1033,48 @@ fun AppearanceSettings(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp),
     ) {
+        
+        Material3SettingsGroup(
+            title = "Home Screen Layout",
+            items = listOf(
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.view_carousel),
+                    title = { Text("Show Featured Spotlight") },
+                    description = { Text("Show large animated banner on home screen") },
+                    trailingContent = {
+                        Switch(
+                            checked = showFeaturedCarousel,
+                            onCheckedChange = onShowFeaturedCarouselChange,
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(id = if (showFeaturedCarousel) R.drawable.check else R.drawable.close),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                )
+                            }
+                        )
+                    },
+                    onClick = { onShowFeaturedCarouselChange(!showFeaturedCarousel) }
+                ),
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.dashboard),
+                    title = { Text("Quick Picks Style") },
+                    description = {
+                        Text(
+                            when (quickPicksStyle) {
+                                QuickPicksStyle.GRID -> "Grid (4 Rows)"
+                                QuickPicksStyle.LIST -> "List (1 Row)"
+                                QuickPicksStyle.CAROUSEL -> "Carousel Banner"
+                            }
+                        )
+                    },
+                    onClick = { showQuickPicksStyleDialog = true }
+                )
+            )
+        )
+        
+        Spacer(modifier = Modifier.height(27.dp))
+
         Material3SettingsGroup(
             title = stringResource(R.string.theme),
             items =
@@ -1662,10 +1730,9 @@ fun AppearanceSettings(
             title = stringResource(R.string.misc),
             items =
                 listOf(
-                    // NEW QUICK PICKS SHAPE SETTING IN MISC GROUP
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.palette), // Using palette as an expressive icon for shapes
-                        title = { Text("Quick Picks Shape") },
+                        title = { Text("Quick Picks Thumbnail Shape") },
                         description = {
                             Text(
                                 when (quickPickShape) {
