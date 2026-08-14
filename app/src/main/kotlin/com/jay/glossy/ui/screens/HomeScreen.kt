@@ -37,6 +37,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
@@ -44,6 +45,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -118,6 +120,8 @@ import com.jay.glossy.constants.GridThumbnailHeight
 import com.jay.glossy.constants.InnerTubeCookieKey
 import com.jay.glossy.constants.ListItemHeight
 import com.jay.glossy.constants.ListThumbnailSize
+import com.jay.glossy.constants.QuickPickShape
+import com.jay.glossy.constants.QuickPickShapeKey
 import com.jay.glossy.constants.RandomizeHomeOrderKey
 import com.jay.glossy.constants.SmallGridThumbnailHeight
 import com.jay.glossy.constants.ThumbnailCornerRadius
@@ -678,6 +682,7 @@ fun HomeScreen(
     val innerTubeCookie by rememberPreference(InnerTubeCookieKey, "")
     val (randomizeHomeOrder) = rememberPreference(RandomizeHomeOrderKey, true)
     val autoRadioQueue by rememberPreference(AutoRadioQueueKey, defaultValue = true)
+    val quickPickShapePref by rememberEnumPreference(QuickPickShapeKey, QuickPickShape.DEFAULT)
 
     LaunchedEffect(Unit) { viewModel.loadHomeData() }
 
@@ -1792,10 +1797,27 @@ fun HomeScreen(
                                                 .fillMaxWidth()
                                                 .height(ListItemHeight * 4),
                                         ) {
-                                            items(
+                                            itemsIndexed(
                                                 items = quickPicks.distinctBy { it.id },
-                                                key = { "home_quickpick_${it.id}" },
-                                            ) { originalSong ->
+                                                key = { _, originalSong -> "home_quickpick_${originalSong.id}" },
+                                            ) { index, originalSong ->
+
+                                            val currentShape = when (quickPickShapePref) {
+                                                QuickPickShape.DEFAULT -> RoundedCornerShape(ThumbnailCornerRadius)
+                                                QuickPickShape.CIRCLE -> CircleShape
+                                                QuickPickShape.LEAF -> RoundedCornerShape(topStart = 24.dp, bottomEnd = 24.dp)
+                                                QuickPickShape.CUT_CORNER -> CutCornerShape(12.dp)
+                                                QuickPickShape.DYNAMIC -> {
+                                                    val shapes = listOf(
+                                                        RoundedCornerShape(ThumbnailCornerRadius),
+                                                        CircleShape,
+                                                        RoundedCornerShape(topStart = 24.dp, bottomEnd = 24.dp),
+                                                        CutCornerShape(12.dp)
+                                                    )
+                                                    shapes[index % shapes.size]
+                                                }
+                                            }
+
                                             // fetch song from database to keep updated
                                             val song by database
                                                 .song(originalSong.id)
@@ -1803,6 +1825,7 @@ fun HomeScreen(
 
                                             SongListItem(
                                                 song = song!!,
+                                                thumbnailShape = currentShape,
                                                 showInLibraryIcon = true,
                                                 isActive = song!!.id == mediaMetadata?.id,
                                                 isPlaying = isPlaying,
