@@ -17,6 +17,7 @@ import androidx.compose.animation.expandIn
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkOut
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
@@ -43,6 +44,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
@@ -286,6 +288,7 @@ fun ClickableArtistText(
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 inline fun ListItem(
     modifier: Modifier = Modifier,
@@ -306,7 +309,7 @@ inline fun ListItem(
                 .clip(RoundedCornerShape(8.dp))
                 .background(
                     color = // selected active
-                        if (isSelected == true) MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                        if (isSelected == true) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f)
                         else MaterialTheme.colorScheme.secondaryContainer
                 )
         } else if (isSelected == true) {
@@ -314,7 +317,7 @@ inline fun ListItem(
                 .height(ListItemHeight)
                 .padding(horizontal = 8.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(color = MaterialTheme.colorScheme.inversePrimary.copy(alpha = 0.4f))
+                .background(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
         } else {
             modifier // default
                 .height(ListItemHeight)
@@ -372,6 +375,7 @@ inline fun ListItem(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ListItem(
     modifier: Modifier = Modifier,
@@ -403,6 +407,7 @@ fun ListItem(
     isActive = isActive
 )
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ListItem(
     modifier: Modifier = Modifier,
@@ -435,6 +440,7 @@ fun ListItem(
     isActive = isActive
 )
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun GridItem(
     modifier: Modifier = Modifier,
@@ -481,6 +487,7 @@ fun GridItem(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun GridItem(
     modifier: Modifier = Modifier,
@@ -517,6 +524,7 @@ fun GridItem(
     fillMaxWidth = fillMaxWidth
 )
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun SongListItem(
     song: Song,
@@ -526,6 +534,7 @@ fun SongListItem(
     showInLibraryIcon: Boolean = false,
     showDownloadIcon: Boolean = true,
     subtitleOverride: String? = null,
+    thumbnailShape: Shape = RoundedCornerShape(ThumbnailCornerRadius),
     badges: @Composable RowScope.() -> Unit = {
         if (showLikedIcon && song.song.liked) {
             Icon.Favorite()
@@ -583,7 +592,7 @@ fun SongListItem(
                      isSelected = isSelected,
                      isActive = isActive,
                      isPlaying = isPlaying,
-                     shape = RoundedCornerShape(ThumbnailCornerRadius),
+                     shape = thumbnailShape,
                      modifier = Modifier.size(ListThumbnailSize)
                  )
              },
@@ -606,6 +615,7 @@ fun SongListItem(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun SongGridItem(
     song: Song,
@@ -671,6 +681,7 @@ fun SongGridItem(
     modifier = modifier
 )
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ArtistListItem(
     artist: Artist,
@@ -710,6 +721,7 @@ fun ArtistListItem(
     modifier = modifier,
 )
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ArtistGridItem(
     artist: Artist,
@@ -743,6 +755,7 @@ fun ArtistGridItem(
     modifier = modifier
 )
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun AlbumListItem(
     album: Album,
@@ -814,6 +827,7 @@ fun AlbumListItem(
     modifier = modifier
 )
 
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun AlbumGridItem(
     album: Album,
@@ -907,6 +921,7 @@ fun AlbumGridItem(
     modifier = modifier
 )
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun PlaylistListItem(
     playlist: Playlist,
@@ -970,7 +985,6 @@ fun PlaylistListItem(
                     stringResource(R.string.liked) -> R.drawable.favorite_border
                     stringResource(R.string.offline) -> R.drawable.offline
                     stringResource(R.string.cached_playlist) -> R.drawable.cached
-                    // R.drawable.backup as placeholder
                     stringResource(R.string.uploaded_playlist) -> R.drawable.backup
                     else -> if (autoPlaylist) R.drawable.trending_up else R.drawable.queue_music
                 }
@@ -988,6 +1002,7 @@ fun PlaylistListItem(
     modifier = modifier
 )
 
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun PlaylistGridItem(
     playlist: Playlist,
@@ -1070,7 +1085,6 @@ fun PlaylistGridItem(
                     stringResource(R.string.liked) -> R.drawable.favorite_border
                     stringResource(R.string.offline) -> R.drawable.offline
                     stringResource(R.string.cached_playlist) -> R.drawable.cached
-                    // R.drawable.backup as placeholder
                     stringResource(R.string.uploaded_playlist) -> R.drawable.backup
                     else -> if (autoPlaylist) R.drawable.trending_up else R.drawable.queue_music
                 }
@@ -1093,6 +1107,7 @@ fun PlaylistGridItem(
     modifier = modifier
 )
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun MediaMetadataListItem(
     mediaMetadata: MediaMetadata,
@@ -1142,7 +1157,7 @@ fun MediaMetadataListItem(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun YouTubeListItem(
     item: YTItem,
@@ -1168,9 +1183,6 @@ fun YouTubeListItem(
             Icon.Favorite()
         }
         if (item.explicit) Icon.Explicit()
-        // if (item is SongItem && song?.song?.inLibrary != null) {
-        //     Icon.Library()
-        // }
         if (item is SongItem) {
             val download by LocalDownloadUtil.current.getDownload(item.id).collectAsStateWithLifecycle(null)
             Icon.Download(download?.state)
@@ -1220,6 +1232,7 @@ fun YouTubeListItem(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun YouTubeGridItem(
     item: YTItem,
@@ -1240,7 +1253,6 @@ fun YouTubeGridItem(
             Icon.Favorite()
         }
         if (item.explicit) Icon.Explicit()
-        // if (item is SongItem && song?.song?.inLibrary != null) Icon.Library()
         if (item is SongItem) {
             val download by LocalDownloadUtil.current.getDownload(item.id).collectAsStateWithLifecycle(null)
             Icon.Download(download?.state)
@@ -1325,6 +1337,7 @@ fun YouTubeGridItem(
     modifier = modifier
 )
 
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun LocalSongsGrid(
     title: String,
@@ -1367,6 +1380,7 @@ fun LocalSongsGrid(
     modifier = modifier
 )
 
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun LocalArtistsGrid(
     title: String,
@@ -1409,6 +1423,7 @@ fun LocalArtistsGrid(
     modifier = modifier
 )
 
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun LocalAlbumsGrid(
     title: String,
@@ -1665,7 +1680,6 @@ fun PlaylistThumbnail(
         1 -> AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
                 .data(thumbnails[0].resize((size.value * 3).toInt()))
-                .apply { /* Removed cache key extensions due to unresolved in env */ }
                 .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
                 .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
                 .networkCachePolicy(coil3.request.CachePolicy.ENABLED)
@@ -1692,7 +1706,6 @@ fun PlaylistThumbnail(
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(thumbnails.getOrNull(index)?.resize((size.value * 1.5).toInt()))
-                        .apply { /* Removed cache key extensions due to unresolved in env */ }
                         .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
                         .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
                         .networkCachePolicy(coil3.request.CachePolicy.ENABLED)
