@@ -124,7 +124,10 @@ import com.jay.glossy.constants.ListItemHeight
 import com.jay.glossy.constants.ListThumbnailSize
 import com.jay.glossy.constants.QuickPickShape
 import com.jay.glossy.constants.QuickPickShapeKey
+import com.jay.glossy.constants.QuickPicksStyle
+import com.jay.glossy.constants.QuickPicksStyleKey
 import com.jay.glossy.constants.RandomizeHomeOrderKey
+import com.jay.glossy.constants.ShowFeaturedCarouselKey
 import com.jay.glossy.constants.SmallGridThumbnailHeight
 import com.jay.glossy.constants.ThumbnailCornerRadius
 import com.jay.glossy.db.entities.Album
@@ -685,6 +688,9 @@ fun HomeScreen(
     val (randomizeHomeOrder) = rememberPreference(RandomizeHomeOrderKey, true)
     val autoRadioQueue by rememberPreference(AutoRadioQueueKey, defaultValue = true)
     val quickPickShapePref by rememberEnumPreference(QuickPickShapeKey, QuickPickShape.DEFAULT)
+
+    val showFeaturedCarouselPref by rememberPreference(ShowFeaturedCarouselKey, defaultValue = true)
+    val quickPicksStylePref by rememberEnumPreference(QuickPicksStyleKey, defaultValue = QuickPicksStyle.GRID)
 
     LaunchedEffect(Unit) { viewModel.loadHomeData() }
 
@@ -1436,7 +1442,7 @@ fun HomeScreen(
                         }
                     }
                     
-                    // --- NEW FEATURED SPOTLIGHT CAROUSEL ADDED HERE ---
+                    // --- FEATURED SPOTLIGHT CAROUSEL ---
                     val spotlightItems = remember(homePage, randomSeed) {
                         homePage?.sections
                             ?.flatMap { it.items }
@@ -1447,7 +1453,7 @@ fun HomeScreen(
                             ?: emptyList()
                     }
 
-                    if (spotlightItems.isNotEmpty()) {
+                    if (showFeaturedCarouselPref && spotlightItems.isNotEmpty()) {
                         item(key = "featured_spotlight_carousel") {
                             Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 16.dp)) {
                                 NavigationTitle(
@@ -1577,7 +1583,6 @@ fun HomeScreen(
                             }
                         }
                     }
-                    // --- END OF FEATURED CAROUSEL ---
                 }
 
                 homeSections.forEach { section ->
@@ -1929,122 +1934,199 @@ fun HomeScreen(
                                 }
 
                                 item(key = "quick_picks_list") {
-                                    LazyHorizontalGrid(
-                                        state = quickPicksLazyGridState,
-                                        rows = GridCells.Fixed(4),
-                                        flingBehavior = rememberSnapFlingBehavior(quickPicksSnapLayoutInfoProvider),
-                                        contentPadding =
-                                            WindowInsets.systemBars
-                                                .only(WindowInsetsSides.Horizontal)
-                                                .asPaddingValues(),
-                                        modifier =
-                                            Modifier
-                                                .fillMaxWidth()
-                                                .height(ListItemHeight * 4),
-                                        ) {
-                                            itemsIndexed(
-                                                items = quickPicks.distinctBy { it.id },
-                                                key = { _, originalSong -> "home_quickpick_${originalSong.id}" },
-                                            ) { index, originalSong ->
+                                    when (quickPicksStylePref) {
+                                        QuickPicksStyle.GRID, QuickPicksStyle.LIST -> {
+                                            val rowsCount = if (quickPicksStylePref == QuickPicksStyle.GRID) 4 else 1
+                                            LazyHorizontalGrid(
+                                                state = quickPicksLazyGridState,
+                                                rows = GridCells.Fixed(rowsCount),
+                                                flingBehavior = rememberSnapFlingBehavior(quickPicksSnapLayoutInfoProvider),
+                                                contentPadding = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal).asPaddingValues(),
+                                                modifier = Modifier.fillMaxWidth().height(ListItemHeight * rowsCount),
+                                            ) {
+                                                itemsIndexed(
+                                                    items = quickPicks.distinctBy { it.id },
+                                                    key = { _, originalSong -> "home_quickpick_${originalSong.id}" },
+                                                ) { index, originalSong ->
 
-                                            val currentShape = when (quickPickShapePref) {
-                                                QuickPickShape.DEFAULT -> RoundedCornerShape(ThumbnailCornerRadius)
-                                                QuickPickShape.CIRCLE -> CircleShape
-                                                QuickPickShape.SQUIRCLE -> RoundedCornerShape(percent = 35)
-                                                QuickPickShape.LEAF -> RoundedCornerShape(topStartPercent = 50, bottomEndPercent = 50)
-                                                QuickPickShape.INVERTED_LEAF -> RoundedCornerShape(topEndPercent = 50, bottomStartPercent = 50)
-                                                QuickPickShape.TEARDROP -> RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomStartPercent = 50, bottomEndPercent = 0)
-                                                QuickPickShape.MESSAGE_BUBBLE -> RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomEndPercent = 50, bottomStartPercent = 0)
-                                                QuickPickShape.TICKET -> RoundedCornerShape(topStartPercent = 25, topEndPercent = 25, bottomStartPercent = 0, bottomEndPercent = 0)
-                                                QuickPickShape.INVERTED_TICKET -> RoundedCornerShape(topStartPercent = 0, topEndPercent = 0, bottomStartPercent = 25, bottomEndPercent = 25)
-                                                QuickPickShape.CUT_CORNER -> CutCornerShape(12.dp)
-                                                QuickPickShape.OCTAGON -> CutCornerShape(percent = 25)
-                                                QuickPickShape.DIAMOND -> CutCornerShape(percent = 50)
-                                                QuickPickShape.BOOKMARK -> CutCornerShape(topStartPercent = 0, topEndPercent = 0, bottomStartPercent = 25, bottomEndPercent = 25)
-                                                QuickPickShape.FOLDER -> CutCornerShape(topStartPercent = 25, topEndPercent = 25, bottomStartPercent = 0, bottomEndPercent = 0)
-                                                QuickPickShape.DYNAMIC -> {
-                                                    val shapes = listOf(
-                                                        RoundedCornerShape(ThumbnailCornerRadius),
-                                                        CircleShape,
-                                                        RoundedCornerShape(percent = 35),
-                                                        RoundedCornerShape(topStartPercent = 50, bottomEndPercent = 50),
-                                                        RoundedCornerShape(topEndPercent = 50, bottomStartPercent = 50),
-                                                        RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomStartPercent = 50, bottomEndPercent = 0),
-                                                        RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomEndPercent = 50, bottomStartPercent = 0),
-                                                        RoundedCornerShape(topStartPercent = 25, topEndPercent = 25, bottomStartPercent = 0, bottomEndPercent = 0),
-                                                        CutCornerShape(12.dp),
-                                                        CutCornerShape(percent = 25),
-                                                        CutCornerShape(percent = 50),
-                                                        CutCornerShape(topStartPercent = 25, topEndPercent = 25, bottomStartPercent = 0, bottomEndPercent = 0)
-                                                    )
-                                                    shapes[index % shapes.size]
-                                                }
-                                            }
+                                                    val currentShape = when (quickPickShapePref) {
+                                                        QuickPickShape.DEFAULT -> RoundedCornerShape(ThumbnailCornerRadius)
+                                                        QuickPickShape.CIRCLE -> CircleShape
+                                                        QuickPickShape.SQUIRCLE -> RoundedCornerShape(percent = 35)
+                                                        QuickPickShape.LEAF -> RoundedCornerShape(topStartPercent = 50, bottomEndPercent = 50)
+                                                        QuickPickShape.INVERTED_LEAF -> RoundedCornerShape(topEndPercent = 50, bottomStartPercent = 50)
+                                                        QuickPickShape.TEARDROP -> RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomStartPercent = 50, bottomEndPercent = 0)
+                                                        QuickPickShape.MESSAGE_BUBBLE -> RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomEndPercent = 50, bottomStartPercent = 0)
+                                                        QuickPickShape.TICKET -> RoundedCornerShape(topStartPercent = 25, topEndPercent = 25, bottomStartPercent = 0, bottomEndPercent = 0)
+                                                        QuickPickShape.INVERTED_TICKET -> RoundedCornerShape(topStartPercent = 0, topEndPercent = 0, bottomStartPercent = 25, bottomEndPercent = 25)
+                                                        QuickPickShape.CUT_CORNER -> CutCornerShape(12.dp)
+                                                        QuickPickShape.OCTAGON -> CutCornerShape(percent = 25)
+                                                        QuickPickShape.DIAMOND -> CutCornerShape(percent = 50)
+                                                        QuickPickShape.BOOKMARK -> CutCornerShape(topStartPercent = 0, topEndPercent = 0, bottomStartPercent = 25, bottomEndPercent = 25)
+                                                        QuickPickShape.FOLDER -> CutCornerShape(topStartPercent = 25, topEndPercent = 25, bottomStartPercent = 0, bottomEndPercent = 0)
+                                                        QuickPickShape.DYNAMIC -> {
+                                                            val shapes = listOf(
+                                                                RoundedCornerShape(ThumbnailCornerRadius),
+                                                                CircleShape,
+                                                                RoundedCornerShape(percent = 35),
+                                                                RoundedCornerShape(topStartPercent = 50, bottomEndPercent = 50),
+                                                                RoundedCornerShape(topEndPercent = 50, bottomStartPercent = 50),
+                                                                RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomStartPercent = 50, bottomEndPercent = 0),
+                                                                RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomEndPercent = 50, bottomStartPercent = 0),
+                                                                RoundedCornerShape(topStartPercent = 25, topEndPercent = 25, bottomStartPercent = 0, bottomEndPercent = 0),
+                                                                CutCornerShape(12.dp),
+                                                                CutCornerShape(percent = 25),
+                                                                CutCornerShape(percent = 50),
+                                                                CutCornerShape(topStartPercent = 25, topEndPercent = 25, bottomStartPercent = 0, bottomEndPercent = 0)
+                                                            )
+                                                            shapes[index % shapes.size]
+                                                        }
+                                                    }
 
-                                            // fetch song from database to keep updated
-                                            val song by database
-                                                .song(originalSong.id)
-                                                .collectAsStateWithLifecycle(initialValue = originalSong)
+                                                    val song by database.song(originalSong.id).collectAsStateWithLifecycle(initialValue = originalSong)
 
-                                            SongListItem(
-                                                song = song!!,
-                                                thumbnailShape = currentShape,
-                                                showInLibraryIcon = true,
-                                                isActive = song!!.id == mediaMetadata?.id,
-                                                isPlaying = isPlaying,
-                                                isSwipeable = false,
-                                                trailingContent = {
-                                                    IconButton(
-                                                        onClick = {
-                                                            menuState.show {
-                                                                SongMenu(
-                                                                    originalSong = song!!,
-                                                                    onDismiss = menuState::dismiss,
-                                                                )
+                                                    SongListItem(
+                                                        song = song!!,
+                                                        thumbnailShape = currentShape,
+                                                        showInLibraryIcon = true,
+                                                        isActive = song!!.id == mediaMetadata?.id,
+                                                        isPlaying = isPlaying,
+                                                        isSwipeable = false,
+                                                        trailingContent = {
+                                                            IconButton(
+                                                                onClick = {
+                                                                    menuState.show { SongMenu(originalSong = song!!, onDismiss = menuState::dismiss) }
+                                                                },
+                                                            ) {
+                                                                Icon(painter = painterResource(R.drawable.more_vert), contentDescription = null)
                                                             }
                                                         },
-                                                    ) {
-                                                        Icon(
-                                                            painter = painterResource(R.drawable.more_vert),
-                                                            contentDescription = null,
+                                                        modifier = Modifier
+                                                            .width(horizontalLazyGridItemWidth)
+                                                            .combinedClickable(
+                                                                onClick = {
+                                                                    if (!isListenTogetherGuest) {
+                                                                        if (song!!.id == mediaMetadata?.id) {
+                                                                            playerConnection.togglePlayPause()
+                                                                        } else {
+                                                                            playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue.radio(song!!.toMediaMetadata()) else ListQueue(title = song!!.title, items = listOf(song!!.toMediaItem())))
+                                                                        }
+                                                                    }
+                                                                },
+                                                                onLongClick = {
+                                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                                    menuState.show { SongMenu(originalSong = song!!, onDismiss = menuState::dismiss) }
+                                                                },
+                                                            ),
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        QuickPicksStyle.CAROUSEL -> {
+                                            val uniquePicks = quickPicks.distinctBy { it.id }
+                                            val carouselState = rememberCarouselState { uniquePicks.size }
+
+                                            HorizontalMultiBrowseCarousel(
+                                                state = carouselState,
+                                                preferredItemWidth = 260.dp,
+                                                itemSpacing = 16.dp,
+                                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                                modifier = Modifier.fillMaxWidth().height(260.dp)
+                                            ) { i ->
+                                                val originalSong = uniquePicks[i]
+                                                val song by database.song(originalSong.id).collectAsStateWithLifecycle(initialValue = originalSong)
+
+                                                val currentShape = when (quickPickShapePref) {
+                                                    QuickPickShape.DEFAULT -> RoundedCornerShape(24.dp)
+                                                    QuickPickShape.CIRCLE -> CircleShape
+                                                    QuickPickShape.SQUIRCLE -> RoundedCornerShape(percent = 35)
+                                                    QuickPickShape.LEAF -> RoundedCornerShape(topStartPercent = 50, bottomEndPercent = 50)
+                                                    QuickPickShape.INVERTED_LEAF -> RoundedCornerShape(topEndPercent = 50, bottomStartPercent = 50)
+                                                    QuickPickShape.TEARDROP -> RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomStartPercent = 50, bottomEndPercent = 0)
+                                                    QuickPickShape.MESSAGE_BUBBLE -> RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomEndPercent = 50, bottomStartPercent = 0)
+                                                    QuickPickShape.TICKET -> RoundedCornerShape(topStartPercent = 25, topEndPercent = 25, bottomStartPercent = 0, bottomEndPercent = 0)
+                                                    QuickPickShape.INVERTED_TICKET -> RoundedCornerShape(topStartPercent = 0, topEndPercent = 0, bottomStartPercent = 25, bottomEndPercent = 25)
+                                                    QuickPickShape.CUT_CORNER -> CutCornerShape(12.dp)
+                                                    QuickPickShape.OCTAGON -> CutCornerShape(percent = 25)
+                                                    QuickPickShape.DIAMOND -> CutCornerShape(percent = 50)
+                                                    QuickPickShape.BOOKMARK -> CutCornerShape(topStartPercent = 0, topEndPercent = 0, bottomStartPercent = 25, bottomEndPercent = 25)
+                                                    QuickPickShape.FOLDER -> CutCornerShape(topStartPercent = 25, topEndPercent = 25, bottomStartPercent = 0, bottomEndPercent = 0)
+                                                    QuickPickShape.DYNAMIC -> {
+                                                        val shapes = listOf(
+                                                            RoundedCornerShape(24.dp), CircleShape, RoundedCornerShape(percent = 35), RoundedCornerShape(topStartPercent = 50, bottomEndPercent = 50),
+                                                            RoundedCornerShape(topEndPercent = 50, bottomStartPercent = 50), RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomStartPercent = 50, bottomEndPercent = 0),
+                                                            RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomEndPercent = 50, bottomStartPercent = 0), RoundedCornerShape(topStartPercent = 25, topEndPercent = 25, bottomStartPercent = 0, bottomEndPercent = 0),
+                                                            CutCornerShape(12.dp), CutCornerShape(percent = 25), CutCornerShape(percent = 50), CutCornerShape(topStartPercent = 25, topEndPercent = 25, bottomStartPercent = 0, bottomEndPercent = 0)
                                                         )
+                                                        shapes[i % shapes.size]
                                                     }
-                                                },
-                                                modifier =
-                                                    Modifier
-                                                        .width(horizontalLazyGridItemWidth)
+                                                }
+
+                                                Card(
+                                                    modifier = Modifier
+                                                        .fillMaxSize()
+                                                        .clip(currentShape)
                                                         .combinedClickable(
                                                             onClick = {
                                                                 if (!isListenTogetherGuest) {
                                                                     if (song!!.id == mediaMetadata?.id) {
                                                                         playerConnection.togglePlayPause()
                                                                     } else {
-                                                                        playerConnection.playQueue(
-                                                                            if (autoRadioQueue) {
-                                                                                YouTubeQueue.radio(
-                                                                                    song!!.toMediaMetadata(),
-                                                                                )
-                                                                            } else {
-                                                                                ListQueue(
-                                                                                    title = song!!.title,
-                                                                                    items = listOf(song!!.toMediaItem())
-                                                                                )
-                                                                            }
-                                                                        )
+                                                                        playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue.radio(song!!.toMediaMetadata()) else ListQueue(title = song!!.title, items = listOf(song!!.toMediaItem())))
                                                                     }
                                                                 }
                                                             },
                                                             onLongClick = {
                                                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                                menuState.show {
-                                                                    SongMenu(
-                                                                        originalSong = song!!,
-                                                                        onDismiss = menuState::dismiss,
-                                                                    )
-                                                                }
-                                                            },
+                                                                menuState.show { SongMenu(originalSong = song!!, onDismiss = menuState::dismiss) }
+                                                            }
                                                         ),
-                                            )
+                                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                                                    shape = currentShape
+                                                ) {
+                                                    Box(modifier = Modifier.fillMaxSize()) {
+                                                        AsyncImage(
+                                                            model = ImageRequest.Builder(LocalContext.current)
+                                                                .data(song!!.song.thumbnailUrl?.resize(1080, 1080))
+                                                                .crossfade(true)
+                                                                .build(),
+                                                            contentDescription = null,
+                                                            contentScale = ContentScale.Crop,
+                                                            modifier = Modifier.fillMaxSize()
+                                                        )
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .fillMaxSize()
+                                                                .background(
+                                                                    Brush.verticalGradient(
+                                                                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.5f), Color.Black.copy(alpha = 0.9f)),
+                                                                        startY = 50f
+                                                                    )
+                                                                )
+                                                        )
+                                                        Column(
+                                                            modifier = Modifier.align(Alignment.BottomStart).padding(16.dp).padding(end = 56.dp)
+                                                        ) {
+                                                            Text(text = song!!.song.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                                            Spacer(modifier = Modifier.height(4.dp))
+                                                            Text(text = song!!.orderedArtists.joinToArtistString(" & ") { it.name }, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.8f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                                        }
+                                                        Box(
+                                                            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp).size(40.dp).background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f), CircleShape)
+                                                                .clickable {
+                                                                    if (!isListenTogetherGuest) {
+                                                                        if (song!!.id == mediaMetadata?.id) playerConnection.togglePlayPause()
+                                                                        else playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue.radio(song!!.toMediaMetadata()) else ListQueue(title = song!!.title, items = listOf(song!!.toMediaItem())))
+                                                                    }
+                                                                },
+                                                            contentAlignment = Alignment.Center
+                                                        ) {
+                                                            Icon(painter = painterResource(if (song!!.id == mediaMetadata?.id && isPlaying) R.drawable.pause else R.drawable.play), contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(20.dp))
+                                                        }
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
