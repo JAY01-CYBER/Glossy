@@ -2372,12 +2372,30 @@ fun HomeScreen(
                                                     .fillMaxWidth()
                                                     .height(ListItemHeight * 4),
                                         ) {
-                                            items(
+                                            itemsIndexed(
                                                 items = sectionSongs.distinctBy { it.id },
-                                                key = { "home_section_${section.index}_song_${it.id}" },
-                                            ) { song ->
+                                                key = { _, song -> "home_section_${section.index}_song_${song.id}" },
+                                            ) { index, song ->
+
+                                                val currentShape = when (quickPickShapePref) {
+                                                    QuickPickShape.DEFAULT -> RoundedCornerShape(ThumbnailCornerRadius)
+                                                    QuickPickShape.CIRCLE -> CircleShape
+                                                    QuickPickShape.LEAF -> RoundedCornerShape(topStart = 24.dp, bottomEnd = 24.dp)
+                                                    QuickPickShape.CUT_CORNER -> CutCornerShape(12.dp)
+                                                    QuickPickShape.DYNAMIC -> {
+                                                        val shapes = listOf(
+                                                            RoundedCornerShape(ThumbnailCornerRadius),
+                                                            CircleShape,
+                                                            RoundedCornerShape(topStart = 24.dp, bottomEnd = 24.dp),
+                                                            CutCornerShape(12.dp)
+                                                        )
+                                                        shapes[index % shapes.size]
+                                                    }
+                                                }
+
                                                 YouTubeListItem(
                                                     item = song,
+                                                    thumbnailShape = currentShape, // <-- Shape Yahan Pass Hogi
                                                     isActive = song.id == mediaMetadata?.id,
                                                     isPlaying = isPlaying,
                                                     isSwipeable = false,
