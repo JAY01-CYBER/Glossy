@@ -741,7 +741,17 @@ val QuickPickShapeKey = stringPreferencesKey("quickPickShape")
 enum class QuickPickShape {
     DEFAULT,
     CIRCLE,
+    SQUIRCLE,
     LEAF,
+    INVERTED_LEAF,
+    TEARDROP,
+    MESSAGE_BUBBLE,
+    TICKET,
+    INVERTED_TICKET,
     CUT_CORNER,
+    OCTAGON,
+    DIAMOND,
+    BOOKMARK,
+    FOLDER,
     DYNAMIC
 }
