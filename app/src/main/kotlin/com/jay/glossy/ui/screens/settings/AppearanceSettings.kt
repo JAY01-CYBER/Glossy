@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -1038,7 +1038,7 @@ fun AppearanceSettings(
             title = "Home Screen Layout",
             items = listOf(
                 Material3SettingsItem(
-                    icon = painterResource(R.drawable.view_carousel),
+                    icon = painterResource(R.drawable.nav_bar),
                     title = { Text("Show Featured Spotlight") },
                     description = { Text("Show large animated banner on home screen") },
                     trailingContent = {
@@ -1057,7 +1057,7 @@ fun AppearanceSettings(
                     onClick = { onShowFeaturedCarouselChange(!showFeaturedCarousel) }
                 ),
                 Material3SettingsItem(
-                    icon = painterResource(R.drawable.dashboard),
+                    icon = painterResource(R.drawable.grid_view),
                     title = { Text("Quick Picks Style") },
                     description = {
                         Text(
@@ -1730,6 +1730,7 @@ fun AppearanceSettings(
             title = stringResource(R.string.misc),
             items =
                 listOf(
+                    // NEW QUICK PICKS SHAPE SETTING IN MISC GROUP
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.palette), // Using palette as an expressive icon for shapes
                         title = { Text("Quick Picks Thumbnail Shape") },
