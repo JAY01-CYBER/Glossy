@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -11,6 +11,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -28,6 +29,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -105,6 +107,8 @@ import com.jay.glossy.constants.SwipeToRemoveSongKey
 import com.jay.glossy.constants.SwipeToSongKey
 import com.jay.glossy.constants.UseNewMiniPlayerDesignKey
 import com.jay.glossy.constants.UseNewPlayerDesignKey
+import com.jay.glossy.constants.QuickPickShape
+import com.jay.glossy.constants.QuickPickShapeKey
 import com.jay.glossy.ui.component.DefaultDialog
 import com.jay.glossy.ui.component.EnumDialog
 import com.jay.glossy.ui.component.IconButton
@@ -123,7 +127,7 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 import kotlin.math.roundToInt
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun AppearanceSettings(
     navController: NavController,
@@ -239,6 +243,14 @@ fun AppearanceSettings(
         )
     val (lyricsTextSize, onLyricsTextSizeChange) = rememberPreference(LyricsTextSizeKey, defaultValue = 24f)
     val (lyricsLineSpacing, onLyricsLineSpacingChange) = rememberPreference(LyricsLineSpacingKey, defaultValue = 1.2f)
+
+    // NEW PREFERENCE FOR QUICK PICKS SHAPE
+    val (quickPickShape, onQuickPickShapeChange) =
+        rememberEnumPreference(
+            QuickPickShapeKey,
+            defaultValue = QuickPickShape.DEFAULT,
+        )
+    var showQuickPickShapeDialog by rememberSaveable { mutableStateOf(false) }
 
     var showExperimentalLyricsBetaDialog by remember { mutableStateOf(false) }
     var showLyricsAnimationStyleDialog by remember { mutableStateOf(false) }
@@ -366,6 +378,29 @@ fun AppearanceSettings(
 
     var showLyricsPositionDialog by rememberSaveable {
         mutableStateOf(false)
+    }
+
+    // NEW QUICK PICK SHAPE DIALOG
+    if (showQuickPickShapeDialog) {
+        EnumDialog(
+            onDismiss = { showQuickPickShapeDialog = false },
+            onSelect = {
+                onQuickPickShapeChange(it)
+                showQuickPickShapeDialog = false
+            },
+            title = "Quick Picks Shape",
+            current = quickPickShape,
+            values = QuickPickShape.values().toList(),
+            valueText = {
+                when (it) {
+                    QuickPickShape.DEFAULT -> "Default (Rounded)"
+                    QuickPickShape.CIRCLE -> "Circle"
+                    QuickPickShape.LEAF -> "Expressive Leaf"
+                    QuickPickShape.CUT_CORNER -> "Cut Corners"
+                    QuickPickShape.DYNAMIC -> "Dynamic (Mixed)"
+                }
+            },
+        )
     }
 
     if (showLyricsPositionDialog) {
@@ -1617,6 +1652,23 @@ fun AppearanceSettings(
             title = stringResource(R.string.misc),
             items =
                 listOf(
+                    // NEW QUICK PICKS SHAPE SETTING IN MISC GROUP
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.palette), // Using palette as an expressive icon for shapes
+                        title = { Text("Quick Picks Shape") },
+                        description = {
+                            Text(
+                                when (quickPickShape) {
+                                    QuickPickShape.DEFAULT -> "Default (Rounded)"
+                                    QuickPickShape.CIRCLE -> "Circle"
+                                    QuickPickShape.LEAF -> "Expressive Leaf"
+                                    QuickPickShape.CUT_CORNER -> "Cut Corners"
+                                    QuickPickShape.DYNAMIC -> "Dynamic (Mixed)"
+                                }
+                            )
+                        },
+                        onClick = { showQuickPickShapeDialog = true },
+                    ),
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.nav_bar),
                         title = { Text(stringResource(R.string.default_open_tab)) },
