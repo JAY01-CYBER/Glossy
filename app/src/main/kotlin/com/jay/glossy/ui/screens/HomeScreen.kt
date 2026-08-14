@@ -88,7 +88,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -1433,6 +1435,149 @@ fun HomeScreen(
                             }
                         }
                     }
+                    
+                    // --- NEW FEATURED SPOTLIGHT CAROUSEL ADDED HERE ---
+                    val spotlightItems = remember(homePage, randomSeed) {
+                        homePage?.sections
+                            ?.flatMap { it.items }
+                            ?.filterIsInstance<SongItem>()
+                            ?.distinctBy { it.id }
+                            ?.shuffled(Random(randomSeed))
+                            ?.take(8)
+                            ?: emptyList()
+                    }
+
+                    if (spotlightItems.isNotEmpty()) {
+                        item(key = "featured_spotlight_carousel") {
+                            Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 16.dp)) {
+                                NavigationTitle(
+                                    title = "Featured Spotlight",
+                                    onPlayAllClick = if (!isListenTogetherGuest) {
+                                        {
+                                            playerConnection.playQueue(
+                                                ListQueue(
+                                                    title = "Featured Spotlight",
+                                                    items = spotlightItems.map { it.toMediaMetadata().toMediaItem() }
+                                                )
+                                            )
+                                        }
+                                    } else null
+                                )
+
+                                val carouselState = rememberCarouselState { spotlightItems.size }
+                                HorizontalMultiBrowseCarousel(
+                                    state = carouselState,
+                                    preferredItemWidth = 300.dp,
+                                    itemSpacing = 16.dp,
+                                    contentPadding = PaddingValues(horizontal = 16.dp),
+                                    modifier = Modifier.fillMaxWidth().height(220.dp)
+                                ) { i ->
+                                    val item = spotlightItems[i]
+                                    Card(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clip(RoundedCornerShape(24.dp))
+                                            .combinedClickable(
+                                                onClick = {
+                                                    if (!isListenTogetherGuest) {
+                                                        playerConnection.playQueue(
+                                                            if (autoRadioQueue) {
+                                                                YouTubeQueue(item.endpoint ?: WatchEndpoint(videoId = item.id), item.toMediaMetadata())
+                                                            } else {
+                                                                ListQueue(title = item.title, items = listOf(item.toMediaItem()))
+                                                            }
+                                                        )
+                                                    }
+                                                },
+                                                onLongClick = {
+                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                    menuState.show {
+                                                        YouTubeSongMenu(song = item, onDismiss = menuState::dismiss)
+                                                    }
+                                                }
+                                            ),
+                                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                                    ) {
+                                        Box(modifier = Modifier.fillMaxSize()) {
+                                            AsyncImage(
+                                                model = ImageRequest.Builder(LocalContext.current)
+                                                    .data(item.thumbnail.resize(1080, 1080))
+                                                    .crossfade(true)
+                                                    .build(),
+                                                contentDescription = null,
+                                                contentScale = ContentScale.Crop,
+                                                modifier = Modifier.fillMaxSize()
+                                            )
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .background(
+                                                        Brush.verticalGradient(
+                                                            colors = listOf(
+                                                                Color.Transparent,
+                                                                Color.Black.copy(alpha = 0.5f),
+                                                                Color.Black.copy(alpha = 0.9f)
+                                                            ),
+                                                            startY = 50f
+                                                        )
+                                                    )
+                                            )
+                                            Column(
+                                                modifier = Modifier
+                                                    .align(Alignment.BottomStart)
+                                                    .padding(16.dp)
+                                                    .padding(end = 56.dp) // space for play button
+                                            ) {
+                                                Text(
+                                                    text = item.title,
+                                                    style = MaterialTheme.typography.titleLarge,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color.White,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Text(
+                                                    text = item.artists.joinToArtistString(" & ") { it.name },
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = Color.White.copy(alpha = 0.8f),
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+                                            Box(
+                                                modifier = Modifier
+                                                    .align(Alignment.BottomEnd)
+                                                    .padding(16.dp)
+                                                    .size(48.dp)
+                                                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f), CircleShape)
+                                                    .clickable {
+                                                        if (!isListenTogetherGuest) {
+                                                            playerConnection.playQueue(
+                                                                if (autoRadioQueue) {
+                                                                    YouTubeQueue(item.endpoint ?: WatchEndpoint(videoId = item.id), item.toMediaMetadata())
+                                                                } else {
+                                                                    ListQueue(title = item.title, items = listOf(item.toMediaItem()))
+                                                                }
+                                                            )
+                                                        }
+                                                    },
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    painter = painterResource(R.drawable.play),
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                    modifier = Modifier.size(24.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    // --- END OF FEATURED CAROUSEL ---
                 }
 
                 homeSections.forEach { section ->
@@ -2009,7 +2154,7 @@ fun HomeScreen(
                                                         }
                                                     }
                                                 },
-                                                modifier = Modifier.maskClip(MaterialTheme.shapes.extraLarge),
+                                                modifier = Modifier.clip(MaterialTheme.shapes.extraLarge),
                                             )
                                         }
                                     }
