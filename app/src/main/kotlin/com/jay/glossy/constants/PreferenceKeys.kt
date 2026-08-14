@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -756,10 +756,14 @@ enum class QuickPickShape {
     DYNAMIC
 }
 
-// Quick Picks Layout Option
-val QuickPickLayoutKey = stringPreferencesKey("quickPickLayout")
+// Quick Picks Layout Style Option
+val QuickPicksStyleKey = stringPreferencesKey("quickPicksStyle")
 
-enum class QuickPickLayout {
+enum class QuickPicksStyle {
     GRID,
+    LIST,
     CAROUSEL
 }
+
+// Featured Spotlight Carousel Option
+val ShowFeaturedCarouselKey = booleanPreferencesKey("showFeaturedCarousel")
