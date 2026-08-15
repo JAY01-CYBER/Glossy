@@ -1457,7 +1457,7 @@ fun HomeScreen(
                     // --- FEATURED SPOTLIGHT CAROUSEL ---
                     if (showFeaturedCarouselPref && spotlightItems.isNotEmpty()) {
                         item(key = "featured_spotlight_carousel") {
-                            Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 16.dp)) {
+                            Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 24.dp)) {
                                 NavigationTitle(
                                     title = "Featured Spotlight",
                                     onPlayAllClick = if (!isListenTogetherGuest) {
@@ -1475,16 +1475,16 @@ fun HomeScreen(
                                 val carouselState = rememberCarouselState { spotlightItems.size }
                                 HorizontalMultiBrowseCarousel(
                                     state = carouselState,
-                                    preferredItemWidth = 300.dp,
-                                    itemSpacing = 16.dp,
-                                    contentPadding = PaddingValues(horizontal = 16.dp),
-                                    modifier = Modifier.fillMaxWidth().height(220.dp)
+                                    preferredItemWidth = 310.dp,
+                                    itemSpacing = 12.dp,
+                                    contentPadding = PaddingValues(horizontal = 24.dp),
+                                    modifier = Modifier.fillMaxWidth().height(240.dp)
                                 ) { i ->
                                     val item = spotlightItems[i]
-                                    Card(
+                                    Box(
                                         modifier = Modifier
                                             .fillMaxSize()
-                                            .clip(RoundedCornerShape(24.dp))
+                                            .maskClip(RoundedCornerShape(28.dp))
                                             .combinedClickable(
                                                 onClick = {
                                                     if (!isListenTogetherGuest) {
@@ -1503,84 +1503,81 @@ fun HomeScreen(
                                                         YouTubeSongMenu(song = item, onDismiss = menuState::dismiss)
                                                     }
                                                 }
-                                            ),
-                                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                                            )
                                     ) {
-                                        Box(modifier = Modifier.fillMaxSize()) {
-                                            AsyncImage(
-                                                model = ImageRequest.Builder(LocalContext.current)
-                                                    .data(item.thumbnail.resize(1080, 1080))
-                                                    .crossfade(true)
-                                                    .build(),
-                                                contentDescription = null,
-                                                contentScale = ContentScale.Crop,
-                                                modifier = Modifier.fillMaxSize()
-                                            )
-                                            Box(
-                                                modifier = Modifier
-                                                    .fillMaxSize()
-                                                    .background(
-                                                        Brush.verticalGradient(
-                                                            colors = listOf(
-                                                                Color.Transparent,
-                                                                Color.Black.copy(alpha = 0.5f),
-                                                                Color.Black.copy(alpha = 0.9f)
-                                                            ),
-                                                            startY = 50f
-                                                        )
+                                        AsyncImage(
+                                            model = ImageRequest.Builder(LocalContext.current)
+                                                .data(item.thumbnail.resize(1080, 1080))
+                                                .crossfade(true)
+                                                .build(),
+                                            contentDescription = null,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .background(
+                                                    Brush.verticalGradient(
+                                                        colors = listOf(
+                                                            Color.Transparent,
+                                                            Color.Black.copy(alpha = 0.1f),
+                                                            Color.Black.copy(alpha = 0.85f)
+                                                        ),
+                                                        startY = 100f
                                                     )
+                                                )
+                                        )
+                                        Column(
+                                            modifier = Modifier
+                                                .align(Alignment.BottomStart)
+                                                .padding(20.dp)
+                                                .padding(end = 64.dp)
+                                        ) {
+                                            Text(
+                                                text = item.title,
+                                                style = MaterialTheme.typography.titleLarge,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = Color.White,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
                                             )
-                                            Column(
-                                                modifier = Modifier
-                                                    .align(Alignment.BottomStart)
-                                                    .padding(16.dp)
-                                                    .padding(end = 56.dp) // space for play button
-                                            ) {
-                                                Text(
-                                                    text = item.title,
-                                                    style = MaterialTheme.typography.titleLarge,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = Color.White,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
-                                                Spacer(modifier = Modifier.height(4.dp))
-                                                Text(
-                                                    text = item.artists.joinToArtistString(" & ") { it.name },
-                                                    style = MaterialTheme.typography.bodyMedium,
-                                                    color = Color.White.copy(alpha = 0.8f),
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
-                                            }
-                                            Box(
-                                                modifier = Modifier
-                                                    .align(Alignment.BottomEnd)
-                                                    .padding(16.dp)
-                                                    .size(48.dp)
-                                                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f), CircleShape)
-                                                    .clickable(
-                                                        onClick = {
-                                                            if (!isListenTogetherGuest) {
-                                                                playerConnection.playQueue(
-                                                                    if (autoRadioQueue) {
-                                                                        YouTubeQueue(item.endpoint ?: WatchEndpoint(videoId = item.id), item.toMediaMetadata())
-                                                                    } else {
-                                                                        ListQueue(title = item.title, items = listOf(item.toMediaItem()))
-                                                                    }
-                                                                )
-                                                            }
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = item.artists.joinToArtistString(" & ") { it.name },
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = Color.White.copy(alpha = 0.75f),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                        Box(
+                                            modifier = Modifier
+                                                .align(Alignment.BottomEnd)
+                                                .padding(16.dp)
+                                                .size(52.dp)
+                                                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
+                                                .clickable(
+                                                    onClick = {
+                                                        if (!isListenTogetherGuest) {
+                                                            playerConnection.playQueue(
+                                                                if (autoRadioQueue) {
+                                                                    YouTubeQueue(item.endpoint ?: WatchEndpoint(videoId = item.id), item.toMediaMetadata())
+                                                                } else {
+                                                                    ListQueue(title = item.title, items = listOf(item.toMediaItem()))
+                                                                }
+                                                            )
                                                         }
-                                                    ),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Icon(
-                                                    painter = painterResource(R.drawable.play),
-                                                    contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                                    modifier = Modifier.size(24.dp)
-                                                )
-                                            }
+                                                    }
+                                                ),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(R.drawable.play),
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                modifier = Modifier.size(26.dp)
+                                            )
                                         }
                                     }
                                 }
