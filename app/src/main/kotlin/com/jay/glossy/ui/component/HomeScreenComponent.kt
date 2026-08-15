@@ -3,10 +3,6 @@ package com.jay.glossy.ui.component
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -15,14 +11,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource // Naya Import lagaya hai
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.util.Calendar
+import com.jay.glossy.R // App ke resources access karne ke liye
 
 @Composable
-fun GlossyCustomHeader(userName: String) { // Ab naam yahan se aayega
+fun GlossyCustomHeader(userName: String) {
     val vibeText = remember {
         val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
         when (hour) {
@@ -60,7 +58,7 @@ fun GlossyCustomHeader(userName: String) { // Ab naam yahan se aayega
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = userName.ifEmpty { "Guest" }, // Agar empty hua toh Guest dikhega
+                    text = userName.ifEmpty { "Guest" },
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -82,22 +80,23 @@ fun GlossyCustomHeader(userName: String) { // Ab naam yahan se aayega
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            // YAHAN PAR ICONS FIX KIYE GAYE HAIN
             Icon(
-                imageVector = Icons.Default.History,
+                painter = painterResource(id = R.drawable.history),
                 contentDescription = "History",
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Icon(
-                imageVector = Icons.Default.BarChart,
+                painter = painterResource(id = R.drawable.stats),
                 contentDescription = "Stats",
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Icon(
-                imageVector = Icons.Default.Settings,
+                painter = painterResource(id = R.drawable.settings),
                 contentDescription = "Settings",
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
             
