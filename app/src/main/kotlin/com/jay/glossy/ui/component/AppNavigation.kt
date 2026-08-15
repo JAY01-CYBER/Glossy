@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -204,7 +203,7 @@ fun AppNavigationBar(
 }
 
 // ----------------------------------------------------
-// Naya Premium Floating Navigation Bar (M3-Play Style)
+// Premium Floating Navigation Bar
 // ----------------------------------------------------
 @Composable
 private fun FloatingAppNavigationBar(
@@ -285,9 +284,7 @@ private fun FloatingAppNavigationBar(
                     }
                 }
             },
-            modifier = Modifier
-                .widthIn(max = 480.dp)
-                .offset(y = 12.dp),
+            modifier = Modifier.widthIn(max = 480.dp),
             colors = toolbarColors,
         ) {
             mainItems.forEachIndexed { index, screen ->
@@ -390,7 +387,7 @@ private fun FloatingNavigationToolbarItem(
 }
 
 // ----------------------------------------------------
-// Standard Old Navigation Bar (Safe Fallback)
+// Standard Old Navigation Bar
 // ----------------------------------------------------
 @Composable
 private fun StandardAppNavigationBar(
@@ -477,9 +474,7 @@ private fun StandardAppNavigationBar(
     }
 }
 
-// ----------------------------------------------------
-// Color Providers for Floating Toolbar
-// ----------------------------------------------------
+// Color Providers
 @Composable
 private fun floatingToolbarContainerColor(pureBlack: Boolean): Color = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
 @Composable
