@@ -16,20 +16,31 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingToolbarDefaults
 import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuDefaults
+import androidx.compose.material3.MenuItemColors
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationRail
@@ -40,11 +51,15 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -219,13 +234,13 @@ private fun FloatingAppNavigationBar(
     val haptics = LocalHapticFeedback.current
     val viewConfiguration = LocalViewConfiguration.current
 
-    // Detach Search item for FAB, keep rest for the Slide Bar
     val searchItem = navigationItems.find { it == Screens.Search }
     val mainItems = navigationItems.filter { it != Screens.Search }
 
     BoxWithConstraints(
         modifier = modifier.fillMaxWidth(),
-        contentAlignment = Alignment.Center,
+        // Pehle yahan Center tha, ab BottomCenter kar diya hai taaki upar na udey
+        contentAlignment = Alignment.BottomCenter,
     ) {
         HorizontalFloatingToolbar(
             expanded = true,
@@ -238,7 +253,6 @@ private fun FloatingAppNavigationBar(
                     val iconRes = if (isSelected) searchItem.iconIdActive else searchItem.iconIdInactive
                     val interactionSource = remember { MutableInteractionSource() }
 
-                    // Custom Long Press Logic inside FAB
                     if (onSearchLongClick != null) {
                         LaunchedEffect(interactionSource) {
                             var isLongClick = false
@@ -282,10 +296,13 @@ private fun FloatingAppNavigationBar(
                     }
                 }
             },
-            modifier = Modifier.widthIn(max = 480.dp),
+            modifier = Modifier
+                .widthIn(max = 480.dp)
+                // Bar ko niche push karne ke liye 12dp ka offset add kiya hai
+                .offset(y = 12.dp),
             colors = toolbarColors,
         ) {
-            mainItems.forEach { screen ->
+            mainItems.forEachIndexed { index, screen ->
                 val isSelected = remember(currentRoute, screen.route) {
                     isRouteSelected(currentRoute, screen.route, navigationItems)
                 }
@@ -298,6 +315,11 @@ private fun FloatingAppNavigationBar(
                     slim = slimNav,
                     onClick = { onItemClick(screen, currentIsSelected) }
                 )
+
+                // Items ke beech mein spacing de di hai taaki width badi lage
+                if (index < mainItems.lastIndex) {
+                    Spacer(modifier = Modifier.width(16.dp))
+                }
             }
         }
     }
@@ -352,9 +374,10 @@ private fun FloatingNavigationToolbarItem(
                 role = Role.Tab,
                 onClick = onClick
             )
-            .widthIn(min = 48.dp)
+            // Width increase karne ke liye paddings aur minWidth ko bada kiya hai
+            .widthIn(min = 64.dp)
             .padding(
-                horizontal = if (showLabel) 16.dp else 12.dp,
+                horizontal = if (showLabel) 24.dp else 16.dp,
                 vertical = 12.dp,
             ),
         horizontalArrangement = Arrangement.Center,
