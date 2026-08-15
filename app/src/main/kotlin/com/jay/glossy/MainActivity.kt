@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -90,6 +90,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -164,6 +165,7 @@ import com.jay.glossy.constants.SlimNavBarHeight
 import com.jay.glossy.constants.SlimNavBarKey
 import com.jay.glossy.constants.StopMusicOnTaskClearKey
 import com.jay.glossy.constants.UpdateNotificationsEnabledKey
+import com.jay.glossy.constants.UseFloatingNavBarKey
 import com.jay.glossy.constants.UseNewMiniPlayerDesignKey
 import com.jay.glossy.db.MusicDatabase
 import com.jay.glossy.db.entities.SearchHistory
@@ -715,6 +717,7 @@ class MainActivity : ComponentActivity() {
                     navigationItems.mapIndexed { i, s -> s.route to i }.toMap()
                 }
                 val (slimNav) = rememberPreference(SlimNavBarKey, defaultValue = false)
+                val (useFloatingNavBar) = rememberPreference(UseFloatingNavBarKey, defaultValue = false)
                 val (useNewMiniPlayerDesign) = rememberPreference(UseNewMiniPlayerDesignKey, defaultValue = true)
                 val (defaultOpenTabInt) = rememberPreference(DefaultOpenTabKey, defaultValue = NavigationTab.HOME.name)
                 val defaultOpenTab = remember(defaultOpenTabInt) {
@@ -811,7 +814,9 @@ class MainActivity : ComponentActivity() {
                         dismissedBound = 0.dp,
                         collapsedBound =
                             bottomInset +
-                                (if (!showRail && shouldShowNavigationBar) navPadding else 0.dp) +
+                                (if (!showRail && shouldShowNavigationBar) {
+                                    navPadding + if (useFloatingNavBar) 16.dp else 0.dp
+                                } else 0.dp) +
                                 (if (useNewMiniPlayerDesign) MiniPlayerBottomSpacing else 0.dp) +
                                 MiniPlayerHeight,
                         expandedBound = maxHeight,
@@ -829,10 +834,12 @@ class MainActivity : ComponentActivity() {
                         shouldShowNavigationBar,
                         playerBottomSheetState.isDismissed,
                         showRail,
+                        useFloatingNavBar
                     ) {
                         var bottom = bottomInset
                         if (shouldShowNavigationBar && !showRail) {
                             bottom += NavigationBarHeight
+                            if (useFloatingNavBar) bottom += 16.dp
                         }
                         if (!playerBottomSheetState.isDismissed) bottom += MiniPlayerHeight
                         windowsInsets
@@ -1160,7 +1167,7 @@ class MainActivity : ComponentActivity() {
                                 }
 
                             // Pre-calculate values for graphicsLayer to avoid reading state during composition
-                            val navBarTotalHeight = bottomInset + NavigationBarHeight
+                            val navBarTotalHeight = bottomInset + NavigationBarHeight + if (useFloatingNavBar) 16.dp else 0.dp
 
                             if (!showRail && currentRoute != "wrapped") {
                                 Box {
@@ -1182,7 +1189,14 @@ class MainActivity : ComponentActivity() {
                                         modifier =
                                             Modifier
                                                 .align(Alignment.BottomCenter)
-                                                .height(bottomInset + navPadding)
+                                                .padding(
+                                                    horizontal = if (useFloatingNavBar) 16.dp else 0.dp
+                                                )
+                                                .padding(
+                                                    bottom = if (useFloatingNavBar) bottomInset + 16.dp else 0.dp
+                                                )
+                                                .clip(if (useFloatingNavBar) RoundedCornerShape(24.dp) else RectangleShape)
+                                                .height(if (useFloatingNavBar) navPadding else bottomInset + navPadding)
                                                 // Use graphicsLayer instead of offset to avoid recomposition
                                                 // graphicsLayer runs during draw phase, not composition phase
                                                 .graphicsLayer {
@@ -1214,7 +1228,8 @@ class MainActivity : ComponentActivity() {
                                                     val progress = playerBottomSheetState.progress
                                                     alpha =
                                                         if (progress > 0f ||
-                                                            (useNewMiniPlayerDesign && !shouldShowNavigationBar)
+                                                            (useNewMiniPlayerDesign && !shouldShowNavigationBar) ||
+                                                            useFloatingNavBar
                                                         ) {
                                                             0f
                                                         } else {
@@ -1244,7 +1259,7 @@ class MainActivity : ComponentActivity() {
                                             .graphicsLayer {
                                                 val progress = playerBottomSheetState.progress
                                                 alpha =
-                                                    if (progress > 0f || (useNewMiniPlayerDesign && !shouldShowNavigationBar)) 0f else 1f
+                                                    if (progress > 0f || (useNewMiniPlayerDesign && !shouldShowNavigationBar) || useFloatingNavBar) 0f else 1f
                                             }.background(baseBg),
                                 )
                             }
