@@ -803,6 +803,12 @@ class MainActivity : ComponentActivity() {
                         0.dp
                     }
 
+                val navigationBarHeight by animateDpAsState(
+                    targetValue = if (shouldShowNavigationBar && !showRail) NavigationBarHeight else 0.dp,
+                    animationSpec = NavigationBarAnimationSpec,
+                    label = "navBarHeight",
+                )
+
                 val playerBottomSheetState =
                     rememberBottomSheetState(
                         dismissedBound = 0.dp,
@@ -1156,7 +1162,7 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
 
-                            val navBarTotalHeight = bottomInset + NavigationBarHeight
+                            val navBarTotalHeight = bottomInset + NavigationBarHeight + if (useFloatingNavBar) 12.dp else 0.dp
                             val fadeBrush = remember(baseBg) {
                                 androidx.compose.ui.graphics.Brush.verticalGradient(
                                     colors = listOf(Color.Transparent, baseBg.copy(alpha = 0.85f), baseBg),
