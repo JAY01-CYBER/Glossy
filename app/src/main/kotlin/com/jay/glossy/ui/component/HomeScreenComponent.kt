@@ -1,21 +1,17 @@
-/**
- * Glossy Project (C) 2026
- * Licensed under GPL-3.0 | See git history for contributors
- */
-
 package com.jay.glossy.ui.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,20 +21,35 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import java.util.Calendar
+import com.jay.glossy.BuildConfig
 import com.jay.glossy.R
 import com.jay.glossy.LocalNavController
+import com.jay.glossy.viewmodels.HomeViewModel
 
 @Composable
-fun GlossyCustomHeader(
-    userName: String,
-    accountImageUrl: String?,
-    latestVersionName: String,
-    currentVersionName: String,
-    onAccountClick: () -> Unit
-) {
+fun GlossyCustomHeader(userName: String) {
     val navController = LocalNavController.current 
+    
+    // --- Account Dialog aur Image ka logic yahan andar hi set kar diya hai ---
+    // (Taaki HomeScreen.kt ko change na karna pade)
+    val viewModel: HomeViewModel = hiltViewModel()
+    val accountImageUrl by viewModel.accountImageUrl.collectAsStateWithLifecycle()
+    var showAccountDialog by remember { mutableStateOf(false) }
+
+    // Agar icon click hoga toh wahi purana Account Settings menu khul jayega
+    if (showAccountDialog) {
+        AccountSettingsDialog(
+            onDismiss = {
+                showAccountDialog = false
+                viewModel.refresh()
+            },
+            latestVersionName = BuildConfig.VERSION_NAME
+        )
+    }
     
     val vibeText = remember {
         val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
@@ -129,41 +140,37 @@ fun GlossyCustomHeader(
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
             
-            // 4. Profile / Account Dialog Trigger (Exact old behavior)
+            // 4. Profile / Account Dialog Trigger
             Box(
                 modifier = Modifier
                     .size(30.dp)
                     .clip(CircleShape)
-                    .clickable { onAccountClick() },
+                    .clickable { showAccountDialog = true }, // YAHAN CLICK PAR DIALOG KHULEGA
                 contentAlignment = Alignment.Center
             ) {
-                BadgedBox(badge = {
-                    if (latestVersionName != currentVersionName) {
-                        Badge()
-                    }
-                }) {
-                    if (accountImageUrl != null) {
-                        AsyncImage(
-                            model = accountImageUrl,
-                            contentDescription = "Account",
-                            modifier = Modifier
-                                .size(30.dp)
-                                .clip(CircleShape),
+                if (accountImageUrl != null) {
+                    // Agar user ki photo hai toh wo dikhegi
+                    AsyncImage(
+                        model = accountImageUrl,
+                        contentDescription = "Account",
+                        modifier = Modifier
+                            .size(30.dp)
+                            .clip(CircleShape),
+                    )
+                } else {
+                    // Agar photo nahi hai toh naam ka pehla akshar dikhega
+                    Box(
+                        modifier = Modifier
+                            .size(30.dp)
+                            .background(Color(0xFF8D6E63), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (userName.isNotEmpty()) userName.take(1).uppercase() else "G",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
                         )
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .size(30.dp)
-                                .background(Color(0xFF8D6E63), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = if (userName.isNotEmpty()) userName.take(1).uppercase() else "G",
-                                color = Color.White,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
                     }
                 }
             }
