@@ -1,9 +1,16 @@
+/**
+ * Glossy Project (C) 2026
+ * Licensed under GPL-3.0 | See git history for contributors
+ */
+
 package com.jay.glossy.ui.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -18,12 +25,19 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
 import java.util.Calendar
 import com.jay.glossy.R
 import com.jay.glossy.LocalNavController
 
 @Composable
-fun GlossyCustomHeader(userName: String) {
+fun GlossyCustomHeader(
+    userName: String,
+    accountImageUrl: String?,
+    latestVersionName: String,
+    currentVersionName: String,
+    onAccountClick: () -> Unit
+) {
     val navController = LocalNavController.current 
     
     val vibeText = remember {
@@ -74,13 +88,9 @@ fun GlossyCustomHeader(userName: String) {
 
         Spacer(modifier = Modifier.width(16.dp))
 
-        // --- Right Side: Compact Pill ---
+        // --- Right Side: Compact Pill (Exact old icons & actions restored) ---
         Row(
             modifier = Modifier
-                .background(
-                    color = MaterialTheme.colorScheme.surfaceVariant.postAlpha(0.7f, 0.7f), // Standard color fallback
-                    shape = CircleShape
-                )
                 .background(
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
                     shape = CircleShape
@@ -94,7 +104,7 @@ fun GlossyCustomHeader(userName: String) {
                 painter = painterResource(id = R.drawable.history),
                 contentDescription = "History",
                 modifier = Modifier
-                    .size(18.dp)
+                    .size(20.dp)
                     .clickable { navController.navigate("history") },
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -104,7 +114,7 @@ fun GlossyCustomHeader(userName: String) {
                 painter = painterResource(id = R.drawable.stats),
                 contentDescription = "Stats",
                 modifier = Modifier
-                    .size(18.dp)
+                    .size(20.dp)
                     .clickable { navController.navigate("stats") },
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -114,29 +124,48 @@ fun GlossyCustomHeader(userName: String) {
                 painter = painterResource(id = R.drawable.group_outlined),
                 contentDescription = "Listen Together",
                 modifier = Modifier
-                    .size(18.dp)
+                    .size(20.dp)
                     .clickable { navController.navigate("listen_together_from_topbar") },
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
             
-            // 4. Profile Avatar -> Settings screen par navigate karne ke liye (ya direct settings route)
+            // 4. Profile / Account Dialog Trigger (Exact old behavior)
             Box(
                 modifier = Modifier
                     .size(30.dp)
-                    .background(Color(0xFF8D6E63), CircleShape)
                     .clip(CircleShape)
-                    .clickable { 
-                        // Account dialog ki jagah agar aap direct settings menu kholna chahte hain jisme login/tokens hain:
-                        navController.navigate("settings") 
-                    },
+                    .clickable { onAccountClick() },
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = if (userName.isNotEmpty()) userName.take(1).uppercase() else "G",
-                    color = Color.White,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                BadgedBox(badge = {
+                    if (latestVersionName != currentVersionName) {
+                        Badge()
+                    }
+                }) {
+                    if (accountImageUrl != null) {
+                        AsyncImage(
+                            model = accountImageUrl,
+                            contentDescription = "Account",
+                            modifier = Modifier
+                                .size(30.dp)
+                                .clip(CircleShape),
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(30.dp)
+                                .background(Color(0xFF8D6E63), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (userName.isNotEmpty()) userName.take(1).uppercase() else "G",
+                                color = Color.White,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
             }
         }
     }
