@@ -1201,6 +1201,13 @@ fun HomeScreen(
                 state = lazylistState,
                 contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
             ) {
+                // ADD THIS CUSTOM HEADER HERE
+                item(key = "glossy_custom_header") {
+                    com.jay.glossy.ui.component.GlossyCustomHeader(
+                        userName = accountName ?: ""
+                    )
+                }
+
                 item {
                     ChipsRow(
                         chips = homePage?.chips?.map { it to it.title } ?: emptyList(),
