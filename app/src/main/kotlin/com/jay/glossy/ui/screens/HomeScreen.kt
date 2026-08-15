@@ -80,6 +80,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -1472,19 +1473,29 @@ fun HomeScreen(
                                     } else null
                                 )
 
-                                val carouselState = rememberCarouselState { spotlightItems.size }
-                                HorizontalMultiBrowseCarousel(
-                                    state = carouselState,
-                                    preferredItemWidth = 310.dp,
-                                    itemSpacing = 12.dp,
-                                    contentPadding = PaddingValues(horizontal = 24.dp),
+                                val pagerState = rememberPagerState(pageCount = { spotlightItems.size })
+                                
+                                HorizontalPager(
+                                    state = pagerState,
+                                    contentPadding = PaddingValues(horizontal = 32.dp),
+                                    pageSpacing = 16.dp,
                                     modifier = Modifier.fillMaxWidth().height(240.dp)
-                                ) { i ->
-                                    val item = spotlightItems[i]
+                                ) { page ->
+                                    val item = spotlightItems[page]
+                                    
+                                    val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
+                                    val scaleFactor = 1f - (kotlin.math.abs(pageOffset).coerceIn(0f, 1f) * 0.15f)
+                                    val alphaFactor = 1f - (kotlin.math.abs(pageOffset).coerceIn(0f, 1f) * 0.4f)
+                                    
                                     Box(
                                         modifier = Modifier
                                             .fillMaxSize()
-                                            .maskClip(RoundedCornerShape(28.dp))
+                                            .graphicsLayer {
+                                                scaleX = scaleFactor
+                                                scaleY = scaleFactor
+                                                alpha = alphaFactor
+                                            }
+                                            .clip(RoundedCornerShape(24.dp))
                                             .combinedClickable(
                                                 onClick = {
                                                     if (!isListenTogetherGuest) {
@@ -1514,6 +1525,7 @@ fun HomeScreen(
                                             contentScale = ContentScale.Crop,
                                             modifier = Modifier.fillMaxSize()
                                         )
+                                        
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxSize()
@@ -1528,6 +1540,7 @@ fun HomeScreen(
                                                     )
                                                 )
                                         )
+                                        
                                         Column(
                                             modifier = Modifier
                                                 .align(Alignment.BottomStart)
@@ -1551,6 +1564,7 @@ fun HomeScreen(
                                                 overflow = TextOverflow.Ellipsis
                                             )
                                         }
+                                        
                                         Box(
                                             modifier = Modifier
                                                 .align(Alignment.BottomEnd)
