@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -27,6 +27,7 @@ import androidx.navigation.compose.dialog
 import androidx.navigation.navArgument
 import com.jay.glossy.constants.DarkModeKey
 import com.jay.glossy.constants.PureBlackKey
+import com.jay.glossy.constants.AccountNameKey
 import com.jay.glossy.ui.screens.artist.ArtistAlbumsScreen
 import com.jay.glossy.ui.screens.artist.ArtistItemsScreen
 import com.jay.glossy.ui.screens.artist.ArtistScreen
@@ -67,6 +68,8 @@ import com.jay.glossy.ui.screens.settings.integrations.ListenTogetherSettings
 import com.jay.glossy.ui.screens.wrapped.WrappedScreen
 import com.jay.glossy.utils.rememberEnumPreference
 import com.jay.glossy.utils.rememberPreference
+import com.jay.glossy.utils.safeDataStoreEdit
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 fun NavGraphBuilder.navigationBuilder(
@@ -76,6 +79,25 @@ fun NavGraphBuilder.navigationBuilder(
     activity: Activity,
     snackbarHostState: SnackbarHostState,
 ) {
+    // NAYA WELCOME SCREEN ROUTE
+    composable("welcome") {
+        val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+        GlossyWelcomeScreen(
+            onSetupComplete = { name ->
+                coroutineScope.launch {
+                    // DataStore mein user ka naam save karna
+                    activity.safeDataStoreEdit { settings ->
+                        settings[AccountNameKey] = name
+                    }
+                    // Setup ke baad Home Screen par bhejna aur Welcome screen ko backstack se hatana
+                    navController.navigate(Screens.Home.route) {
+                        popUpTo("welcome") { inclusive = true }
+                    }
+                }
+            }
+        )
+    }
+
     composable(Screens.Home.route) {
         HomeScreen(snackbarHostState = snackbarHostState)
     }
