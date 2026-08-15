@@ -16,7 +16,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -28,19 +27,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingToolbarDefaults
 import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuDefaults
-import androidx.compose.material3.MenuItemColors
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationRail
@@ -59,7 +50,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -239,7 +229,6 @@ private fun FloatingAppNavigationBar(
 
     BoxWithConstraints(
         modifier = modifier.fillMaxWidth(),
-        // Pehle yahan Center tha, ab BottomCenter kar diya hai taaki upar na udey
         contentAlignment = Alignment.BottomCenter,
     ) {
         HorizontalFloatingToolbar(
@@ -298,7 +287,6 @@ private fun FloatingAppNavigationBar(
             },
             modifier = Modifier
                 .widthIn(max = 480.dp)
-                // Bar ko niche push karne ke liye 12dp ka offset add kiya hai
                 .offset(y = 12.dp),
             colors = toolbarColors,
         ) {
@@ -316,7 +304,6 @@ private fun FloatingAppNavigationBar(
                     onClick = { onItemClick(screen, currentIsSelected) }
                 )
 
-                // Items ke beech mein spacing de di hai taaki width badi lage
                 if (index < mainItems.lastIndex) {
                     Spacer(modifier = Modifier.width(16.dp))
                 }
@@ -374,7 +361,6 @@ private fun FloatingNavigationToolbarItem(
                 role = Role.Tab,
                 onClick = onClick
             )
-            // Width increase karne ke liye paddings aur minWidth ko bada kiya hai
             .widthIn(min = 64.dp)
             .padding(
                 horizontal = if (showLabel) 24.dp else 16.dp,
