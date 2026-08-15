@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
@@ -73,7 +74,7 @@ fun GlossyCustomHeader(userName: String) {
 
         Spacer(modifier = Modifier.width(16.dp))
 
-        // --- Right Side: Compact Pill (History, Stat, Listen Together, Profile) ---
+        // --- Right Side: Compact Pill (Exact icons and actions from your old MainActivity code) ---
         Row(
             modifier = Modifier
                 .background(
@@ -84,41 +85,42 @@ fun GlossyCustomHeader(userName: String) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // 1. History
+            // 1. History Icon (Old action: navigate("history"))[span_4](start_span)[span_4](end_span)
             Icon(
                 painter = painterResource(id = R.drawable.history),
                 contentDescription = "History",
                 modifier = Modifier
-                    .size(18.dp)
+                    .size(20.dp)
                     .clickable { navController.navigate("history") },
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
             
-            // 2. Stat
+            // 2. Stats Icon (Old action: navigate("stats"))[span_5](start_span)[span_5](end_span)
             Icon(
                 painter = painterResource(id = R.drawable.stats),
                 contentDescription = "Stats",
                 modifier = Modifier
-                    .size(18.dp)
+                    .size(20.dp)
                     .clickable { navController.navigate("stats") },
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
             
-            // 3. Listen Together
+            // 3. Listen Together Icon (Old action: navigate("listen_together_from_topbar"))[span_6](start_span)[span_6](end_span)
             Icon(
-                painter = painterResource(id = R.drawable.listen_together),
+                painter = painterResource(id = R.drawable.group_outlined),
                 contentDescription = "Listen Together",
                 modifier = Modifier
-                    .size(18.dp)
+                    .size(20.dp)
                     .clickable { navController.navigate("listen_together_from_topbar") },
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
             
-            // 4. Profile
+            // 4. Profile / Account Avatar (Old action: navigate("account"))
             Box(
                 modifier = Modifier
                     .size(30.dp)
                     .background(Color(0xFF8D6E63), CircleShape)
+                    .clip(CircleShape)
                     .clickable { navController.navigate("account") },
                 contentAlignment = Alignment.Center
             ) {
