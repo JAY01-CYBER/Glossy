@@ -112,6 +112,7 @@ import com.jay.glossy.constants.QuickPickShapeKey
 import com.jay.glossy.constants.QuickPicksStyle
 import com.jay.glossy.constants.QuickPicksStyleKey
 import com.jay.glossy.constants.ShowFeaturedCarouselKey
+import com.jay.glossy.constants.UseFloatingNavBarKey
 import com.jay.glossy.ui.component.DefaultDialog
 import com.jay.glossy.ui.component.EnumDialog
 import com.jay.glossy.ui.component.IconButton
@@ -293,6 +294,12 @@ fun AppearanceSettings(
     val (slimNav, onSlimNavChange) =
         rememberPreference(
             SlimNavBarKey,
+            defaultValue = false,
+        )
+        
+    val (useFloatingNavBar, onUseFloatingNavBarChange) = 
+        rememberPreference(
+            UseFloatingNavBarKey,
             defaultValue = false,
         )
 
@@ -1850,6 +1857,29 @@ fun AppearanceSettings(
                             )
                         },
                         onClick = { onSlimNavChange(!slimNav) },
+                    ),
+                    // NEW FLOATING NAVIGATION BAR TOGGLE
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.nav_bar),
+                        title = { Text("Floating Navigation Bar") },
+                        description = { Text("Use a modern floating bottom navigation bar") },
+                        trailingContent = {
+                            Switch(
+                                checked = useFloatingNavBar,
+                                onCheckedChange = onUseFloatingNavBarChange,
+                                thumbContent = {
+                                    Icon(
+                                        painter =
+                                            painterResource(
+                                                id = if (useFloatingNavBar) R.drawable.check else R.drawable.close,
+                                            ),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize),
+                                    )
+                                },
+                            )
+                        },
+                        onClick = { onUseFloatingNavBarChange(!useFloatingNavBar) },
                     ),
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.group_outlined),
