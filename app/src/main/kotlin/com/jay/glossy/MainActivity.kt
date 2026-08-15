@@ -803,19 +803,13 @@ class MainActivity : ComponentActivity() {
                         0.dp
                     }
 
-                val navigationBarHeight by animateDpAsState(
-                    targetValue = if (shouldShowNavigationBar && !showRail) NavigationBarHeight else 0.dp,
-                    animationSpec = NavigationBarAnimationSpec,
-                    label = "navBarHeight",
-                )
-
                 val playerBottomSheetState =
                     rememberBottomSheetState(
                         dismissedBound = 0.dp,
                         collapsedBound =
                             bottomInset +
                                 (if (!showRail && shouldShowNavigationBar) {
-                                    navPadding + if (useFloatingNavBar) 16.dp else 0.dp
+                                    if (useFloatingNavBar) 72.dp else navPadding
                                 } else 0.dp) +
                                 (if (useNewMiniPlayerDesign) MiniPlayerBottomSpacing else 0.dp) +
                                 MiniPlayerHeight,
@@ -838,8 +832,7 @@ class MainActivity : ComponentActivity() {
                     ) {
                         var bottom = bottomInset
                         if (shouldShowNavigationBar && !showRail) {
-                            bottom += NavigationBarHeight
-                            if (useFloatingNavBar) bottom += 16.dp
+                            bottom += if (useFloatingNavBar) 72.dp else NavigationBarHeight
                         }
                         if (!playerBottomSheetState.isDismissed) bottom += MiniPlayerHeight
                         windowsInsets
@@ -1105,7 +1098,7 @@ class MainActivity : ComponentActivity() {
                             }
                         },
                         bottomBar = {
-                            val currentBackStackEntry = navController.currentBackStackEntry // reads reactively outside remember
+                            val currentBackStackEntry = navController.currentBackStackEntry
 
                             val onNavItemClick: (Screens, Boolean) -> Unit =
                                 remember(
@@ -1124,17 +1117,14 @@ class MainActivity : ComponentActivity() {
                                                 try {
                                                     val route = navController.currentBackStackEntry?.destination?.route
                                                     if (route == SearchRoutes.ROUTE || route == "search_input") {
-                                                        // For search screens, use search_input entry
                                                         navController.getBackStackEntry("search_input")
                                                     } else {
-                                                        // For other screens, use current entry
                                                         navController.currentBackStackEntry
                                                     }
                                                 } catch (e: Exception) {
                                                     null
                                                 }
 
-                                            // Use appropriate key based on screen type
                                             if (screen == Screens.Search) {
                                                 val current = targetEntry?.savedStateHandle?.get<Int>("scrollToTopCount") ?: 0
                                                 targetEntry?.savedStateHandle?.set("scrollToTopCount", current + 1)
@@ -1166,8 +1156,16 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
 
-                            // Pre-calculate values for graphicsLayer to avoid reading state during composition
-                            val navBarTotalHeight = bottomInset + NavigationBarHeight + if (useFloatingNavBar) 16.dp else 0.dp
+                            val navBarTotalHeight = bottomInset + NavigationBarHeight
+                            val fadeBrush = remember(baseBg) {
+                                androidx.compose.ui.graphics.Brush.verticalGradient(
+                                    colors = listOf(Color.Transparent, baseBg.copy(alpha = 0.85f), baseBg),
+                                    startY = 0f
+                                )
+                            }
+                            val solidBrush = remember(baseBg) {
+                                androidx.compose.ui.graphics.Brush.verticalGradient(listOf(baseBg, baseBg))
+                            }
 
                             if (!showRail && currentRoute != "wrapped") {
                                 Box {
@@ -1179,6 +1177,24 @@ class MainActivity : ComponentActivity() {
                                         )
                                     }
 
+                                    Box(
+                                        modifier =
+                                            Modifier
+                                                .fillMaxWidth()
+                                                .align(Alignment.BottomCenter)
+                                                .height(if (useFloatingNavBar) bottomInsetDp + 130.dp else bottomInsetDp)
+                                                .graphicsLayer {
+                                                    val progress = playerBottomSheetState.progress
+                                                    alpha =
+                                                        if (progress > 0f || (useNewMiniPlayerDesign && !shouldShowNavigationBar)) {
+                                                            0f
+                                                        } else {
+                                                            1f
+                                                        }
+                                                }
+                                                .background(if (useFloatingNavBar) fadeBrush else solidBrush)
+                                    )
+
                                     AppNavigationBar(
                                         navigationItems = navigationItems,
                                         currentRoute = currentRoute,
@@ -1189,16 +1205,12 @@ class MainActivity : ComponentActivity() {
                                         modifier =
                                             Modifier
                                                 .align(Alignment.BottomCenter)
-                                                .padding(
-                                                    horizontal = if (useFloatingNavBar) 16.dp else 0.dp
+                                                .padding(horizontal = if (useFloatingNavBar) 16.dp else 0.dp)
+                                                .padding(bottom = if (useFloatingNavBar) bottomInsetDp + 12.dp else 0.dp)
+                                                .then(
+                                                    if (useFloatingNavBar) Modifier
+                                                    else Modifier.height(bottomInset + navPadding).clip(RectangleShape)
                                                 )
-                                                .padding(
-                                                    bottom = if (useFloatingNavBar) bottomInset + 16.dp else 0.dp
-                                                )
-                                                .clip(if (useFloatingNavBar) RoundedCornerShape(24.dp) else RectangleShape)
-                                                .height(if (useFloatingNavBar) navPadding else bottomInset + navPadding)
-                                                // Use graphicsLayer instead of offset to avoid recomposition
-                                                // graphicsLayer runs during draw phase, not composition phase
                                                 .graphicsLayer {
                                                     val navBarHeightPx = navigationBarHeight.toPx()
                                                     val totalHeightPx = navBarTotalHeight.toPx()
@@ -1207,7 +1219,6 @@ class MainActivity : ComponentActivity() {
                                                         if (navBarHeightPx == 0f) {
                                                             totalHeightPx
                                                         } else {
-                                                            // Read progress only during draw phase
                                                             val progress = playerBottomSheetState.progress.coerceIn(0f, 1f)
                                                             val slideOffset = totalHeightPx * progress
                                                             val hideOffset =
@@ -1215,27 +1226,6 @@ class MainActivity : ComponentActivity() {
                                                             slideOffset + hideOffset
                                                         }
                                                 },
-                                    )
-
-                                    Box(
-                                        modifier =
-                                            Modifier
-                                                .fillMaxWidth()
-                                                .align(Alignment.BottomCenter)
-                                                .height(bottomInsetDp)
-                                                // Use graphicsLayer for background color changes
-                                                .graphicsLayer {
-                                                    val progress = playerBottomSheetState.progress
-                                                    alpha =
-                                                        if (progress > 0f ||
-                                                            (useNewMiniPlayerDesign && !shouldShowNavigationBar) ||
-                                                            useFloatingNavBar
-                                                        ) {
-                                                            0f
-                                                        } else {
-                                                            1f
-                                                        }
-                                                }.background(baseBg),
                                     )
                                 }
                             } else {
@@ -1255,7 +1245,6 @@ class MainActivity : ComponentActivity() {
                                             .fillMaxWidth()
                                             .align(Alignment.BottomCenter)
                                             .height(bottomInsetDp)
-                                            // Use graphicsLayer for background color changes
                                             .graphicsLayer {
                                                 val progress = playerBottomSheetState.progress
                                                 alpha =
