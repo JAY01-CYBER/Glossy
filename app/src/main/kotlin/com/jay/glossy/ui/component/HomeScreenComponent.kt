@@ -1,6 +1,7 @@
 package com.jay.glossy.ui.component
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
@@ -11,16 +12,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource // Naya Import lagaya hai
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.util.Calendar
-import com.jay.glossy.R // App ke resources access karne ke liye
+import com.jay.glossy.R
+import com.jay.glossy.LocalNavController
 
 @Composable
 fun GlossyCustomHeader(userName: String) {
+    val navController = LocalNavController.current 
+    
     val vibeText = remember {
         val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
         when (hour) {
@@ -69,7 +73,7 @@ fun GlossyCustomHeader(userName: String) {
 
         Spacer(modifier = Modifier.width(16.dp))
 
-        // --- Right Side: Compact Pill with Icons & Avatar ---
+        // --- Right Side: Compact Pill (History, Stat, Listen Together, Profile) ---
         Row(
             modifier = Modifier
                 .background(
@@ -80,31 +84,42 @@ fun GlossyCustomHeader(userName: String) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // YAHAN PAR ICONS FIX KIYE GAYE HAIN
+            // 1. History
             Icon(
                 painter = painterResource(id = R.drawable.history),
                 contentDescription = "History",
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Icon(
-                painter = painterResource(id = R.drawable.stats),
-                contentDescription = "Stats",
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Icon(
-                painter = painterResource(id = R.drawable.settings),
-                contentDescription = "Settings",
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier
+                    .size(18.dp)
+                    .clickable { navController.navigate("history") },
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
             
-            // Profile Avatar (First letter of Name)
+            // 2. Stat
+            Icon(
+                painter = painterResource(id = R.drawable.stats),
+                contentDescription = "Stats",
+                modifier = Modifier
+                    .size(18.dp)
+                    .clickable { navController.navigate("stats") },
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            
+            // 3. Listen Together
+            Icon(
+                painter = painterResource(id = R.drawable.listen_together),
+                contentDescription = "Listen Together",
+                modifier = Modifier
+                    .size(18.dp)
+                    .clickable { navController.navigate("listen_together_from_topbar") },
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            
+            // 4. Profile
             Box(
                 modifier = Modifier
                     .size(30.dp)
-                    .background(Color(0xFF8D6E63), CircleShape),
+                    .background(Color(0xFF8D6E63), CircleShape)
+                    .clickable { navController.navigate("account") },
                 contentAlignment = Alignment.Center
             ) {
                 Text(
