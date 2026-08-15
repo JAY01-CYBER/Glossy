@@ -815,7 +815,7 @@ class MainActivity : ComponentActivity() {
                         collapsedBound =
                             bottomInset +
                                 (if (!showRail && shouldShowNavigationBar) {
-                                    if (useFloatingNavBar) 72.dp else navPadding
+                                    if (useFloatingNavBar) 76.dp else navPadding
                                 } else 0.dp) +
                                 (if (useNewMiniPlayerDesign) MiniPlayerBottomSpacing else 0.dp) +
                                 MiniPlayerHeight,
@@ -838,7 +838,7 @@ class MainActivity : ComponentActivity() {
                     ) {
                         var bottom = bottomInset
                         if (shouldShowNavigationBar && !showRail) {
-                            bottom += if (useFloatingNavBar) 72.dp else NavigationBarHeight
+                            bottom += if (useFloatingNavBar) 76.dp else NavigationBarHeight
                         }
                         if (!playerBottomSheetState.isDismissed) bottom += MiniPlayerHeight
                         windowsInsets
@@ -1165,7 +1165,7 @@ class MainActivity : ComponentActivity() {
                             val navBarTotalHeight = bottomInset + NavigationBarHeight + if (useFloatingNavBar) 12.dp else 0.dp
                             val fadeBrush = remember(baseBg) {
                                 androidx.compose.ui.graphics.Brush.verticalGradient(
-                                    colors = listOf(Color.Transparent, baseBg.copy(alpha = 0.85f), baseBg),
+                                    colors = listOf(Color.Transparent, baseBg.copy(alpha = 0.6f), baseBg),
                                     startY = 0f
                                 )
                             }
@@ -1188,7 +1188,7 @@ class MainActivity : ComponentActivity() {
                                             Modifier
                                                 .fillMaxWidth()
                                                 .align(Alignment.BottomCenter)
-                                                .height(if (useFloatingNavBar) bottomInsetDp + 130.dp else bottomInsetDp)
+                                                .height(if (useFloatingNavBar) bottomInsetDp + 90.dp else bottomInsetDp)
                                                 .graphicsLayer {
                                                     val progress = playerBottomSheetState.progress
                                                     alpha =
@@ -1212,7 +1212,7 @@ class MainActivity : ComponentActivity() {
                                             Modifier
                                                 .align(Alignment.BottomCenter)
                                                 .padding(horizontal = if (useFloatingNavBar) 16.dp else 0.dp)
-                                                .padding(bottom = if (useFloatingNavBar) bottomInsetDp + 12.dp else 0.dp)
+                                                .padding(bottom = if (useFloatingNavBar) bottomInsetDp + 4.dp else 0.dp)
                                                 .then(
                                                     if (useFloatingNavBar) Modifier
                                                     else Modifier.height(bottomInset + navPadding).clip(RectangleShape)
