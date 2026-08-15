@@ -27,30 +27,29 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
-// Screen states ko Welcome ke hisaab se rename kiya gaya hai
+// R class ko import karna zaroori hai taaki aapka small_icon access ho sake
+import com.jay.glossy.R 
+
 enum class WelcomeState {
     INTRO, GUEST_INPUT, LOADING
 }
 
 @Composable
 fun GlossyWelcomeScreen(
-    onSetupComplete: (String) -> Unit // Jab setup ho jaye toh naam yahan se pass hoga
+    onSetupComplete: (String) -> Unit 
 ) {
     var currentState by remember { mutableStateOf(WelcomeState.INTRO) }
     var guestName by remember { mutableStateOf("") }
 
-    // Pure black background for premium feel
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
     ) {
-        // Glowing Aura Background (Only for Intro & Loading screens)
         if (currentState != WelcomeState.GUEST_INPUT) {
             AuraBackground()
         }
 
-        // Smooth transition between screens
         AnimatedContent(
             targetState = currentState,
             transitionSpec = {
@@ -77,7 +76,6 @@ fun GlossyWelcomeScreen(
                 }
                 WelcomeState.LOADING -> {
                     LoadingSection(name = guestName)
-                    // 3 seconds ka fake loading effect, uske baad actual app me entry
                     LaunchedEffect(Unit) {
                         delay(3000)
                         onSetupComplete(guestName)
@@ -90,13 +88,12 @@ fun GlossyWelcomeScreen(
 
 @Composable
 fun AuraBackground() {
-    // Premium glowing horizon (eclipse) effect
     Canvas(modifier = Modifier.fillMaxSize()) {
         drawOval(
             brush = Brush.radialGradient(
                 colors = listOf(
-                    Color(0xFF2962FF).copy(alpha = 0.4f), // Deep Blue glow
-                    Color(0xFFD7CCC8).copy(alpha = 0.2f), // Warm Beige glow
+                    Color(0xFF2962FF).copy(alpha = 0.4f), 
+                    Color(0xFFD7CCC8).copy(alpha = 0.2f), 
                     Color.Transparent
                 ),
                 center = Offset(size.width / 2, size.height * 0.35f),
@@ -119,10 +116,10 @@ fun IntroSection(onGuestClick: () -> Unit) {
     ) {
         Spacer(modifier = Modifier.weight(1f))
 
-        // Music Note Logo
+        // Aapka Custom Logo Yahan Update Kiya Hai
         Icon(
-            painter = painterResource(android.R.drawable.ic_media_play),
-            contentDescription = "Logo",
+            painter = painterResource(R.drawable.small_icon),
+            contentDescription = "Glossy Logo",
             tint = Color.White,
             modifier = Modifier.size(48.dp)
         )
@@ -145,7 +142,6 @@ fun IntroSection(onGuestClick: () -> Unit) {
 
         Spacer(modifier = Modifier.height(48.dp))
 
-        // Google Button
         Button(
             onClick = { /* Handle Google setup if needed */ },
             modifier = Modifier
@@ -162,7 +158,6 @@ fun IntroSection(onGuestClick: () -> Unit) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Guest Button
         Text(
             text = "Continue as a guest",
             color = Color.LightGray,
@@ -195,9 +190,10 @@ fun GuestInputSection(name: String, onNameChange: (String) -> Unit, onContinue: 
     ) {
         Spacer(modifier = Modifier.height(80.dp))
 
+        // Aapka Custom Logo Yahan Update Kiya Hai
         Icon(
-            painter = painterResource(android.R.drawable.ic_media_play),
-            contentDescription = "Logo",
+            painter = painterResource(R.drawable.small_icon),
+            contentDescription = "Glossy Logo",
             tint = Color.White,
             modifier = Modifier.size(48.dp)
         )
@@ -212,7 +208,6 @@ fun GuestInputSection(name: String, onNameChange: (String) -> Unit, onContinue: 
         
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Custom Pill shaped Text Field
         BasicTextField(
             value = name,
             onValueChange = onNameChange,
@@ -274,9 +269,10 @@ fun LoadingSection(name: String) {
     ) {
         Spacer(modifier = Modifier.weight(1f))
 
+        // Aapka Custom Logo Yahan Update Kiya Hai
         Icon(
-            painter = painterResource(android.R.drawable.ic_media_play),
-            contentDescription = "Logo",
+            painter = painterResource(R.drawable.small_icon),
+            contentDescription = "Glossy Logo",
             tint = Color.White,
             modifier = Modifier.size(48.dp)
         )
