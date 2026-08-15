@@ -74,9 +74,13 @@ fun GlossyCustomHeader(userName: String) {
 
         Spacer(modifier = Modifier.width(16.dp))
 
-        // --- Right Side: Compact Pill (Exact icons and actions from your old MainActivity code) ---
+        // --- Right Side: Compact Pill ---
         Row(
             modifier = Modifier
+                .background(
+                    color = MaterialTheme.colorScheme.surfaceVariant.postAlpha(0.7f, 0.7f), // Standard color fallback
+                    shape = CircleShape
+                )
                 .background(
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
                     shape = CircleShape
@@ -85,43 +89,46 @@ fun GlossyCustomHeader(userName: String) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // 1. History Icon (Old action: navigate("history"))[span_4](start_span)[span_4](end_span)
+            // 1. History Icon
             Icon(
                 painter = painterResource(id = R.drawable.history),
                 contentDescription = "History",
                 modifier = Modifier
-                    .size(20.dp)
+                    .size(18.dp)
                     .clickable { navController.navigate("history") },
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
             
-            // 2. Stats Icon (Old action: navigate("stats"))[span_5](start_span)[span_5](end_span)
+            // 2. Stats Icon
             Icon(
                 painter = painterResource(id = R.drawable.stats),
                 contentDescription = "Stats",
                 modifier = Modifier
-                    .size(20.dp)
+                    .size(18.dp)
                     .clickable { navController.navigate("stats") },
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
             
-            // 3. Listen Together Icon (Old action: navigate("listen_together_from_topbar"))[span_6](start_span)[span_6](end_span)
+            // 3. Listen Together Icon
             Icon(
                 painter = painterResource(id = R.drawable.group_outlined),
                 contentDescription = "Listen Together",
                 modifier = Modifier
-                    .size(20.dp)
+                    .size(18.dp)
                     .clickable { navController.navigate("listen_together_from_topbar") },
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
             
-            // 4. Profile / Account Avatar (Old action: navigate("account"))
+            // 4. Profile Avatar -> Settings screen par navigate karne ke liye (ya direct settings route)
             Box(
                 modifier = Modifier
                     .size(30.dp)
                     .background(Color(0xFF8D6E63), CircleShape)
                     .clip(CircleShape)
-                    .clickable { navController.navigate("account") },
+                    .clickable { 
+                        // Account dialog ki jagah agar aap direct settings menu kholna chahte hain jisme login/tokens hain:
+                        navController.navigate("settings") 
+                    },
                 contentAlignment = Alignment.Center
             ) {
                 Text(
