@@ -135,6 +135,7 @@ import coil3.toBitmap
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.WatchEndpoint
+import com.jay.glossy.constants.AccountNameKey
 import com.jay.glossy.constants.AppBarHeight
 import com.jay.glossy.constants.AppLanguageKey
 import com.jay.glossy.constants.CheckForUpdatesKey
@@ -786,9 +787,11 @@ class MainActivity : ComponentActivity() {
 
                 val shouldShowNavigationBar =
                     remember(currentRoute, navigationItemRoutes) {
-                        currentRoute == null ||
+                        currentRoute != "welcome" && (
+                            currentRoute == null ||
                             navigationItemRoutes.contains(currentRoute) ||
                             currentRoute!!.startsWith("search/")
+                        )
                     }
 
                 val isLandscape = configuration.containerDpSize.width > configuration.containerDpSize.height
@@ -843,7 +846,7 @@ class MainActivity : ComponentActivity() {
                         if (!playerBottomSheetState.isDismissed) bottom += MiniPlayerHeight
                         windowsInsets
                             .only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top)
-                            .add(WindowInsets(top = AppBarHeight, bottom = bottom))
+                            .add(WindowInsets(bottom = bottom)) // Custom Top Bar k wajah se top padding hta di hai
                     }
                 appBarScrollBehavior(
                     canScroll = {
@@ -1019,90 +1022,7 @@ class MainActivity : ComponentActivity() {
 
                     Scaffold(
                         snackbarHost = { SnackbarHost(snackbarHostState) },
-                        topBar = {
-                            AnimatedVisibility(
-                                visible = shouldShowTopBar,
-                                enter = fadeIn(animationSpec = tween(durationMillis = 300)),
-                                exit = fadeOut(animationSpec = tween(durationMillis = 200)),
-                            ) {
-                                Row {
-                                    TopAppBar(
-                                        title = {
-                                            Text(
-                                                text = currentTitleRes?.let { stringResource(it) } ?: "",
-                                                style = MaterialTheme.typography.titleLarge,
-                                            )
-                                        },
-                                        actions = {
-                                            if (showHistoryButton) {
-                                                IconButton(onClick = { navController.navigate("history") }) {
-                                                    Icon(
-                                                        painter = painterResource(R.drawable.history),
-                                                        contentDescription = stringResource(R.string.history),
-                                                    )
-                                                }
-                                            }
-                                            IconButton(onClick = { navController.navigate("stats") }) {
-                                                Icon(
-                                                    painter = painterResource(R.drawable.stats),
-                                                    contentDescription = stringResource(R.string.stats),
-                                                )
-                                            }
-                                            if (listenTogetherInTopBar) {
-                                                IconButton(onClick = { navController.navigate("listen_together_from_topbar") }) {
-                                                    Icon(
-                                                        painter = painterResource(R.drawable.group_outlined),
-                                                        contentDescription = stringResource(R.string.together),
-                                                    )
-                                                }
-                                            }
-                                            IconButton(onClick = { showAccountDialog = true }) {
-                                                BadgedBox(badge = {
-                                                    if (latestVersionName != BuildConfig.VERSION_NAME) {
-                                                        Badge()
-                                                    }
-                                                }) {
-                                                    if (accountImageUrl != null) {
-                                                        AsyncImage(
-                                                            model = accountImageUrl,
-                                                            contentDescription = stringResource(R.string.account),
-                                                            modifier =
-                                                                Modifier
-                                                                    .size(24.dp)
-                                                                    .clip(CircleShape),
-                                                        )
-                                                    } else {
-                                                        Icon(
-                                                            painter = painterResource(R.drawable.account),
-                                                            contentDescription = stringResource(R.string.account),
-                                                            modifier = Modifier.size(24.dp),
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        },
-                                        scrollBehavior = topAppBarScrollBehavior,
-                                        colors =
-                                            TopAppBarDefaults.topAppBarColors(
-                                                containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer,
-                                                scrolledContainerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer,
-                                                titleContentColor = MaterialTheme.colorScheme.onSurface,
-                                                actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                navigationIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            ),
-                                        modifier =
-                                            Modifier.windowInsetsPadding(
-                                                if (showRail) {
-                                                    WindowInsets(left = NavigationBarHeight)
-                                                        .add(cutoutInsets.only(WindowInsetsSides.Start))
-                                                } else {
-                                                    cutoutInsets.only(WindowInsetsSides.Start + WindowInsetsSides.End)
-                                                },
-                                            ),
-                                    )
-                                }
-                            }
-                        },
+                        // Top Bar has been removed from here as requested
                         bottomBar = {
                             val currentBackStackEntry = navController.currentBackStackEntry
 
@@ -1201,38 +1121,40 @@ class MainActivity : ComponentActivity() {
                                                 .background(if (useFloatingNavBar) fadeBrush else solidBrush)
                                     )
 
-                                    AppNavigationBar(
-                                        navigationItems = navigationItems,
-                                        currentRoute = currentRoute,
-                                        onItemClick = onNavItemClick,
-                                        pureBlack = pureBlack,
-                                        slimNav = slimNav,
-                                        onSearchLongClick = onSearchLongClick,
-                                        modifier =
-                                            Modifier
-                                                .align(Alignment.BottomCenter)
-                                                .padding(horizontal = if (useFloatingNavBar) 16.dp else 0.dp)
-                                                .padding(bottom = if (useFloatingNavBar) bottomInsetDp + 4.dp else 0.dp)
-                                                .then(
-                                                    if (useFloatingNavBar) Modifier
-                                                    else Modifier.height(bottomInset + navPadding).clip(RectangleShape)
-                                                )
-                                                .graphicsLayer {
-                                                    val navBarHeightPx = navigationBarHeight.toPx()
-                                                    val totalHeightPx = navBarTotalHeight.toPx()
+                                    if (shouldShowNavigationBar) {
+                                        AppNavigationBar(
+                                            navigationItems = navigationItems,
+                                            currentRoute = currentRoute,
+                                            onItemClick = onNavItemClick,
+                                            pureBlack = pureBlack,
+                                            slimNav = slimNav,
+                                            onSearchLongClick = onSearchLongClick,
+                                            modifier =
+                                                Modifier
+                                                    .align(Alignment.BottomCenter)
+                                                    .padding(horizontal = if (useFloatingNavBar) 16.dp else 0.dp)
+                                                    .padding(bottom = if (useFloatingNavBar) bottomInsetDp + 4.dp else 0.dp)
+                                                    .then(
+                                                        if (useFloatingNavBar) Modifier
+                                                        else Modifier.height(bottomInset + navPadding).clip(RectangleShape)
+                                                    )
+                                                    .graphicsLayer {
+                                                        val navBarHeightPx = navigationBarHeight.toPx()
+                                                        val totalHeightPx = navBarTotalHeight.toPx()
 
-                                                    translationY =
-                                                        if (navBarHeightPx == 0f) {
-                                                            totalHeightPx
-                                                        } else {
-                                                            val progress = playerBottomSheetState.progress.coerceIn(0f, 1f)
-                                                            val slideOffset = totalHeightPx * progress
-                                                            val hideOffset =
-                                                                totalHeightPx * (1 - navBarHeightPx / NavigationBarHeight.toPx())
-                                                            slideOffset + hideOffset
-                                                        }
-                                                },
-                                    )
+                                                        translationY =
+                                                            if (navBarHeightPx == 0f) {
+                                                                totalHeightPx
+                                                            } else {
+                                                                val progress = playerBottomSheetState.progress.coerceIn(0f, 1f)
+                                                                val slideOffset = totalHeightPx * progress
+                                                                val hideOffset =
+                                                                    totalHeightPx * (1 - navBarHeightPx / NavigationBarHeight.toPx())
+                                                                slideOffset + hideOffset
+                                                            }
+                                                    },
+                                        )
+                                    }
                                 }
                             } else {
                                 if (currentRoute != "wrapped") {
@@ -1298,7 +1220,7 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
 
-                            if (showRail && currentRoute != "wrapped") {
+                            if (showRail && currentRoute != "wrapped" && shouldShowNavigationBar) {
                                 AppNavigationRail(
                                     navigationItems = navigationItems,
                                     currentRoute = currentRoute,
@@ -1308,15 +1230,19 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                             Box(Modifier.weight(1f)) {
+                                val (accountNamePref) = rememberPreference(AccountNameKey, defaultValue = "")
+                                val isFirstTime = accountNamePref.isBlank()
+
                                 // NavHost with animations (Material 3 Expressive style)
                                 NavHost(
                                     navController = navController,
-                                    startDestination =
+                                    startDestination = if (isFirstTime) "welcome" else {
                                         when (tabOpenedFromShortcut ?: defaultOpenTab) {
                                             NavigationTab.HOME -> Screens.Home
                                             NavigationTab.LIBRARY -> Screens.Library
                                             else -> Screens.Home
-                                        }.route,
+                                        }.route
+                                    },
                                     enterTransition = {
                                         val currentRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
                                         val previousRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
