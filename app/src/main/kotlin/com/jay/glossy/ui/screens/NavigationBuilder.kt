@@ -68,7 +68,6 @@ import com.jay.glossy.ui.screens.wrapped.WrappedScreen
 import com.jay.glossy.utils.rememberEnumPreference
 import com.jay.glossy.utils.rememberPreference
 
-// NEW IMPORTS FOR WELCOME SCREEN
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import com.jay.glossy.utils.safeDataStoreEdit
 import kotlinx.coroutines.launch
@@ -95,8 +94,17 @@ fun NavGraphBuilder.navigationBuilder(
                         prefs[booleanPreferencesKey("has_seen_welcome")] = true
                     }
                 }
-                
                 navController.navigate(Screens.Home.route) {
+                    popUpTo("welcome") { inclusive = true }
+                }
+            },
+            onGoogleLoginClick = { // GOOGLE BUTTON CLICK FIX
+                coroutineScope.launch {
+                    context.safeDataStoreEdit { prefs ->
+                        prefs[booleanPreferencesKey("has_seen_welcome")] = true
+                    }
+                }
+                navController.navigate("login") {
                     popUpTo("welcome") { inclusive = true }
                 }
             }
