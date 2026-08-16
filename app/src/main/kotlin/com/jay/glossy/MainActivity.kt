@@ -224,6 +224,7 @@ import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.util.Locale
 import javax.inject.Inject
+import androidx.datastore.preferences.core.booleanPreferencesKey
 
 @Suppress("DEPRECATION", "ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
 @AndroidEntryPoint
@@ -690,6 +691,9 @@ class MainActivity : ComponentActivity() {
                 val bottomInsetDp = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
                 val navController = rememberNavController()
+
+                // YAHAN PAR DATASTORE SE CHECK KIYA HAI
+                val (hasSeenWelcome) = rememberPreference(booleanPreferencesKey("has_seen_welcome"), defaultValue = false)
 
                 LaunchedEffect(Unit) {
                     val lastSeenVersion = dataStore.data.first()[LastSeenVersionKey] ?: ""
@@ -1311,12 +1315,15 @@ class MainActivity : ComponentActivity() {
                                 // NavHost with animations (Material 3 Expressive style)
                                 NavHost(
                                     navController = navController,
+                                    // YAHAN NEW START DESTINATION ADD KI HAI
                                     startDestination =
-                                        when (tabOpenedFromShortcut ?: defaultOpenTab) {
-                                            NavigationTab.HOME -> Screens.Home
-                                            NavigationTab.LIBRARY -> Screens.Library
-                                            else -> Screens.Home
-                                        }.route,
+                                        if (!hasSeenWelcome) "welcome" else {
+                                            when (tabOpenedFromShortcut ?: defaultOpenTab) {
+                                                NavigationTab.HOME -> Screens.Home
+                                                NavigationTab.LIBRARY -> Screens.Library
+                                                else -> Screens.Home
+                                            }.route
+                                        },
                                     enterTransition = {
                                         val currentRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
                                         val previousRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
