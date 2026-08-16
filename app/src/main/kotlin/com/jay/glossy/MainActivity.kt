@@ -77,7 +77,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -167,6 +166,7 @@ import com.jay.glossy.constants.StopMusicOnTaskClearKey
 import com.jay.glossy.constants.UpdateNotificationsEnabledKey
 import com.jay.glossy.constants.UseFloatingNavBarKey
 import com.jay.glossy.constants.UseNewMiniPlayerDesignKey
+import com.jay.glossy.constants.AccountNameKey
 import com.jay.glossy.db.MusicDatabase
 import com.jay.glossy.db.entities.SearchHistory
 import com.jay.glossy.extensions.toEnum
@@ -665,6 +665,49 @@ class MainActivity : ComponentActivity() {
 
                 val navController = rememberNavController()
 
+                // FIX 1: Reactive current route tracking - Solves the Setting Screen Bottom Bar bug
+                val navBackStackEntry by navController.currentBackStackEntryAsState()
+                val currentRoute = navBackStackEntry?.destination?.route
+
+                // FIX 2: Solid Welcome Screen Tracking Logic
+                val prefs by dataStore.data.collectAsStateWithLifecycle(initialValue = null)
+                val (defaultOpenTabInt) = rememberPreference(DefaultOpenTabKey, defaultValue = NavigationTab.HOME.name)
+                val defaultOpenTab = remember(defaultOpenTabInt) {
+                    try {
+                        NavigationTab.valueOf(defaultOpenTabInt)
+                    } catch (_: IllegalArgumentException) {
+                        NavigationTab.HOME
+                    }
+                }
+                val tabOpenedFromShortcut = remember {
+                    when (intent?.action) {
+                        ACTION_SEARCH -> NavigationTab.LIBRARY
+                        ACTION_LIBRARY -> NavigationTab.SEARCH
+                        else -> null
+                    }
+                }
+
+                var initialRoute by rememberSaveable { mutableStateOf<String?>(null) }
+                
+                LaunchedEffect(prefs) {
+                    if (prefs != null && initialRoute == null) {
+                        val savedAccountName = prefs!![AccountNameKey] ?: ""
+                        initialRoute = if (savedAccountName.isBlank()) "welcome" else {
+                            when (tabOpenedFromShortcut ?: defaultOpenTab) {
+                                NavigationTab.HOME -> Screens.Home.route
+                                NavigationTab.LIBRARY -> Screens.Library.route
+                                else -> Screens.Home.route
+                            }
+                        }
+                    }
+                }
+
+                if (initialRoute == null) {
+                    // Blank screen while loading DataStore to prevent flashing
+                    Box(modifier = Modifier.fillMaxSize().background(Color.Black))
+                    return@BoxWithConstraints
+                }
+
                 LaunchedEffect(Unit) {
                     val lastSeenVersion = dataStore.data.first()[LastSeenVersionKey] ?: ""
                     val currentVersion = BuildConfig.VERSION_NAME
@@ -674,8 +717,6 @@ class MainActivity : ComponentActivity() {
                 }
 
                 val homeViewModel: HomeViewModel = hiltViewModel()
-                val accountImageUrl by homeViewModel.accountImageUrl.collectAsStateWithLifecycle()
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val (previousTab, setPreviousTab) = rememberSaveable { mutableStateOf("home") }
 
                 val (listenTogetherInTopBar) = rememberPreference(ListenTogetherInTopBarKey, defaultValue = true)
@@ -693,23 +734,7 @@ class MainActivity : ComponentActivity() {
                 val (slimNav) = rememberPreference(SlimNavBarKey, defaultValue = false)
                 val (useFloatingNavBar) = rememberPreference(UseFloatingNavBarKey, defaultValue = false)
                 val (useNewMiniPlayerDesign) = rememberPreference(UseNewMiniPlayerDesignKey, defaultValue = true)
-                val (defaultOpenTabInt) = rememberPreference(DefaultOpenTabKey, defaultValue = NavigationTab.HOME.name)
-                val defaultOpenTab = remember(defaultOpenTabInt) {
-                    try {
-                        NavigationTab.valueOf(defaultOpenTabInt)
-                    } catch (_: IllegalArgumentException) {
-                        NavigationTab.HOME
-                    }
-                }
-                val tabOpenedFromShortcut =
-                    remember {
-                        when (intent?.action) {
-                            ACTION_SEARCH -> NavigationTab.LIBRARY
-                            ACTION_LIBRARY -> NavigationTab.SEARCH
-                            else -> null
-                        }
-                    }
-
+                
                 val topLevelScreens =
                     remember {
                         listOf(
@@ -746,11 +771,6 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                // FIX: Restored this to correctly track the active screen dynamically
-                val currentRoute by remember {
-                    derivedStateOf { navBackStackEntry?.destination?.route }
-                }
-
                 val inSearchScreen by remember {
                     derivedStateOf { currentRoute?.startsWith("search/") == true }
                 }
@@ -761,9 +781,9 @@ class MainActivity : ComponentActivity() {
 
                 val shouldShowNavigationBar =
                     remember(currentRoute, navigationItemRoutes) {
-                        currentRoute == null ||
+                        (currentRoute == null ||
                             navigationItemRoutes.contains(currentRoute) ||
-                            currentRoute!!.startsWith("search/")
+                            currentRoute.startsWith("search/")) && currentRoute != "welcome" && currentRoute != "settings"
                     }
 
                 val isLandscape = configuration.containerDpSize.width > configuration.containerDpSize.height
@@ -803,6 +823,21 @@ class MainActivity : ComponentActivity() {
                 val playerReady by playerReadyState
                 val activePlayerConnection = if (playerReady) playerConnection else null
 
+                var shouldShowTopBar by rememberSaveable { mutableStateOf(false) }
+
+                LaunchedEffect(navBackStackEntry, listenTogetherInTopBar) {
+                    val navRoute = navBackStackEntry?.destination?.route
+                    val isListenTogetherScreen =
+                        navRoute == Screens.ListenTogether.route ||
+                            navRoute == "listen_together_from_topbar"
+                            
+                    // FIX 3: Make the custom top bar visible globally on top screens!
+                    shouldShowTopBar = navRoute in topLevelScreens &&
+                        navRoute != "settings" &&
+                        navRoute != "welcome" &&
+                        !(isListenTogetherScreen && listenTogetherInTopBar)
+                }
+
                 val playerAwareWindowInsets =
                     remember(
                         bottomInset,
@@ -810,7 +845,7 @@ class MainActivity : ComponentActivity() {
                         playerBottomSheetState.isDismissed,
                         showRail,
                         useFloatingNavBar,
-                        currentRoute
+                        shouldShowTopBar
                     ) {
                         var bottom = bottomInset
                         if (shouldShowNavigationBar && !showRail) {
@@ -818,8 +853,8 @@ class MainActivity : ComponentActivity() {
                         }
                         if (!playerBottomSheetState.isDismissed) bottom += MiniPlayerHeight
                         
-                        // FIX: Perfectly calculates 0dp padding for Home so the header isn't pushed down!
-                        val topInset = if (currentRoute == Screens.Home.route) 0.dp else AppBarHeight
+                        // Perfectly calculate the padding so the content doesn't draw under our Global Header
+                        val topInset = if (shouldShowTopBar) AppBarHeight else 0.dp
 
                         windowsInsets
                             .only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top)
@@ -858,7 +893,6 @@ class MainActivity : ComponentActivity() {
                         onQueryChange(TextFieldValue())
                     }
 
-                    // Reset scroll behavior for main navigation items
                     if (navigationItems.fastAny { it.route == navBackStackEntry?.destination?.route }) {
                         if (navigationItems.fastAny { it.route == previousTab }) {
                             topAppBarScrollBehavior.state.resetHeightOffset()
@@ -867,14 +901,12 @@ class MainActivity : ComponentActivity() {
 
                     topAppBarScrollBehavior.state.resetHeightOffset()
 
-                    // Collapse player when navigating to equalizer
                     if (navBackStackEntry?.destination?.route == "equalizer" &&
                         playerBottomSheetState.isExpanded
                     ) {
                         playerBottomSheetState.collapseSoft()
                     }
 
-                    // Track previous tab for animations
                     navController.currentBackStackEntry?.destination?.route?.let {
                         setPreviousTab(it)
                     }
@@ -917,24 +949,8 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                var shouldShowTopBar by rememberSaveable { mutableStateOf(false) }
-
-                LaunchedEffect(navBackStackEntry, listenTogetherInTopBar) {
-                    val navRoute = navBackStackEntry?.destination?.route
-                    val isListenTogetherScreen =
-                        navRoute == Screens.ListenTogether.route ||
-                            navRoute == "listen_together_from_topbar"
-                            
-                    shouldShowTopBar = navRoute in topLevelScreens &&
-                        navRoute != "settings" &&
-                        navRoute != Screens.Home.route &&
-                        !(isListenTogetherScreen && listenTogetherInTopBar)
-                }
-
                 val coroutineScope = rememberCoroutineScope()
-                var sharedSong: SongItem? by remember {
-                    mutableStateOf(null)
-                }
+                var sharedSong: SongItem? by remember { mutableStateOf(null) }
                 val snackbarHostState = remember { SnackbarHostState() }
 
                 LaunchedEffect(Unit) {
@@ -962,26 +978,7 @@ class MainActivity : ComponentActivity() {
                     onDispose { removeOnNewIntentListener(listener) }
                 }
 
-                val currentTitleRes =
-                    remember(navBackStackEntry) {
-                        when (navBackStackEntry?.destination?.route) {
-                            Screens.Home.route -> R.string.home
-                            Screens.Search.route -> R.string.search
-                            Screens.Library.route -> R.string.filter_library
-                            Screens.ListenTogether.route -> R.string.together
-                            else -> null
-                        }
-                    }
-
                 var showAccountDialog by remember { mutableStateOf(false) }
-
-                val pauseListenHistory by rememberPreference(PauseListenHistoryKey, defaultValue = false)
-                val eventCount by database.eventCount().collectAsStateWithLifecycle(initialValue = 0)
-                val showHistoryButton =
-                    remember(pauseListenHistory, eventCount) {
-                        !(pauseListenHistory && eventCount == 0)
-                    }
-
                 val baseBg = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
 
                 CompositionLocalProvider(
@@ -1008,81 +1005,22 @@ class MainActivity : ComponentActivity() {
                                 enter = fadeIn(animationSpec = tween(durationMillis = 300)),
                                 exit = fadeOut(animationSpec = tween(durationMillis = 200)),
                             ) {
-                                Row {
-                                    TopAppBar(
-                                        title = {
-                                            Text(
-                                                text = currentTitleRes?.let { stringResource(it) } ?: "",
-                                                style = MaterialTheme.typography.titleLarge,
-                                            )
-                                        },
-                                        actions = {
-                                            if (showHistoryButton) {
-                                                IconButton(onClick = { navController.navigate("history") }) {
-                                                    Icon(
-                                                        painter = painterResource(R.drawable.history),
-                                                        contentDescription = stringResource(R.string.history),
-                                                    )
-                                                }
+                                val accountName by homeViewModel.accountName.collectAsStateWithLifecycle()
+                                
+                                // FIX: GLOBAL GLOSSY CUSTOM HEADER IS APPLIED HERE!
+                                Box(
+                                    modifier = Modifier
+                                        .background(if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer)
+                                        .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top))
+                                        .windowInsetsPadding(
+                                            if (showRail) {
+                                                WindowInsets(left = NavigationBarHeight).add(cutoutInsets.only(WindowInsetsSides.Start))
+                                            } else {
+                                                cutoutInsets.only(WindowInsetsSides.Start + WindowInsetsSides.End)
                                             }
-                                            IconButton(onClick = { navController.navigate("stats") }) {
-                                                Icon(
-                                                    painter = painterResource(R.drawable.stats),
-                                                    contentDescription = stringResource(R.string.stats),
-                                                )
-                                            }
-                                            if (listenTogetherInTopBar) {
-                                                IconButton(onClick = { navController.navigate("listen_together_from_topbar") }) {
-                                                    Icon(
-                                                        painter = painterResource(R.drawable.group_outlined),
-                                                        contentDescription = stringResource(R.string.together),
-                                                    )
-                                                }
-                                            }
-                                            IconButton(onClick = { showAccountDialog = true }) {
-                                                BadgedBox(badge = {
-                                                    if (latestVersionName != BuildConfig.VERSION_NAME) {
-                                                        Badge()
-                                                    }
-                                                }) {
-                                                    if (accountImageUrl != null) {
-                                                        AsyncImage(
-                                                            model = accountImageUrl,
-                                                            contentDescription = stringResource(R.string.account),
-                                                            modifier =
-                                                                Modifier
-                                                                    .size(24.dp)
-                                                                    .clip(CircleShape),
-                                                        )
-                                                    } else {
-                                                        Icon(
-                                                            painter = painterResource(R.drawable.account),
-                                                            contentDescription = stringResource(R.string.account),
-                                                            modifier = Modifier.size(24.dp),
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        },
-                                        scrollBehavior = topAppBarScrollBehavior,
-                                        colors =
-                                            TopAppBarDefaults.topAppBarColors(
-                                                containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer,
-                                                scrolledContainerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer,
-                                                titleContentColor = MaterialTheme.colorScheme.onSurface,
-                                                actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                navigationIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            ),
-                                        modifier =
-                                            Modifier.windowInsetsPadding(
-                                                if (showRail) {
-                                                    WindowInsets(left = NavigationBarHeight)
-                                                        .add(cutoutInsets.only(WindowInsetsSides.Start))
-                                                } else {
-                                                    cutoutInsets.only(WindowInsetsSides.Start + WindowInsetsSides.End)
-                                                },
-                                            ),
-                                    )
+                                        )
+                                ) {
+                                    com.jay.glossy.ui.component.GlossyCustomHeader(userName = accountName ?: "")
                                 }
                             }
                         },
@@ -1156,7 +1094,7 @@ class MainActivity : ComponentActivity() {
                                 androidx.compose.ui.graphics.Brush.verticalGradient(listOf(baseBg, baseBg))
                             }
 
-                            if (!showRail && currentRoute != "wrapped") {
+                            if (!showRail && currentRoute != "wrapped" && currentRoute != "welcome") {
                                 Box {
                                     if (activePlayerConnection != null) {
                                         BottomSheetPlayer(
@@ -1218,7 +1156,7 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
                             } else {
-                                if (currentRoute != "wrapped") {
+                                if (currentRoute != "wrapped" && currentRoute != "welcome") {
                                     if (activePlayerConnection != null) {
                                         BottomSheetPlayer(
                                             state = playerBottomSheetState,
@@ -1228,18 +1166,20 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
 
-                                Box(
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .align(Alignment.BottomCenter)
-                                            .height(bottomInsetDp)
-                                            .graphicsLayer {
-                                                val progress = playerBottomSheetState.progress
-                                                alpha =
-                                                    if (progress > 0f || (useNewMiniPlayerDesign && !shouldShowNavigationBar) || useFloatingNavBar) 0f else 1f
-                                            }.background(baseBg),
-                                )
+                                if (currentRoute != "welcome") {
+                                    Box(
+                                        modifier =
+                                            Modifier
+                                                .fillMaxWidth()
+                                                .align(Alignment.BottomCenter)
+                                                .height(bottomInsetDp)
+                                                .graphicsLayer {
+                                                    val progress = playerBottomSheetState.progress
+                                                    alpha =
+                                                        if (progress > 0f || (useNewMiniPlayerDesign && !shouldShowNavigationBar) || useFloatingNavBar) 0f else 1f
+                                                }.background(baseBg),
+                                    )
+                                }
                             }
                         },
                         modifier =
@@ -1281,7 +1221,7 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
 
-                            if (showRail && currentRoute != "wrapped") {
+                            if (showRail && currentRoute != "wrapped" && currentRoute != "welcome") {
                                 AppNavigationRail(
                                     navigationItems = navigationItems,
                                     currentRoute = currentRoute,
@@ -1294,12 +1234,7 @@ class MainActivity : ComponentActivity() {
                                 // NavHost with animations (Material 3 Expressive style)
                                 NavHost(
                                     navController = navController,
-                                    startDestination =
-                                        when (tabOpenedFromShortcut ?: defaultOpenTab) {
-                                            NavigationTab.HOME -> Screens.Home
-                                            NavigationTab.LIBRARY -> Screens.Library
-                                            else -> Screens.Home
-                                        }.route,
+                                    startDestination = initialRoute!!, // Initial route properly assigned here!
                                     enterTransition = {
                                         val currentRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
                                         val previousRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
