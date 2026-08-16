@@ -31,6 +31,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -1029,60 +1030,86 @@ class MainActivity : ComponentActivity() {
                                     TopAppBar(
                                         title = {
                                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                                // 1. Aapka Small Icon
+                                                // 1. Aapka Small Icon - Size Bada kar diya (36.dp) Text ke barabar
                                                 Icon(
                                                     painter = painterResource(R.drawable.small_icon), 
                                                     contentDescription = null,
-                                                    modifier = Modifier.size(28.dp).padding(end = 8.dp),
+                                                    modifier = Modifier.size(36.dp).padding(end = 6.dp),
                                                     tint = MaterialTheme.colorScheme.onSurface
                                                 )
-                                                // 2. Fixed "Glossy" Text (Ekdum straight aur proper)
+                                                // 2. "Glossy" Text - Bada size, aur cut nahi hoga
                                                 Text(
                                                     text = "Glossy",
                                                     style = MaterialTheme.typography.titleLarge.copy(
                                                         fontFamily = bbhBartle,
                                                         fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                                                        fontSize = 24.sp 
+                                                        fontSize = 32.sp // Text ekdum clear aur bada
                                                     ),
-                                                    maxLines = 1, // ISSE TEXT VERTICAL NAHI HOGA KABHI BHI!
-                                                    overflow = TextOverflow.Ellipsis,
+                                                    maxLines = 1,
                                                     color = MaterialTheme.colorScheme.onSurface
                                                 )
                                             }
                                         },
                                         actions = {
-                                            // 3. PILL-SHAPED CONTAINER WITH ORIGINAL ICONS ONLY
+                                            // 3. PILL-SHAPED CONTAINER WITH PREMIUM FADE GRADIENT & TIGHT ICONS
                                             Surface(
                                                 shape = CircleShape, 
-                                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                                                modifier = Modifier.padding(end = 8.dp)
+                                                color = Color.Transparent, // Transparent rakha taaki brush kaam kare
+                                                modifier = Modifier
+                                                    .padding(end = 8.dp)
+                                                    .background(
+                                                        brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                                                            colors = listOf(
+                                                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
+                                                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+                                                            )
+                                                        ),
+                                                        shape = CircleShape
+                                                    )
                                             ) {
                                                 Row(
-                                                    verticalAlignment = Alignment.CenterVertically
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                                    horizontalArrangement = Arrangement.spacedBy(4.dp) // ICONS EKDUM PAAS-PAAS HAIN AB!
                                                 ) {
                                                     if (showHistoryButton) {
-                                                        IconButton(onClick = { navController.navigate("history") }) {
+                                                        IconButton(
+                                                            onClick = { navController.navigate("history") },
+                                                            modifier = Modifier.size(32.dp) // IconButton ka size fix kiya taaki wo extra jagah na khaye
+                                                        ) {
                                                             Icon(
                                                                 painter = painterResource(R.drawable.history),
                                                                 contentDescription = stringResource(R.string.history),
+                                                                modifier = Modifier.size(20.dp)
                                                             )
                                                         }
                                                     }
-                                                    IconButton(onClick = { navController.navigate("stats") }) {
+                                                    IconButton(
+                                                        onClick = { navController.navigate("stats") },
+                                                        modifier = Modifier.size(32.dp)
+                                                    ) {
                                                         Icon(
                                                             painter = painterResource(R.drawable.stats),
                                                             contentDescription = stringResource(R.string.stats),
+                                                            modifier = Modifier.size(20.dp)
                                                         )
                                                     }
                                                     if (listenTogetherInTopBar) {
-                                                        IconButton(onClick = { navController.navigate("listen_together_from_topbar") }) {
+                                                        IconButton(
+                                                            onClick = { navController.navigate("listen_together_from_topbar") },
+                                                            modifier = Modifier.size(32.dp)
+                                                        ) {
                                                             Icon(
                                                                 painter = painterResource(R.drawable.group_outlined),
                                                                 contentDescription = stringResource(R.string.together),
+                                                                modifier = Modifier.size(20.dp)
                                                             )
                                                         }
                                                     }
-                                                    IconButton(onClick = { showAccountDialog = true }) {
+                                                    IconButton(
+                                                        onClick = { showAccountDialog = true },
+                                                        modifier = Modifier.size(32.dp)
+                                                    ) {
                                                         BadgedBox(badge = {
                                                             if (latestVersionName != BuildConfig.VERSION_NAME) {
                                                                 Badge()
@@ -1093,15 +1120,22 @@ class MainActivity : ComponentActivity() {
                                                                     model = accountImageUrl,
                                                                     contentDescription = stringResource(R.string.account),
                                                                     modifier = Modifier
-                                                                        .size(24.dp)
+                                                                        .size(26.dp)
                                                                         .clip(CircleShape),
                                                                 )
                                                             } else {
-                                                                Icon(
-                                                                    painter = painterResource(R.drawable.account),
-                                                                    contentDescription = stringResource(R.string.account),
-                                                                    modifier = Modifier.size(24.dp)
-                                                                )
+                                                                Surface(
+                                                                    shape = CircleShape,
+                                                                    color = MaterialTheme.colorScheme.primary,
+                                                                    modifier = Modifier.size(26.dp)
+                                                                ) {
+                                                                    Icon(
+                                                                        painter = painterResource(R.drawable.account),
+                                                                        contentDescription = stringResource(R.string.account),
+                                                                        modifier = Modifier.padding(4.dp),
+                                                                        tint = MaterialTheme.colorScheme.onPrimary
+                                                                    )
+                                                                }
                                                             }
                                                         }
                                                     }
