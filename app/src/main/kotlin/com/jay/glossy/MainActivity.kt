@@ -30,6 +30,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -1030,31 +1031,31 @@ class MainActivity : ComponentActivity() {
                                     TopAppBar(
                                         title = {
                                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                                // 1. Aapka Small Icon - Size Bada kar diya (36.dp) Text ke barabar
+                                                // 1. Icon ab BADA (42.dp) ho gaya hai
                                                 Icon(
                                                     painter = painterResource(R.drawable.small_icon), 
                                                     contentDescription = null,
-                                                    modifier = Modifier.size(36.dp).padding(end = 6.dp),
+                                                    modifier = Modifier.size(42.dp).padding(end = 8.dp),
                                                     tint = MaterialTheme.colorScheme.onSurface
                                                 )
-                                                // 2. "Glossy" Text - Bada size, aur cut nahi hoga
+                                                // 2. Text NORMAL aur elegant (Pehle jaisa 'Home' text style)
                                                 Text(
                                                     text = "Glossy",
                                                     style = MaterialTheme.typography.titleLarge.copy(
-                                                        fontFamily = bbhBartle,
-                                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                                                        fontSize = 32.sp // Text ekdum clear aur bada
+                                                        fontFamily = bbhBartle
+                                                        // Bold aur extra 32sp size HATA diya, ab normal aur fit lagega
                                                     ),
-                                                    maxLines = 1,
+                                                    maxLines = 1, 
+                                                    overflow = TextOverflow.Ellipsis,
                                                     color = MaterialTheme.colorScheme.onSurface
                                                 )
                                             }
                                         },
                                         actions = {
-                                            // 3. PILL-SHAPED CONTAINER WITH PREMIUM FADE GRADIENT & TIGHT ICONS
+                                            // 3. PILL-SHAPED CONTAINER WITH CUSTOM ICONS (TIGHT SPACING)
                                             Surface(
                                                 shape = CircleShape, 
-                                                color = Color.Transparent, // Transparent rakha taaki brush kaam kare
+                                                color = Color.Transparent, 
                                                 modifier = Modifier
                                                     .padding(end = 8.dp)
                                                     .background(
@@ -1070,72 +1071,77 @@ class MainActivity : ComponentActivity() {
                                                 Row(
                                                     verticalAlignment = Alignment.CenterVertically,
                                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-                                                    horizontalArrangement = Arrangement.spacedBy(4.dp) // ICONS EKDUM PAAS-PAAS HAIN AB!
+                                                    // EKDUM Tight Spacing (Sirf 2.dp gap icons ke beech me)
+                                                    horizontalArrangement = Arrangement.spacedBy(2.dp) 
                                                 ) {
+                                                    // Yahan se saare IconButton hata diye, ab Custom Icon use kar rahe hain
                                                     if (showHistoryButton) {
-                                                        IconButton(
-                                                            onClick = { navController.navigate("history") },
-                                                            modifier = Modifier.size(32.dp) // IconButton ka size fix kiya taaki wo extra jagah na khaye
-                                                        ) {
-                                                            Icon(
-                                                                painter = painterResource(R.drawable.history),
-                                                                contentDescription = stringResource(R.string.history),
-                                                                modifier = Modifier.size(20.dp)
-                                                            )
-                                                        }
-                                                    }
-                                                    IconButton(
-                                                        onClick = { navController.navigate("stats") },
-                                                        modifier = Modifier.size(32.dp)
-                                                    ) {
                                                         Icon(
-                                                            painter = painterResource(R.drawable.stats),
-                                                            contentDescription = stringResource(R.string.stats),
-                                                            modifier = Modifier.size(20.dp)
+                                                            painter = painterResource(R.drawable.history),
+                                                            contentDescription = stringResource(R.string.history),
+                                                            modifier = Modifier
+                                                                .clip(CircleShape)
+                                                                .clickable { navController.navigate("history") }
+                                                                .padding(6.dp)
+                                                                .size(22.dp),
+                                                            tint = MaterialTheme.colorScheme.onSurface
                                                         )
                                                     }
+                                                    Icon(
+                                                        painter = painterResource(R.drawable.stats),
+                                                        contentDescription = stringResource(R.string.stats),
+                                                        modifier = Modifier
+                                                            .clip(CircleShape)
+                                                            .clickable { navController.navigate("stats") }
+                                                            .padding(6.dp)
+                                                            .size(22.dp),
+                                                        tint = MaterialTheme.colorScheme.onSurface
+                                                    )
                                                     if (listenTogetherInTopBar) {
-                                                        IconButton(
-                                                            onClick = { navController.navigate("listen_together_from_topbar") },
-                                                            modifier = Modifier.size(32.dp)
-                                                        ) {
-                                                            Icon(
-                                                                painter = painterResource(R.drawable.group_outlined),
-                                                                contentDescription = stringResource(R.string.together),
-                                                                modifier = Modifier.size(20.dp)
-                                                            )
-                                                        }
+                                                        Icon(
+                                                            painter = painterResource(R.drawable.group_outlined),
+                                                            contentDescription = stringResource(R.string.together),
+                                                            modifier = Modifier
+                                                                .clip(CircleShape)
+                                                                .clickable { navController.navigate("listen_together_from_topbar") }
+                                                                .padding(6.dp)
+                                                                .size(22.dp),
+                                                            tint = MaterialTheme.colorScheme.onSurface
+                                                        )
                                                     }
-                                                    IconButton(
-                                                        onClick = { showAccountDialog = true },
-                                                        modifier = Modifier.size(32.dp)
-                                                    ) {
-                                                        BadgedBox(badge = {
+                                                    
+                                                    // Profile icon
+                                                    BadgedBox(
+                                                        badge = {
                                                             if (latestVersionName != BuildConfig.VERSION_NAME) {
                                                                 Badge()
                                                             }
-                                                        }) {
-                                                            if (accountImageUrl != null) {
-                                                                AsyncImage(
-                                                                    model = accountImageUrl,
+                                                        },
+                                                        modifier = Modifier
+                                                            .padding(start = 4.dp, end = 2.dp)
+                                                            .clip(CircleShape)
+                                                            .clickable { showAccountDialog = true }
+                                                    ) {
+                                                        if (accountImageUrl != null) {
+                                                            AsyncImage(
+                                                                model = accountImageUrl,
+                                                                contentDescription = stringResource(R.string.account),
+                                                                modifier = Modifier
+                                                                    .size(28.dp)
+                                                                    .clip(CircleShape),
+                                                            )
+                                                        } else {
+                                                            Surface(
+                                                                shape = CircleShape,
+                                                                color = MaterialTheme.colorScheme.primary,
+                                                                modifier = Modifier.size(28.dp)
+                                                            ) {
+                                                                Icon(
+                                                                    painter = painterResource(R.drawable.account),
                                                                     contentDescription = stringResource(R.string.account),
-                                                                    modifier = Modifier
-                                                                        .size(26.dp)
-                                                                        .clip(CircleShape),
+                                                                    modifier = Modifier.padding(4.dp),
+                                                                    tint = MaterialTheme.colorScheme.onPrimary
                                                                 )
-                                                            } else {
-                                                                Surface(
-                                                                    shape = CircleShape,
-                                                                    color = MaterialTheme.colorScheme.primary,
-                                                                    modifier = Modifier.size(26.dp)
-                                                                ) {
-                                                                    Icon(
-                                                                        painter = painterResource(R.drawable.account),
-                                                                        contentDescription = stringResource(R.string.account),
-                                                                        modifier = Modifier.padding(4.dp),
-                                                                        tint = MaterialTheme.colorScheme.onPrimary
-                                                                    )
-                                                                }
                                                             }
                                                         }
                                                     }
