@@ -254,11 +254,7 @@ class MainActivity : ComponentActivity() {
     private var pendingIntent: Intent? = null
     private var latestVersionName by mutableStateOf(BuildConfig.VERSION_NAME)
 
-    // Keep PlayerConnection as regular property - NOT mutableStateOf to prevent UI recomposition
-    // when it becomes null during onStop. Only update the snapshot for Compose when needed.
     private var playerConnection: PlayerConnection? = null
-
-    // This is the snapshot we pass to Compose - changes here trigger recomposition
     private var playerConnectionSnapshot by mutableStateOf<PlayerConnection?>(null)
 
     private var isServiceBound = false
@@ -277,11 +273,8 @@ class MainActivity : ComponentActivity() {
             }
 
             override fun onServiceDisconnected(name: ComponentName?) {
-                // Disconnect Listen Together manager
                 listenTogetherManager.setPlayerConnection(null)
                 playerConnection?.dispose()
-                // DO NOT null out playerConnection here - keep it for when service reconnects
-                // DO NOT update playerConnectionSnapshot - this is the key to preventing recomposition
             }
         }
 
@@ -295,24 +288,17 @@ class MainActivity : ComponentActivity() {
             isServiceBound = false
             listenTogetherManager.setPlayerConnection(null)
             playerConnection?.dispose()
-            // DO NOT null out playerConnection here - keep it for reconnection
-            // DO NOT update playerConnectionSnapshot - this prevents UI recomposition
         }
     }
 
     override fun onStart() {
         super.onStart()
-        // Request notification permission on Android 13+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1000)
             }
         }
 
-        // Start the playback service explicitly once so it can outlive binding.
-        // Re-issuing startForegroundService() while an existing service instance is already
-        // running can trigger "did not then call startForeground" on some Android 9 devices
-        // when the framework expects a fresh foreground promotion for that start request.
         if (!MusicService.isRunning) {
             val serviceIntent = Intent(this, MusicService::class.java)
             try {
@@ -328,7 +314,6 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        // Bind to service - if already bound, this is a no-op but ensures we stay connected
         if (!isServiceBound) {
             bindService(
                 Intent(this, MusicService::class.java),
@@ -340,11 +325,6 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onStop() {
-        // Keep the service binding, PlayerConnection and Listen Together wiring alive while
-        // the Activity is backgrounded. The MusicService is a foreground service and keeps
-        // running, so the host must keep reporting playback state to the LT server; detaching
-        // the player listener here used to break LT for any host that wasn't staring at the
-        // app the whole session. Full teardown happens in onDestroy() via safeUnbindService().
         super.onStop()
     }
 
@@ -353,18 +333,15 @@ class MainActivity : ComponentActivity() {
             listenTogetherManager.disconnect()
         }
         super.onDestroy()
-        // Use effective playing state so Cast (local player paused, remote playing) is included.
         val stopServiceOnClear =
             dataStore.get(StopMusicOnTaskClearKey, false) &&
                 playerConnection?.isEffectivelyPlaying?.value == true &&
                 isFinishing
 
-        // Full cleanup - only on actual destroy
         playerConnection?.dispose()
         playerConnection = null
         playerConnectionSnapshot = null
 
-        // Unbind before stopService: a started+bound service does not stop until all clients unbind.
         safeUnbindService("onDestroy()")
 
         if (stopServiceOnClear) {
@@ -389,7 +366,6 @@ class MainActivity : ComponentActivity() {
         window.decorView.layoutDirection = View.LAYOUT_DIRECTION_LTR
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        // Initialize Listen Together manager
         listenTogetherManager.initialize()
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
@@ -417,12 +393,10 @@ class MainActivity : ComponentActivity() {
                 }
         }
 
-        // Defer migration and version tracking to avoid blocking first frame
         lifecycleScope.launch(Dispatchers.IO) {
             val preferences = dataStore.data.first()
             val currentVersion = BuildConfig.VERSION_NAME
 
-            // SimpMusic Removal Migration
             if (preferences[SimpMusicMigrationDoneKey] != true) {
                 safeDataStoreEdit { settings ->
                     val currentOrder = settings[LyricsProviderOrderKey] ?: ""
@@ -691,10 +665,6 @@ class MainActivity : ComponentActivity() {
 
                 val navController = rememberNavController()
 
-                val currentRoute by remember {
-                    derivedStateOf { navController.currentBackStackEntry?.destination?.route }
-                }
-
                 LaunchedEffect(Unit) {
                     val lastSeenVersion = dataStore.data.first()[LastSeenVersionKey] ?: ""
                     val currentVersion = BuildConfig.VERSION_NAME
@@ -776,6 +746,11 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
+                // FIX: Restored this to correctly track the active screen dynamically
+                val currentRoute by remember {
+                    derivedStateOf { navBackStackEntry?.destination?.route }
+                }
+
                 val inSearchScreen by remember {
                     derivedStateOf { currentRoute?.startsWith("search/") == true }
                 }
@@ -835,7 +810,7 @@ class MainActivity : ComponentActivity() {
                         playerBottomSheetState.isDismissed,
                         showRail,
                         useFloatingNavBar,
-                        currentRoute // Yahan route update ho raha hai
+                        currentRoute
                     ) {
                         var bottom = bottomInset
                         if (shouldShowNavigationBar && !showRail) {
@@ -843,8 +818,7 @@ class MainActivity : ComponentActivity() {
                         }
                         if (!playerBottomSheetState.isDismissed) bottom += MiniPlayerHeight
                         
-                        // YAHAN FIX HAI: Home screen par padding 0 hogi (taaki custom header dikhe), aur
-                        // baaki saari screens (Settings, Artist etc) par AppBarHeight add hogi taaki wo cut na ho!
+                        // FIX: Perfectly calculates 0dp padding for Home so the header isn't pushed down!
                         val topInset = if (currentRoute == Screens.Home.route) 0.dp else AppBarHeight
 
                         windowsInsets
@@ -951,7 +925,6 @@ class MainActivity : ComponentActivity() {
                         navRoute == Screens.ListenTogether.route ||
                             navRoute == "listen_together_from_topbar"
                             
-                    // YAHAN FIX HAI: Home screen par default top bar hide kar diya gaya hai
                     shouldShowTopBar = navRoute in topLevelScreens &&
                         navRoute != "settings" &&
                         navRoute != Screens.Home.route &&
