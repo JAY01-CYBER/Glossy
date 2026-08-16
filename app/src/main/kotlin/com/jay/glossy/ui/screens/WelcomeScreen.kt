@@ -19,15 +19,16 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.delay
-
-// R class ko import karna zaroori hai taaki aapka small_icon access ho sake
+import com.jay.glossy.utils.safeDataStoreEdit
 import com.jay.glossy.R 
 
 enum class WelcomeState {
@@ -76,8 +77,18 @@ fun GlossyWelcomeScreen(
                 }
                 WelcomeState.LOADING -> {
                     LoadingSection(name = guestName)
+                    
+                    // Datastore me save karne ke liye context liya
+                    val context = LocalContext.current
+                    
                     LaunchedEffect(Unit) {
                         delay(3000)
+                        
+                        // Naam Datastore me save ho raha hai
+                        context.safeDataStoreEdit { prefs ->
+                            prefs[stringPreferencesKey("guest_name")] = guestName
+                        }
+                        
                         onSetupComplete(guestName)
                     }
                 }
@@ -116,7 +127,6 @@ fun IntroSection(onGuestClick: () -> Unit) {
     ) {
         Spacer(modifier = Modifier.weight(1f))
 
-        // Aapka Custom Logo Yahan Update Kiya Hai
         Icon(
             painter = painterResource(R.drawable.small_icon),
             contentDescription = "Glossy Logo",
@@ -190,7 +200,6 @@ fun GuestInputSection(name: String, onNameChange: (String) -> Unit, onContinue: 
     ) {
         Spacer(modifier = Modifier.height(80.dp))
 
-        // Aapka Custom Logo Yahan Update Kiya Hai
         Icon(
             painter = painterResource(R.drawable.small_icon),
             contentDescription = "Glossy Logo",
@@ -269,7 +278,6 @@ fun LoadingSection(name: String) {
     ) {
         Spacer(modifier = Modifier.weight(1f))
 
-        // Aapka Custom Logo Yahan Update Kiya Hai
         Icon(
             painter = painterResource(R.drawable.small_icon),
             contentDescription = "Glossy Logo",
