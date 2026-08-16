@@ -224,7 +224,9 @@ import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.util.Locale
 import javax.inject.Inject
+
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.compose.ui.platform.LocalContext
 
 @Suppress("DEPRECATION", "ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
 @AndroidEntryPoint
@@ -692,8 +694,11 @@ class MainActivity : ComponentActivity() {
 
                 val navController = rememberNavController()
 
-                // YAHAN PAR DATASTORE SE CHECK KIYA HAI
-                val (hasSeenWelcome) = rememberPreference(booleanPreferencesKey("has_seen_welcome"), defaultValue = false)
+                // YAHAN PAR SYNCHRONOUS READ USE KIYA HAI (Delay Fix)
+                val context = LocalContext.current
+                val hasSeenWelcome = remember {
+                    context.dataStore.get(booleanPreferencesKey("has_seen_welcome"), false)
+                }
 
                 LaunchedEffect(Unit) {
                     val lastSeenVersion = dataStore.data.first()[LastSeenVersionKey] ?: ""
@@ -1312,10 +1317,8 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                             Box(Modifier.weight(1f)) {
-                                // NavHost with animations (Material 3 Expressive style)
                                 NavHost(
                                     navController = navController,
-                                    // YAHAN NEW START DESTINATION ADD KI HAI
                                     startDestination =
                                         if (!hasSeenWelcome) "welcome" else {
                                             when (tabOpenedFromShortcut ?: defaultOpenTab) {
