@@ -1091,14 +1091,16 @@ class MainActivity : ComponentActivity() {
                                             }
                                         },
                                         scrollBehavior = topAppBarScrollBehavior,
+                                        // --- YAHAN COLOR TRANSPARENT KIYA HAI ---
                                         colors =
                                             TopAppBarDefaults.topAppBarColors(
-                                                containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer,
-                                                scrolledContainerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer,
+                                                containerColor = Color.Transparent,
+                                                scrolledContainerColor = Color.Transparent,
                                                 titleContentColor = MaterialTheme.colorScheme.onSurface,
                                                 actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 navigationIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                             ),
+                                        // --- END ---
                                         modifier =
                                             Modifier.windowInsetsPadding(
                                                 if (showRail) {
