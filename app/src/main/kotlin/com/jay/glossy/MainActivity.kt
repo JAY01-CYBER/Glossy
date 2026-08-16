@@ -663,12 +663,12 @@ class MainActivity : ComponentActivity() {
                 val bottomInset = with(density) { windowsInsets.getBottom(density).toDp() }
                 val bottomInsetDp = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
+                // FIX 1: Explicitly defining variable types to fix compiler issues
                 val navController = rememberNavController()
-
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentRoute = navBackStackEntry?.destination?.route
+                val currentRoute: String? = navBackStackEntry?.destination?.route
+                val inSearchScreen: Boolean = currentRoute?.startsWith("search/") == true
 
-                // --- WELCOME SCREEN AUTO-DETECT LOGIC ---
                 val (defaultOpenTabInt) = rememberPreference(DefaultOpenTabKey, defaultValue = NavigationTab.HOME.name)
                 val defaultOpenTab = remember(defaultOpenTabInt) {
                     try {
@@ -685,7 +685,7 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                var initialRoute by rememberSaveable { mutableStateOf<String?>(null) }
+                var initialRoute: String? by rememberSaveable { mutableStateOf(null) }
                 val prefs by dataStore.data.collectAsStateWithLifecycle(initialValue = null)
 
                 LaunchedEffect(prefs) {
@@ -693,9 +693,10 @@ class MainActivity : ComponentActivity() {
                         val savedAccountName = prefs!![AccountNameKey] ?: ""
                         initialRoute = if (savedAccountName.isBlank()) "welcome" else {
                             when (tabOpenedFromShortcut ?: defaultOpenTab) {
-                                NavigationTab.HOME -> Screens.Home.route
-                                NavigationTab.LIBRARY -> Screens.Library.route
-                                else -> Screens.Home.route
+                                NavigationTab.HOME -> "home"
+                                NavigationTab.LIBRARY -> "library"
+                                NavigationTab.SEARCH -> "search"
+                                else -> "home"
                             }
                         }
                     }
@@ -718,29 +719,30 @@ class MainActivity : ComponentActivity() {
                 val (previousTab, setPreviousTab) = rememberSaveable { mutableStateOf("home") }
 
                 val (listenTogetherInTopBar) = rememberPreference(ListenTogetherInTopBarKey, defaultValue = true)
+                
+                // FIX 2: 100% Null-safe parsing for MainScreens
                 val navigationItems =
                     remember(listenTogetherInTopBar) {
                         if (listenTogetherInTopBar) {
-                            Screens.MainScreens.filter { it != Screens.ListenTogether }
+                            Screens.MainScreens.filter { (it as Screens?)?.route != "listen_together" }
                         } else {
                             Screens.MainScreens
                         }
                     }
                 val routeIndexMap = remember(navigationItems) {
-                    navigationItems.mapIndexed { i, s -> s.route to i }.toMap()
+                    navigationItems.mapIndexedNotNull { i, s -> 
+                        val safeS: Screens? = s
+                        safeS?.route?.let { it to i } 
+                    }.toMap()
                 }
+                
                 val (slimNav) = rememberPreference(SlimNavBarKey, defaultValue = false)
                 val (useFloatingNavBar) = rememberPreference(UseFloatingNavBarKey, defaultValue = false)
                 val (useNewMiniPlayerDesign) = rememberPreference(UseNewMiniPlayerDesignKey, defaultValue = true)
                 
                 val topLevelScreens =
                     remember {
-                        listOf(
-                            Screens.Home.route,
-                            Screens.Library.route,
-                            Screens.ListenTogether.route,
-                            "settings",
-                        )
+                        listOf("home", "library", "listen_together", "settings")
                     }
 
                 val (query, onQueryChange) =
@@ -769,11 +771,9 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                val inSearchScreen = currentRoute?.startsWith("search/") == true
-
                 val navigationItemRoutes =
                     remember(navigationItems) {
-                        navigationItems.map { it.route }.toSet()
+                        navigationItems.mapNotNull { (it as Screens?)?.route }.toSet()
                     }
 
                 val shouldShowNavigationBar =
@@ -814,8 +814,6 @@ class MainActivity : ComponentActivity() {
                         expandedBound = maxHeight,
                     )
 
-                // 🚨 FIX: Restored perfectly to original logic.
-                // This guarantees EVERY screen has standard AppBarHeight top padding so content never cuts into status bar!
                 val playerAwareWindowInsets =
                     remember(
                         bottomInset,
@@ -845,7 +843,7 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(navBackStackEntry, listenTogetherInTopBar) {
                     val navRoute = navBackStackEntry?.destination?.route
                     val isListenTogetherScreen =
-                        navRoute == Screens.ListenTogether.route ||
+                        navRoute == "listen_together" ||
                             navRoute == "listen_together_from_topbar"
                             
                     shouldShowTopBar = navRoute in topLevelScreens &&
@@ -869,7 +867,6 @@ class MainActivity : ComponentActivity() {
                         },
                     )
 
-                // Navigation tracking
                 LaunchedEffect(navBackStackEntry) {
                     if (inSearchScreen) {
                         val searchQuery =
@@ -882,12 +879,12 @@ class MainActivity : ComponentActivity() {
                                 TextRange(searchQuery.length),
                             ),
                         )
-                    } else if (navigationItems.fastAny { it.route == navBackStackEntry?.destination?.route }) {
+                    } else if (navigationItems.fastAny { (it as Screens?)?.route == navBackStackEntry?.destination?.route }) {
                         onQueryChange(TextFieldValue())
                     }
 
-                    if (navigationItems.fastAny { it.route == navBackStackEntry?.destination?.route }) {
-                        if (navigationItems.fastAny { it.route == previousTab }) {
+                    if (navigationItems.fastAny { (it as Screens?)?.route == navBackStackEntry?.destination?.route }) {
+                        if (navigationItems.fastAny { (it as Screens?)?.route == previousTab }) {
                             topAppBarScrollBehavior.state.resetHeightOffset()
                         }
                     }
@@ -1000,7 +997,6 @@ class MainActivity : ComponentActivity() {
                             ) {
                                 val accountName by homeViewModel.accountName.collectAsStateWithLifecycle()
                                 
-                                // 🚨 FIX: Explicit statusBarsPadding ensures Header NEVER goes inside the status bar!
                                 val topBarInsets = if (showRail) {
                                     windowsInsets.only(WindowInsetsSides.Top)
                                         .add(WindowInsets(left = NavigationBarHeight))
@@ -1022,6 +1018,7 @@ class MainActivity : ComponentActivity() {
                         bottomBar = {
                             val currentBackStackEntry = navController.currentBackStackEntry
 
+                            // FIX 3: Safe cast route checking in lambdas to avoid R8 NPE crash
                             val onNavItemClick: (Screens, Boolean) -> Unit =
                                 remember(
                                     navController,
@@ -1031,6 +1028,9 @@ class MainActivity : ComponentActivity() {
                                     currentBackStackEntry,
                                 ) {
                                     { screen: Screens, isSelected: Boolean ->
+                                        val safeScreen: Screens? = screen
+                                        val targetRoute: String = safeScreen?.route ?: "home"
+                                        
                                         if (playerBottomSheetState.isExpanded) {
                                             playerBottomSheetState.collapseSoft()
                                         }
@@ -1047,7 +1047,7 @@ class MainActivity : ComponentActivity() {
                                                     null
                                                 }
 
-                                            if (screen == Screens.Search) {
+                                            if (targetRoute == "search") {
                                                 val current = targetEntry?.savedStateHandle?.get<Int>("scrollToTopCount") ?: 0
                                                 targetEntry?.savedStateHandle?.set("scrollToTopCount", current + 1)
                                             } else {
@@ -1058,7 +1058,7 @@ class MainActivity : ComponentActivity() {
                                                 topAppBarScrollBehavior.state.resetHeightOffset()
                                             }
                                         } else {
-                                            navController.navigate(screen.route) {
+                                            navController.navigate(targetRoute) {
                                                 popUpTo(navController.graph.startDestinationId) {
                                                     saveState = true
                                                 }
@@ -1186,6 +1186,9 @@ class MainActivity : ComponentActivity() {
                             val onRailItemClick: (Screens, Boolean) -> Unit =
                                 remember(navController, coroutineScope, topAppBarScrollBehavior, playerBottomSheetState) {
                                     { screen: Screens, isSelected: Boolean ->
+                                        val safeScreen: Screens? = screen
+                                        val targetRoute: String = safeScreen?.route ?: "home"
+                                        
                                         if (playerBottomSheetState.isExpanded) {
                                             playerBottomSheetState.collapseSoft()
                                         }
@@ -1196,7 +1199,7 @@ class MainActivity : ComponentActivity() {
                                                 topAppBarScrollBehavior.state.resetHeightOffset()
                                             }
                                         } else {
-                                            navController.navigate(screen.route) {
+                                            navController.navigate(targetRoute) {
                                                 popUpTo(navController.graph.startDestinationId) {
                                                     saveState = true
                                                 }
