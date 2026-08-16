@@ -1208,13 +1208,13 @@ fun HomeScreen(
                 // --- GREETING SECTION START ---
                 item(key = "greeting_section") {
                     val guestNamePref by rememberPreference(stringPreferencesKey("guest_name"), "")
-                    
+
                     val finalName = when {
-                        !accountName.isNullOrBlank() -> accountName!!
+                        !accountName.isNullOrBlank() && !accountName!!.equals("Guest", ignoreCase = true) -> accountName!!
                         guestNamePref.isNotBlank() -> guestNamePref
                         else -> "J"
                     }
-                    
+
                     GreetingSection(userName = finalName)
                 }
                 // --- GREETING SECTION END ---
