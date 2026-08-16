@@ -184,6 +184,10 @@ import kotlinx.coroutines.withContext
 import kotlin.math.min
 import kotlin.random.Random
 
+// NEW IMPORTS FOR GREETING
+import androidx.datastore.preferences.core.stringPreferencesKey
+import com.jay.glossy.ui.component.GreetingSection
+
 sealed class HomeSection(
     val id: String,
     val baseWeight: Int,
@@ -1201,7 +1205,19 @@ fun HomeScreen(
                 state = lazylistState,
                 contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
             ) {
-                // DELETE KIYA GAYA DOUBLE CUSTOM HEADER 
+                // --- GREETING SECTION START ---
+                item(key = "greeting_section") {
+                    val guestNamePref by rememberPreference(stringPreferencesKey("guest_name"), "")
+                    
+                    val finalName = when {
+                        !accountName.isNullOrBlank() -> accountName!!
+                        guestNamePref.isNotBlank() -> guestNamePref
+                        else -> "J"
+                    }
+                    
+                    GreetingSection(userName = finalName)
+                }
+                // --- GREETING SECTION END ---
 
                 item {
                     ChipsRow(
