@@ -1,5 +1,5 @@
 /**
- * Glossy Project (C) 2026
+ * Metrolist Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -19,7 +19,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -28,7 +27,6 @@ import androidx.navigation.compose.dialog
 import androidx.navigation.navArgument
 import com.jay.glossy.constants.DarkModeKey
 import com.jay.glossy.constants.PureBlackKey
-import com.jay.glossy.constants.AccountNameKey
 import com.jay.glossy.ui.screens.artist.ArtistAlbumsScreen
 import com.jay.glossy.ui.screens.artist.ArtistItemsScreen
 import com.jay.glossy.ui.screens.artist.ArtistScreen
@@ -69,8 +67,6 @@ import com.jay.glossy.ui.screens.settings.integrations.ListenTogetherSettings
 import com.jay.glossy.ui.screens.wrapped.WrappedScreen
 import com.jay.glossy.utils.rememberEnumPreference
 import com.jay.glossy.utils.rememberPreference
-import com.jay.glossy.utils.safeDataStoreEdit
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 fun NavGraphBuilder.navigationBuilder(
@@ -80,22 +76,6 @@ fun NavGraphBuilder.navigationBuilder(
     activity: Activity,
     snackbarHostState: SnackbarHostState,
 ) {
-    composable("welcome") {
-        val coroutineScope = rememberCoroutineScope()
-        GlossyWelcomeScreen(
-            onSetupComplete = { name ->
-                coroutineScope.launch {
-                    activity.safeDataStoreEdit { settings ->
-                        settings[AccountNameKey] = name
-                    }
-                    navController.navigate(Screens.Home.route) {
-                        popUpTo("welcome") { inclusive = true }
-                    }
-                }
-            }
-        )
-    }
-
     composable(Screens.Home.route) {
         HomeScreen(snackbarHostState = snackbarHostState)
     }
