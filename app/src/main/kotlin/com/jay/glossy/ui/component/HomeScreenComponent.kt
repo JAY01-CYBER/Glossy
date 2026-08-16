@@ -34,13 +34,10 @@ import com.jay.glossy.viewmodels.HomeViewModel
 fun GlossyCustomHeader(userName: String) {
     val navController = LocalNavController.current 
     
-    // --- Account Dialog aur Image ka logic yahan andar hi set kar diya hai ---
-    // (Taaki HomeScreen.kt ko change na karna pade)
     val viewModel: HomeViewModel = hiltViewModel()
     val accountImageUrl by viewModel.accountImageUrl.collectAsStateWithLifecycle()
     var showAccountDialog by remember { mutableStateOf(false) }
 
-    // Agar icon click hoga toh wahi purana Account Settings menu khul jayega
     if (showAccountDialog) {
         AccountSettingsDialog(
             onDismiss = {
@@ -67,7 +64,6 @@ fun GlossyCustomHeader(userName: String) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // --- Left Side: Vibe Text & Greeting ---
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.Center
@@ -99,7 +95,6 @@ fun GlossyCustomHeader(userName: String) {
 
         Spacer(modifier = Modifier.width(16.dp))
 
-        // --- Right Side: Compact Pill (Exact old icons & actions restored) ---
         Row(
             modifier = Modifier
                 .background(
@@ -110,7 +105,6 @@ fun GlossyCustomHeader(userName: String) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // 1. History Icon
             Icon(
                 painter = painterResource(id = R.drawable.history),
                 contentDescription = "History",
@@ -120,7 +114,6 @@ fun GlossyCustomHeader(userName: String) {
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
             
-            // 2. Stats Icon
             Icon(
                 painter = painterResource(id = R.drawable.stats),
                 contentDescription = "Stats",
@@ -130,7 +123,6 @@ fun GlossyCustomHeader(userName: String) {
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
             
-            // 3. Listen Together Icon
             Icon(
                 painter = painterResource(id = R.drawable.group_outlined),
                 contentDescription = "Listen Together",
@@ -140,16 +132,14 @@ fun GlossyCustomHeader(userName: String) {
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
             
-            // 4. Profile / Account Dialog Trigger
             Box(
                 modifier = Modifier
                     .size(30.dp)
                     .clip(CircleShape)
-                    .clickable { showAccountDialog = true }, // YAHAN CLICK PAR DIALOG KHULEGA
+                    .clickable { showAccountDialog = true },
                 contentAlignment = Alignment.Center
             ) {
                 if (accountImageUrl != null) {
-                    // Agar user ki photo hai toh wo dikhegi
                     AsyncImage(
                         model = accountImageUrl,
                         contentDescription = "Account",
@@ -158,7 +148,6 @@ fun GlossyCustomHeader(userName: String) {
                             .clip(CircleShape),
                     )
                 } else {
-                    // Agar photo nahi hai toh naam ka pehla akshar dikhega
                     Box(
                         modifier = Modifier
                             .size(30.dp)
