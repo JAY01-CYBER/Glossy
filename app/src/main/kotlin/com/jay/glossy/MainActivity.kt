@@ -663,14 +663,13 @@ class MainActivity : ComponentActivity() {
                 val bottomInset = with(density) { windowsInsets.getBottom(density).toDp() }
                 val bottomInsetDp = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
+                // FIX 1: Navigation Controller and Basic States
                 val navController = rememberNavController()
-
-                // FIX 1: Reactive current route tracking - Solves the Setting Screen Bottom Bar bug
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
+                val inSearchScreen = currentRoute?.startsWith("search/") == true
 
-                // FIX 2: Solid Welcome Screen Tracking Logic
-                val prefs by dataStore.data.collectAsStateWithLifecycle(initialValue = null)
+                // --- WELCOME SCREEN AUTO-DETECT LOGIC ---
                 val (defaultOpenTabInt) = rememberPreference(DefaultOpenTabKey, defaultValue = NavigationTab.HOME.name)
                 val defaultOpenTab = remember(defaultOpenTabInt) {
                     try {
@@ -688,7 +687,8 @@ class MainActivity : ComponentActivity() {
                 }
 
                 var initialRoute by rememberSaveable { mutableStateOf<String?>(null) }
-                
+                val prefs by dataStore.data.collectAsStateWithLifecycle(initialValue = null)
+
                 LaunchedEffect(prefs) {
                     if (prefs != null && initialRoute == null) {
                         val savedAccountName = prefs!![AccountNameKey] ?: ""
@@ -703,7 +703,6 @@ class MainActivity : ComponentActivity() {
                 }
 
                 if (initialRoute == null) {
-                    // Blank screen while loading DataStore to prevent flashing
                     Box(modifier = Modifier.fillMaxSize().background(Color.Black))
                     return@BoxWithConstraints
                 }
@@ -771,9 +770,6 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                val inSearchScreen by remember {
-                    derivedStateOf { currentRoute?.startsWith("search/") == true }
-                }
                 val navigationItemRoutes =
                     remember(navigationItems) {
                         navigationItems.map { it.route }.toSet()
@@ -831,7 +827,6 @@ class MainActivity : ComponentActivity() {
                         navRoute == Screens.ListenTogether.route ||
                             navRoute == "listen_together_from_topbar"
                             
-                    // FIX 3: Make the custom top bar visible globally on top screens!
                     shouldShowTopBar = navRoute in topLevelScreens &&
                         navRoute != "settings" &&
                         navRoute != "welcome" &&
@@ -853,7 +848,6 @@ class MainActivity : ComponentActivity() {
                         }
                         if (!playerBottomSheetState.isDismissed) bottom += MiniPlayerHeight
                         
-                        // Perfectly calculate the padding so the content doesn't draw under our Global Header
                         val topInset = if (shouldShowTopBar) AppBarHeight else 0.dp
 
                         windowsInsets
@@ -1007,7 +1001,6 @@ class MainActivity : ComponentActivity() {
                             ) {
                                 val accountName by homeViewModel.accountName.collectAsStateWithLifecycle()
                                 
-                                // FIX: GLOBAL GLOSSY CUSTOM HEADER IS APPLIED HERE!
                                 Box(
                                     modifier = Modifier
                                         .background(if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer)
@@ -1231,10 +1224,9 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                             Box(Modifier.weight(1f)) {
-                                // NavHost with animations (Material 3 Expressive style)
                                 NavHost(
                                     navController = navController,
-                                    startDestination = initialRoute!!, // Initial route properly assigned here!
+                                    startDestination = initialRoute!!,
                                     enterTransition = {
                                         val currentRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
                                         val previousRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
