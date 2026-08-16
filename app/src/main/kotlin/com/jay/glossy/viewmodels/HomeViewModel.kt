@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -66,6 +66,8 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import javax.inject.Inject
 import kotlin.random.Random
+
+import androidx.datastore.preferences.core.stringPreferencesKey
 
 data class DailyDiscoverItem(
     val seed: Song,
@@ -752,35 +754,38 @@ class HomeViewModel @Inject constructor(
             }
         }
 
-        // Listen for cookie changes and reload account data
         viewModelScope.launch(Dispatchers.IO) {
-            context.dataStore.data
-                .map { it[InnerTubeCookieKey] }
-                .collect { cookie ->
-                    if (isProcessingAccountData) return@collect
+            combine(
+                context.dataStore.data.map { it[InnerTubeCookieKey] }.distinctUntilChanged(),
+                context.dataStore.data.map { it[stringPreferencesKey("guest_name")] }.distinctUntilChanged()
+            ) { cookie, guestName ->
+                Pair(cookie, guestName)
+            }.collect { (cookie, guestName) ->
+                if (isProcessingAccountData) return@collect
 
-                    lastProcessedCookie = cookie
-                    isProcessingAccountData = true
+                lastProcessedCookie = cookie
+                isProcessingAccountData = true
 
-                    try {
-                        if (cookie != null && cookie.isNotEmpty()) {
-                            YouTube.cookie = cookie
+                try {
+                    if (cookie != null && cookie.isNotEmpty()) {
+                        YouTube.cookie = cookie
 
-                            YouTube.accountInfo().onSuccess { info ->
-                                accountName.value = info.name
-                                accountImageUrl.value = info.thumbnailUrl
-                            }.onFailure {
-                                reportException(it)
-                            }
-                        } else {
-                            accountName.value = "Guest"
-                            accountImageUrl.value = null
-                            accountPlaylists.value = null
+                        YouTube.accountInfo().onSuccess { info ->
+                            accountName.value = info.name
+                            accountImageUrl.value = info.thumbnailUrl
+                        }.onFailure {
+                            accountName.value = if (!guestName.isNullOrBlank()) guestName else "Guest"
+                            reportException(it)
                         }
-                    } finally {
-                        isProcessingAccountData = false
+                    } else {
+                        accountName.value = if (!guestName.isNullOrBlank()) guestName else "Guest"
+                        accountImageUrl.value = null
+                        accountPlaylists.value = null
                     }
+                } finally {
+                    isProcessingAccountData = false
                 }
+            }
         }
 
         // Listen for HideYoutubeShorts preference changes and reload account playlists instantly
