@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -68,6 +68,13 @@ import com.jay.glossy.ui.screens.wrapped.WrappedScreen
 import com.jay.glossy.utils.rememberEnumPreference
 import com.jay.glossy.utils.rememberPreference
 
+// NEW IMPORTS FOR WELCOME SCREEN
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import com.jay.glossy.utils.safeDataStoreEdit
+import kotlinx.coroutines.launch
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.rememberCoroutineScope
+
 @OptIn(ExperimentalMaterial3Api::class)
 fun NavGraphBuilder.navigationBuilder(
     navController: NavHostController,
@@ -76,6 +83,26 @@ fun NavGraphBuilder.navigationBuilder(
     activity: Activity,
     snackbarHostState: SnackbarHostState,
 ) {
+    // --- WELCOME SCREEN ROUTE ---
+    composable("welcome") {
+        val context = LocalContext.current
+        val coroutineScope = rememberCoroutineScope()
+        
+        GlossyWelcomeScreen(
+            onSetupComplete = { 
+                coroutineScope.launch {
+                    context.safeDataStoreEdit { prefs ->
+                        prefs[booleanPreferencesKey("has_seen_welcome")] = true
+                    }
+                }
+                
+                navController.navigate(Screens.Home.route) {
+                    popUpTo("welcome") { inclusive = true }
+                }
+            }
+        )
+    }
+
     composable(Screens.Home.route) {
         HomeScreen(snackbarHostState = snackbarHostState)
     }
