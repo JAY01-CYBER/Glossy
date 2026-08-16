@@ -104,6 +104,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -227,6 +228,9 @@ import javax.inject.Inject
 
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.compose.ui.platform.LocalContext
+
+// --- Font import add kiya hai taaki custom font chal sake ---
+import com.jay.glossy.ui.theme.bbhBartle
 
 @Suppress("DEPRECATION", "ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
 @AndroidEntryPoint
@@ -694,7 +698,6 @@ class MainActivity : ComponentActivity() {
 
                 val navController = rememberNavController()
 
-                // YAHAN PAR SYNCHRONOUS READ USE KIYA HAI (Delay Fix)
                 val context = LocalContext.current
                 val hasSeenWelcome = remember {
                     context.dataStore.get(booleanPreferencesKey("has_seen_welcome"), false)
@@ -988,17 +991,6 @@ class MainActivity : ComponentActivity() {
                     onDispose { removeOnNewIntentListener(listener) }
                 }
 
-                val currentTitleRes =
-                    remember(navBackStackEntry) {
-                        when (navBackStackEntry?.destination?.route) {
-                            Screens.Home.route -> R.string.home
-                            Screens.Search.route -> R.string.search
-                            Screens.Library.route -> R.string.filter_library
-                            Screens.ListenTogether.route -> R.string.together
-                            else -> null
-                        }
-                    }
-
                 var showAccountDialog by remember { mutableStateOf(false) }
 
                 val pauseListenHistory by rememberPreference(PauseListenHistoryKey, defaultValue = false)
@@ -1037,79 +1029,115 @@ class MainActivity : ComponentActivity() {
                                 Row {
                                     TopAppBar(
                                         title = {
-                                            Text(
-                                                text = currentTitleRes?.let { stringResource(it) } ?: "",
-                                                style = MaterialTheme.typography.titleLarge,
-                                            )
-                                        },
-                                        actions = {
-                                            if (showHistoryButton) {
-                                                IconButton(onClick = { navController.navigate("history") }) {
-                                                    Icon(
-                                                        painter = painterResource(R.drawable.history),
-                                                        contentDescription = stringResource(R.string.history),
-                                                    )
-                                                }
-                                            }
-                                            IconButton(onClick = { navController.navigate("stats") }) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                // 1. Aapka Small Icon
                                                 Icon(
-                                                    painter = painterResource(R.drawable.stats),
-                                                    contentDescription = stringResource(R.string.stats),
+                                                    painter = painterResource(R.drawable.small_icon), 
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(32.dp).padding(end = 8.dp),
+                                                    tint = MaterialTheme.colorScheme.onSurface
+                                                )
+                                                // 2. Hardcoded "Glossy" Name + Screenshot wala Custom Font
+                                                Text(
+                                                    text = "Glossy",
+                                                    style = MaterialTheme.typography.titleLarge.copy(
+                                                        fontFamily = bbhBartle,
+                                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                                        fontSize = 28.sp // Thoda bada size taaki logo jaisa lage
+                                                    ),
+                                                    color = MaterialTheme.colorScheme.onSurface
                                                 )
                                             }
-                                            if (listenTogetherInTopBar) {
-                                                IconButton(onClick = { navController.navigate("listen_together_from_topbar") }) {
-                                                    Icon(
-                                                        painter = painterResource(R.drawable.group_outlined),
-                                                        contentDescription = stringResource(R.string.together),
-                                                    )
-                                                }
-                                            }
-                                            IconButton(onClick = { showAccountDialog = true }) {
-                                                BadgedBox(badge = {
-                                                    if (latestVersionName != BuildConfig.VERSION_NAME) {
-                                                        Badge()
+                                        },
+                                        actions = {
+                                            // 3. PILL-SHAPED CONTAINER (M3Play Style)
+                                            Surface(
+                                                shape = CircleShape, 
+                                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                                                modifier = Modifier.padding(end = 8.dp)
+                                            ) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    modifier = Modifier.padding(horizontal = 4.dp)
+                                                ) {
+                                                    if (showHistoryButton) {
+                                                        IconButton(onClick = { navController.navigate("history") }) {
+                                                            Icon(
+                                                                painter = painterResource(R.drawable.history),
+                                                                contentDescription = stringResource(R.string.history),
+                                                            )
+                                                        }
                                                     }
-                                                }) {
-                                                    if (accountImageUrl != null) {
-                                                        AsyncImage(
-                                                            model = accountImageUrl,
-                                                            contentDescription = stringResource(R.string.account),
-                                                            modifier =
-                                                                Modifier
-                                                                    .size(24.dp)
-                                                                    .clip(CircleShape),
-                                                        )
-                                                    } else {
+                                                    IconButton(onClick = { navController.navigate("stats") }) {
                                                         Icon(
-                                                            painter = painterResource(R.drawable.account),
-                                                            contentDescription = stringResource(R.string.account),
-                                                            modifier = Modifier.size(24.dp),
+                                                            painter = painterResource(R.drawable.stats),
+                                                            contentDescription = stringResource(R.string.stats),
                                                         )
+                                                    }
+                                                    IconButton(onClick = { navController.navigate("settings") }) {
+                                                        Icon(
+                                                            painter = painterResource(R.drawable.settings), // Apne settings icon ka exact naam check kar lena
+                                                            contentDescription = "Settings",
+                                                        )
+                                                    }
+                                                    if (listenTogetherInTopBar) {
+                                                        IconButton(onClick = { navController.navigate("listen_together_from_topbar") }) {
+                                                            Icon(
+                                                                painter = painterResource(R.drawable.group_outlined),
+                                                                contentDescription = stringResource(R.string.together),
+                                                            )
+                                                        }
+                                                    }
+                                                    IconButton(onClick = { showAccountDialog = true }) {
+                                                        BadgedBox(badge = {
+                                                            if (latestVersionName != BuildConfig.VERSION_NAME) {
+                                                                Badge()
+                                                            }
+                                                        }) {
+                                                            if (accountImageUrl != null) {
+                                                                AsyncImage(
+                                                                    model = accountImageUrl,
+                                                                    contentDescription = stringResource(R.string.account),
+                                                                    modifier = Modifier
+                                                                        .size(28.dp)
+                                                                        .clip(CircleShape),
+                                                                )
+                                                            } else {
+                                                                Surface(
+                                                                    shape = CircleShape,
+                                                                    color = MaterialTheme.colorScheme.primary,
+                                                                    modifier = Modifier.size(28.dp)
+                                                                ) {
+                                                                    Icon(
+                                                                        painter = painterResource(R.drawable.account),
+                                                                        contentDescription = stringResource(R.string.account),
+                                                                        modifier = Modifier.padding(5.dp),
+                                                                        tint = MaterialTheme.colorScheme.onPrimary
+                                                                    )
+                                                                }
+                                                            }
+                                                        }
                                                     }
                                                 }
                                             }
                                         },
                                         scrollBehavior = topAppBarScrollBehavior,
-                                        // --- YAHAN COLOR TRANSPARENT KIYA HAI ---
-                                        colors =
-                                            TopAppBarDefaults.topAppBarColors(
-                                                containerColor = Color.Transparent,
-                                                scrolledContainerColor = Color.Transparent,
-                                                titleContentColor = MaterialTheme.colorScheme.onSurface,
-                                                actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                navigationIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            ),
-                                        // --- END ---
-                                        modifier =
-                                            Modifier.windowInsetsPadding(
-                                                if (showRail) {
-                                                    WindowInsets(left = NavigationBarHeight)
-                                                        .add(cutoutInsets.only(WindowInsetsSides.Start))
-                                                } else {
-                                                    cutoutInsets.only(WindowInsetsSides.Start + WindowInsetsSides.End)
-                                                },
-                                            ),
+                                        colors = TopAppBarDefaults.topAppBarColors(
+                                            // 4. M3Play ki tarah hamesha Transparent!
+                                            containerColor = Color.Transparent,
+                                            scrolledContainerColor = Color.Transparent, 
+                                            titleContentColor = MaterialTheme.colorScheme.onSurface,
+                                            actionIconContentColor = MaterialTheme.colorScheme.onSurface,
+                                            navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                                        ),
+                                        modifier = Modifier.windowInsetsPadding(
+                                            if (showRail) {
+                                                WindowInsets(left = NavigationBarHeight)
+                                                    .add(cutoutInsets.only(WindowInsetsSides.Start))
+                                            } else {
+                                                cutoutInsets.only(WindowInsetsSides.Start + WindowInsetsSides.End)
+                                            }
+                                        )
                                     )
                                 }
                             }
