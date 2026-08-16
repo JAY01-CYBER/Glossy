@@ -19,6 +19,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -79,17 +80,14 @@ fun NavGraphBuilder.navigationBuilder(
     activity: Activity,
     snackbarHostState: SnackbarHostState,
 ) {
-    // NAYA WELCOME SCREEN ROUTE
     composable("welcome") {
-        val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+        val coroutineScope = rememberCoroutineScope()
         GlossyWelcomeScreen(
             onSetupComplete = { name ->
                 coroutineScope.launch {
-                    // DataStore mein user ka naam save karna
                     activity.safeDataStoreEdit { settings ->
                         settings[AccountNameKey] = name
                     }
-                    // Setup ke baad Home Screen par bhejna aur Welcome screen ko backstack se hatana
                     navController.navigate(Screens.Home.route) {
                         popUpTo("welcome") { inclusive = true }
                     }
