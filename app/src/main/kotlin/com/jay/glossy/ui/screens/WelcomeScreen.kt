@@ -37,7 +37,8 @@ enum class WelcomeState {
 
 @Composable
 fun GlossyWelcomeScreen(
-    onSetupComplete: (String) -> Unit 
+    onSetupComplete: (String) -> Unit,
+    onGoogleLoginClick: () -> Unit // GOOGLE LOGIN KA PARAMETER
 ) {
     var currentState by remember { mutableStateOf(WelcomeState.INTRO) }
     var guestName by remember { mutableStateOf("") }
@@ -61,7 +62,8 @@ fun GlossyWelcomeScreen(
             when (state) {
                 WelcomeState.INTRO -> {
                     IntroSection(
-                        onGuestClick = { currentState = WelcomeState.GUEST_INPUT }
+                        onGuestClick = { currentState = WelcomeState.GUEST_INPUT },
+                        onGoogleClick = onGoogleLoginClick // YAHAN PARAMETER PASS KIYA
                     )
                 }
                 WelcomeState.GUEST_INPUT -> {
@@ -78,13 +80,11 @@ fun GlossyWelcomeScreen(
                 WelcomeState.LOADING -> {
                     LoadingSection(name = guestName)
                     
-                    // Datastore me save karne ke liye context liya
                     val context = LocalContext.current
                     
                     LaunchedEffect(Unit) {
                         delay(3000)
                         
-                        // Naam Datastore me save ho raha hai
                         context.safeDataStoreEdit { prefs ->
                             prefs[stringPreferencesKey("guest_name")] = guestName
                         }
@@ -118,7 +118,7 @@ fun AuraBackground() {
 
 // --- SCREEN 1: Intro Screen ---
 @Composable
-fun IntroSection(onGuestClick: () -> Unit) {
+fun IntroSection(onGuestClick: () -> Unit, onGoogleClick: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -153,7 +153,7 @@ fun IntroSection(onGuestClick: () -> Unit) {
         Spacer(modifier = Modifier.height(48.dp))
 
         Button(
-            onClick = { /* Handle Google setup if needed */ },
+            onClick = onGoogleClick, // YAHAN GOOGLE BUTTON KA CLICK FIX KIYA
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
