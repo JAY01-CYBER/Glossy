@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.add
@@ -100,9 +101,12 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -222,6 +226,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
+import java.util.Calendar
 import java.util.Locale
 import javax.inject.Inject
 
@@ -826,9 +831,6 @@ class MainActivity : ComponentActivity() {
                         !(isListenTogetherScreen && listenTogetherInTopBar)
                 }
 
-                // 🚨 PERFECT FIX FOR HEADER PADDING OVERLAP 🚨
-                // Home/Library ke liye padding 92.dp set ki hai (64.dp ki jagah)
-                // Kyunki GlossyCustomHeader lamba hai!
                 val playerAwareWindowInsets =
                     remember(
                         bottomInset,
@@ -836,7 +838,7 @@ class MainActivity : ComponentActivity() {
                         playerBottomSheetState.isDismissed,
                         showRail,
                         useFloatingNavBar,
-                        shouldShowTopBar
+                        windowsInsets
                     ) {
                         var bottom = bottomInset
                         if (shouldShowNavigationBar && !showRail) {
@@ -844,12 +846,9 @@ class MainActivity : ComponentActivity() {
                         }
                         if (!playerBottomSheetState.isDismissed) bottom += MiniPlayerHeight
                         
-                        // FIX: Yahan 92.dp diya hai naye Header ki perfectly fit height ke liye
-                        val topInset = if (shouldShowTopBar) 92.dp else 0.dp
-
                         windowsInsets
                             .only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top)
-                            .add(WindowInsets(top = topInset, bottom = bottom))
+                            .add(WindowInsets(top = AppBarHeight, bottom = bottom))
                     }
 
                 val playerReadyState =
@@ -976,6 +975,22 @@ class MainActivity : ComponentActivity() {
 
                 var showAccountDialog by remember { mutableStateOf(false) }
                 val baseBg = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
+                val accountName by homeViewModel.accountName.collectAsStateWithLifecycle()
+                val accountImageUrl by homeViewModel.accountImageUrl.collectAsStateWithLifecycle()
+                val pauseListenHistory by rememberPreference(PauseListenHistoryKey, defaultValue = false)
+                val eventCount by database.eventCount().collectAsStateWithLifecycle(initialValue = 0)
+                val showHistoryButton = remember(pauseListenHistory, eventCount) { !(pauseListenHistory && eventCount == 0) }
+
+                val currentTitleRes =
+                    remember(navBackStackEntry) {
+                        when (navBackStackEntry?.destination?.route) {
+                            Screens.Home.route -> R.string.home
+                            Screens.Search.route -> R.string.search
+                            Screens.Library.route -> R.string.filter_library
+                            Screens.ListenTogether.route -> R.string.together
+                            else -> null
+                        }
+                    }
 
                 CompositionLocalProvider(
                     LocalDatabase provides database,
@@ -1001,23 +1016,108 @@ class MainActivity : ComponentActivity() {
                                 enter = fadeIn(animationSpec = tween(durationMillis = 300)),
                                 exit = fadeOut(animationSpec = tween(durationMillis = 200)),
                             ) {
-                                val accountName by homeViewModel.accountName.collectAsStateWithLifecycle()
-                                
-                                val topBarInsets = if (showRail) {
-                                    windowsInsets.only(WindowInsetsSides.Top)
-                                        .add(WindowInsets(left = NavigationBarHeight))
-                                        .add(cutoutInsets.only(WindowInsetsSides.Start))
-                                } else {
-                                    windowsInsets.only(WindowInsetsSides.Top)
-                                        .add(cutoutInsets.only(WindowInsetsSides.Start + WindowInsetsSides.End))
-                                }
-
-                                Box(
-                                    modifier = Modifier
-                                        .background(if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer)
-                                        .windowInsetsPadding(topBarInsets)
-                                ) {
-                                    com.jay.glossy.ui.component.GlossyCustomHeader(userName = accountName ?: "")
+                                Row {
+                                    TopAppBar(
+                                        title = {
+                                            if (currentRoute == "home") {
+                                                val vibeText = remember {
+                                                    val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+                                                    when (hour) {
+                                                        in 0..11 -> "Enjoy the Morning Vibes 🌅"
+                                                        in 12..16 -> "Enjoy the Afternoon Vibes ☀️"
+                                                        else -> "Enjoy the Evening Vibes 🌙"
+                                                    }
+                                                }
+                                                Column(verticalArrangement = Arrangement.Center) {
+                                                    Text(
+                                                        text = vibeText,
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        fontStyle = FontStyle.Italic,
+                                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                                    )
+                                                    Text(
+                                                        text = "Hi, ${accountName?.ifEmpty { "Guest" } ?: "Guest"} \uD83D\uDC4B",
+                                                        style = MaterialTheme.typography.titleLarge,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                }
+                                            } else {
+                                                Text(
+                                                    text = currentTitleRes?.let { stringResource(it) } ?: "",
+                                                    style = MaterialTheme.typography.titleLarge,
+                                                )
+                                            }
+                                        },
+                                        actions = {
+                                            if (showHistoryButton) {
+                                                IconButton(onClick = { navController.navigate("history") }) {
+                                                    Icon(
+                                                        painter = painterResource(R.drawable.history),
+                                                        contentDescription = stringResource(R.string.history),
+                                                    )
+                                                }
+                                            }
+                                            IconButton(onClick = { navController.navigate("stats") }) {
+                                                Icon(
+                                                    painter = painterResource(R.drawable.stats),
+                                                    contentDescription = stringResource(R.string.stats),
+                                                )
+                                            }
+                                            if (listenTogetherInTopBar) {
+                                                IconButton(onClick = { navController.navigate("listen_together_from_topbar") }) {
+                                                    Icon(
+                                                        painter = painterResource(R.drawable.group_outlined),
+                                                        contentDescription = stringResource(R.string.together),
+                                                    )
+                                                }
+                                            }
+                                            IconButton(onClick = { showAccountDialog = true }) {
+                                                BadgedBox(badge = {
+                                                    if (latestVersionName != BuildConfig.VERSION_NAME) {
+                                                        Badge()
+                                                    }
+                                                }) {
+                                                    if (accountImageUrl != null) {
+                                                        AsyncImage(
+                                                            model = accountImageUrl,
+                                                            contentDescription = stringResource(R.string.account),
+                                                            modifier = Modifier.size(24.dp).clip(CircleShape),
+                                                        )
+                                                    } else {
+                                                        val initial = accountName?.takeIf { it.isNotEmpty() }?.take(1)?.uppercase() ?: "G"
+                                                        Box(
+                                                            modifier = Modifier.size(24.dp).background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                                                            contentAlignment = Alignment.Center
+                                                        ) {
+                                                            Text(
+                                                                text = initial,
+                                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                                style = MaterialTheme.typography.labelSmall,
+                                                                fontWeight = FontWeight.Bold
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        scrollBehavior = topAppBarScrollBehavior,
+                                        colors =
+                                            TopAppBarDefaults.topAppBarColors(
+                                                containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer,
+                                                scrolledContainerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer,
+                                                titleContentColor = MaterialTheme.colorScheme.onSurface,
+                                                actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                navigationIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            ),
+                                        modifier =
+                                            Modifier.windowInsetsPadding(
+                                                if (showRail) {
+                                                    WindowInsets(left = NavigationBarHeight).add(cutoutInsets.only(WindowInsetsSides.Start))
+                                                } else {
+                                                    cutoutInsets.only(WindowInsetsSides.Start + WindowInsetsSides.End)
+                                                },
+                                            ),
+                                    )
                                 }
                             }
                         },
