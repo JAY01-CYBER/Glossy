@@ -102,6 +102,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -228,8 +229,6 @@ import javax.inject.Inject
 
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.compose.ui.platform.LocalContext
-
-// --- Font import add kiya hai taaki custom font chal sake ---
 import com.jay.glossy.ui.theme.bbhBartle
 
 @Suppress("DEPRECATION", "ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
@@ -1034,31 +1033,32 @@ class MainActivity : ComponentActivity() {
                                                 Icon(
                                                     painter = painterResource(R.drawable.small_icon), 
                                                     contentDescription = null,
-                                                    modifier = Modifier.size(32.dp).padding(end = 8.dp),
+                                                    modifier = Modifier.size(28.dp).padding(end = 8.dp),
                                                     tint = MaterialTheme.colorScheme.onSurface
                                                 )
-                                                // 2. Hardcoded "Glossy" Name + Screenshot wala Custom Font
+                                                // 2. Fixed "Glossy" Text (Ekdum straight aur proper)
                                                 Text(
                                                     text = "Glossy",
                                                     style = MaterialTheme.typography.titleLarge.copy(
                                                         fontFamily = bbhBartle,
                                                         fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                                                        fontSize = 28.sp // Thoda bada size taaki logo jaisa lage
+                                                        fontSize = 24.sp 
                                                     ),
+                                                    maxLines = 1, // ISSE TEXT VERTICAL NAHI HOGA KABHI BHI!
+                                                    overflow = TextOverflow.Ellipsis,
                                                     color = MaterialTheme.colorScheme.onSurface
                                                 )
                                             }
                                         },
                                         actions = {
-                                            // 3. PILL-SHAPED CONTAINER (M3Play Style)
+                                            // 3. PILL-SHAPED CONTAINER WITH ORIGINAL ICONS ONLY
                                             Surface(
                                                 shape = CircleShape, 
                                                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
                                                 modifier = Modifier.padding(end = 8.dp)
                                             ) {
                                                 Row(
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    modifier = Modifier.padding(horizontal = 4.dp)
+                                                    verticalAlignment = Alignment.CenterVertically
                                                 ) {
                                                     if (showHistoryButton) {
                                                         IconButton(onClick = { navController.navigate("history") }) {
@@ -1072,12 +1072,6 @@ class MainActivity : ComponentActivity() {
                                                         Icon(
                                                             painter = painterResource(R.drawable.stats),
                                                             contentDescription = stringResource(R.string.stats),
-                                                        )
-                                                    }
-                                                    IconButton(onClick = { navController.navigate("settings") }) {
-                                                        Icon(
-                                                            painter = painterResource(R.drawable.settings), // Apne settings icon ka exact naam check kar lena
-                                                            contentDescription = "Settings",
                                                         )
                                                     }
                                                     if (listenTogetherInTopBar) {
@@ -1099,22 +1093,15 @@ class MainActivity : ComponentActivity() {
                                                                     model = accountImageUrl,
                                                                     contentDescription = stringResource(R.string.account),
                                                                     modifier = Modifier
-                                                                        .size(28.dp)
+                                                                        .size(24.dp)
                                                                         .clip(CircleShape),
                                                                 )
                                                             } else {
-                                                                Surface(
-                                                                    shape = CircleShape,
-                                                                    color = MaterialTheme.colorScheme.primary,
-                                                                    modifier = Modifier.size(28.dp)
-                                                                ) {
-                                                                    Icon(
-                                                                        painter = painterResource(R.drawable.account),
-                                                                        contentDescription = stringResource(R.string.account),
-                                                                        modifier = Modifier.padding(5.dp),
-                                                                        tint = MaterialTheme.colorScheme.onPrimary
-                                                                    )
-                                                                }
+                                                                Icon(
+                                                                    painter = painterResource(R.drawable.account),
+                                                                    contentDescription = stringResource(R.string.account),
+                                                                    modifier = Modifier.size(24.dp)
+                                                                )
                                                             }
                                                         }
                                                     }
@@ -1123,7 +1110,6 @@ class MainActivity : ComponentActivity() {
                                         },
                                         scrollBehavior = topAppBarScrollBehavior,
                                         colors = TopAppBarDefaults.topAppBarColors(
-                                            // 4. M3Play ki tarah hamesha Transparent!
                                             containerColor = Color.Transparent,
                                             scrolledContainerColor = Color.Transparent, 
                                             titleContentColor = MaterialTheme.colorScheme.onSurface,
