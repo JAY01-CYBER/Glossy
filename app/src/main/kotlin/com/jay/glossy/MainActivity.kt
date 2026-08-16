@@ -231,6 +231,7 @@ import javax.inject.Inject
 
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.compose.ui.platform.LocalContext
+import com.jay.glossy.ui.theme.bbhBartle
 
 @Suppress("DEPRECATION", "ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
 @AndroidEntryPoint
@@ -1037,7 +1038,7 @@ class MainActivity : ComponentActivity() {
                                                     modifier = Modifier.size(42.dp).padding(end = 8.dp),
                                                     tint = MaterialTheme.colorScheme.onSurface
                                                 )
-                                                // 2. NORMAL TEXT - No custom stylish font
+                                                // 2. NORMAL TEXT - No custom font, original bold look
                                                 Text(
                                                     text = "Glossy",
                                                     style = MaterialTheme.typography.headlineMedium.copy(
@@ -1050,85 +1051,98 @@ class MainActivity : ComponentActivity() {
                                             }
                                         },
                                         actions = {
-                                            // 3. SOLID PILL CONTAINER - No transparency, No fade
+                                            // 3. SOLID PILL WITH PREMIUM FADE EFFECT
                                             Surface(
                                                 shape = CircleShape, 
-                                                color = MaterialTheme.colorScheme.surfaceVariant, // 100% Solid Color
+                                                // 100% Solid background (No transparency issue) jisse peeche ke gaane na dikhein
+                                                color = MaterialTheme.colorScheme.surfaceVariant, 
                                                 modifier = Modifier.padding(end = 8.dp)
                                             ) {
-                                                Row(
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-                                                    // EKDUM Tight Spacing
-                                                    horizontalArrangement = Arrangement.spacedBy(2.dp) 
-                                                ) {
-                                                    if (showHistoryButton) {
-                                                        Icon(
-                                                            painter = painterResource(R.drawable.history),
-                                                            contentDescription = stringResource(R.string.history),
-                                                            modifier = Modifier
-                                                                .clip(CircleShape)
-                                                                .clickable { navController.navigate("history") }
-                                                                .padding(6.dp)
-                                                                .size(22.dp),
-                                                            tint = MaterialTheme.colorScheme.onSurface
-                                                        )
-                                                    }
-                                                    Icon(
-                                                        painter = painterResource(R.drawable.stats),
-                                                        contentDescription = stringResource(R.string.stats),
-                                                        modifier = Modifier
-                                                            .clip(CircleShape)
-                                                            .clickable { navController.navigate("stats") }
-                                                            .padding(6.dp)
-                                                            .size(22.dp),
-                                                        tint = MaterialTheme.colorScheme.onSurface
-                                                    )
-                                                    if (listenTogetherInTopBar) {
-                                                        Icon(
-                                                            painter = painterResource(R.drawable.group_outlined),
-                                                            contentDescription = stringResource(R.string.together),
-                                                            modifier = Modifier
-                                                                .clip(CircleShape)
-                                                                .clickable { navController.navigate("listen_together_from_topbar") }
-                                                                .padding(6.dp)
-                                                                .size(22.dp),
-                                                            tint = MaterialTheme.colorScheme.onSurface
-                                                        )
-                                                    }
-                                                    
-                                                    // Profile icon
-                                                    BadgedBox(
-                                                        badge = {
-                                                            if (latestVersionName != BuildConfig.VERSION_NAME) {
-                                                                Badge()
-                                                            }
-                                                        },
-                                                        modifier = Modifier
-                                                            .padding(start = 4.dp, end = 2.dp)
-                                                            .clip(CircleShape)
-                                                            .clickable { showAccountDialog = true }
-                                                    ) {
-                                                        if (accountImageUrl != null) {
-                                                            AsyncImage(
-                                                                model = accountImageUrl,
-                                                                contentDescription = stringResource(R.string.account),
-                                                                modifier = Modifier
-                                                                    .size(28.dp)
-                                                                    .clip(CircleShape),
+                                                // Yahan Premium Fade Effect add kiya hai (Box ke andar Gradient)
+                                                Box(
+                                                    modifier = Modifier.background(
+                                                        brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+                                                            colors = listOf(
+                                                                Color.Transparent,
+                                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) // Halka sa premium fade/glow
                                                             )
-                                                        } else {
-                                                            Surface(
-                                                                shape = CircleShape,
-                                                                color = MaterialTheme.colorScheme.primary,
-                                                                modifier = Modifier.size(28.dp)
-                                                            ) {
-                                                                Icon(
-                                                                    painter = painterResource(R.drawable.account),
+                                                        )
+                                                    )
+                                                ) {
+                                                    Row(
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                                        // EKDUM Tight Spacing
+                                                        horizontalArrangement = Arrangement.spacedBy(2.dp) 
+                                                    ) {
+                                                        if (showHistoryButton) {
+                                                            Icon(
+                                                                painter = painterResource(R.drawable.history),
+                                                                contentDescription = stringResource(R.string.history),
+                                                                modifier = Modifier
+                                                                    .clip(CircleShape)
+                                                                    .clickable { navController.navigate("history") }
+                                                                    .padding(6.dp)
+                                                                    .size(22.dp),
+                                                                tint = MaterialTheme.colorScheme.onSurface
+                                                            )
+                                                        }
+                                                        Icon(
+                                                            painter = painterResource(R.drawable.stats),
+                                                            contentDescription = stringResource(R.string.stats),
+                                                            modifier = Modifier
+                                                                .clip(CircleShape)
+                                                                .clickable { navController.navigate("stats") }
+                                                                .padding(6.dp)
+                                                                .size(22.dp),
+                                                            tint = MaterialTheme.colorScheme.onSurface
+                                                        )
+                                                        if (listenTogetherInTopBar) {
+                                                            Icon(
+                                                                painter = painterResource(R.drawable.group_outlined),
+                                                                contentDescription = stringResource(R.string.together),
+                                                                modifier = Modifier
+                                                                    .clip(CircleShape)
+                                                                    .clickable { navController.navigate("listen_together_from_topbar") }
+                                                                    .padding(6.dp)
+                                                                    .size(22.dp),
+                                                                tint = MaterialTheme.colorScheme.onSurface
+                                                            )
+                                                        }
+                                                        
+                                                        // Profile icon
+                                                        BadgedBox(
+                                                            badge = {
+                                                                if (latestVersionName != BuildConfig.VERSION_NAME) {
+                                                                    Badge()
+                                                                }
+                                                            },
+                                                            modifier = Modifier
+                                                                .padding(start = 4.dp, end = 2.dp)
+                                                                .clip(CircleShape)
+                                                                .clickable { showAccountDialog = true }
+                                                        ) {
+                                                            if (accountImageUrl != null) {
+                                                                AsyncImage(
+                                                                    model = accountImageUrl,
                                                                     contentDescription = stringResource(R.string.account),
-                                                                    modifier = Modifier.padding(4.dp),
-                                                                    tint = MaterialTheme.colorScheme.onPrimary
+                                                                    modifier = Modifier
+                                                                        .size(28.dp)
+                                                                        .clip(CircleShape),
                                                                 )
+                                                            } else {
+                                                                Surface(
+                                                                    shape = CircleShape,
+                                                                    color = MaterialTheme.colorScheme.primary,
+                                                                    modifier = Modifier.size(28.dp)
+                                                                ) {
+                                                                    Icon(
+                                                                        painter = painterResource(R.drawable.account),
+                                                                        contentDescription = stringResource(R.string.account),
+                                                                        modifier = Modifier.padding(4.dp),
+                                                                        tint = MaterialTheme.colorScheme.onPrimary
+                                                                    )
+                                                                }
                                                             }
                                                         }
                                                     }
