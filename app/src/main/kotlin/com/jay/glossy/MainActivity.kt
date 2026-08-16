@@ -663,7 +663,6 @@ class MainActivity : ComponentActivity() {
                 val bottomInset = with(density) { windowsInsets.getBottom(density).toDp() }
                 val bottomInsetDp = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
-                // FIX 1: Explicitly defining variable types to fix compiler issues
                 val navController = rememberNavController()
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute: String? = navBackStackEntry?.destination?.route
@@ -720,7 +719,6 @@ class MainActivity : ComponentActivity() {
 
                 val (listenTogetherInTopBar) = rememberPreference(ListenTogetherInTopBarKey, defaultValue = true)
                 
-                // FIX 2: 100% Null-safe parsing for MainScreens
                 val navigationItems =
                     remember(listenTogetherInTopBar) {
                         if (listenTogetherInTopBar) {
@@ -814,30 +812,6 @@ class MainActivity : ComponentActivity() {
                         expandedBound = maxHeight,
                     )
 
-                val playerAwareWindowInsets =
-                    remember(
-                        bottomInset,
-                        shouldShowNavigationBar,
-                        playerBottomSheetState.isDismissed,
-                        showRail,
-                        useFloatingNavBar
-                    ) {
-                        var bottom = bottomInset
-                        if (shouldShowNavigationBar && !showRail) {
-                            bottom += if (useFloatingNavBar) 76.dp else NavigationBarHeight
-                        }
-                        if (!playerBottomSheetState.isDismissed) bottom += MiniPlayerHeight
-                        windowsInsets
-                            .only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top)
-                            .add(WindowInsets(top = AppBarHeight, bottom = bottom))
-                    }
-
-                val playerReadyState =
-                    playerConnection?.service?.isPlayerReady?.collectAsStateWithLifecycle()
-                        ?: remember { mutableStateOf(false) }
-                val playerReady by playerReadyState
-                val activePlayerConnection = if (playerReady) playerConnection else null
-
                 var shouldShowTopBar by rememberSaveable { mutableStateOf(false) }
 
                 LaunchedEffect(navBackStackEntry, listenTogetherInTopBar) {
@@ -851,6 +825,38 @@ class MainActivity : ComponentActivity() {
                         navRoute != "welcome" &&
                         !(isListenTogetherScreen && listenTogetherInTopBar)
                 }
+
+                // 🚨 PERFECT FIX FOR HEADER PADDING OVERLAP 🚨
+                // Home/Library ke liye padding 92.dp set ki hai (64.dp ki jagah)
+                // Kyunki GlossyCustomHeader lamba hai!
+                val playerAwareWindowInsets =
+                    remember(
+                        bottomInset,
+                        shouldShowNavigationBar,
+                        playerBottomSheetState.isDismissed,
+                        showRail,
+                        useFloatingNavBar,
+                        shouldShowTopBar
+                    ) {
+                        var bottom = bottomInset
+                        if (shouldShowNavigationBar && !showRail) {
+                            bottom += if (useFloatingNavBar) 76.dp else NavigationBarHeight
+                        }
+                        if (!playerBottomSheetState.isDismissed) bottom += MiniPlayerHeight
+                        
+                        // FIX: Yahan 92.dp diya hai naye Header ki perfectly fit height ke liye
+                        val topInset = if (shouldShowTopBar) 92.dp else 0.dp
+
+                        windowsInsets
+                            .only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top)
+                            .add(WindowInsets(top = topInset, bottom = bottom))
+                    }
+
+                val playerReadyState =
+                    playerConnection?.service?.isPlayerReady?.collectAsStateWithLifecycle()
+                        ?: remember { mutableStateOf(false) }
+                val playerReady by playerReadyState
+                val activePlayerConnection = if (playerReady) playerConnection else null
 
                 appBarScrollBehavior(
                     canScroll = {
@@ -1018,7 +1024,6 @@ class MainActivity : ComponentActivity() {
                         bottomBar = {
                             val currentBackStackEntry = navController.currentBackStackEntry
 
-                            // FIX 3: Safe cast route checking in lambdas to avoid R8 NPE crash
                             val onNavItemClick: (Screens, Boolean) -> Unit =
                                 remember(
                                     navController,
