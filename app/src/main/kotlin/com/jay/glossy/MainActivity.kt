@@ -663,11 +663,10 @@ class MainActivity : ComponentActivity() {
                 val bottomInset = with(density) { windowsInsets.getBottom(density).toDp() }
                 val bottomInsetDp = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
-                // FIX 1: Navigation Controller and Basic States
                 val navController = rememberNavController()
+
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
-                val inSearchScreen = currentRoute?.startsWith("search/") == true
 
                 // --- WELCOME SCREEN AUTO-DETECT LOGIC ---
                 val (defaultOpenTabInt) = rememberPreference(DefaultOpenTabKey, defaultValue = NavigationTab.HOME.name)
@@ -770,6 +769,8 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
+                val inSearchScreen = currentRoute?.startsWith("search/") == true
+
                 val navigationItemRoutes =
                     remember(navigationItems) {
                         navigationItems.map { it.route }.toSet()
@@ -813,6 +814,26 @@ class MainActivity : ComponentActivity() {
                         expandedBound = maxHeight,
                     )
 
+                // 🚨 FIX: Restored perfectly to original logic.
+                // This guarantees EVERY screen has standard AppBarHeight top padding so content never cuts into status bar!
+                val playerAwareWindowInsets =
+                    remember(
+                        bottomInset,
+                        shouldShowNavigationBar,
+                        playerBottomSheetState.isDismissed,
+                        showRail,
+                        useFloatingNavBar
+                    ) {
+                        var bottom = bottomInset
+                        if (shouldShowNavigationBar && !showRail) {
+                            bottom += if (useFloatingNavBar) 76.dp else NavigationBarHeight
+                        }
+                        if (!playerBottomSheetState.isDismissed) bottom += MiniPlayerHeight
+                        windowsInsets
+                            .only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top)
+                            .add(WindowInsets(top = AppBarHeight, bottom = bottom))
+                    }
+
                 val playerReadyState =
                     playerConnection?.service?.isPlayerReady?.collectAsStateWithLifecycle()
                         ?: remember { mutableStateOf(false) }
@@ -833,28 +854,6 @@ class MainActivity : ComponentActivity() {
                         !(isListenTogetherScreen && listenTogetherInTopBar)
                 }
 
-                val playerAwareWindowInsets =
-                    remember(
-                        bottomInset,
-                        shouldShowNavigationBar,
-                        playerBottomSheetState.isDismissed,
-                        showRail,
-                        useFloatingNavBar,
-                        shouldShowTopBar
-                    ) {
-                        var bottom = bottomInset
-                        if (shouldShowNavigationBar && !showRail) {
-                            bottom += if (useFloatingNavBar) 76.dp else NavigationBarHeight
-                        }
-                        if (!playerBottomSheetState.isDismissed) bottom += MiniPlayerHeight
-                        
-                        val topInset = if (shouldShowTopBar) AppBarHeight else 0.dp
-
-                        windowsInsets
-                            .only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top)
-                            .add(WindowInsets(top = topInset, bottom = bottom))
-                    }
-                    
                 appBarScrollBehavior(
                     canScroll = {
                         !inSearchScreen &&
@@ -1001,17 +1000,20 @@ class MainActivity : ComponentActivity() {
                             ) {
                                 val accountName by homeViewModel.accountName.collectAsStateWithLifecycle()
                                 
+                                // 🚨 FIX: Explicit statusBarsPadding ensures Header NEVER goes inside the status bar!
+                                val topBarInsets = if (showRail) {
+                                    windowsInsets.only(WindowInsetsSides.Top)
+                                        .add(WindowInsets(left = NavigationBarHeight))
+                                        .add(cutoutInsets.only(WindowInsetsSides.Start))
+                                } else {
+                                    windowsInsets.only(WindowInsetsSides.Top)
+                                        .add(cutoutInsets.only(WindowInsetsSides.Start + WindowInsetsSides.End))
+                                }
+
                                 Box(
                                     modifier = Modifier
                                         .background(if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer)
-                                        .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top))
-                                        .windowInsetsPadding(
-                                            if (showRail) {
-                                                WindowInsets(left = NavigationBarHeight).add(cutoutInsets.only(WindowInsetsSides.Start))
-                                            } else {
-                                                cutoutInsets.only(WindowInsetsSides.Start + WindowInsetsSides.End)
-                                            }
-                                        )
+                                        .windowInsetsPadding(topBarInsets)
                                 ) {
                                     com.jay.glossy.ui.component.GlossyCustomHeader(userName = accountName ?: "")
                                 }
