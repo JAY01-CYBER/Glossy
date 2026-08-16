@@ -231,7 +231,6 @@ import javax.inject.Inject
 
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.compose.ui.platform.LocalContext
-import com.jay.glossy.ui.theme.bbhBartle
 
 @Suppress("DEPRECATION", "ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
 @AndroidEntryPoint
@@ -1031,50 +1030,38 @@ class MainActivity : ComponentActivity() {
                                     TopAppBar(
                                         title = {
                                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                                // 1. Icon ab BADA (42.dp) ho gaya hai
+                                                // 1. Aapka Small Icon - Size aur bada kar diya (42.dp)
                                                 Icon(
                                                     painter = painterResource(R.drawable.small_icon), 
                                                     contentDescription = null,
                                                     modifier = Modifier.size(42.dp).padding(end = 8.dp),
                                                     tint = MaterialTheme.colorScheme.onSurface
                                                 )
-                                                // 2. Text NORMAL aur elegant (Pehle jaisa 'Home' text style)
+                                                // 2. NORMAL TEXT - No custom stylish font
                                                 Text(
                                                     text = "Glossy",
-                                                    style = MaterialTheme.typography.titleLarge.copy(
-                                                        fontFamily = bbhBartle
-                                                        // Bold aur extra 32sp size HATA diya, ab normal aur fit lagega
+                                                    style = MaterialTheme.typography.headlineMedium.copy(
+                                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                                                     ),
-                                                    maxLines = 1, 
+                                                    maxLines = 1,
                                                     overflow = TextOverflow.Ellipsis,
                                                     color = MaterialTheme.colorScheme.onSurface
                                                 )
                                             }
                                         },
                                         actions = {
-                                            // 3. PILL-SHAPED CONTAINER WITH CUSTOM ICONS (TIGHT SPACING)
+                                            // 3. SOLID PILL CONTAINER - No transparency, No fade
                                             Surface(
                                                 shape = CircleShape, 
-                                                color = Color.Transparent, 
-                                                modifier = Modifier
-                                                    .padding(end = 8.dp)
-                                                    .background(
-                                                        brush = androidx.compose.ui.graphics.Brush.linearGradient(
-                                                            colors = listOf(
-                                                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
-                                                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
-                                                            )
-                                                        ),
-                                                        shape = CircleShape
-                                                    )
+                                                color = MaterialTheme.colorScheme.surfaceVariant, // 100% Solid Color
+                                                modifier = Modifier.padding(end = 8.dp)
                                             ) {
                                                 Row(
                                                     verticalAlignment = Alignment.CenterVertically,
                                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-                                                    // EKDUM Tight Spacing (Sirf 2.dp gap icons ke beech me)
+                                                    // EKDUM Tight Spacing
                                                     horizontalArrangement = Arrangement.spacedBy(2.dp) 
                                                 ) {
-                                                    // Yahan se saare IconButton hata diye, ab Custom Icon use kar rahe hain
                                                     if (showHistoryButton) {
                                                         Icon(
                                                             painter = painterResource(R.drawable.history),
