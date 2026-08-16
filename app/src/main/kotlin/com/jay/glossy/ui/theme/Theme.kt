@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -51,7 +51,9 @@ fun MetrolistTheme(
             seedColor = themeColor, // themeColor is guaranteed non-default here
             isDark = darkTheme,
             specVersion = ColorSpec.SpecVersion.SPEC_2025,
-            style = PaletteStyle.TonalSpot // Keep existing style
+            // --- YAHAN CHANGE KIYA HAI: TonalSpot se Expressive kar diya ---
+            style = PaletteStyle.Expressive 
+            // --- CHANGE END ---
         )
     }
 
