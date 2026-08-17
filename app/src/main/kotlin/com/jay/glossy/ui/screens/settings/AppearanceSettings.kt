@@ -113,6 +113,11 @@ import com.jay.glossy.constants.QuickPicksStyle
 import com.jay.glossy.constants.QuickPicksStyleKey
 import com.jay.glossy.constants.ShowFeaturedCarouselKey
 import com.jay.glossy.constants.UseFloatingNavBarKey
+
+// FONT IMPORTS
+import com.jay.glossy.constants.AppFont
+import com.jay.glossy.constants.SelectedFontKey
+
 import com.jay.glossy.ui.component.DefaultDialog
 import com.jay.glossy.ui.component.EnumDialog
 import com.jay.glossy.ui.component.IconButton
@@ -170,6 +175,11 @@ fun AppearanceSettings(
         )
     // Check if user has selected a custom color (not the default/dynamic color)
     val isUsingCustomColor = selectedThemeColorInt != DefaultThemeColor.toArgb()
+
+    // FONT PREFERENCE STATE
+    val (selectedFontValue, onSelectedFontChange) = rememberPreference(SelectedFontKey, defaultValue = AppFont.SYSTEM.value)
+    val currentFont = AppFont.fromValue(selectedFontValue)
+    var showAppFontDialog by rememberSaveable { mutableStateOf(false) }
 
     val (useNewPlayerDesign, onUseNewPlayerDesignChange) =
         rememberPreference(
@@ -392,6 +402,21 @@ fun AppearanceSettings(
 
     var showLyricsPositionDialog by rememberSaveable {
         mutableStateOf(false)
+    }
+    
+    // FONT DIALOG IMPLEMENTATION
+    if (showAppFontDialog) {
+        EnumDialog(
+            onDismiss = { showAppFontDialog = false },
+            onSelect = {
+                onSelectedFontChange(it.value)
+                showAppFontDialog = false
+            },
+            title = "App Font",
+            current = currentFont,
+            values = AppFont.entries.toList(),
+            valueText = { it.displayName },
+        )
     }
 
     if (showQuickPicksStyleDialog) {
@@ -1135,7 +1160,6 @@ fun AppearanceSettings(
                         ),
                     )
                     // Only show dynamic theme option when using the default/dynamic color
-                    // When a custom color is selected, dynamic theme is automatically disabled
                     if (!isUsingCustomColor) {
                         add(
                             Material3SettingsItem(
@@ -1191,6 +1215,16 @@ fun AppearanceSettings(
                             title = { Text(stringResource(R.string.theme)) },
                             description = { Text(stringResource(R.string.theme_desc)) },
                             onClick = { navController.navigate("settings/appearance/theme") },
+                        ),
+                    )
+                    
+                    // APP FONT ITEM ADDED HERE
+                    add(
+                        Material3SettingsItem(
+                            icon = painterResource(R.drawable.palette),
+                            title = { Text("App Font") },
+                            description = { Text(currentFont.displayName) },
+                            onClick = { showAppFontDialog = true },
                         ),
                     )
                 },
@@ -1737,9 +1771,8 @@ fun AppearanceSettings(
             title = stringResource(R.string.misc),
             items =
                 listOf(
-                    // NEW QUICK PICKS SHAPE SETTING IN MISC GROUP
                     Material3SettingsItem(
-                        icon = painterResource(R.drawable.palette), // Using palette as an expressive icon for shapes
+                        icon = painterResource(R.drawable.palette), 
                         title = { Text("Quick Picks Thumbnail Shape") },
                         description = {
                             Text(
@@ -1858,7 +1891,6 @@ fun AppearanceSettings(
                         },
                         onClick = { onSlimNavChange(!slimNav) },
                     ),
-                    // NEW FLOATING NAVIGATION BAR TOGGLE
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.nav_bar),
                         title = { Text("Floating Navigation Bar") },
