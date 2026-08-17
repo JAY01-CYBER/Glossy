@@ -10,11 +10,14 @@ import com.jay.glossy.R
 import android.annotation.SuppressLint
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.expandIn
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
@@ -28,11 +31,14 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.DropdownMenu
@@ -48,6 +54,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -74,15 +81,37 @@ fun <E> ChipsRow(
         Spacer(Modifier.width(12.dp))
 
         chips.forEach { (value, label) ->
+            val isSelected = currentValue == value
+            val emoji = getEmojiForLabel(label)
+            val displayText = if (emoji.isNotEmpty()) "$emoji $label" else label
+
             FilterChip(
-                label = { Text(label) },
-                selected = currentValue == value,
+                label = { Text(displayText) },
+                selected = isSelected,
                 colors = FilterChipDefaults.filterChipColors(
                     containerColor = containerColor,
+                    // YouTube Music style colors on selection
+                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ),
+                leadingIcon = {
+                    AnimatedVisibility(
+                        visible = isSelected,
+                        enter = fadeIn(tween(200)) + expandHorizontally(tween(200), expandFrom = Alignment.Start),
+                        exit = fadeOut(tween(200)) + shrinkHorizontally(tween(200), shrinkTowards = Alignment.Start)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Check,
+                            contentDescription = "Selected",
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                },
                 onClick = { onValueUpdate(value) },
                 shape = RoundedCornerShape(16.dp),
-                border = null
+                border = null,
+                modifier = Modifier.animateContentSize(tween(200)) // Makes the text shift super smooth!
             )
 
             Spacer(Modifier.width(8.dp))
@@ -191,19 +220,65 @@ fun <Int> ChoiceChipsRow(
             ) {
                 chips.forEach { (value, label) ->
                     Spacer(Modifier.width(8.dp))
+                    
+                    val isSelected = currentValue == value
+                    val emoji = getEmojiForLabel(label)
+                    val displayText = if (emoji.isNotEmpty()) "$emoji $label" else label
 
                     FilterChip(
-                        label = { Text(label) },
-                        selected = currentValue == value,
+                        label = { Text(displayText) },
+                        selected = isSelected,
                         colors = FilterChipDefaults.filterChipColors(
                             containerColor = containerColor,
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer
                         ),
+                        leadingIcon = {
+                            AnimatedVisibility(
+                                visible = isSelected,
+                                enter = fadeIn(tween(200)) + expandHorizontally(tween(200), expandFrom = Alignment.Start),
+                                exit = fadeOut(tween(200)) + shrinkHorizontally(tween(200), shrinkTowards = Alignment.Start)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Check,
+                                    contentDescription = "Selected",
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        },
                         onClick = { onValueUpdate(value) },
                         shape = RoundedCornerShape(16.dp),
-                        border = null
+                        border = null,
+                        modifier = Modifier.animateContentSize(tween(200))
                     )
                 }
             }
         }
+    }
+}
+
+// Ye function automatically chip ke label ko padh kar sahi emoji return karega
+private fun getEmojiForLabel(label: String): String {
+    val lower = label.lowercase()
+    return when {
+        lower.contains("workout") || lower.contains("cardio") -> "🏋️"
+        lower.contains("feel good") || lower.contains("feel-good") || lower.contains("happy") -> "☀️"
+        lower.contains("energize") || lower.contains("energise") || lower.contains("power") || lower.contains("boost") -> "⚡"
+        lower.contains("podcast") -> "🎙️"
+        lower.contains("relax") || lower.contains("calm") || lower.contains("unwind") -> "🧘"
+        lower.contains("sleep") || lower.contains("night") || lower.contains("lullaby") -> "🌙"
+        lower.contains("commute") || lower.contains("drive") || lower.contains("trip") -> "🚗"
+        lower.contains("focus") || lower.contains("study") || lower.contains("work") -> "🧠"
+        lower.contains("party") || lower.contains("dance") || lower.contains("club") -> "🎉"
+        lower.contains("romance") || lower.contains("love") -> "❤️"
+        lower.contains("sad") || lower.contains("heartbreak") || lower.contains("cry") -> "🌧️"
+        lower.contains("chill") || lower.contains("acoustic") -> "☕"
+        lower.contains("gaming") || lower.contains("game") -> "🎮"
+        lower.contains("throwback") || lower.contains("retro") || lower.contains("classic") || lower.contains("90s") || lower.contains("80s") -> "📻"
+        lower.contains("bollywood") || lower.contains("desi") -> "💃"
+        lower.contains("trending") || lower.contains("top") || lower.contains("hits") -> "🔥"
+        lower.contains("new") || lower.contains("latest") || lower.contains("release") -> "🆕"
+        else -> "" // Default empty, taki unknown categories pe ajeeb emoji na aaye
     }
 }
