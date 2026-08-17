@@ -24,6 +24,31 @@ import com.jay.glossy.constants.SelectedFontKey
 import com.jay.glossy.ui.component.IconButton
 import com.jay.glossy.utils.rememberPreference
 
+// FONT IMPORTS
+import com.jay.glossy.ui.theme.GoogleSansFontFamily
+import com.jay.glossy.ui.theme.GoogleSansFlexFontFamily
+import com.jay.glossy.ui.theme.InterFontFamily
+import com.jay.glossy.ui.theme.ManropeFontFamily
+import com.jay.glossy.ui.theme.OutfitFontFamily
+import com.jay.glossy.ui.theme.PlusJakartaSansFontFamily
+import com.jay.glossy.ui.theme.PoppinsFontFamily
+import com.jay.glossy.ui.theme.RoundexFontFamily
+
+// HELPER FUNCTION: Maps Enum to Compose FontFamily
+fun getComposeFontFamily(appFont: AppFont): FontFamily {
+    return when (appFont) {
+        AppFont.SYSTEM -> FontFamily.Default
+        AppFont.GOOGLE_SANS -> GoogleSansFontFamily
+        AppFont.GOOGLE_SANS_FLEX -> GoogleSansFlexFontFamily
+        AppFont.INTER -> InterFontFamily
+        AppFont.MANROPE -> ManropeFontFamily
+        AppFont.OUTFIT -> OutfitFontFamily
+        AppFont.PLUS_JAKARTA_SANS -> PlusJakartaSansFontFamily
+        AppFont.POPPINS -> PoppinsFontFamily
+        AppFont.ROUNDEX -> RoundexFontFamily
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppFontSettingsScreen(
@@ -70,7 +95,7 @@ fun AppFontSettingsScreen(
                     Text(
                         text = "\"Where words fail, music speaks.\"",
                         style = MaterialTheme.typography.titleLarge.copy(fontSize = 28.sp, lineHeight = 36.sp),
-                        fontFamily = currentFont.fontFamily, 
+                        fontFamily = getComposeFontFamily(currentFont), // ERROR FIXED HERE
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                     Spacer(modifier = Modifier.height(20.dp))
@@ -119,7 +144,7 @@ fun AppFontSettingsScreen(
                                 text = fontOption.description,
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontFamily = fontOption.fontFamily 
+                                fontFamily = getComposeFontFamily(fontOption) // ERROR FIXED HERE
                             )
                         }
                     }
