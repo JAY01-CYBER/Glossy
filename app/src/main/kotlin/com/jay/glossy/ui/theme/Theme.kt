@@ -28,7 +28,6 @@ import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamiccolor.ColorSpec
 import com.materialkolor.rememberDynamicColorScheme
 import com.materialkolor.score.Score
-
 import com.jay.glossy.constants.AppFont
 import com.jay.glossy.constants.SelectedFontKey
 import com.jay.glossy.utils.rememberPreference
@@ -44,10 +43,8 @@ fun MetrolistTheme(
 ) {
     val context = LocalContext.current
     
-    // 1. Font DataStore se Read karein
     val (selectedFontValue) = rememberPreference(SelectedFontKey, AppFont.SYSTEM.value)
 
-    // 2. String ko actual Font se map karein
     val brandFont = remember(selectedFontValue) {
         when (AppFont.fromValue(selectedFontValue)) {
             AppFont.SYSTEM -> FontFamily.Default
@@ -59,11 +56,9 @@ fun MetrolistTheme(
             AppFont.PLUS_JAKARTA_SANS -> PlusJakartaSansFontFamily
             AppFont.POPPINS -> PoppinsFontFamily
             AppFont.ROUNDEX -> RoundexFontFamily
-            AppFont.BBH_BARTLE -> BbhBartleFontFamily
         }
     }
 
-    // 3. Dynamic Typography generate karein
     val typography = remember(brandFont) {
         getTypography(brandFont = brandFont, plainFont = brandFont)
     }
@@ -91,7 +86,7 @@ fun MetrolistTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = typography, // Yahan pe Typography Apply ho rahi hai!
+        typography = typography, 
         content = content
     )
 }
