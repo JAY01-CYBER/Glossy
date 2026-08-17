@@ -1063,13 +1063,11 @@ class MainActivity : ComponentActivity() {
                                     TopAppBar(
                                         title = {
                                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                                // 1. Aapka Small Icon - Size aur bada kar diya (48x48 space) aur padding adjust kar li taaki clear dikhe
+                                                // 1. Aapka Small Icon - Gap nikal diya gaya hai
                                                 Icon(
                                                     painter = painterResource(R.drawable.small_icon), 
                                                     contentDescription = null,
-                                                    modifier = Modifier
-                                                        .padding(end = 12.dp)
-                                                        .size(52.dp),
+                                                    modifier = Modifier.size(52.dp),
                                                     tint = MaterialTheme.colorScheme.onSurface
                                                 )
                                                 // 2. TEXT WITH CUSTOM FONT
