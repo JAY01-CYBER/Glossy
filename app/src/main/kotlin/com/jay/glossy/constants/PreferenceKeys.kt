@@ -163,7 +163,6 @@ val PauseListenHistoryKey = booleanPreferencesKey("pauseListenHistory")
 val PauseSearchHistoryKey = booleanPreferencesKey("pauseSearchHistory")
 val DisableScreenshotKey = booleanPreferencesKey("disableScreenshot")
 
-// Stream sources — which innertube clients are used for stream resolution (Settings → Stream sources).
 val StreamSourceWebRemixKey = booleanPreferencesKey("streamSourceWebRemix")
 val StreamSourceTVHTML5Key = booleanPreferencesKey("streamSourceTVHTML5")
 val StreamSourceAndroidVRKey = booleanPreferencesKey("streamSourceAndroidVR")
@@ -193,10 +192,8 @@ val DiscordButton2LabelKey = stringPreferencesKey("discordButton2Label")
 val DiscordButton2UrlKey = stringPreferencesKey("discordButton2Url")
 val DiscordUserStatusKey = stringPreferencesKey("discordUserStatus")
 
-// Google Cast
 val EnableGoogleCastKey = booleanPreferencesKey("enableGoogleCast")
 
-// Listen Together
 val ListenTogetherServerUrlKey = stringPreferencesKey("listenTogetherServerUrl")
 val ListenTogetherUsernameKey = stringPreferencesKey("listenTogetherUsername")
 val EnableListenTogetherKey = booleanPreferencesKey("enableListenTogether")
@@ -206,7 +203,6 @@ val ListenTogetherSyncVolumeKey = booleanPreferencesKey("listenTogetherSyncVolum
 val ListenTogetherBlockedUsersKey = stringPreferencesKey("listenTogetherBlockedUsers")
 val ListenTogetherInTopBarKey = booleanPreferencesKey("listenTogetherInTopBar")
 
-// Session persistence for reconnection
 val ListenTogetherSessionTokenKey = stringPreferencesKey("listenTogetherSessionToken")
 val ListenTogetherRoomCodeKey = stringPreferencesKey("listenTogetherRoomCode")
 val ListenTogetherUserIdKey = stringPreferencesKey("listenTogetherUserId")
@@ -259,7 +255,6 @@ val LastWeeklyMostPlaylistSyncKey = longPreferencesKey("last_weekly_most_playlis
 val LastMonthlyMostPlaylistSyncKey = longPreferencesKey("last_monthly_most_playlist_sync")
 val ShowMostStatsPlaylistsKey = booleanPreferencesKey("show_most_stats_playlists")
 
-// Sync cooldown in seconds (30 minutes)
 const val SYNC_COOLDOWN = 30 * 60L
 
 val ArtistViewTypeKey = stringPreferencesKey("artistViewType")
@@ -736,7 +731,6 @@ val CountryCodeToName =
         "ZW" to "Zimbabwe",
     )
 
-// Quick Picks Shape Option
 val QuickPickShapeKey = stringPreferencesKey("quickPickShape")
 
 enum class QuickPickShape {
@@ -757,7 +751,6 @@ enum class QuickPickShape {
     DYNAMIC
 }
 
-// Quick Picks Layout Style Option
 val QuickPicksStyleKey = stringPreferencesKey("quickPicksStyle")
 
 enum class QuickPicksStyle {
@@ -766,13 +759,8 @@ enum class QuickPicksStyle {
     CAROUSEL
 }
 
-// Featured Spotlight Carousel Option
 val ShowFeaturedCarouselKey = booleanPreferencesKey("showFeaturedCarousel")
 
-
-// ==========================================
-// NEW: APP FONT CUSTOMIZATION KEYS & ENUM
-// ==========================================
 val SelectedFontKey = stringPreferencesKey("selected_font")
 
 enum class AppFont(val value: String, val displayName: String, val description: String) {
@@ -784,8 +772,7 @@ enum class AppFont(val value: String, val displayName: String, val description: 
     OUTFIT("outfit", "Outfit", "A clean and modern geometric sans-serif."),
     PLUS_JAKARTA_SANS("plus_jakarta_sans", "Plus Jakarta Sans", "A premium warm geometric sans-serif typeface."),
     POPPINS("poppins", "Poppins", "A geometric sans-serif typeface with international appeal."),
-    ROUNDEX("roundex", "Roundex", "A smooth, rounded modern typeface."),
-    BBH_BARTLE("bbh_bartle", "BBH Bartle", "A custom artistic typeface.");
+    ROUNDEX("roundex", "Roundex", "A smooth, rounded modern typeface.");
 
     companion object {
         fun fromValue(value: String): AppFont = entries.find { it.value == value } ?: SYSTEM
