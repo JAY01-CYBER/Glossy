@@ -9,6 +9,7 @@ import com.jay.glossy.R
 
 import android.annotation.SuppressLint
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
@@ -53,7 +54,6 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -84,7 +84,7 @@ fun <E> ChipsRow(
             val emoji = getEmojiForLabel(label)
             val displayText = if (emoji.isNotEmpty()) "$emoji $label" else label
 
-            // Bouncy Spring animation for Corner Radius (Vivimusic Style)
+            // Bouncy Spring animation for Corner Radius
             val cornerRadius by animateDpAsState(
                 targetValue = if (isSelected) 20.dp else 8.dp,
                 animationSpec = spring(
@@ -93,6 +93,17 @@ fun <E> ChipsRow(
                 ),
                 label = "corner_radius"
             )
+
+            // FIX: Explicitly typed to let compiler know it's a Composable Lambda
+            val leadingIconComposable: @Composable (() -> Unit)? = if (isSelected) {
+                {
+                    Icon(
+                        painter = painterResource(R.drawable.check), 
+                        contentDescription = "Selected",
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            } else null
 
             FilterChip(
                 label = { Text(displayText) },
@@ -104,17 +115,7 @@ fun <E> ChipsRow(
                     selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ),
                 onClick = { onValueUpdate(value) },
-                leadingIcon = if (isSelected) {
-                    {
-                        Icon(
-                            painter = painterResource(R.drawable.check), 
-                            contentDescription = "Selected",
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                } else {
-                    null
-                },
+                leadingIcon = leadingIconComposable,
                 shape = RoundedCornerShape(cornerRadius),
                 border = null,
                 modifier = Modifier
@@ -247,6 +248,17 @@ fun <Int> ChoiceChipsRow(
                         label = "corner_radius"
                     )
 
+                    // FIX: Explicitly typed to let compiler know it's a Composable Lambda
+                    val leadingIconComposable: @Composable (() -> Unit)? = if (isSelected) {
+                        {
+                            Icon(
+                                painter = painterResource(R.drawable.check),
+                                contentDescription = "Selected",
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    } else null
+
                     FilterChip(
                         label = { Text(displayText) },
                         selected = isSelected,
@@ -257,17 +269,7 @@ fun <Int> ChoiceChipsRow(
                             selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer
                         ),
                         onClick = { onValueUpdate(value) },
-                        leadingIcon = if (isSelected) {
-                            {
-                                Icon(
-                                    painter = painterResource(R.drawable.check),
-                                    contentDescription = "Selected",
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        } else {
-                            null
-                        },
+                        leadingIcon = leadingIconComposable,
                         shape = RoundedCornerShape(cornerRadius),
                         border = null,
                         modifier = Modifier
