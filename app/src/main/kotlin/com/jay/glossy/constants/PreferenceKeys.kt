@@ -768,3 +768,26 @@ enum class QuickPicksStyle {
 
 // Featured Spotlight Carousel Option
 val ShowFeaturedCarouselKey = booleanPreferencesKey("showFeaturedCarousel")
+
+
+// ==========================================
+// NEW: APP FONT CUSTOMIZATION KEYS & ENUM
+// ==========================================
+val SelectedFontKey = stringPreferencesKey("selected_font")
+
+enum class AppFont(val value: String, val displayName: String, val description: String) {
+    SYSTEM("system", "System Default", "Use the default system typeface."),
+    GOOGLE_SANS("google_sans", "Google Sans", "Google's signature geometric sans-serif."),
+    GOOGLE_SANS_FLEX("google_sans_flex", "Google Sans Flex", "Google's highly adaptable flex font."),
+    INTER("inter", "Inter", "A typeface carefully crafted & designed for computer screens."),
+    MANROPE("manrope", "Manrope", "An open-source modern sans-serif font family."),
+    OUTFIT("outfit", "Outfit", "A clean and modern geometric sans-serif."),
+    PLUS_JAKARTA_SANS("plus_jakarta_sans", "Plus Jakarta Sans", "A premium warm geometric sans-serif typeface."),
+    POPPINS("poppins", "Poppins", "A geometric sans-serif typeface with international appeal."),
+    ROUNDEX("roundex", "Roundex", "A smooth, rounded modern typeface."),
+    BBH_BARTLE("bbh_bartle", "BBH Bartle", "A custom artistic typeface.");
+
+    companion object {
+        fun fromValue(value: String): AppFont = entries.find { it.value == value } ?: SYSTEM
+    }
+}
