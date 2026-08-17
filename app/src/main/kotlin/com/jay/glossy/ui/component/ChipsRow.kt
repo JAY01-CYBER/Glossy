@@ -37,8 +37,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.DropdownMenu
@@ -90,7 +88,6 @@ fun <E> ChipsRow(
                 selected = isSelected,
                 colors = FilterChipDefaults.filterChipColors(
                     containerColor = containerColor,
-                    // YouTube Music style colors on selection
                     selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                     selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -101,8 +98,9 @@ fun <E> ChipsRow(
                         enter = fadeIn(tween(200)) + expandHorizontally(tween(200), expandFrom = Alignment.Start),
                         exit = fadeOut(tween(200)) + shrinkHorizontally(tween(200), shrinkTowards = Alignment.Start)
                     ) {
+                        // FIX: Changed from Icons.Filled.Check to painterResource
                         Icon(
-                            imageVector = Icons.Filled.Check,
+                            painter = painterResource(R.drawable.check), 
                             contentDescription = "Selected",
                             modifier = Modifier.size(18.dp)
                         )
@@ -111,7 +109,7 @@ fun <E> ChipsRow(
                 onClick = { onValueUpdate(value) },
                 shape = RoundedCornerShape(16.dp),
                 border = null,
-                modifier = Modifier.animateContentSize(tween(200)) // Makes the text shift super smooth!
+                modifier = Modifier.animateContentSize(tween(200))
             )
 
             Spacer(Modifier.width(8.dp))
@@ -240,8 +238,9 @@ fun <Int> ChoiceChipsRow(
                                 enter = fadeIn(tween(200)) + expandHorizontally(tween(200), expandFrom = Alignment.Start),
                                 exit = fadeOut(tween(200)) + shrinkHorizontally(tween(200), shrinkTowards = Alignment.Start)
                             ) {
+                                // FIX: Changed from Icons.Filled.Check to painterResource
                                 Icon(
-                                    imageVector = Icons.Filled.Check,
+                                    painter = painterResource(R.drawable.check),
                                     contentDescription = "Selected",
                                     modifier = Modifier.size(18.dp)
                                 )
@@ -258,7 +257,7 @@ fun <Int> ChoiceChipsRow(
     }
 }
 
-// Ye function automatically chip ke label ko padh kar sahi emoji return karega
+// Emoji Helper function
 private fun getEmojiForLabel(label: String): String {
     val lower = label.lowercase()
     return when {
@@ -279,6 +278,6 @@ private fun getEmojiForLabel(label: String): String {
         lower.contains("bollywood") || lower.contains("desi") -> "💃"
         lower.contains("trending") || lower.contains("top") || lower.contains("hits") -> "🔥"
         lower.contains("new") || lower.contains("latest") || lower.contains("release") -> "🆕"
-        else -> "" // Default empty, taki unknown categories pe ajeeb emoji na aaye
+        else -> "" 
     }
 }
