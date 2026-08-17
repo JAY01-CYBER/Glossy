@@ -6,7 +6,6 @@
 package com.jay.glossy.ui.theme
 
 import com.jay.glossy.R
-
 import android.graphics.Bitmap
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -16,17 +15,23 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.SaverScope
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.palette.graphics.Palette
 import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamiccolor.ColorSpec
 import com.materialkolor.rememberDynamicColorScheme
 import com.materialkolor.score.Score
+
+import com.jay.glossy.constants.AppFont
+import com.jay.glossy.constants.SelectedFontKey
+import com.jay.glossy.utils.rememberPreference
 
 val DefaultThemeColor = Color(0xFFED5564)
 
@@ -38,26 +43,44 @@ fun MetrolistTheme(
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
-    // Determine if system dynamic colors should be used (Android S+ and default theme color)
+    
+    // 1. Font DataStore se Read karein
+    val (selectedFontValue) = rememberPreference(SelectedFontKey, AppFont.SYSTEM.value)
+
+    // 2. String ko actual Font se map karein
+    val brandFont = remember(selectedFontValue) {
+        when (AppFont.fromValue(selectedFontValue)) {
+            AppFont.SYSTEM -> FontFamily.Default
+            AppFont.GOOGLE_SANS -> GoogleSansFontFamily
+            AppFont.GOOGLE_SANS_FLEX -> GoogleSansFlexFontFamily
+            AppFont.INTER -> InterFontFamily
+            AppFont.MANROPE -> ManropeFontFamily
+            AppFont.OUTFIT -> OutfitFontFamily
+            AppFont.PLUS_JAKARTA_SANS -> PlusJakartaSansFontFamily
+            AppFont.POPPINS -> PoppinsFontFamily
+            AppFont.ROUNDEX -> RoundexFontFamily
+            AppFont.BBH_BARTLE -> BbhBartleFontFamily
+        }
+    }
+
+    // 3. Dynamic Typography generate karein
+    val typography = remember(brandFont) {
+        getTypography(brandFont = brandFont, plainFont = brandFont)
+    }
+
     val useSystemDynamicColor = (themeColor == DefaultThemeColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
 
-    // Select the appropriate color scheme generation method
     val baseColorScheme = if (useSystemDynamicColor) {
-        // Use standard Material 3 dynamic color functions for system wallpaper colors
         if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
     } else {
-        // Use materialKolor only when a specific seed color is provided
         rememberDynamicColorScheme(
-            seedColor = themeColor, // themeColor is guaranteed non-default here
+            seedColor = themeColor,
             isDark = darkTheme,
             specVersion = ColorSpec.SpecVersion.SPEC_2025,
-            // --- YAHAN CHANGE KIYA HAI: TonalSpot se Expressive kar diya ---
             style = PaletteStyle.Expressive 
-            // --- CHANGE END ---
         )
     }
 
-    // Apply pureBlack modification if needed, similar to original logic
     val colorScheme = remember(baseColorScheme, pureBlack, darkTheme) {
         if (darkTheme && pureBlack) {
             baseColorScheme.pureBlack(true)
@@ -66,10 +89,9 @@ fun MetrolistTheme(
         }
     }
 
-    // Use standard MaterialTheme instead of MaterialExpressiveTheme
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = AppTypography, // Use the defined AppTypography
+        typography = typography, // Yahan pe Typography Apply ho rahi hai!
         content = content
     )
 }
