@@ -1027,7 +1027,23 @@ class MainActivity : ComponentActivity() {
                                 enter = fadeIn(animationSpec = tween(durationMillis = 300)),
                                 exit = fadeOut(animationSpec = tween(durationMillis = 200)),
                             ) {
-                                Row {
+                                val topFadeBrush = remember(baseBg) {
+                                    androidx.compose.ui.graphics.Brush.verticalGradient(
+                                        colors = listOf(
+                                            baseBg,
+                                            baseBg.copy(alpha = 0.9f),
+                                            baseBg.copy(alpha = 0.6f),
+                                            baseBg.copy(alpha = 0.1f),
+                                            Color.Transparent
+                                        )
+                                    )
+                                }
+
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(topFadeBrush)
+                                ) {
                                     TopAppBar(
                                         title = {
                                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1166,6 +1182,7 @@ class MainActivity : ComponentActivity() {
                                             }
                                         )
                                     )
+                                    Box(modifier = Modifier.height(24.dp))
                                 }
                             }
                         },
