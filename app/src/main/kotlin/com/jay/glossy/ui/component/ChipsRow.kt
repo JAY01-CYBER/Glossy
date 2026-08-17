@@ -9,15 +9,15 @@ import com.jay.glossy.R
 
 import android.annotation.SuppressLint
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.expandIn
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -83,6 +84,16 @@ fun <E> ChipsRow(
             val emoji = getEmojiForLabel(label)
             val displayText = if (emoji.isNotEmpty()) "$emoji $label" else label
 
+            // Bouncy Spring animation for Corner Radius (Vivimusic Style)
+            val cornerRadius by animateDpAsState(
+                targetValue = if (isSelected) 20.dp else 8.dp,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMedium
+                ),
+                label = "corner_radius"
+            )
+
             FilterChip(
                 label = { Text(displayText) },
                 selected = isSelected,
@@ -92,24 +103,28 @@ fun <E> ChipsRow(
                     selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ),
-                leadingIcon = {
-                    AnimatedVisibility(
-                        visible = isSelected,
-                        enter = fadeIn(tween(200)) + expandHorizontally(tween(200), expandFrom = Alignment.Start),
-                        exit = fadeOut(tween(200)) + shrinkHorizontally(tween(200), shrinkTowards = Alignment.Start)
-                    ) {
-                        // FIX: Changed from Icons.Filled.Check to painterResource
+                onClick = { onValueUpdate(value) },
+                leadingIcon = if (isSelected) {
+                    {
                         Icon(
                             painter = painterResource(R.drawable.check), 
                             contentDescription = "Selected",
                             modifier = Modifier.size(18.dp)
                         )
                     }
+                } else {
+                    null
                 },
-                onClick = { onValueUpdate(value) },
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(cornerRadius),
                 border = null,
-                modifier = Modifier.animateContentSize(tween(200))
+                modifier = Modifier
+                    .height(35.dp)
+                    .animateContentSize( // Smooth bouncy text shift
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        )
+                    )
             )
 
             Spacer(Modifier.width(8.dp))
@@ -223,6 +238,15 @@ fun <Int> ChoiceChipsRow(
                     val emoji = getEmojiForLabel(label)
                     val displayText = if (emoji.isNotEmpty()) "$emoji $label" else label
 
+                    val cornerRadius by animateDpAsState(
+                        targetValue = if (isSelected) 20.dp else 8.dp,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        ),
+                        label = "corner_radius"
+                    )
+
                     FilterChip(
                         label = { Text(displayText) },
                         selected = isSelected,
@@ -232,24 +256,28 @@ fun <Int> ChoiceChipsRow(
                             selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
                             selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer
                         ),
-                        leadingIcon = {
-                            AnimatedVisibility(
-                                visible = isSelected,
-                                enter = fadeIn(tween(200)) + expandHorizontally(tween(200), expandFrom = Alignment.Start),
-                                exit = fadeOut(tween(200)) + shrinkHorizontally(tween(200), shrinkTowards = Alignment.Start)
-                            ) {
-                                // FIX: Changed from Icons.Filled.Check to painterResource
+                        onClick = { onValueUpdate(value) },
+                        leadingIcon = if (isSelected) {
+                            {
                                 Icon(
                                     painter = painterResource(R.drawable.check),
                                     contentDescription = "Selected",
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
+                        } else {
+                            null
                         },
-                        onClick = { onValueUpdate(value) },
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(cornerRadius),
                         border = null,
-                        modifier = Modifier.animateContentSize(tween(200))
+                        modifier = Modifier
+                            .height(35.dp)
+                            .animateContentSize(
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessMedium
+                                )
+                            )
                     )
                 }
             }
