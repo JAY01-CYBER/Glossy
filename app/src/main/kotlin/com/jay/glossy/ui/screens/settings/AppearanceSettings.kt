@@ -113,11 +113,8 @@ import com.jay.glossy.constants.QuickPicksStyle
 import com.jay.glossy.constants.QuickPicksStyleKey
 import com.jay.glossy.constants.ShowFeaturedCarouselKey
 import com.jay.glossy.constants.UseFloatingNavBarKey
-
-// FONT IMPORTS
 import com.jay.glossy.constants.AppFont
 import com.jay.glossy.constants.SelectedFontKey
-
 import com.jay.glossy.ui.component.DefaultDialog
 import com.jay.glossy.ui.component.EnumDialog
 import com.jay.glossy.ui.component.IconButton
@@ -173,13 +170,10 @@ fun AppearanceSettings(
             SelectedThemeColorKey,
             defaultValue = DefaultThemeColor.toArgb(),
         )
-    // Check if user has selected a custom color (not the default/dynamic color)
     val isUsingCustomColor = selectedThemeColorInt != DefaultThemeColor.toArgb()
 
-    // FONT PREFERENCE STATE
-    val (selectedFontValue, onSelectedFontChange) = rememberPreference(SelectedFontKey, defaultValue = AppFont.SYSTEM.value)
+    val (selectedFontValue) = rememberPreference(SelectedFontKey, defaultValue = AppFont.SYSTEM.value)
     val currentFont = AppFont.fromValue(selectedFontValue)
-    var showAppFontDialog by rememberSaveable { mutableStateOf(false) }
 
     val (useNewPlayerDesign, onUseNewPlayerDesignChange) =
         rememberPreference(
@@ -258,7 +252,6 @@ fun AppearanceSettings(
     val (lyricsTextSize, onLyricsTextSizeChange) = rememberPreference(LyricsTextSizeKey, defaultValue = 24f)
     val (lyricsLineSpacing, onLyricsLineSpacingChange) = rememberPreference(LyricsLineSpacingKey, defaultValue = 1.2f)
 
-    // HOME SCREEN LAYOUT PREFERENCES
     val (showFeaturedCarousel, onShowFeaturedCarouselChange) = rememberPreference(ShowFeaturedCarouselKey, defaultValue = true)
     val (quickPicksStyle, onQuickPicksStyleChange) = rememberEnumPreference(QuickPicksStyleKey, defaultValue = QuickPicksStyle.GRID)
     var showQuickPicksStyleDialog by rememberSaveable { mutableStateOf(false) }
@@ -313,7 +306,6 @@ fun AppearanceSettings(
             defaultValue = false,
         )
 
-    // Density scale preferences
     val context = activity as Context
     val sharedPreferences = remember { context.getSharedPreferences("metrolist_settings", Context.MODE_PRIVATE) }
     val prefDensityScale =
@@ -326,7 +318,6 @@ fun AppearanceSettings(
 
     val onDensityScaleChange: (Float) -> Unit = { newScale ->
         setDensityScale(newScale)
-        // Write to SharedPreferences for DensityScaler to read on next startup
         sharedPreferences.edit {
             putFloat("density_scale_factor", newScale)
         }
@@ -388,36 +379,10 @@ fun AppearanceSettings(
             defaultValue = LibraryFilter.LIBRARY,
         )
 
-    var showSliderOptionDialog by rememberSaveable {
-        mutableStateOf(false)
-    }
-
-    var showPlayerBackgroundDialog by rememberSaveable {
-        mutableStateOf(false)
-    }
-
-    var showPlayerButtonsStyleDialog by rememberSaveable {
-        mutableStateOf(false)
-    }
-
-    var showLyricsPositionDialog by rememberSaveable {
-        mutableStateOf(false)
-    }
-    
-    // FONT DIALOG IMPLEMENTATION
-    if (showAppFontDialog) {
-        EnumDialog(
-            onDismiss = { showAppFontDialog = false },
-            onSelect = {
-                onSelectedFontChange(it.value)
-                showAppFontDialog = false
-            },
-            title = "App Font",
-            current = currentFont,
-            values = AppFont.entries.toList(),
-            valueText = { it.displayName },
-        )
-    }
+    var showSliderOptionDialog by rememberSaveable { mutableStateOf(false) }
+    var showPlayerBackgroundDialog by rememberSaveable { mutableStateOf(false) }
+    var showPlayerButtonsStyleDialog by rememberSaveable { mutableStateOf(false) }
+    var showLyricsPositionDialog by rememberSaveable { mutableStateOf(false) }
 
     if (showQuickPicksStyleDialog) {
         EnumDialog(
@@ -516,7 +481,6 @@ fun AppearanceSettings(
 
     if (showLyricsTextSizeDialog) {
         var tempTextSize by remember { mutableFloatStateOf(lyricsTextSize) }
-
         DefaultDialog(
             onDismiss = {
                 tempTextSize = lyricsTextSize
@@ -524,15 +488,11 @@ fun AppearanceSettings(
             },
             buttons = {
                 TextButton(
-                    onClick = {
-                        tempTextSize = 24f
-                    },
+                    onClick = { tempTextSize = 24f },
                 ) {
                     Text(stringResource(R.string.reset))
                 }
-
                 Spacer(modifier = Modifier.weight(1f))
-
                 TextButton(
                     onClick = {
                         tempTextSize = lyricsTextSize
@@ -560,13 +520,11 @@ fun AppearanceSettings(
                     style = MaterialTheme.typography.headlineSmall,
                     modifier = Modifier.padding(bottom = 16.dp),
                 )
-
                 Text(
                     text = "${tempTextSize.roundToInt()} sp",
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.padding(bottom = 16.dp),
                 )
-
                 Slider(
                     value = tempTextSize,
                     onValueChange = { tempTextSize = it },
@@ -579,7 +537,6 @@ fun AppearanceSettings(
 
     if (showLyricsLineSpacingDialog) {
         var tempLineSpacing by remember { mutableFloatStateOf(lyricsLineSpacing) }
-
         DefaultDialog(
             onDismiss = {
                 tempLineSpacing = lyricsLineSpacing
@@ -587,15 +544,11 @@ fun AppearanceSettings(
             },
             buttons = {
                 TextButton(
-                    onClick = {
-                        tempLineSpacing = 1.3f
-                    },
+                    onClick = { tempLineSpacing = 1.3f },
                 ) {
                     Text(stringResource(R.string.reset))
                 }
-
                 Spacer(modifier = Modifier.weight(1f))
-
                 TextButton(
                     onClick = {
                         tempLineSpacing = lyricsLineSpacing
@@ -623,13 +576,11 @@ fun AppearanceSettings(
                     style = MaterialTheme.typography.headlineSmall,
                     modifier = Modifier.padding(bottom = 16.dp),
                 )
-
                 Text(
                     text = String.format(Locale.US, "%.1f", tempLineSpacing),
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.padding(bottom = 16.dp),
                 )
-
                 Slider(
                     value = tempLineSpacing,
                     onValueChange = { tempLineSpacing = it },
@@ -702,10 +653,7 @@ fun AppearanceSettings(
         )
     }
 
-    var showDefaultOpenTabDialog by rememberSaveable {
-        mutableStateOf(false)
-    }
-
+    var showDefaultOpenTabDialog by rememberSaveable { mutableStateOf(false) }
     if (showDefaultOpenTabDialog) {
         EnumDialog(
             onDismiss = { showDefaultOpenTabDialog = false },
@@ -726,10 +674,7 @@ fun AppearanceSettings(
         )
     }
 
-    var showDefaultChipDialog by rememberSaveable {
-        mutableStateOf(false)
-    }
-
+    var showDefaultChipDialog by rememberSaveable { mutableStateOf(false) }
     if (showDefaultChipDialog) {
         EnumDialog(
             onDismiss = { showDefaultChipDialog = false },
@@ -753,10 +698,7 @@ fun AppearanceSettings(
         )
     }
 
-    var showGridSizeDialog by rememberSaveable {
-        mutableStateOf(false)
-    }
-
+    var showGridSizeDialog by rememberSaveable { mutableStateOf(false) }
     if (showGridSizeDialog) {
         EnumDialog(
             onDismiss = { showGridSizeDialog = false },
@@ -1159,7 +1101,6 @@ fun AppearanceSettings(
                             onClick = { onEnableLandscapeScalingChange(!enableLandscapeScaling) },
                         ),
                     )
-                    // Only show dynamic theme option when using the default/dynamic color
                     if (!isUsingCustomColor) {
                         add(
                             Material3SettingsItem(
@@ -1218,13 +1159,13 @@ fun AppearanceSettings(
                         ),
                     )
                     
-                    // APP FONT ITEM ADDED HERE
+                    // NAYI SCREEN NAVIGATE KARNE WALA FONT OPTION
                     add(
                         Material3SettingsItem(
                             icon = painterResource(R.drawable.palette),
                             title = { Text("App Font") },
                             description = { Text(currentFont.displayName) },
-                            onClick = { showAppFontDialog = true },
+                            onClick = { navController.navigate("settings/appearance/font") },
                         ),
                     )
                 },
