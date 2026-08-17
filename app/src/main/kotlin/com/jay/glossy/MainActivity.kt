@@ -1027,23 +1027,39 @@ class MainActivity : ComponentActivity() {
                                 enter = fadeIn(animationSpec = tween(durationMillis = 300)),
                                 exit = fadeOut(animationSpec = tween(durationMillis = 200)),
                             ) {
-                                val topFadeBrush = remember(baseBg) {
-                                    androidx.compose.ui.graphics.Brush.verticalGradient(
-                                        colors = listOf(
-                                            baseBg,
-                                            baseBg.copy(alpha = 0.9f),
-                                            baseBg.copy(alpha = 0.6f),
-                                            baseBg.copy(alpha = 0.1f),
+                                // M3PLAY EXACT BLUR BACKGROUND LOGIC
+                                Box(
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    val gradientColors = if (pureBlack) {
+                                        listOf(
+                                            Color.Black,
+                                            Color.Black.copy(alpha = 0.98f),
+                                            Color.Black.copy(alpha = 0.90f),
+                                            Color.Black.copy(alpha = 0.70f),
+                                            Color.Black.copy(alpha = 0.40f),
+                                            Color.Black.copy(alpha = 0.10f),
                                             Color.Transparent
                                         )
-                                    )
-                                }
+                                    } else {
+                                        listOf(
+                                            baseBg,
+                                            baseBg.copy(alpha = 0.98f),
+                                            baseBg.copy(alpha = 0.90f),
+                                            baseBg.copy(alpha = 0.70f),
+                                            baseBg.copy(alpha = 0.40f),
+                                            baseBg.copy(alpha = 0.10f),
+                                            Color.Transparent
+                                        )
+                                    }
 
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(topFadeBrush)
-                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(AppBarHeight + with(LocalDensity.current) { WindowInsets.systemBars.getTop(LocalDensity.current).toDp() } + 48.dp)
+                                            .background(androidx.compose.ui.graphics.Brush.verticalGradient(colors = gradientColors))
+                                    )
+
                                     TopAppBar(
                                         title = {
                                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1167,7 +1183,7 @@ class MainActivity : ComponentActivity() {
                                         },
                                         scrollBehavior = topAppBarScrollBehavior,
                                         colors = TopAppBarDefaults.topAppBarColors(
-                                            containerColor = Color.Transparent,
+                                            containerColor = Color.Transparent, // Set transparent to let our box background shine through
                                             scrolledContainerColor = Color.Transparent, 
                                             titleContentColor = MaterialTheme.colorScheme.onSurface,
                                             actionIconContentColor = MaterialTheme.colorScheme.onSurface,
@@ -1182,7 +1198,6 @@ class MainActivity : ComponentActivity() {
                                             }
                                         )
                                     )
-                                    Box(modifier = Modifier.height(24.dp))
                                 }
                             }
                         },
