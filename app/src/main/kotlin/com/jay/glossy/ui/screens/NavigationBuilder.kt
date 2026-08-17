@@ -59,6 +59,7 @@ import com.jay.glossy.ui.screens.settings.StorageSettings
 import com.jay.glossy.ui.screens.settings.StreamSourcesSettings
 import com.jay.glossy.ui.screens.settings.ThemeScreen
 import com.jay.glossy.ui.screens.settings.UpdaterScreen
+import com.jay.glossy.ui.screens.settings.AppFontSettingsScreen // NAYI SCREEN IMPORT KI HAI
 import com.jay.glossy.ui.screens.settings.integrations.DiscordSettings
 import com.jay.glossy.ui.screens.settings.integrations.IntegrationScreen
 import com.jay.glossy.ui.screens.settings.integrations.LastFMSettings
@@ -388,6 +389,11 @@ fun NavGraphBuilder.navigationBuilder(
 
     composable("settings/appearance") {
         AppearanceSettings(navController, activity, snackbarHostState)
+    }
+    
+    // NAYI SCREEN YAHAN DEFINE KI HAI
+    composable("settings/appearance/font") {
+        AppFontSettingsScreen(navController)
     }
 
     composable("settings/appearance/theme") {
