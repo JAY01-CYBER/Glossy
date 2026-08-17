@@ -59,7 +59,7 @@ import com.jay.glossy.ui.screens.settings.StorageSettings
 import com.jay.glossy.ui.screens.settings.StreamSourcesSettings
 import com.jay.glossy.ui.screens.settings.ThemeScreen
 import com.jay.glossy.ui.screens.settings.UpdaterScreen
-import com.jay.glossy.ui.screens.settings.AppFontSettingsScreen // NAYI SCREEN IMPORT KI HAI
+import com.jay.glossy.ui.screens.settings.AppFontSettingsScreen
 import com.jay.glossy.ui.screens.settings.integrations.DiscordSettings
 import com.jay.glossy.ui.screens.settings.integrations.IntegrationScreen
 import com.jay.glossy.ui.screens.settings.integrations.LastFMSettings
@@ -99,15 +99,11 @@ fun NavGraphBuilder.navigationBuilder(
                     popUpTo("welcome") { inclusive = true }
                 }
             },
-            onGoogleLoginClick = { // GOOGLE BUTTON CLICK FIX
-                coroutineScope.launch {
-                    context.safeDataStoreEdit { prefs ->
-                        prefs[booleanPreferencesKey("has_seen_welcome")] = true
-                    }
-                }
-                navController.navigate("login") {
-                    popUpTo("welcome") { inclusive = true }
-                }
+            onGoogleLoginClick = { 
+                // BUG FIX: Yahan 'has_seen_welcome' ko true nahi karna hai aur 
+                // 'welcome' screen ko history se delete (popUpTo) nahi karna hai.
+                // Sirf login screen par navigate karna hai.
+                navController.navigate("login")
             }
         )
     }
@@ -391,7 +387,6 @@ fun NavGraphBuilder.navigationBuilder(
         AppearanceSettings(navController, activity, snackbarHostState)
     }
     
-    // NAYI SCREEN YAHAN DEFINE KI HAI
     composable("settings/appearance/font") {
         AppFontSettingsScreen(navController)
     }
