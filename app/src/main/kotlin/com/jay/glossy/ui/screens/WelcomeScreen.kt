@@ -43,24 +43,20 @@ fun GlossyWelcomeScreen(
     var currentState by remember { mutableStateOf(WelcomeState.INTRO) }
     var guestName by remember { mutableStateOf("") }
     
-    // Theme check karna taaki UI uske hisaab se change ho
     val isDark = isSystemInDarkTheme()
     
-    // Theme ke hisaab se background image select karna
     val bgImage = if (isDark) R.drawable.welcome_bg_dark else R.drawable.welcome_bg_light
 
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
-        // NAYA WALLPAPER LOGIC
         Image(
             painter = painterResource(id = bgImage),
             contentDescription = "Welcome Background",
-            contentScale = ContentScale.Crop, // Screen par poora fit aayega
+            contentScale = ContentScale.Crop, 
             modifier = Modifier.fillMaxSize()
         )
 
-        // Semi-transparent overlay agar guest input ya loading screen ho
         if (currentState != WelcomeState.INTRO) {
             Box(
                 modifier = Modifier
@@ -130,9 +126,8 @@ fun IntroSection(isDark: Boolean, onGuestClick: () -> Unit, onGoogleClick: () ->
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.weight(1.8f))
 
-        // LOGO SIZE BADI KI HAI (84.dp)
         Icon(
             painter = painterResource(R.drawable.small_icon),
             contentDescription = "Glossy Logo",
@@ -148,12 +143,15 @@ fun IntroSection(isDark: Boolean, onGuestClick: () -> Unit, onGoogleClick: () ->
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(12.dp))
+        
+        // YAHAN PAR NAYA TEXT AUR ITALIC FONT STYLE ADD KIYA HAI
         Text(
-            text = "A Clean and Minimal Music Streaming app which\nis totally Free Without any subscription or\nAdvertisement",
+            text = "A beautifully crafted music player, made for the\nway you listen — completely free, with no\nsubscriptions and no ads",
             color = subTextColor,
             fontSize = 12.sp,
             textAlign = TextAlign.Center,
-            lineHeight = 18.sp
+            lineHeight = 18.sp,
+            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
         )
 
         Spacer(modifier = Modifier.height(48.dp))
@@ -184,7 +182,7 @@ fun IntroSection(isDark: Boolean, onGuestClick: () -> Unit, onGoogleClick: () ->
                 .padding(8.dp)
         )
 
-        Spacer(modifier = Modifier.weight(0.5f))
+        Spacer(modifier = Modifier.weight(0.4f))
 
         Text(
             text = "By tapping Get Started, I agree with the Terms of\nService and Privacy Policy.",
@@ -212,7 +210,6 @@ fun GuestInputSection(isDark: Boolean, name: String, onNameChange: (String) -> U
     ) {
         Spacer(modifier = Modifier.height(80.dp))
 
-        // LOGO SIZE BADI KI HAI (84.dp)
         Icon(
             painter = painterResource(R.drawable.small_icon),
             contentDescription = "Glossy Logo",
@@ -292,9 +289,8 @@ fun LoadingSection(isDark: Boolean, name: String) {
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.weight(1.8f))
 
-        // LOGO SIZE BADI KI HAI (84.dp)
         Icon(
             painter = painterResource(R.drawable.small_icon),
             contentDescription = "Glossy Logo",
