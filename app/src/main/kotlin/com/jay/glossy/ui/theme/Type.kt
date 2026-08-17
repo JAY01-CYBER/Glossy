@@ -13,7 +13,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-// 1. Aapke saare custom fonts yahan define kiye gaye hain
 val GoogleSansFontFamily = FontFamily(Font(R.font.google_sans, FontWeight.Normal))
 val GoogleSansFlexFontFamily = FontFamily(Font(R.font.google_sans_flex, FontWeight.Normal))
 val InterFontFamily = FontFamily(Font(R.font.inter, FontWeight.Normal))
@@ -22,9 +21,7 @@ val OutfitFontFamily = FontFamily(Font(R.font.outfit, FontWeight.Normal))
 val PlusJakartaSansFontFamily = FontFamily(Font(R.font.plus_jakarta_sans, FontWeight.Normal))
 val PoppinsFontFamily = FontFamily(Font(R.font.poppins, FontWeight.Normal))
 val RoundexFontFamily = FontFamily(Font(R.font.roundex, FontWeight.Normal))
-val BbhBartleFontFamily = FontFamily(Font(R.font.bbh_bartle_regular, FontWeight.Normal))
 
-// 2. Dynamic Typography Builder
 fun getTypography(brandFont: FontFamily, plainFont: FontFamily = FontFamily.Default): Typography = Typography(
     displayLarge = TextStyle(
         fontFamily = brandFont,
