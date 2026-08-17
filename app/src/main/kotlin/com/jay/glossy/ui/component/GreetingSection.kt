@@ -88,16 +88,19 @@ fun GreetingSection(userName: String) {
         // --- RIGHT SIDE: Buttons (Download & Liked) ---
         Column(
             horizontalAlignment = Alignment.End,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.width(IntrinsicSize.Max) // Dono buttons ko same size ka banane ke liye
         ) {
             // Download Button
             Surface(
                 shape = RoundedCornerShape(16.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                modifier = Modifier.clickable {
-                    // Seedha downloaded playlist par le jayega
-                    navController.navigate("auto_playlist/downloaded")
-                }
+                modifier = Modifier
+                    .fillMaxWidth() // Parent column ki max width lega
+                    .clickable {
+                        // Seedha downloaded playlist par le jayega
+                        navController.navigate("auto_playlist/downloaded")
+                    }
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -122,10 +125,12 @@ fun GreetingSection(userName: String) {
             Surface(
                 shape = RoundedCornerShape(16.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                modifier = Modifier.clickable {
-                    // Seedha Liked songs wali playlist par le jayega
-                    navController.navigate("auto_playlist/liked")
-                }
+                modifier = Modifier
+                    .fillMaxWidth() // Parent column ki max width lega
+                    .clickable {
+                        // Seedha Liked songs wali playlist par le jayega
+                        navController.navigate("auto_playlist/liked")
+                    }
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
