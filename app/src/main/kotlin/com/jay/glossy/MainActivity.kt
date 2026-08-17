@@ -103,6 +103,8 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
@@ -231,7 +233,6 @@ import javax.inject.Inject
 
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.compose.ui.platform.LocalContext
-import com.jay.glossy.ui.theme.bbhBartle
 
 @Suppress("DEPRECATION", "ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
 @AndroidEntryPoint
@@ -1027,7 +1028,6 @@ class MainActivity : ComponentActivity() {
                                 enter = fadeIn(animationSpec = tween(durationMillis = 300)),
                                 exit = fadeOut(animationSpec = tween(durationMillis = 200)),
                             ) {
-                                // M3PLAY EXACT BLUR BACKGROUND LOGIC
                                 Box(
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
@@ -1063,17 +1063,20 @@ class MainActivity : ComponentActivity() {
                                     TopAppBar(
                                         title = {
                                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                                // 1. Aapka Small Icon - Size aur bada kar diya (42.dp)
+                                                // 1. Aapka Small Icon - Size aur bada kar diya (48x48 space) aur padding adjust kar li taaki clear dikhe
                                                 Icon(
                                                     painter = painterResource(R.drawable.small_icon), 
                                                     contentDescription = null,
-                                                    modifier = Modifier.size(42.dp).padding(end = 8.dp),
+                                                    modifier = Modifier
+                                                        .padding(end = 12.dp)
+                                                        .size(52.dp),
                                                     tint = MaterialTheme.colorScheme.onSurface
                                                 )
-                                                // 2. NORMAL TEXT - No custom font, original bold look
+                                                // 2. TEXT WITH CUSTOM FONT
                                                 Text(
                                                     text = "Glossy",
                                                     style = MaterialTheme.typography.headlineMedium.copy(
+                                                        fontFamily = FontFamily(Font(R.font.roundex)),
                                                         fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                                                     ),
                                                     maxLines = 1,
