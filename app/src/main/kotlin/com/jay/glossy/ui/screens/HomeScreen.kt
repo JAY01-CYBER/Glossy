@@ -1205,6 +1205,18 @@ fun HomeScreen(
                 state = lazylistState,
                 contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
             ) {
+
+                // --- CHIP ROW SECTION ---
+                item {
+                    ChipsRow(
+                        chips = homePage?.chips?.map { it to it.title } ?: emptyList(),
+                        currentValue = selectedChip,
+                        onValueUpdate = {
+                            viewModel.toggleChip(it)
+                        },
+                    )
+                }
+
                 // --- GREETING SECTION START ---
                 item(key = "greeting_section") {
                     val guestNamePref by rememberPreference(stringPreferencesKey("guest_name"), "")
@@ -1219,15 +1231,6 @@ fun HomeScreen(
                 }
                 // --- GREETING SECTION END ---
 
-                item {
-                    ChipsRow(
-                        chips = homePage?.chips?.map { it to it.title } ?: emptyList(),
-                        currentValue = selectedChip,
-                        onValueUpdate = {
-                            viewModel.toggleChip(it)
-                        },
-                    )
-                }
 
                 if (isLoading && homePage?.chips.isNullOrEmpty()) {
                     item(key = "chips_shimmer") {
