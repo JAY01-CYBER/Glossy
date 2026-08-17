@@ -31,6 +31,10 @@ import kotlinx.coroutines.delay
 import com.jay.glossy.utils.safeDataStoreEdit
 import com.jay.glossy.R 
 
+// NAYE IMPORTS LOGIN CHECK KE LIYE
+import com.jay.glossy.constants.InnerTubeCookieKey
+import com.jay.glossy.utils.rememberPreference
+
 enum class WelcomeState {
     INTRO, GUEST_INPUT, LOADING
 }
@@ -46,6 +50,20 @@ fun GlossyWelcomeScreen(
     val isDark = isSystemInDarkTheme()
     
     val bgImage = if (isDark) R.drawable.welcome_bg_dark else R.drawable.welcome_bg_light
+
+    // ==========================================
+    // SMART LOGIN CHECKER: 
+    // Jaise hi login complete hoga (cookie aayegi), ye automatically Home Screen par bhej dega!
+    // ==========================================
+    val (cookie) = rememberPreference(InnerTubeCookieKey, defaultValue = "")
+    
+    LaunchedEffect(cookie) {
+        if (cookie.isNotBlank()) {
+            // Agar cookie mil gayi matlab user successfully login ho gaya hai
+            onSetupComplete("Google User") 
+        }
+    }
+    // ==========================================
 
     Box(
         modifier = Modifier.fillMaxSize()
@@ -144,7 +162,6 @@ fun IntroSection(isDark: Boolean, onGuestClick: () -> Unit, onGoogleClick: () ->
         )
         Spacer(modifier = Modifier.height(12.dp))
         
-        // YAHAN PAR NAYA TEXT AUR ITALIC FONT STYLE ADD KIYA HAI
         Text(
             text = "A beautifully crafted music player, made for the\nway you listen — completely free, with no\nsubscriptions and no ads",
             color = subTextColor,
