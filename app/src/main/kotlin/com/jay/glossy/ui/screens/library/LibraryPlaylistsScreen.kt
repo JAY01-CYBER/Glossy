@@ -91,8 +91,6 @@ import com.jay.glossy.ui.component.LibrarySearchHeader
 import com.jay.glossy.ui.component.LibraryPlaylistGridItem
 import com.jay.glossy.ui.component.LibraryPlaylistListItem
 import com.jay.glossy.ui.component.LocalMenuState
-import com.jay.glossy.ui.component.PlaylistGridItem
-import com.jay.glossy.ui.component.PlaylistListItem
 import com.jay.glossy.ui.component.SortHeader
 import com.jay.glossy.extensions.matchesNormalizedQuery
 import com.jay.glossy.extensions.normalizeForSearch
@@ -448,31 +446,49 @@ fun LibraryPlaylistsScreen(
                         }
                     }
 
+                    // Auto Playlists in pairs (Grid format) even inside List View
+                    val autoPlaylists = visibleResults.filter { it.autoPlaylist }
+                    val regularPlaylists = visibleResults.filter { !it.autoPlaylist }
+
+                    autoPlaylists.chunked(2).forEach { rowItems ->
+                        item(
+                            key = "auto_row_${rowItems.first().key}",
+                            contentType = CONTENT_TYPE_PLAYLIST
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp)
+                                    .animateItem()
+                            ) {
+                                rowItems.forEach { item ->
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        AutoPlaylistGridItem(
+                                            playlist = item.playlist,
+                                            onClick = { item.route?.let(navController::navigate) }
+                                        )
+                                    }
+                                }
+                                // If odd number, fill space
+                                if (rowItems.size == 1) {
+                                    Spacer(modifier = Modifier.weight(1f).padding(8.dp))
+                                }
+                            }
+                        }
+                    }
+
+                    // Normal playlists as standard list items
                     items(
-                        items = visibleResults,
+                        items = regularPlaylists,
                         key = { it.key },
                         contentType = { CONTENT_TYPE_PLAYLIST },
                     ) { item ->
-                        if (item.autoPlaylist) {
-                            PlaylistListItem(
-                                playlist = item.playlist,
-                                autoPlaylist = true,
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            item.route?.let(navController::navigate)
-                                        }
-                                        .animateItem(),
-                            )
-                        } else {
-                            LibraryPlaylistListItem(
-                                menuState = menuState,
-                                coroutineScope = coroutineScope,
-                                playlist = item.playlist,
-                                modifier = Modifier.animateItem(),
-                            )
-                        }
+                        LibraryPlaylistListItem(
+                            menuState = menuState,
+                            coroutineScope = coroutineScope,
+                            playlist = item.playlist,
+                            modifier = Modifier.animateItem(),
+                        )
                     }
                 }
             }
@@ -603,7 +619,7 @@ private fun AutoPlaylistGridItem(
 
     Box(
         modifier = modifier
-            .padding(8.dp) // Added gap here so they don't stick together
+            .padding(8.dp) 
             .fillMaxWidth()
             .height(115.dp)
             .clip(RoundedCornerShape(20.dp))
