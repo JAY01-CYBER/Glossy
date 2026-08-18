@@ -91,6 +91,8 @@ import com.jay.glossy.ui.component.LibrarySearchHeader
 import com.jay.glossy.ui.component.LibraryPlaylistGridItem
 import com.jay.glossy.ui.component.LibraryPlaylistListItem
 import com.jay.glossy.ui.component.LocalMenuState
+import com.jay.glossy.ui.component.PlaylistGridItem
+import com.jay.glossy.ui.component.PlaylistListItem
 import com.jay.glossy.ui.component.SortHeader
 import com.jay.glossy.extensions.matchesNormalizedQuery
 import com.jay.glossy.extensions.normalizeForSearch
@@ -335,6 +337,13 @@ fun LibraryPlaylistsScreen(
         )
     }
 
+    val inactivePillGradient = Brush.horizontalGradient(
+        colors = listOf(
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
+        )
+    )
+
     val headerContent = @Composable {
         LibrarySearchHeader(
             isSearchActive = isSearchActive,
@@ -347,20 +356,27 @@ fun LibraryPlaylistsScreen(
             keyboardController = keyboardController,
             modifier = Modifier.padding(start = 16.dp),
         ) {
-            SortHeader(
-                sortType = sortType,
-                sortDescending = sortDescending,
-                onSortTypeChange = onSortTypeChange,
-                onSortDescendingChange = onSortDescendingChange,
-                sortTypeText = { sortType ->
-                    when (sortType) {
-                        PlaylistSortType.CREATE_DATE -> R.string.sort_by_create_date
-                        PlaylistSortType.NAME -> R.string.sort_by_name
-                        PlaylistSortType.SONG_COUNT -> R.string.sort_by_song_count
-                        PlaylistSortType.LAST_UPDATED -> R.string.sort_by_last_updated
-                    }
-                },
-            )
+            // Pill shape for SortHeader
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50.dp))
+                    .background(inactivePillGradient)
+            ) {
+                SortHeader(
+                    sortType = sortType,
+                    sortDescending = sortDescending,
+                    onSortTypeChange = onSortTypeChange,
+                    onSortDescendingChange = onSortDescendingChange,
+                    sortTypeText = { sortType ->
+                        when (sortType) {
+                            PlaylistSortType.CREATE_DATE -> R.string.sort_by_create_date
+                            PlaylistSortType.NAME -> R.string.sort_by_name
+                            PlaylistSortType.SONG_COUNT -> R.string.sort_by_song_count
+                            PlaylistSortType.LAST_UPDATED -> R.string.sort_by_last_updated
+                        }
+                    },
+                )
+            }
 
             Spacer(Modifier.weight(1f))
 
@@ -372,39 +388,49 @@ fun LibraryPlaylistsScreen(
                 ),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.padding(end = 12.dp)
             )
 
-            IconButton(
-                onClick = { isSearchActive = true },
-                modifier = Modifier.padding(start = 8.dp).size(40.dp),
+            // Pill shape for Search and Grid
+            Row(
+                modifier = Modifier
+                    .padding(end = 16.dp)
+                    .clip(RoundedCornerShape(50.dp))
+                    .background(inactivePillGradient),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    painter = painterResource(R.drawable.search),
-                    contentDescription = stringResource(R.string.search),
-                )
-            }
+                IconButton(
+                    onClick = { isSearchActive = true },
+                    modifier = Modifier.size(40.dp),
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.search),
+                        contentDescription = stringResource(R.string.search),
+                    )
+                }
 
-            IconButton(
-                onClick = {
-                    viewType = viewType.toggle()
-                },
-                modifier = Modifier.padding(end = 8.dp).size(40.dp),
-            ) {
-                Icon(
-                    painter =
-                    painterResource(
-                        when (viewType) {
-                            LibraryViewType.LIST -> R.drawable.list
-                            LibraryViewType.GRID -> R.drawable.grid_view
-                        },
-                    ),
-                    contentDescription = stringResource(
-                        when (viewType) {
-                            LibraryViewType.LIST -> R.string.switch_to_grid_view
-                            LibraryViewType.GRID -> R.string.switch_to_list_view
-                        },
-                    ),
-                )
+                IconButton(
+                    onClick = {
+                        viewType = viewType.toggle()
+                    },
+                    modifier = Modifier.size(40.dp),
+                ) {
+                    Icon(
+                        painter =
+                        painterResource(
+                            when (viewType) {
+                                LibraryViewType.LIST -> R.drawable.list
+                                LibraryViewType.GRID -> R.drawable.grid_view
+                            },
+                        ),
+                        contentDescription = stringResource(
+                            when (viewType) {
+                                LibraryViewType.LIST -> R.string.switch_to_grid_view
+                                LibraryViewType.GRID -> R.string.switch_to_list_view
+                            },
+                        ),
+                    )
+                }
             }
         }
     }
@@ -446,7 +472,6 @@ fun LibraryPlaylistsScreen(
                         }
                     }
 
-                    // Auto Playlists in pairs (Grid format) even inside List View
                     val autoPlaylists = visibleResults.filter { it.autoPlaylist }
                     val regularPlaylists = visibleResults.filter { !it.autoPlaylist }
 
@@ -469,7 +494,6 @@ fun LibraryPlaylistsScreen(
                                         )
                                     }
                                 }
-                                // If odd number, fill space
                                 if (rowItems.size == 1) {
                                     Spacer(modifier = Modifier.weight(1f).padding(8.dp))
                                 }
@@ -477,7 +501,6 @@ fun LibraryPlaylistsScreen(
                         }
                     }
 
-                    // Normal playlists as standard list items
                     items(
                         items = regularPlaylists,
                         key = { it.key },
