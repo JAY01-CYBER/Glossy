@@ -354,7 +354,8 @@ fun LibraryPlaylistsScreen(
                 viewModel.updateSearchQuery("")
             },
             keyboardController = keyboardController,
-            modifier = Modifier.padding(start = 16.dp),
+            // Yahan top = 12.dp aur bottom = 12.dp padding add ki gayi hai spacing theek karne ke liye
+            modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp),
         ) {
             // Pill shape for SortHeader
             Box(
