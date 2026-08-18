@@ -366,9 +366,10 @@ fun LibrarySongsScreen(
                 key = "filter",
                 contentType = CONTENT_TYPE_HEADER,
             ) {
-                Row {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Spacer(Modifier.width(12.dp))
                     FilterChip(
+                        modifier = Modifier.padding(end = 8.dp).height(36.dp),
                         label = { Text(stringResource(R.string.songs)) },
                         selected = true,
                         colors = FilterChipDefaults.filterChipColors(containerColor = MaterialTheme.colorScheme.surface),
