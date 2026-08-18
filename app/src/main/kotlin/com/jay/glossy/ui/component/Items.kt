@@ -457,20 +457,20 @@ fun GridItem(
     Box(
         modifier = if (fillMaxWidth) {
             modifier
-                .padding(8.dp) // Item ke bahar ki spacing
+                .padding(horizontal = 8.dp, vertical = 4.dp) // Height adjust karne ke liye outer padding kam ki
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp)) // Card ke bahar ke corners
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)) // Soft background
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
         } else {
             modifier
-                .padding(8.dp)
-                .width((gridHeight * thumbnailRatio) + 24.dp) // Image width + padding
-                .clip(RoundedCornerShape(16.dp))
+                .padding(horizontal = 8.dp, vertical = 4.dp) // Height adjust karne ke liye outer padding kam ki
+                .width((gridHeight * thumbnailRatio) + 16.dp)
+                .clip(RoundedCornerShape(12.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
         }
     ) {
         Column(
-            modifier = Modifier.padding(12.dp) // Card ke andar ki spacing
+            modifier = Modifier.padding(8.dp) // Inner padding kam ki taaki text border se na takraye
         ) {
             BoxWithConstraints(
                 contentAlignment = Alignment.Center,
@@ -481,16 +481,19 @@ fun GridItem(
                 thumbnailContent()
             }
 
-            Spacer(modifier = Modifier.height(12.dp)) // Image aur Title ke beech gap
+            Spacer(modifier = Modifier.height(8.dp))
 
             title()
 
-            Spacer(modifier = Modifier.height(4.dp)) // Title aur Subtitle ke beech chhota gap
+            Spacer(modifier = Modifier.height(2.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 badges()
                 subtitle()
             }
+            
+            // Extra spacer taaki bottom ka text (jaise 'p' ya 'y') cut na ho
+            Spacer(modifier = Modifier.height(2.dp))
         }
     }
 }
@@ -514,7 +517,7 @@ fun GridItem(
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Start, // Text starting se align hoga
+            textAlign = TextAlign.Start,
             modifier = Modifier.fillMaxWidth()
         )
     },
@@ -527,6 +530,7 @@ fun GridItem(
             overflow = TextOverflow.Ellipsis,
         )
     },
+    badges = badges,
     thumbnailContent = thumbnailContent,
     thumbnailRatio = thumbnailRatio,
     fillMaxWidth = fillMaxWidth
