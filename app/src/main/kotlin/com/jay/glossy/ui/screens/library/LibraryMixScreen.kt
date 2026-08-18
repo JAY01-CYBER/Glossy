@@ -362,6 +362,12 @@ fun LibraryMixScreen(
         }
     }
 
+    // YAHAN PAR DATA KO CATEGORIES MEIN DIVIDE KIYA GAYA HAI
+    val groupedPlaylists = remember(filteredItems) { filteredItems.filterIsInstance<Playlist>() }
+    val groupedAlbums = remember(filteredItems) { filteredItems.filterIsInstance<Album>() }
+    val groupedArtists = remember(filteredItems) { filteredItems.filterIsInstance<Artist>() }
+    val groupedSongs = remember(filteredItems) { filteredItems.filterIsInstance<Song>() }
+
     val coroutineScope = rememberCoroutineScope()
 
     val lazyListState = rememberLazyListState()
@@ -484,292 +490,198 @@ fun LibraryMixScreen(
                         headerContent()
                     }
 
-                    if (showLikedPlaylist) {
-                        item(
-                            key = "likedPlaylist",
-                            contentType = { CONTENT_TYPE_PLAYLIST },
-                        ) {
-                            PlaylistListItem(
-                                playlist = likedPlaylist,
-                                autoPlaylist = true,
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            navController.navigate("auto_playlist/liked")
-                                        }.animateItem(),
-                            )
-                        }
+                    // Auto Playlists (Grid format inside List View)
+                    val activeAutoPlaylists = buildList {
+                        if (showLikedPlaylist) add(likedPlaylist to "auto_playlist/liked")
+                        if (showDownloadedPlaylist) add(downloadPlaylist to "auto_playlist/downloaded")
+                        if (showCachedPlaylists) add(cachedPlaylist to "cache_playlist/cached")
+                        if (showTopPlaylists) add(topPlaylist to "top_playlist/$topSize")
+                        if (showUploadedPlaylists) add(uploadedPlaylist to "auto_playlist/uploaded")
                     }
 
-                    if (showDownloadedPlaylist) {
+                    activeAutoPlaylists.chunked(2).forEach { rowItems ->
                         item(
-                            key = "downloadedPlaylist",
-                            contentType = { CONTENT_TYPE_PLAYLIST },
+                            key = "auto_row_${rowItems.first().first.playlist.name}",
+                            contentType = CONTENT_TYPE_PLAYLIST
                         ) {
-                            PlaylistListItem(
-                                playlist = downloadPlaylist,
-                                autoPlaylist = true,
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            navController.navigate("auto_playlist/downloaded")
-                                        }
-                                        .animateItem(),
-                            )
-                        }
-                    }
-
-                    if (showCachedPlaylists) {
-                        item(
-                            key = "cachedPlaylist",
-                            contentType = { CONTENT_TYPE_PLAYLIST },
-                        ) {
-                            PlaylistListItem(
-                                playlist = cachedPlaylist,
-                                autoPlaylist = true,
-                                modifier =
-                                Modifier
+                            Row(
+                                modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable {
-                                        navController.navigate("cache_playlist/cached")
+                                    .padding(horizontal = 8.dp)
+                                    .animateItem()
+                            ) {
+                                rowItems.forEach { (playlist, route) ->
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        AutoPlaylistGridItem(
+                                            playlist = playlist,
+                                            onClick = { navController.navigate(route) }
+                                        )
                                     }
-                                    .animateItem(),
-                            )
+                                }
+                                if (rowItems.size == 1) {
+                                    Spacer(modifier = Modifier.weight(1f).padding(8.dp))
+                                }
+                            }
                         }
                     }
 
-                    if (showTopPlaylists) {
-                        item(
-                            key = "TopPlaylist",
+                    // 1. PLAYLISTS SECTION
+                    if (groupedPlaylists.isNotEmpty()) {
+                        item(key = "header_playlists", contentType = CONTENT_TYPE_HEADER) {
+                            SectionHeader(title = "Playlists")
+                        }
+                        items(
+                            items = groupedPlaylists,
+                            key = { it.id },
                             contentType = { CONTENT_TYPE_PLAYLIST },
-                        ) {
+                        ) { item ->
                             PlaylistListItem(
-                                playlist = topPlaylist,
-                                autoPlaylist = true,
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            navController.navigate("top_playlist/$topSize")
-                                        }.animateItem(),
+                                playlist = item,
+                                trailingContent = {
+                                    IconButton(
+                                        onClick = {
+                                            menuState.show {
+                                                PlaylistMenu(
+                                                    playlist = item,
+                                                    coroutineScope = coroutineScope,
+                                                    onDismiss = menuState::dismiss,
+                                                )
+                                            }
+                                        },
+                                    ) {
+                                        Icon(painter = painterResource(R.drawable.more_vert), contentDescription = null)
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .combinedClickable(
+                                        onClick = {
+                                            if (!item.playlist.isEditable && item.songCount == 0 && item.playlist.browseId != null) {
+                                                navController.navigate("online_playlist/${item.playlist.browseId}")
+                                            } else {
+                                                navController.navigate("local_playlist/${item.id}")
+                                            }
+                                        },
+                                        onLongClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            menuState.show { PlaylistMenu(playlist = item, coroutineScope = coroutineScope, onDismiss = menuState::dismiss) }
+                                        },
+                                    ).animateItem(),
                             )
                         }
                     }
 
-                    if (showUploadedPlaylists) {
-                        item(
-                            key = "uploadedPlaylist",
+                    // 2. ALBUMS SECTION
+                    if (groupedAlbums.isNotEmpty()) {
+                        item(key = "header_albums", contentType = CONTENT_TYPE_HEADER) {
+                            SectionHeader(title = "Albums")
+                        }
+                        items(
+                            items = groupedAlbums,
+                            key = { it.id },
+                            contentType = { CONTENT_TYPE_PLAYLIST }, // Keeping consistent
+                        ) { item ->
+                            AlbumListItem(
+                                album = item,
+                                isActive = item.id == mediaMetadata?.album?.id,
+                                isPlaying = isPlaying,
+                                trailingContent = {
+                                    IconButton(
+                                        onClick = { menuState.show { AlbumMenu(originalAlbum = item, onDismiss = menuState::dismiss) } }
+                                    ) {
+                                        Icon(painter = painterResource(R.drawable.more_vert), contentDescription = null)
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .combinedClickable(
+                                        onClick = { navController.navigate("album/${item.id}") },
+                                        onLongClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            menuState.show { AlbumMenu(originalAlbum = item, onDismiss = menuState::dismiss) }
+                                        },
+                                    ).animateItem(),
+                            )
+                        }
+                    }
+
+                    // 3. ARTISTS SECTION
+                    if (groupedArtists.isNotEmpty()) {
+                        item(key = "header_artists", contentType = CONTENT_TYPE_HEADER) {
+                            SectionHeader(title = "Artists")
+                        }
+                        items(
+                            items = groupedArtists,
+                            key = { it.id },
                             contentType = { CONTENT_TYPE_PLAYLIST },
-                        ) {
-                            PlaylistListItem(
-                                playlist = uploadedPlaylist,
-                                autoPlaylist = true,
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            navController.navigate("auto_playlist/uploaded")
-                                        }.animateItem(),
+                        ) { item ->
+                            ArtistListItem(
+                                artist = item,
+                                trailingContent = {
+                                    IconButton(
+                                        onClick = { menuState.show { ArtistMenu(originalArtist = item, coroutineScope = coroutineScope, onDismiss = menuState::dismiss) } }
+                                    ) {
+                                        Icon(painter = painterResource(R.drawable.more_vert), contentDescription = null)
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .combinedClickable(
+                                        onClick = { navController.navigate("artist/${item.id}") },
+                                        onLongClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            menuState.show { ArtistMenu(originalArtist = item, coroutineScope = coroutineScope, onDismiss = menuState::dismiss) }
+                                        },
+                                    ).animateItem(),
                             )
                         }
                     }
 
-                    items(
-                        items = filteredItems,
-                        key = { it.id },
-                        contentType = { CONTENT_TYPE_PLAYLIST },
-                    ) { item ->
-                        when (item) {
-                            is Playlist -> {
-                                PlaylistListItem(
-                                    playlist = item,
-                                    trailingContent = {
-                                        IconButton(
-                                            onClick = {
-                                                menuState.show {
-                                                    PlaylistMenu(
-                                                        playlist = item,
-                                                        coroutineScope = coroutineScope,
-                                                        onDismiss = menuState::dismiss,
-                                                    )
-                                                }
-                                            },
-                                        ) {
-                                            Icon(
-                                                painter = painterResource(R.drawable.more_vert),
-                                                contentDescription = null,
-                                            )
-                                        }
-                                    },
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .combinedClickable(
-                                                onClick = {
-                                                    if (!item.playlist.isEditable && item.songCount == 0 &&
-                                                        item.playlist.browseId != null
-                                                    ) {
-                                                        navController.navigate("online_playlist/${item.playlist.browseId}")
-                                                    } else {
-                                                        navController.navigate("local_playlist/${item.id}")
-                                                    }
-                                                },
-                                                onLongClick = {
-                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    menuState.show {
-                                                        PlaylistMenu(
-                                                            playlist = item,
-                                                            coroutineScope = coroutineScope,
-                                                            onDismiss = menuState::dismiss,
-                                                        )
-                                                    }
-                                                },
-                                            ).animateItem(),
-                                )
-                            }
-
-                            is Song -> {
-                                SongListItem(
-                                    song = item,
-                                    showInLibraryIcon = true,
-                                    isActive = item.id == mediaMetadata?.id,
-                                    isPlaying = isPlaying,
-                                    trailingContent = {
-                                        IconButton(
-                                            onClick = {
-                                                menuState.show {
-                                                    SongMenu(
-                                                        originalSong = item,
-                                                        onDismiss = menuState::dismiss,
-                                                    )
-                                                }
-                                            },
-                                        ) {
-                                            Icon(
-                                                painter = painterResource(R.drawable.more_vert),
-                                                contentDescription = null,
-                                            )
-                                        }
-                                    },
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .combinedClickable(
-                                                onClick = {
-                                                    if (item.id == mediaMetadata?.id) {
-                                                        playerConnection.togglePlayPause()
-                                                    } else {
-                                                        val filteredSongs = filteredItems.filterIsInstance<Song>()
-                                                        playerConnection.playQueue(
-                                                            ListQueue(
-                                                                title = queueSearchedSongsStr,
-                                                                items = filteredSongs.map { it.toMediaItem() },
-                                                                startIndex = filteredSongs.indexOfFirst { it.id == item.id },
-                                                            ),
-                                                        )
-                                                    }
-                                                },
-                                                onLongClick = {
-                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    menuState.show {
-                                                        SongMenu(
-                                                            originalSong = item,
-                                                            onDismiss = menuState::dismiss,
-                                                        )
-                                                    }
-                                                },
-                                            )
-                                            .animateItem(),
-                                )
-                            }
-
-                            is Artist -> {
-                                ArtistListItem(
-                                    artist = item,
-                                    trailingContent = {
-                                        IconButton(
-                                            onClick = {
-                                                menuState.show {
-                                                    ArtistMenu(
-                                                        originalArtist = item,
-                                                        coroutineScope = coroutineScope,
-                                                        onDismiss = menuState::dismiss,
-                                                    )
-                                                }
-                                            },
-                                        ) {
-                                            Icon(
-                                                painter = painterResource(R.drawable.more_vert),
-                                                contentDescription = null,
-                                            )
-                                        }
-                                    },
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .combinedClickable(
-                                                onClick = {
-                                                    navController.navigate("artist/${item.id}")
-                                                },
-                                                onLongClick = {
-                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    menuState.show {
-                                                        ArtistMenu(
-                                                            originalArtist = item,
-                                                            coroutineScope = coroutineScope,
-                                                            onDismiss = menuState::dismiss,
-                                                        )
-                                                    }
-                                                },
-                                            ).animateItem(),
-                                )
-                            }
-
-                            is Album -> {
-                                AlbumListItem(
-                                    album = item,
-                                    isActive = item.id == mediaMetadata?.album?.id,
-                                    isPlaying = isPlaying,
-                                    trailingContent = {
-                                        IconButton(
-                                            onClick = {
-                                                menuState.show {
-                                                    AlbumMenu(
-                                                        originalAlbum = item,
-                                                        onDismiss = menuState::dismiss,
-                                                    )
-                                                }
-                                            },
-                                        ) {
-                                            Icon(
-                                                painter = painterResource(R.drawable.more_vert),
-                                                contentDescription = null,
-                                            )
-                                        }
-                                    },
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .combinedClickable(
-                                                onClick = {
-                                                    navController.navigate("album/${item.id}")
-                                                },
-                                                onLongClick = {
-                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    menuState.show {
-                                                        AlbumMenu(
-                                                            originalAlbum = item,
-                                                            onDismiss = menuState::dismiss,
-                                                        )
-                                                    }
-                                                },
-                                            ).animateItem(),
-                                )
-                            }
-
-                            else -> {}
+                    // 4. SONGS SECTION
+                    if (groupedSongs.isNotEmpty()) {
+                        item(key = "header_songs", contentType = CONTENT_TYPE_HEADER) {
+                            SectionHeader(title = "Songs")
+                        }
+                        items(
+                            items = groupedSongs,
+                            key = { it.id },
+                            contentType = { CONTENT_TYPE_PLAYLIST },
+                        ) { item ->
+                            SongListItem(
+                                song = item,
+                                showInLibraryIcon = true,
+                                isActive = item.id == mediaMetadata?.id,
+                                isPlaying = isPlaying,
+                                trailingContent = {
+                                    IconButton(
+                                        onClick = { menuState.show { SongMenu(originalSong = item, onDismiss = menuState::dismiss) } }
+                                    ) {
+                                        Icon(painter = painterResource(R.drawable.more_vert), contentDescription = null)
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .combinedClickable(
+                                        onClick = {
+                                            if (item.id == mediaMetadata?.id) {
+                                                playerConnection.togglePlayPause()
+                                            } else {
+                                                val fSongs = filteredItems.filterIsInstance<Song>()
+                                                playerConnection.playQueue(
+                                                    ListQueue(
+                                                        title = queueSearchedSongsStr,
+                                                        items = fSongs.map { it.toMediaItem() },
+                                                        startIndex = fSongs.indexOfFirst { it.id == item.id },
+                                                    ),
+                                                )
+                                            }
+                                        },
+                                        onLongClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            menuState.show { SongMenu(originalSong = item, onDismiss = menuState::dismiss) }
+                                        },
+                                    ).animateItem(),
+                            )
                         }
                     }
 
@@ -879,135 +791,132 @@ fun LibraryMixScreen(
                         }
                     }
 
-                    items(
-                        items = filteredItems,
-                        key = { it.id },
-                        contentType = { CONTENT_TYPE_PLAYLIST },
-                    ) { item ->
-                        when (item) {
-                            is Playlist -> {
-                                PlaylistGridItem(
-                                    playlist = item,
-                                    fillMaxWidth = true,
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .combinedClickable(
-                                                onClick = {
-                                                    if (!item.playlist.isEditable && item.songCount == 0 &&
-                                                        item.playlist.browseId != null
-                                                    ) {
-                                                        navController.navigate("online_playlist/${item.playlist.browseId}")
-                                                    } else {
-                                                        navController.navigate("local_playlist/${item.id}")
-                                                    }
-                                                },
-                                                onLongClick = {
-                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    menuState.show {
-                                                        PlaylistMenu(
-                                                            playlist = item,
-                                                            coroutineScope = coroutineScope,
-                                                            onDismiss = menuState::dismiss,
-                                                        )
-                                                    }
-                                                },
-                                            ).animateItem(),
-                                )
-                            }
+                    // 1. PLAYLISTS SECTION (GRID)
+                    if (groupedPlaylists.isNotEmpty()) {
+                        item(key = "header_playlists_grid", span = { GridItemSpan(maxLineSpan) }, contentType = CONTENT_TYPE_HEADER) {
+                            SectionHeader(title = "Playlists")
+                        }
+                        items(
+                            items = groupedPlaylists,
+                            key = { it.id },
+                            contentType = { CONTENT_TYPE_PLAYLIST },
+                        ) { item ->
+                            PlaylistGridItem(
+                                playlist = item,
+                                fillMaxWidth = true,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .combinedClickable(
+                                        onClick = {
+                                            if (!item.playlist.isEditable && item.songCount == 0 && item.playlist.browseId != null) {
+                                                navController.navigate("online_playlist/${item.playlist.browseId}")
+                                            } else {
+                                                navController.navigate("local_playlist/${item.id}")
+                                            }
+                                        },
+                                        onLongClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            menuState.show { PlaylistMenu(playlist = item, coroutineScope = coroutineScope, onDismiss = menuState::dismiss) }
+                                        },
+                                    ).animateItem(),
+                            )
+                        }
+                    }
 
-                            is Song -> {
-                                SongGridItem(
-                                    song = item,
-                                    showInLibraryIcon = true,
-                                    isActive = item.id == mediaMetadata?.id,
-                                    isPlaying = isPlaying,
-                                    fillMaxWidth = true,
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .combinedClickable(
-                                                onClick = {
-                                                    if (item.id == mediaMetadata?.id) {
-                                                        playerConnection.togglePlayPause()
-                                                    } else {
-                                                        val filteredSongs = filteredItems.filterIsInstance<Song>()
-                                                        playerConnection.playQueue(
-                                                            ListQueue(
-                                                                title = queueSearchedSongsStr,
-                                                                items = filteredSongs.map { it.toMediaItem() },
-                                                                startIndex = filteredSongs.indexOfFirst { it.id == item.id },
-                                                            ),
-                                                        )
-                                                    }
-                                                },
-                                                onLongClick = {
-                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    menuState.show {
-                                                        SongMenu(
-                                                            originalSong = item,
-                                                            onDismiss = menuState::dismiss,
-                                                        )
-                                                    }
-                                                },
-                                            )
-                                            .animateItem(),
-                                )
-                            }
+                    // 2. ALBUMS SECTION (GRID)
+                    if (groupedAlbums.isNotEmpty()) {
+                        item(key = "header_albums_grid", span = { GridItemSpan(maxLineSpan) }, contentType = CONTENT_TYPE_HEADER) {
+                            SectionHeader(title = "Albums")
+                        }
+                        items(
+                            items = groupedAlbums,
+                            key = { it.id },
+                            contentType = { CONTENT_TYPE_PLAYLIST },
+                        ) { item ->
+                            AlbumGridItem(
+                                album = item,
+                                isActive = item.id == mediaMetadata?.album?.id,
+                                isPlaying = isPlaying,
+                                coroutineScope = coroutineScope,
+                                fillMaxWidth = true,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .combinedClickable(
+                                        onClick = { navController.navigate("album/${item.id}") },
+                                        onLongClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            menuState.show { AlbumMenu(originalAlbum = item, onDismiss = menuState::dismiss) }
+                                        },
+                                    ).animateItem(),
+                            )
+                        }
+                    }
 
-                            is Artist -> {
-                                ArtistGridItem(
-                                    artist = item,
-                                    fillMaxWidth = true,
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .combinedClickable(
-                                                onClick = {
-                                                    navController.navigate("artist/${item.id}")
-                                                },
-                                                onLongClick = {
-                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    menuState.show {
-                                                        ArtistMenu(
-                                                            originalArtist = item,
-                                                            coroutineScope = coroutineScope,
-                                                            onDismiss = menuState::dismiss,
-                                                        )
-                                                    }
-                                                },
-                                            ).animateItem(),
-                                )
-                            }
+                    // 3. ARTISTS SECTION (GRID)
+                    if (groupedArtists.isNotEmpty()) {
+                        item(key = "header_artists_grid", span = { GridItemSpan(maxLineSpan) }, contentType = CONTENT_TYPE_HEADER) {
+                            SectionHeader(title = "Artists")
+                        }
+                        items(
+                            items = groupedArtists,
+                            key = { it.id },
+                            contentType = { CONTENT_TYPE_PLAYLIST },
+                        ) { item ->
+                            ArtistGridItem(
+                                artist = item,
+                                fillMaxWidth = true,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .combinedClickable(
+                                        onClick = { navController.navigate("artist/${item.id}") },
+                                        onLongClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            menuState.show { ArtistMenu(originalArtist = item, coroutineScope = coroutineScope, onDismiss = menuState::dismiss) }
+                                        },
+                                    ).animateItem(),
+                            )
+                        }
+                    }
 
-                            is Album -> {
-                                AlbumGridItem(
-                                    album = item,
-                                    isActive = item.id == mediaMetadata?.album?.id,
-                                    isPlaying = isPlaying,
-                                    coroutineScope = coroutineScope,
-                                    fillMaxWidth = true,
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .combinedClickable(
-                                                onClick = {
-                                                    navController.navigate("album/${item.id}")
-                                                },
-                                                onLongClick = {
-                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    menuState.show {
-                                                        AlbumMenu(
-                                                            originalAlbum = item,
-                                                            onDismiss = menuState::dismiss,
-                                                        )
-                                                    }
-                                                },
-                                            ).animateItem(),
-                                )
-                            }
-
-                            else -> {}
+                    // 4. SONGS SECTION (GRID)
+                    if (groupedSongs.isNotEmpty()) {
+                        item(key = "header_songs_grid", span = { GridItemSpan(maxLineSpan) }, contentType = CONTENT_TYPE_HEADER) {
+                            SectionHeader(title = "Songs")
+                        }
+                        items(
+                            items = groupedSongs,
+                            key = { it.id },
+                            contentType = { CONTENT_TYPE_PLAYLIST },
+                        ) { item ->
+                            SongGridItem(
+                                song = item,
+                                showInLibraryIcon = true,
+                                isActive = item.id == mediaMetadata?.id,
+                                isPlaying = isPlaying,
+                                fillMaxWidth = true,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .combinedClickable(
+                                        onClick = {
+                                            if (item.id == mediaMetadata?.id) {
+                                                playerConnection.togglePlayPause()
+                                            } else {
+                                                val fSongs = filteredItems.filterIsInstance<Song>()
+                                                playerConnection.playQueue(
+                                                    ListQueue(
+                                                        title = queueSearchedSongsStr,
+                                                        items = fSongs.map { it.toMediaItem() },
+                                                        startIndex = fSongs.indexOfFirst { it.id == item.id },
+                                                    ),
+                                                )
+                                            }
+                                        },
+                                        onLongClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            menuState.show { SongMenu(originalSong = item, onDismiss = menuState::dismiss) }
+                                        },
+                                    ).animateItem(),
+                            )
                         }
                     }
 
@@ -1060,6 +969,21 @@ fun LibraryMixScreen(
 }
 
 @Composable
+private fun SectionHeader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleLarge.copy(
+            fontWeight = FontWeight.Bold,
+            fontSize = 22.sp
+        ),
+        color = MaterialTheme.colorScheme.onBackground,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 8.dp)
+    )
+}
+
+@Composable
 private fun AutoPlaylistGridItem(
     playlist: Playlist,
     onClick: () -> Unit,
@@ -1102,7 +1026,7 @@ private fun AutoPlaylistGridItem(
 
     Box(
         modifier = modifier
-            .padding(8.dp) // Added gap here so they don't stick together
+            .padding(8.dp) 
             .fillMaxWidth()
             .height(115.dp)
             .clip(RoundedCornerShape(20.dp))
