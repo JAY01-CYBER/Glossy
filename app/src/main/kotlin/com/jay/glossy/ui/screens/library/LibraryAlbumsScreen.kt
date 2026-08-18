@@ -157,8 +157,6 @@ fun LibraryAlbumsScreen(
             when (sortType) {
                 AlbumSortType.NAME -> list.sortedBy { it.album.title.lowercase() }
                 AlbumSortType.ARTIST -> list.sortedBy { it.artists.joinToString { a -> a.name }.lowercase() }
-                AlbumSortType.YEAR -> list.sortedBy { it.album.year }
-                AlbumSortType.SONG_COUNT -> list.sortedBy { it.songCount }
                 else -> list
             }.let { if (sortDescending) it.reversed() else it }
         }
