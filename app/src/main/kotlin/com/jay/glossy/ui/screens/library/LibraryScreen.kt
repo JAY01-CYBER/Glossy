@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -32,7 +33,10 @@ fun LibraryScreen() {
 
     val filterContent = @Composable {
         // Yahan padding aur Spacer add kiya hai taaki chips upar ya left se na chipkein
-        Row(modifier = Modifier.padding(top = 12.dp, bottom = 8.dp)) {
+        Row(
+            modifier = Modifier.padding(top = 12.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Spacer(Modifier.width(12.dp))
             ChipsRow(
                 chips = listOf(
