@@ -13,7 +13,7 @@ media3 = "1.10.1"
 mediarouter = "1.8.1"
 castFramework = "22.3.1"
 room = "2.8.4"
-hilt = "2.60.1"
+hilt = "2.51.1"
 ktor = "3.5.2"
 ksp = "2.3.10"
 jsoup = "1.23.1"
@@ -115,7 +115,6 @@ junit = { module = "junit:junit", version.ref = "junit" }
 
 timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
 
-# newpipeextractor = { module = "com.github.TeamNewPipe:NewPipeExtractor", version.ref = "newpipeextractor" }
 extractor = { module = "com.github.MetrolistGroup:MetrolistExtractor", version.ref = "extractor" }
 
 kuromoji-ipadic = { module = "com.atilika.kuromoji:kuromoji-ipadic", version.ref = "kuromojiIpadic" }
