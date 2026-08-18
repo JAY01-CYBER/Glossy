@@ -6,7 +6,6 @@
 package com.jay.glossy.ui.screens.library
 
 import com.jay.glossy.R
-
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -136,8 +135,6 @@ fun LibraryArtistsScreen(
         baseArtists.let { list ->
             when (sortType) {
                 ArtistSortType.NAME -> list.sortedBy { it.artist.name.lowercase() }
-                ArtistSortType.SONG_COUNT -> list.sortedBy { it.songCount }
-                ArtistSortType.PLAY_TIME -> list.sortedBy { it.playTime }
                 else -> list // CREATE_DATE default
             }.let { if (sortDescending) it.reversed() else it }
         }
