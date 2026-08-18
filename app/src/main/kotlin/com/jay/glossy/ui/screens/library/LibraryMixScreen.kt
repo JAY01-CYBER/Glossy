@@ -241,7 +241,6 @@ fun LibraryMixScreen(
         showUploaded && matchesNormalizedQuery(normalizedQuery, uploadedPlaylist.playlist.name)
     val showCachedPlaylists = showCached && matchesNormalizedQuery(normalizedQuery, cachedPlaylist.playlist.name)
 
-
     val albums = viewModel.albums.collectAsStateWithLifecycle()
     val artist = viewModel.artists.collectAsStateWithLifecycle()
     val songs = viewModel.songs.collectAsStateWithLifecycle()
@@ -362,7 +361,6 @@ fun LibraryMixScreen(
         }
     }
 
-    // YAHAN PAR DATA KO CATEGORIES MEIN DIVIDE KIYA GAYA HAI
     val groupedPlaylists = remember(filteredItems) { filteredItems.filterIsInstance<Playlist>() }
     val groupedAlbums = remember(filteredItems) { filteredItems.filterIsInstance<Album>() }
     val groupedArtists = remember(filteredItems) { filteredItems.filterIsInstance<Artist>() }
@@ -394,6 +392,13 @@ fun LibraryMixScreen(
         }
     }
 
+    val inactivePillGradient = Brush.horizontalGradient(
+        colors = listOf(
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
+        )
+    )
+
     val headerContent = @Composable {
         LibrarySearchHeader(
             isSearchActive = isSearchActive,
@@ -406,53 +411,69 @@ fun LibraryMixScreen(
             keyboardController = keyboardController,
             modifier = Modifier.padding(start = 16.dp),
         ) {
-            SortHeader(
-                sortType = sortType,
-                sortDescending = sortDescending,
-                onSortTypeChange = onSortTypeChange,
-                onSortDescendingChange = onSortDescendingChange,
-                sortTypeText = { sortType ->
-                    when (sortType) {
-                        MixSortType.CREATE_DATE -> R.string.sort_by_create_date
-                        MixSortType.LAST_UPDATED -> R.string.sort_by_last_updated
-                        MixSortType.NAME -> R.string.sort_by_name
-                    }
-                },
-            )
-
-            Spacer(Modifier.weight(1f))
-
-            IconButton(
-                onClick = { isSearchActive = true },
-                modifier = Modifier.padding(start = 8.dp).size(40.dp),
+            // Pill shape for SortHeader
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50.dp))
+                    .background(inactivePillGradient)
             ) {
-                Icon(
-                    painter = painterResource(R.drawable.search),
-                    contentDescription = stringResource(R.string.search),
+                SortHeader(
+                    sortType = sortType,
+                    sortDescending = sortDescending,
+                    onSortTypeChange = onSortTypeChange,
+                    onSortDescendingChange = onSortDescendingChange,
+                    sortTypeText = { sortType ->
+                        when (sortType) {
+                            MixSortType.CREATE_DATE -> R.string.sort_by_create_date
+                            MixSortType.LAST_UPDATED -> R.string.sort_by_last_updated
+                            MixSortType.NAME -> R.string.sort_by_name
+                        }
+                    },
                 )
             }
 
-            IconButton(
-                onClick = {
-                    viewType = viewType.toggle()
-                },
-                modifier = Modifier.padding(end = 8.dp).size(40.dp),
+            Spacer(Modifier.weight(1f))
+
+            // Pill shape for Search and Grid
+            Row(
+                modifier = Modifier
+                    .padding(end = 16.dp)
+                    .clip(RoundedCornerShape(50.dp))
+                    .background(inactivePillGradient),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    painter =
-                    painterResource(
-                        when (viewType) {
-                            LibraryViewType.LIST -> R.drawable.list
-                            LibraryViewType.GRID -> R.drawable.grid_view
-                        },
-                    ),
-                    contentDescription = stringResource(
-                        when (viewType) {
-                            LibraryViewType.LIST -> R.string.switch_to_grid_view
-                            LibraryViewType.GRID -> R.string.switch_to_list_view
-                        },
-                    ),
-                )
+                IconButton(
+                    onClick = { isSearchActive = true },
+                    modifier = Modifier.size(40.dp),
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.search),
+                        contentDescription = stringResource(R.string.search),
+                    )
+                }
+
+                IconButton(
+                    onClick = {
+                        viewType = viewType.toggle()
+                    },
+                    modifier = Modifier.size(40.dp),
+                ) {
+                    Icon(
+                        painter =
+                        painterResource(
+                            when (viewType) {
+                                LibraryViewType.LIST -> R.drawable.list
+                                LibraryViewType.GRID -> R.drawable.grid_view
+                            },
+                        ),
+                        contentDescription = stringResource(
+                            when (viewType) {
+                                LibraryViewType.LIST -> R.string.switch_to_grid_view
+                                LibraryViewType.GRID -> R.string.switch_to_list_view
+                            },
+                        ),
+                    )
+                }
             }
         }
     }
@@ -490,7 +511,6 @@ fun LibraryMixScreen(
                         headerContent()
                     }
 
-                    // Auto Playlists (Grid format inside List View)
                     val activeAutoPlaylists = buildList {
                         if (showLikedPlaylist) add(likedPlaylist to "auto_playlist/liked")
                         if (showDownloadedPlaylist) add(downloadPlaylist to "auto_playlist/downloaded")
@@ -525,7 +545,6 @@ fun LibraryMixScreen(
                         }
                     }
 
-                    // 1. PLAYLISTS SECTION
                     if (groupedPlaylists.isNotEmpty()) {
                         item(key = "header_playlists", contentType = CONTENT_TYPE_HEADER) {
                             SectionHeader(title = "Playlists")
@@ -571,7 +590,6 @@ fun LibraryMixScreen(
                         }
                     }
 
-                    // 2. ALBUMS SECTION
                     if (groupedAlbums.isNotEmpty()) {
                         item(key = "header_albums", contentType = CONTENT_TYPE_HEADER) {
                             SectionHeader(title = "Albums")
@@ -579,7 +597,7 @@ fun LibraryMixScreen(
                         items(
                             items = groupedAlbums,
                             key = { it.id },
-                            contentType = { CONTENT_TYPE_PLAYLIST }, // Keeping consistent
+                            contentType = { CONTENT_TYPE_PLAYLIST }, 
                         ) { item ->
                             AlbumListItem(
                                 album = item,
@@ -605,7 +623,6 @@ fun LibraryMixScreen(
                         }
                     }
 
-                    // 3. ARTISTS SECTION
                     if (groupedArtists.isNotEmpty()) {
                         item(key = "header_artists", contentType = CONTENT_TYPE_HEADER) {
                             SectionHeader(title = "Artists")
@@ -637,7 +654,6 @@ fun LibraryMixScreen(
                         }
                     }
 
-                    // 4. SONGS SECTION
                     if (groupedSongs.isNotEmpty()) {
                         item(key = "header_songs", contentType = CONTENT_TYPE_HEADER) {
                             SectionHeader(title = "Songs")
@@ -791,7 +807,6 @@ fun LibraryMixScreen(
                         }
                     }
 
-                    // 1. PLAYLISTS SECTION (GRID)
                     if (groupedPlaylists.isNotEmpty()) {
                         item(key = "header_playlists_grid", span = { GridItemSpan(maxLineSpan) }, contentType = CONTENT_TYPE_HEADER) {
                             SectionHeader(title = "Playlists")
@@ -823,7 +838,6 @@ fun LibraryMixScreen(
                         }
                     }
 
-                    // 2. ALBUMS SECTION (GRID)
                     if (groupedAlbums.isNotEmpty()) {
                         item(key = "header_albums_grid", span = { GridItemSpan(maxLineSpan) }, contentType = CONTENT_TYPE_HEADER) {
                             SectionHeader(title = "Albums")
@@ -852,7 +866,6 @@ fun LibraryMixScreen(
                         }
                     }
 
-                    // 3. ARTISTS SECTION (GRID)
                     if (groupedArtists.isNotEmpty()) {
                         item(key = "header_artists_grid", span = { GridItemSpan(maxLineSpan) }, contentType = CONTENT_TYPE_HEADER) {
                             SectionHeader(title = "Artists")
@@ -878,7 +891,6 @@ fun LibraryMixScreen(
                         }
                     }
 
-                    // 4. SONGS SECTION (GRID)
                     if (groupedSongs.isNotEmpty()) {
                         item(key = "header_songs_grid", span = { GridItemSpan(maxLineSpan) }, contentType = CONTENT_TYPE_HEADER) {
                             SectionHeader(title = "Songs")
@@ -940,7 +952,6 @@ fun LibraryMixScreen(
             }
         }
 
-        // Always visible + button (no scroll hiding)
         FloatingActionButton(
             onClick = { showCreatePlaylistDialog = true },
             modifier = Modifier
