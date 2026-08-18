@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -9,12 +9,16 @@ import com.jay.glossy.R
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.jay.glossy.LocalNavController
 import com.jay.glossy.constants.ChipSortTypeKey
 import com.jay.glossy.constants.LibraryFilter
@@ -27,7 +31,9 @@ fun LibraryScreen() {
     var filterType by rememberEnumPreference(ChipSortTypeKey, LibraryFilter.LIBRARY)
 
     val filterContent = @Composable {
-        Row {
+        // Yahan padding aur Spacer add kiya hai taaki chips upar ya left se na chipkein
+        Row(modifier = Modifier.padding(top = 12.dp, bottom = 8.dp)) {
+            Spacer(Modifier.width(12.dp))
             ChipsRow(
                 chips = listOf(
                     LibraryFilter.PLAYLISTS to stringResource(R.string.filter_playlists),
