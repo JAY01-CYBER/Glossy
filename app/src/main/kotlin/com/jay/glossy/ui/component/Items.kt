@@ -1,8 +1,7 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
- * 
- * Optimized for minimal recomposition during navigation
+ * * Optimized for minimal recomposition during navigation
  */
 
 package com.jay.glossy.ui.component
@@ -440,6 +439,7 @@ fun ListItem(
     isActive = isActive
 )
 
+// Yahan se Naya Box-Type / Card Grid Design Shuru Hota Hai! 🔥
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun GridItem(
@@ -452,37 +452,45 @@ fun GridItem(
     fillMaxWidth: Boolean = false,
 ) {
     val gridHeight = currentGridThumbnailHeight()
-    Column(
+    
+    // Naya Box (Card) jo background aur rounded corners dega
+    Box(
         modifier = if (fillMaxWidth) {
             modifier
-                .padding(12.dp)
+                .padding(8.dp) // Item ke bahar ki spacing
                 .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp)) // Card ke bahar ke corners
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)) // Soft background
         } else {
             modifier
-                .padding(12.dp)
-                .width(gridHeight * thumbnailRatio)
+                .padding(8.dp)
+                .width((gridHeight * thumbnailRatio) + 24.dp) // Image width + padding
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
         }
     ) {
-        BoxWithConstraints(
-            contentAlignment = Alignment.Center,
-            modifier = if (fillMaxWidth) {
-                Modifier.fillMaxWidth()
-            } else {
-                Modifier.height(gridHeight)
-            }
-                .aspectRatio(thumbnailRatio)
+        Column(
+            modifier = Modifier.padding(12.dp) // Card ke andar ki spacing
         ) {
-            thumbnailContent()
-        }
+            BoxWithConstraints(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(thumbnailRatio)
+            ) {
+                thumbnailContent()
+            }
 
-        Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(12.dp)) // Image aur Title ke beech gap
 
-        title()
+            title()
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            badges()
+            Spacer(modifier = Modifier.height(4.dp)) // Title aur Subtitle ke beech chhota gap
 
-            subtitle()
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                badges()
+                subtitle()
+            }
         }
     }
 }
@@ -506,7 +514,7 @@ fun GridItem(
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Start,
+            textAlign = TextAlign.Start, // Text starting se align hoga
             modifier = Modifier.fillMaxWidth()
         )
     },
@@ -668,7 +676,7 @@ fun SongGridItem(
             thumbnailUrl = song.song.thumbnailUrl,
             isActive = isActive,
             isPlaying = isPlaying,
-            shape = RoundedCornerShape(ThumbnailCornerRadius),
+            shape = RoundedCornerShape(12.dp), // Image corner radius slightly smaller than card
             modifier = Modifier.size(gridHeight)
         )
         if (!isActive) {
@@ -748,7 +756,7 @@ fun ArtistGridItem(
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .fillMaxSize()
-                .clip(CircleShape)
+                .clip(CircleShape) // Circle shape for artists
         )
     },
     fillMaxWidth = fillMaxWidth,
@@ -900,7 +908,7 @@ fun AlbumGridItem(
             thumbnailUrl = album.album.thumbnailUrl,
             isActive = isActive,
             isPlaying = isPlaying,
-            shape = RoundedCornerShape(ThumbnailCornerRadius),
+            shape = RoundedCornerShape(12.dp),
         )
 
         AlbumPlayButton(
@@ -1100,7 +1108,7 @@ fun PlaylistGridItem(
                     )
                 }
             },
-            shape = RoundedCornerShape(ThumbnailCornerRadius)
+            shape = RoundedCornerShape(12.dp)
         )
     },
     fillMaxWidth = fillMaxWidth,
@@ -1304,7 +1312,7 @@ fun YouTubeGridItem(
             thumbnailUrl = item.thumbnail,
             isActive = isActive,
             isPlaying = isPlaying,
-            shape = if (item is ArtistItem) CircleShape else RoundedCornerShape(ThumbnailCornerRadius),
+            shape = if (item is ArtistItem) CircleShape else RoundedCornerShape(12.dp),
         )
 
         if (item is SongItem && !isActive) {
@@ -1371,7 +1379,7 @@ fun LocalSongsGrid(
             thumbnailUrl = thumbnailUrl,
             isActive = isActive,
             isPlaying = isPlaying,
-            shape = RoundedCornerShape(ThumbnailCornerRadius),
+            shape = RoundedCornerShape(12.dp),
             modifier = if (fillMaxWidth) Modifier.fillMaxWidth() else Modifier,
             showCenterPlay = true,
             playButtonVisible = false
@@ -1457,7 +1465,7 @@ fun LocalAlbumsGrid(
             thumbnailUrl = thumbnailUrl,
             isActive = isActive,
             isPlaying = isPlaying,
-            shape = RoundedCornerShape(ThumbnailCornerRadius),
+            shape = RoundedCornerShape(12.dp),
             modifier = if (fillMaxWidth) Modifier.fillMaxWidth() else Modifier,
             showCenterPlay = false,
             playButtonVisible = true
