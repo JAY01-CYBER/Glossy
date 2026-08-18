@@ -179,9 +179,10 @@ fun LibraryPodcastsScreen(
     ) {
         // Chip row header — same pattern as LibrarySongsScreen
         val chipsHeader = @Composable {
-            Row {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Spacer(Modifier.width(12.dp))
                 FilterChip(
+                    modifier = Modifier.padding(end = 8.dp).height(36.dp),
                     label = { Text(stringResource(R.string.filter_podcasts)) },
                     selected = true,
                     colors =
