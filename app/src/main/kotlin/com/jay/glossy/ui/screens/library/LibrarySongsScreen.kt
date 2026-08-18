@@ -6,7 +6,6 @@
 package com.jay.glossy.ui.screens.library
 
 import com.jay.glossy.R
-
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.widget.Toast
@@ -85,6 +84,7 @@ import com.jay.glossy.extensions.toMediaItem
 import com.jay.glossy.playback.queues.ListQueue
 import com.jay.glossy.ui.component.ChipsRow
 import com.jay.glossy.ui.component.DefaultDialog
+import com.jay.glossy.ui.component.EmptyPlaceholder
 import com.jay.glossy.ui.component.HideOnScrollFAB
 import com.jay.glossy.ui.component.LibrarySearchEmptyPlaceholder
 import com.jay.glossy.ui.component.LibrarySearchHeader
@@ -173,7 +173,6 @@ fun LibrarySongsScreen(
                             uploadProgress = 0f
 
                             try {
-                                // Get actual display name from content resolver
                                 var fileName = uri.lastPathSegment?.substringAfterLast('/') ?: "unknown"
                                 context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
                                     if (cursor.moveToFirst()) {
@@ -191,12 +190,7 @@ fun LibrarySongsScreen(
 
                                 if (extension !in YouTube.SUPPORTED_UPLOAD_TYPES) {
                                     withContext(Dispatchers.Main) {
-                                        Toast
-                                            .makeText(
-                                                context,
-                                                uploadUnsupportedFormatStr,
-                                                Toast.LENGTH_SHORT,
-                                            ).show()
+                                        Toast.makeText(context, uploadUnsupportedFormatStr, Toast.LENGTH_SHORT).show()
                                     }
                                     return@forEachIndexed
                                 }
@@ -209,61 +203,36 @@ fun LibrarySongsScreen(
 
                                 if (data.size > YouTube.MAX_UPLOAD_SIZE) {
                                     withContext(Dispatchers.Main) {
-                                        Toast
-                                            .makeText(
-                                                context,
-                                                uploadFileTooLargeStr,
-                                                Toast.LENGTH_SHORT,
-                                            ).show()
+                                        Toast.makeText(context, uploadFileTooLargeStr, Toast.LENGTH_SHORT).show()
                                     }
                                     return@forEachIndexed
                                 }
 
-                                val result =
-                                    YouTube.uploadSong(
-                                        filename = fileName,
-                                        data = data,
-                                        onProgress = { progress ->
-                                            uploadProgress = progress
-                                        },
-                                    )
+                                val result = YouTube.uploadSong(
+                                    filename = fileName,
+                                    data = data,
+                                    onProgress = { progress -> uploadProgress = progress },
+                                )
 
                                 if (result.isSuccess && result.getOrDefault(false)) {
                                     successCount++
                                 }
                             } catch (e: Exception) {
                                 withContext(Dispatchers.Main) {
-                                    Toast
-                                        .makeText(
-                                            context,
-                                            uploadFailedStr + ": ${e.message}",
-                                            Toast.LENGTH_SHORT,
-                                        ).show()
+                                    Toast.makeText(context, uploadFailedStr + ": ${e.message}", Toast.LENGTH_SHORT).show()
                                 }
                             }
                         }
 
                         isUploading = false
-
                         if (successCount > 0) {
-                            // Show completion briefly
                             uploadProgress = 1f
                             currentFileName = uploadCompleteStr
                             kotlinx.coroutines.delay(1000)
-
-                            // Show toast on main thread
                             withContext(Dispatchers.Main) {
-                                Toast
-                                    .makeText(
-                                        context,
-                                        uploadCompleteStr,
-                                        Toast.LENGTH_SHORT,
-                                    ).show()
+                                Toast.makeText(context, uploadCompleteStr, Toast.LENGTH_SHORT).show()
                             }
-
                             showUploadDialog = false
-
-                            // Refresh uploaded songs
                             viewModel.syncUploadedSongs()
                         } else {
                             showUploadDialog = false
@@ -284,10 +253,8 @@ fun LibrarySongsScreen(
     }
 
     val lazyListState = rememberLazyListState()
-
     val backStackEntry by navController.currentBackStackEntryAsState()
-    val scrollToTop =
-        backStackEntry?.savedStateHandle?.getStateFlow("scrollToTop", false)?.collectAsStateWithLifecycle()
+    val scrollToTop = backStackEntry?.savedStateHandle?.getStateFlow("scrollToTop", false)?.collectAsStateWithLifecycle()
 
     LaunchedEffect(scrollToTop?.value) {
         if (scrollToTop?.value == true) {
@@ -296,17 +263,22 @@ fun LibrarySongsScreen(
         }
     }
 
-    val filteredSongs =
-        (if (hideExplicit) {
-            songs.filter { !it.song.explicit }
-        } else {
-            songs
-        }).filter { song ->
+    // Fixed Sorting Logic
+    val filteredSongs = remember(songs, hideExplicit, normalizedQuery, sortType, sortDescending) {
+        val visibleSongs = if (hideExplicit) songs.filter { !it.song.explicit } else songs
+        visibleSongs.filter { song ->
             val artistNames = song.artists.map { it.name }.toTypedArray()
             matchesNormalizedQuery(normalizedQuery, song.song.title, song.album?.title, *artistNames)
+        }.let { list ->
+            when (sortType) {
+                SongSortType.NAME -> list.sortedBy { it.song.title.lowercase() }
+                SongSortType.ARTIST -> list.sortedBy { it.artists.joinToString { a -> a.name }.lowercase() }
+                SongSortType.PLAY_TIME -> list.sortedBy { it.song.duration }
+                else -> list // Default CREATE_DATE behavior
+            }.let { if (sortDescending) it.reversed() else it }
         }
+    }
 
-    // Upload progress dialog
     if (showUploadDialog) {
         DefaultDialog(
             onDismiss = {
@@ -316,12 +288,7 @@ fun LibrarySongsScreen(
                 }
                 showUploadDialog = false
             },
-            icon = {
-                Icon(
-                    painter = painterResource(R.drawable.upload),
-                    contentDescription = null,
-                )
-            },
+            icon = { Icon(painter = painterResource(R.drawable.upload), contentDescription = null) },
             title = { Text(stringResource(R.string.uploading)) },
             buttons = {
                 TextButton(
@@ -337,71 +304,49 @@ fun LibrarySongsScreen(
                 }
             },
         ) {
-            Text(
-                text = stringResource(R.string.upload_progress, currentUploadIndex, totalUploads),
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            Text(text = stringResource(R.string.upload_progress, currentUploadIndex, totalUploads), style = MaterialTheme.typography.bodyMedium)
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = currentFileName,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Text(text = currentFileName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(modifier = Modifier.height(16.dp))
-            LinearProgressIndicator(
-                progress = { uploadProgress },
-                modifier = Modifier.fillMaxWidth(),
-            )
+            LinearProgressIndicator(progress = { uploadProgress }, modifier = Modifier.fillMaxWidth())
         }
     }
 
-    Box(
-        modifier = Modifier.fillMaxSize(),
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             state = lazyListState,
             contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
         ) {
-            item(
-                key = "filter",
-                contentType = CONTENT_TYPE_HEADER,
-            ) {
-                Row {
+            item(key = "filter", contentType = CONTENT_TYPE_HEADER) {
+                // Fixed Alignment and Chip Size
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Spacer(Modifier.width(12.dp))
                     FilterChip(
+                        modifier = Modifier.padding(end = 8.dp).height(36.dp),
                         label = { Text(stringResource(R.string.songs)) },
                         selected = true,
                         colors = FilterChipDefaults.filterChipColors(containerColor = MaterialTheme.colorScheme.surface),
                         onClick = onDeselect,
                         shape = RoundedCornerShape(16.dp),
                         leadingIcon = {
-                            Icon(
-                                painter = painterResource(R.drawable.close),
-                                contentDescription = "",
-                            )
+                            Icon(painter = painterResource(R.drawable.close), contentDescription = "")
                         },
                     )
                     ChipsRow(
-                        chips =
-                            listOf(
-                                SongFilter.LIKED to stringResource(R.string.filter_liked),
-                                SongFilter.LIBRARY to stringResource(R.string.filter_library),
-                                SongFilter.UPLOADED to stringResource(R.string.filter_uploaded),
-                                SongFilter.DOWNLOADED to stringResource(R.string.filter_downloaded),
-                            ),
+                        chips = listOf(
+                            SongFilter.LIKED to stringResource(R.string.filter_liked),
+                            SongFilter.LIBRARY to stringResource(R.string.filter_library),
+                            SongFilter.UPLOADED to stringResource(R.string.filter_uploaded),
+                            SongFilter.DOWNLOADED to stringResource(R.string.filter_downloaded),
+                        ),
                         currentValue = filter,
-                        onValueUpdate = {
-                            filter = it
-                        },
+                        onValueUpdate = { filter = it },
                         modifier = Modifier.weight(1f),
                     )
                 }
             }
 
-            item(
-                key = "header",
-                contentType = CONTENT_TYPE_HEADER,
-            ) {
+            item(key = "header", contentType = CONTENT_TYPE_HEADER) {
                 val inactivePillGradient = Brush.horizontalGradient(
                     colors = listOf(
                         MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
@@ -420,19 +365,19 @@ fun LibrarySongsScreen(
                     keyboardController = keyboardController,
                     modifier = Modifier.padding(start = 16.dp),
                 ) {
-                    // Pill shape for SortHeader
+                    // Fixed Date Added Solid Shape
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(50.dp))
-                            .background(inactivePillGradient)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
                     ) {
                         SortHeader(
                             sortType = sortType,
                             sortDescending = sortDescending,
                             onSortTypeChange = onSortTypeChange,
                             onSortDescendingChange = onSortDescendingChange,
-                            sortTypeText = { sortType ->
-                                when (sortType) {
+                            sortTypeText = { type ->
+                                when (type) {
                                     SongSortType.CREATE_DATE -> R.string.sort_by_create_date
                                     SongSortType.NAME -> R.string.sort_by_name
                                     SongSortType.ARTIST -> R.string.sort_by_artist
@@ -445,18 +390,12 @@ fun LibrarySongsScreen(
                     Spacer(Modifier.weight(1f))
 
                     Text(
-                        text =
-                            pluralStringResource(
-                                R.plurals.n_song,
-                                filteredSongs.size,
-                                filteredSongs.size,
-                            ),
+                        text = pluralStringResource(R.plurals.n_song, filteredSongs.size, filteredSongs.size),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.padding(end = 12.dp)
                     )
 
-                    // Pill shape for Search Icon
                     Row(
                         modifier = Modifier
                             .padding(end = 16.dp)
@@ -464,25 +403,25 @@ fun LibrarySongsScreen(
                             .background(inactivePillGradient),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(
-                            onClick = { isSearchActive = true },
-                            modifier = Modifier.size(40.dp),
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.search),
-                                contentDescription = stringResource(R.string.search),
-                            )
+                        IconButton(onClick = { isSearchActive = true }, modifier = Modifier.size(40.dp)) {
+                            Icon(painter = painterResource(R.drawable.search), contentDescription = stringResource(R.string.search))
                         }
                     }
                 }
             }
 
-            if (filteredSongs.isEmpty() && searchQuery.isNotBlank()) {
-                item(
-                    key = "empty_search_result",
-                    contentType = CONTENT_TYPE_HEADER,
-                ) {
-                    LibrarySearchEmptyPlaceholder(modifier = Modifier.animateItem())
+            // Fixed Empty State Logic
+            if (filteredSongs.isEmpty()) {
+                item(key = "empty_search_result", contentType = CONTENT_TYPE_HEADER) {
+                    if (searchQuery.isNotBlank()) {
+                        LibrarySearchEmptyPlaceholder(modifier = Modifier.animateItem())
+                    } else {
+                        EmptyPlaceholder(
+                            icon = R.drawable.music_note,
+                            text = stringResource(R.string.library_song_empty),
+                            modifier = Modifier.animateItem(),
+                        )
+                    }
                 }
             }
 
@@ -500,65 +439,40 @@ fun LibrarySongsScreen(
                     showDownloadIcon = filter != SongFilter.DOWNLOADED,
                     trailingContent = {
                         IconButton(
-                            onClick = {
-                                menuState.show {
-                                    SongMenu(
-                                        originalSong = song,
-                                        onDismiss = menuState::dismiss,
-                                    )
-                                }
-                            },
+                            onClick = { menuState.show { SongMenu(originalSong = song, onDismiss = menuState::dismiss) } }
                         ) {
-                            Icon(
-                                painter = painterResource(R.drawable.more_vert),
-                                contentDescription = null,
-                            )
+                            Icon(painter = painterResource(R.drawable.more_vert), contentDescription = null)
                         }
                     },
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                if (song.id == mediaMetadata?.id) {
-                                    playerConnection.togglePlayPause()
-                                } else {
-                                    playerConnection.playQueue(
-                                        ListQueue(
-                                            title = queueAllSongsStr,
-                                            items = filteredSongs.map { it.toMediaItem() },
-                                            startIndex = index,
-                                        ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            if (song.id == mediaMetadata?.id) {
+                                playerConnection.togglePlayPause()
+                            } else {
+                                playerConnection.playQueue(
+                                    ListQueue(
+                                        title = queueAllSongsStr,
+                                        items = filteredSongs.map { it.toMediaItem() },
+                                        startIndex = index,
                                     )
-                                }
-                            }.animateItem(),
+                                )
+                            }
+                        }
+                        .animateItem(),
                 )
             }
         }
 
-        // Show upload FAB when on UPLOADED filter, shuffle FAB otherwise
         HideOnScrollFAB(
             visible = if (filter == SongFilter.UPLOADED) true else filteredSongs.isNotEmpty(),
             lazyListState = lazyListState,
             icon = if (filter == SongFilter.UPLOADED) R.drawable.upload else R.drawable.shuffle,
             onClick = {
                 if (filter == SongFilter.UPLOADED) {
-                    filePickerLauncher.launch(
-                        arrayOf(
-                            "audio/mpeg",
-                            "audio/mp4",
-                            "audio/x-m4a",
-                            "audio/flac",
-                            "audio/ogg",
-                            "audio/x-ms-wma",
-                        ),
-                    )
+                    filePickerLauncher.launch(arrayOf("audio/mpeg", "audio/mp4", "audio/x-m4a", "audio/flac", "audio/ogg", "audio/x-ms-wma"))
                 } else {
-                    playerConnection.playQueue(
-                        ListQueue(
-                            title = queueAllSongsStr,
-                            items = filteredSongs.shuffled().map { it.toMediaItem() },
-                        ),
-                    )
+                    playerConnection.playQueue(ListQueue(title = queueAllSongsStr, items = filteredSongs.shuffled().map { it.toMediaItem() }))
                 }
             },
         )
