@@ -1102,6 +1102,7 @@ private fun AutoPlaylistGridItem(
 
     Box(
         modifier = modifier
+            .padding(8.dp) // Added gap here so they don't stick together
             .fillMaxWidth()
             .height(115.dp)
             .clip(RoundedCornerShape(20.dp))
