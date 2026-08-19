@@ -177,9 +177,12 @@ fun LibraryPodcastsScreen(
                     },
                 ),
     ) {
-        // Chip row header — same pattern as LibrarySongsScreen
+        // Chip row header
         val chipsHeader = @Composable {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Spacer(Modifier.width(12.dp))
                 FilterChip(
                     modifier = Modifier.padding(end = 8.dp).height(36.dp),
@@ -355,38 +358,26 @@ fun LibraryPodcastsScreen(
                     }
 
                     item(key = "sort_header", contentType = CONTENT_TYPE_HEADER) {
-                        val inactivePillGradient = Brush.horizontalGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
-                            )
-                        )
-
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            modifier = Modifier.padding(horizontal = 16.dp, top = 8.dp, bottom = 8.dp),
                         ) {
-                            // Pill shape for SortHeader
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(50.dp))
-                                    .background(inactivePillGradient)
-                            ) {
-                                SortHeader(
-                                    sortType = sortType,
-                                    sortDescending = sortDescending,
-                                    onSortTypeChange = onSortTypeChange,
-                                    onSortDescendingChange = onSortDescendingChange,
-                                    sortTypeText = { st ->
-                                        when (st) {
-                                            SongSortType.CREATE_DATE -> R.string.sort_by_create_date
-                                            SongSortType.NAME -> R.string.sort_by_name
-                                            SongSortType.ARTIST -> R.string.sort_by_artist
-                                            SongSortType.PLAY_TIME -> R.string.sort_by_play_time
-                                        }
-                                    },
-                                )
-                            }
+                            // Replaced outer Box with pure SortHeader for Vivi SplitButton Design
+                            SortHeader(
+                                sortType = sortType,
+                                sortDescending = sortDescending,
+                                onSortTypeChange = onSortTypeChange,
+                                onSortDescendingChange = onSortDescendingChange,
+                                sortTypeText = { st ->
+                                    when (st) {
+                                        SongSortType.CREATE_DATE -> R.string.sort_by_create_date
+                                        SongSortType.NAME -> R.string.sort_by_name
+                                        SongSortType.ARTIST -> R.string.sort_by_artist
+                                        SongSortType.PLAY_TIME -> R.string.sort_by_play_time
+                                    }
+                                },
+                            )
+                            
                             Spacer(Modifier.weight(1f))
                             Text(
                                 text =
