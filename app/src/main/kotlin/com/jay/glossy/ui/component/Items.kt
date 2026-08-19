@@ -10,7 +10,12 @@ import com.jay.glossy.R
 
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandIn
 import androidx.compose.animation.fadeIn
@@ -33,6 +38,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -289,7 +295,7 @@ fun ClickableArtistText(
 }
 
 // ------------------------------------------------------------------------
-// PREMIUM LIST ITEM DESIGN (Compact Spacing, Thin Dividers & Exact Star Aligned)
+// PREMIUM LIST ITEM DESIGN (Ultra Compact Spacing, Thin Dividers)
 // ------------------------------------------------------------------------
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
@@ -313,15 +319,14 @@ inline fun ListItem(
             .fillMaxWidth()
             .background(
                 color = if (isSelected == true) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f) 
-                        else Color.Transparent, // Active Highlight hat gaya, ab transparent rahega Apple Music jaisa!
+                        else Color.Transparent, 
                 shape = if (isSelected == true) RoundedCornerShape(8.dp) else RoundedCornerShape(0.dp)
             )
             .drawBehind {
-                // Patli si bottom line draw karna
                 if (!isActive && isSelected != true) {
                     val strokeWidth = 0.5.dp.toPx() 
                     val y = size.height - strokeWidth / 2
-                    val startX = 86.dp.toPx() // 2dp pad + 14dp Box + 56dp image + 14dp spacing = 86dp
+                    val startX = 86.dp.toPx()
                     
                     drawLine(
                         color = dividerColor,
@@ -331,16 +336,22 @@ inline fun ListItem(
                     )
                 }
             }
-            // 2dp start padding aur 14dp ka Box milakar exact 16dp maintain karega image ke liye
-            .padding(start = 2.dp, end = 16.dp, top = 4.dp, bottom = 4.dp)
+            // EXTREMELY TIGHT PADDING (2.dp upar aur niche) APPLE MUSIC JAISE!
+            .padding(start = 2.dp, end = 16.dp, top = 2.dp, bottom = 2.dp)
     ) {
-        // Leading Content (Star / Liked Icon) fixed space allocation
-        Box(
-            modifier = Modifier.width(14.dp), 
-            contentAlignment = Alignment.CenterStart
-        ) {
-            if (leadingContent != null) {
-                leadingContent()
+        // Zero-Width Leading Content (Star)
+        if (leadingContent != null) {
+            Box(
+                modifier = Modifier.width(0.dp) 
+            ) {
+                Box(
+                    modifier = Modifier
+                        .offset(x = (-16).dp) 
+                        .width(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    leadingContent()
+                }
             }
         }
 
@@ -613,7 +624,7 @@ fun SongListItem(
                          painter = painterResource(R.drawable.favorite),
                          contentDescription = null,
                          tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                         modifier = Modifier.size(12.dp) // Perfect subtle size
+                         modifier = Modifier.size(14.dp)
                      )
                  }
              } else null,
@@ -1602,7 +1613,7 @@ fun ItemThumbnail(
             }
         }
 
-        // Ye raha Active visualizer and Dim Thumbnail fix
+        // Apply Apple Music Visualizer on Top of the Thumbnail if Active
         if (isActive) {
             Box(
                 contentAlignment = Alignment.Center,
@@ -1610,12 +1621,19 @@ fun ItemThumbnail(
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = 0.5f), shape)
             ) {
-                PlayingIndicatorBox(
-                    isActive = true,
-                    playWhenReady = isPlaying,
-                    color = Color.White,
-                    modifier = Modifier.fillMaxSize()
-                )
+                if (isPlaying) {
+                    AppleMusicVisualizer(
+                        color = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                } else {
+                    Icon(
+                        painter = painterResource(R.drawable.play),
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             }
         }
     }
@@ -1664,15 +1682,16 @@ fun LocalThumbnail(
                     .background(Color.Black.copy(alpha = 0.5f), shape)
             ) {
                 if (isPlaying) {
-                    PlayingIndicator(
+                    AppleMusicVisualizer(
                         color = Color.White,
-                        modifier = Modifier.height(24.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 } else {
                     Icon(
                         painter = painterResource(R.drawable.play),
                         contentDescription = null,
-                        tint = Color.White
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
@@ -2000,7 +2019,7 @@ object Icon {
             contentDescription = null,
             tint = MaterialTheme.colorScheme.error,
             modifier = Modifier
-                .size(14.dp)
+                .size(16.dp)
                 .padding(end = 4.dp)
         )
     }
@@ -2012,7 +2031,7 @@ object Icon {
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
             modifier = Modifier
-                .size(14.dp)
+                .size(16.dp)
                 .padding(end = 4.dp)
         )
     }
@@ -2025,13 +2044,13 @@ object Icon {
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                 modifier = Modifier
-                    .size(14.dp)
+                    .size(16.dp)
                     .padding(end = 4.dp)
             )
             STATE_QUEUED, STATE_DOWNLOADING -> CircularProgressIndicator(
                 strokeWidth = 2.dp,
                 modifier = Modifier
-                    .size(12.dp)
+                    .size(14.dp)
                     .padding(end = 4.dp)
             )
             else -> { /* no icon */ }
@@ -2045,8 +2064,47 @@ object Icon {
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
             modifier = Modifier
-                .size(14.dp)
+                .size(16.dp)
                 .padding(end = 4.dp)
         )
+    }
+}
+
+// NEW CUSTOM APPLE MUSIC STYLE VISUALIZER
+@Composable
+fun AppleMusicVisualizer(modifier: Modifier = Modifier, color: Color = Color.White) {
+    val infiniteTransition = rememberInfiniteTransition(label = "visualizer")
+    
+    // Alag alag timing aur heights se wave jaisa smooth feel aayega
+    val anim1 by infiniteTransition.animateFloat(
+        initialValue = 0.3f, targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(tween(400, easing = LinearEasing), RepeatMode.Reverse),
+        label = "bar1"
+    )
+    val anim2 by infiniteTransition.animateFloat(
+        initialValue = 1.0f, targetValue = 0.4f,
+        animationSpec = infiniteRepeatable(tween(300, easing = LinearEasing), RepeatMode.Reverse),
+        label = "bar2"
+    )
+    val anim3 by infiniteTransition.animateFloat(
+        initialValue = 0.5f, targetValue = 0.9f,
+        animationSpec = infiniteRepeatable(tween(500, easing = LinearEasing), RepeatMode.Reverse),
+        label = "bar3"
+    )
+    val anim4 by infiniteTransition.animateFloat(
+        initialValue = 0.8f, targetValue = 0.2f,
+        animationSpec = infiniteRepeatable(tween(350, easing = LinearEasing), RepeatMode.Reverse),
+        label = "bar4"
+    )
+
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(3.dp), // Dando ke beech ki jagah
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(modifier = Modifier.width(4.dp).fillMaxHeight(anim1).clip(RoundedCornerShape(50)).background(color))
+        Box(modifier = Modifier.width(4.dp).fillMaxHeight(anim2).clip(RoundedCornerShape(50)).background(color))
+        Box(modifier = Modifier.width(4.dp).fillMaxHeight(anim3).clip(RoundedCornerShape(50)).background(color))
+        Box(modifier = Modifier.width(4.dp).fillMaxHeight(anim4).clip(RoundedCornerShape(50)).background(color))
     }
 }
