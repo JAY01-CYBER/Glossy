@@ -83,6 +83,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastForEachIndexed
 import androidx.compose.ui.zIndex
 import androidx.media3.common.MediaItem
@@ -108,11 +109,8 @@ import com.jay.glossy.constants.CropAlbumArtKey
 import com.jay.glossy.constants.GridItemSize
 import com.jay.glossy.constants.GridItemsSizeKey
 import com.jay.glossy.constants.GridThumbnailHeight
-import com.jay.glossy.constants.ListItemHeight
-import com.jay.glossy.constants.ListThumbnailSize
 import com.jay.glossy.constants.SmallGridThumbnailHeight
 import com.jay.glossy.constants.SwipeToSongKey
-import com.jay.glossy.constants.ThumbnailCornerRadius
 import com.jay.glossy.db.entities.Album
 import com.jay.glossy.db.entities.Artist
 import com.jay.glossy.db.entities.ArtistEntity
@@ -287,6 +285,10 @@ fun ClickableArtistText(
     )
 }
 
+// ------------------------------------------------------------------------
+// PREMIUM LIST ITEM DESIGN (Matches 78310 screenshot)
+// ------------------------------------------------------------------------
+
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 inline fun ListItem(
@@ -295,6 +297,7 @@ inline fun ListItem(
     noinline subtitle: (@Composable RowScope.() -> Unit)? = null,
     thumbnailContent: @Composable () -> Unit,
     trailingContent: @Composable RowScope.() -> Unit = {},
+    noinline leadingContent: (@Composable () -> Unit)? = null,
     isSelected: Boolean? = false,
     isActive: Boolean = false,
     isAvailable: Boolean = true,
@@ -302,40 +305,45 @@ inline fun ListItem(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = if (isActive) {
-            modifier // playing highlight
-                .height(ListItemHeight)
-                .padding(horizontal = 8.dp)
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 4.dp)
                 .clip(RoundedCornerShape(8.dp))
                 .background(
-                    color = // selected active
-                        if (isSelected == true) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f)
-                        else MaterialTheme.colorScheme.secondaryContainer
+                    color = if (isSelected == true) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f)
+                            else MaterialTheme.colorScheme.secondaryContainer
                 )
         } else if (isSelected == true) {
-            modifier // inactive selected
-                .height(ListItemHeight)
-                .padding(horizontal = 8.dp)
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 4.dp)
                 .clip(RoundedCornerShape(8.dp))
                 .background(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
         } else {
-            modifier // default
-                .height(ListItemHeight)
-                .padding(horizontal = 8.dp)
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp) // Screenshot spacing
         }
     ) {
+        // Star Icon Area
+        if (leadingContent != null) {
+            leadingContent()
+        }
+
+        // Thumbnail Area
         Box(
-            modifier = Modifier.padding(6.dp),
+            modifier = Modifier.padding(end = 14.dp), // Space between image and text
             contentAlignment = Alignment.Center
         ) {
             thumbnailContent()
+            
             if (!isAvailable) {
                 Box(
                     modifier = Modifier
-                        .size(ListThumbnailSize)
-                        .align(Alignment.Center)
+                        .matchParentSize()
                         .background(
                             Color.Black.copy(alpha = 0.25f),
-                            RoundedCornerShape(ThumbnailCornerRadius)
+                            RoundedCornerShape(12.dp)
                         )
                 ) {
                     Icon(
@@ -343,27 +351,32 @@ inline fun ListItem(
                         contentDescription = null,
                         tint = Color.White,
                         modifier = Modifier
-                            .size(ListThumbnailSize / 2)
+                            .size(24.dp)
                             .align(Alignment.Center)
                             .graphicsLayer { alpha = 1f }
                     )
                 }
             }
         }
+        
+        // Texts Area
         Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = 6.dp)
+            modifier = Modifier.weight(1f),
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center
         ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium
+                ),
+                color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
 
             if (subtitle != null) {
+                Spacer(modifier = Modifier.height(2.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     subtitle()
                 }
@@ -383,17 +396,19 @@ fun ListItem(
     badges: @Composable RowScope.() -> Unit = {},
     thumbnailContent: @Composable () -> Unit,
     trailingContent: @Composable RowScope.() -> Unit = {},
+    leadingContent: (@Composable () -> Unit)? = null,
     isSelected: Boolean? = false,
     isActive: Boolean = false,
 ) = ListItem(
     title = title,
+    leadingContent = leadingContent,
     subtitle = {
         badges()
         if (subtitle != null) {
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.secondary,
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -415,18 +430,20 @@ fun ListItem(
     badges: @Composable RowScope.() -> Unit = {},
     thumbnailContent: @Composable () -> Unit,
     trailingContent: @Composable RowScope.() -> Unit = {},
+    leadingContent: (@Composable () -> Unit)? = null,
     isSelected: Boolean? = false,
     isActive: Boolean = false,
 ) = ListItem(
     title = title,
+    leadingContent = leadingContent,
     subtitle = {
         badges()
 
         if (!subtitle.isNullOrEmpty()) {
             Text(
                 text = subtitle,
-                color = MaterialTheme.colorScheme.secondary,
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -439,7 +456,10 @@ fun ListItem(
     isActive = isActive
 )
 
-// Yahan se Naya Box-Type / Card Grid Design Shuru Hota Hai! 🔥
+// ------------------------------------------------------------------------
+// GRID ITEM DESIGN
+// ------------------------------------------------------------------------
+
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun GridItem(
@@ -453,24 +473,23 @@ fun GridItem(
 ) {
     val gridHeight = currentGridThumbnailHeight()
     
-    // Naya Box (Card) jo background aur rounded corners dega
     Box(
         modifier = if (fillMaxWidth) {
             modifier
-                .padding(horizontal = 8.dp, vertical = 4.dp) // Height adjust karne ke liye outer padding kam ki
+                .padding(horizontal = 8.dp, vertical = 4.dp)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(12.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
         } else {
             modifier
-                .padding(horizontal = 8.dp, vertical = 4.dp) // Height adjust karne ke liye outer padding kam ki
+                .padding(horizontal = 8.dp, vertical = 4.dp)
                 .width((gridHeight * thumbnailRatio) + 16.dp)
                 .clip(RoundedCornerShape(12.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
         }
     ) {
         Column(
-            modifier = Modifier.padding(8.dp) // Inner padding kam ki taaki text border se na takraye
+            modifier = Modifier.padding(8.dp)
         ) {
             BoxWithConstraints(
                 contentAlignment = Alignment.Center,
@@ -492,7 +511,6 @@ fun GridItem(
                 subtitle()
             }
             
-            // Extra spacer taaki bottom ka text (jaise 'p' ya 'y') cut na ho
             Spacer(modifier = Modifier.height(2.dp))
         }
     }
@@ -536,6 +554,10 @@ fun GridItem(
     fillMaxWidth = fillMaxWidth
 )
 
+// ------------------------------------------------------------------------
+// SPECIFIC LIST ITEMS (Songs, Albums, Artists, etc)
+// ------------------------------------------------------------------------
+
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun SongListItem(
@@ -546,11 +568,9 @@ fun SongListItem(
     showInLibraryIcon: Boolean = false,
     showDownloadIcon: Boolean = true,
     subtitleOverride: String? = null,
-    thumbnailShape: Shape = RoundedCornerShape(ThumbnailCornerRadius),
+    thumbnailShape: Shape = RoundedCornerShape(12.dp),
     badges: @Composable RowScope.() -> Unit = {
-        if (showLikedIcon && song.song.liked) {
-            Icon.Favorite()
-        }
+        // Favorite Icon is moved to leadingContent for premium look
         if (song.song.explicit) {
             Icon.Explicit()
         }
@@ -574,6 +594,20 @@ fun SongListItem(
     val content: @Composable () -> Unit = {
          ListItem(
              title = song.song.title,
+             leadingContent = if (showLikedIcon) {
+                 {
+                     if (song.song.liked) {
+                         Icon(
+                             painter = painterResource(R.drawable.favorite),
+                             contentDescription = null,
+                             tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                             modifier = Modifier.size(18.dp).padding(end = 12.dp)
+                         )
+                     } else {
+                         Spacer(modifier = Modifier.width(30.dp))
+                     }
+                 }
+             } else null,
              subtitle = {
                   badges()
                   if (subtitleOverride == null) {
@@ -582,16 +616,16 @@ fun SongListItem(
                               song.orderedArtists.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name },
                               makeTimeString(song.song.duration * 1000L)
                           ),
-                          style = MaterialTheme.typography.bodySmall,
-                          color = MaterialTheme.colorScheme.secondary,
+                          style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
+                          color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                           maxLines = 1,
                           overflow = TextOverflow.Ellipsis,
                       )
                   } else {
                      Text(
                          text = subtitleOverride,
-                         style = MaterialTheme.typography.bodySmall,
-                         color = MaterialTheme.colorScheme.secondary,
+                         style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
+                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                          maxLines = 1,
                          overflow = TextOverflow.Ellipsis,
                      )
@@ -605,7 +639,7 @@ fun SongListItem(
                      isActive = isActive,
                      isPlaying = isPlaying,
                      shape = thumbnailShape,
-                     modifier = Modifier.size(ListThumbnailSize)
+                     modifier = Modifier.size(56.dp) // Premium fixed size
                  )
              },
              trailingContent = trailingContent,
@@ -680,7 +714,7 @@ fun SongGridItem(
             thumbnailUrl = song.song.thumbnailUrl,
             isActive = isActive,
             isPlaying = isPlaying,
-            shape = RoundedCornerShape(12.dp), // Image corner radius slightly smaller than card
+            shape = RoundedCornerShape(12.dp),
             modifier = Modifier.size(gridHeight)
         )
         if (!isActive) {
@@ -725,7 +759,7 @@ fun ArtistListItem(
                 .build(),
             contentDescription = null,
             modifier = Modifier
-                .size(ListThumbnailSize)
+                .size(56.dp)
                 .clip(CircleShape),
         )
     },
@@ -760,7 +794,7 @@ fun ArtistGridItem(
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .fillMaxSize()
-                .clip(CircleShape) // Circle shape for artists
+                .clip(CircleShape)
         )
     },
     fillMaxWidth = fillMaxWidth,
@@ -820,8 +854,8 @@ fun AlbumListItem(
                 pluralStringResource(R.plurals.n_song, album.album.songCount, album.album.songCount),
                 album.album.year?.toString()
             ),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.secondary,
+            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -831,8 +865,8 @@ fun AlbumListItem(
             thumbnailUrl = album.album.thumbnailUrl,
             isActive = isActive,
             isPlaying = isPlaying,
-            shape = RoundedCornerShape(ThumbnailCornerRadius),
-            modifier = Modifier.size(ListThumbnailSize)
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.size(56.dp)
         )
     },
     trailingContent = trailingContent,
@@ -991,7 +1025,7 @@ fun PlaylistListItem(
     thumbnailContent = {
         PlaylistThumbnail(
             thumbnails = playlist.thumbnails,
-            size = ListThumbnailSize,
+            size = 56.dp,
             placeHolder = {
                 val painter = when (playlist.playlist.name) {
                     stringResource(R.string.liked) -> R.drawable.favorite_border
@@ -1004,10 +1038,10 @@ fun PlaylistListItem(
                     painter = painterResource(painter),
                     contentDescription = null,
                     tint = LocalContentColor.current.copy(alpha = 0.8f),
-                    modifier = Modifier.size(ListThumbnailSize / 2)
+                    modifier = Modifier.size(28.dp)
                 )
             },
-            shape = RoundedCornerShape(ThumbnailCornerRadius)
+            shape = RoundedCornerShape(12.dp)
         )
     },
     trailingContent = trailingContent,
@@ -1147,7 +1181,10 @@ fun MediaMetadataListItem(
                         }
                     }
                 },
-                style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.secondary),
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                    fontSize = 14.sp
+                ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -1159,8 +1196,8 @@ fun MediaMetadataListItem(
                 isSelected = isSelected,
                 isActive = isActive,
                 isPlaying = isPlaying,
-                shape = RoundedCornerShape(ThumbnailCornerRadius),
-                modifier = Modifier.size(ListThumbnailSize)
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.size(56.dp)
             )
         },
         trailingContent = trailingContent,
@@ -1180,21 +1217,9 @@ fun YouTubeListItem(
     isPlaying: Boolean = false,
     isSwipeable: Boolean = true,
     trailingContent: @Composable RowScope.() -> Unit = {},
-    thumbnailShape: Shape = if (item is ArtistItem) CircleShape else RoundedCornerShape(ThumbnailCornerRadius),
+    thumbnailShape: Shape = if (item is ArtistItem) CircleShape else RoundedCornerShape(12.dp),
     badges: @Composable RowScope.() -> Unit = {
-        val database = LocalDatabase.current
-        val song by produceState<Song?>(initialValue = null, item.id) {
-            if (item is SongItem) value = database.song(item.id).firstOrNull()
-        }
-        val album by produceState<Album?>(initialValue = null, item.id) {
-            if (item is AlbumItem) value = database.album(item.id).firstOrNull()
-        }
-
-        if ((item is SongItem && song?.song?.liked == true) ||
-            (item is AlbumItem && album?.album?.bookmarkedAt != null)
-        ) {
-            Icon.Favorite()
-        }
+        // Favorite Icon moved to leadingContent
         if (item.explicit) Icon.Explicit()
         if (item is SongItem) {
             val download by LocalDownloadUtil.current.getDownload(item.id).collectAsStateWithLifecycle(null)
@@ -1203,10 +1228,32 @@ fun YouTubeListItem(
     },
 ) {
     val swipeEnabled by rememberPreference(SwipeToSongKey, defaultValue = false)
+    
+    val database = LocalDatabase.current
+    val song by produceState<Song?>(initialValue = null, item.id) {
+        if (item is SongItem) value = database.song(item.id).firstOrNull()
+    }
+    val album by produceState<Album?>(initialValue = null, item.id) {
+        if (item is AlbumItem) value = database.album(item.id).firstOrNull()
+    }
+
+    val isLiked = (item is SongItem && song?.song?.liked == true) || (item is AlbumItem && album?.album?.bookmarkedAt != null)
 
     val content: @Composable () -> Unit = {
         ListItem(
             title = item.title,
+            leadingContent = {
+                if (isLiked) {
+                    Icon(
+                        painter = painterResource(R.drawable.favorite),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                        modifier = Modifier.size(18.dp).padding(end = 12.dp)
+                    )
+                } else if (item is SongItem) {
+                    Spacer(modifier = Modifier.width(30.dp))
+                }
+            },
             subtitle = when (item) {
                 is SongItem -> joinByBullet(item.artists.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name }, makeTimeString(item.duration?.times(1000L)))
                 is AlbumItem -> joinByBullet(item.artists?.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name }, item.year?.toString())
@@ -1224,7 +1271,7 @@ fun YouTubeListItem(
                     isActive = isActive,
                     isPlaying = isPlaying,
                     shape = thumbnailShape,
-                    modifier = Modifier.size(ListThumbnailSize)
+                    modifier = Modifier.size(56.dp)
                 )
             },
             trailingContent = trailingContent,
