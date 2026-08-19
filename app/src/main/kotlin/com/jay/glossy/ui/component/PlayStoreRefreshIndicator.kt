@@ -1,5 +1,6 @@
 package com.jay.glossy.ui.component
 
+import android.graphics.Matrix
 import androidx.compose.animation.animateColor
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
@@ -23,12 +24,15 @@ import androidx.compose.ui.graphics.asComposePath
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-// Nayi library ke imports
+
+// Nayi library ke imports + toPath() import jo miss ho gaya tha
 import androidx.graphics.shapes.CornerRounding
 import androidx.graphics.shapes.Morph
 import androidx.graphics.shapes.RoundedPolygon
 import androidx.graphics.shapes.circle
 import androidx.graphics.shapes.star
+import androidx.graphics.shapes.toPath
+
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,8 +42,8 @@ fun PlayStoreRefreshIndicator(
     state: PullToRefreshState,
     modifier: Modifier = Modifier
 ) {
-    // Swipe down progress ko 0.0 se 1.0 ke beech limit karna
-    val progress = state.progress.coerceIn(0f, 1f)
+    // FIX 1: Naye Material 3 mein 'progress' ko 'distanceFraction' kehte hain
+    val progress = state.distanceFraction.coerceIn(0f, 1f)
     
     // Infinite Animations
     val infiniteTransition = rememberInfiniteTransition(label = "refresh_transition")
@@ -84,7 +88,7 @@ fun PlayStoreRefreshIndicator(
         label = "color"
     )
 
-    // Shapes Define Karna (Image wala starburst bhi yahi hai)
+    // Shapes Define Karna 
     val starburst = remember { RoundedPolygon.star(numVerticesPerRadius = 12, innerRadius = 0.7f, rounding = CornerRounding(0.15f)) }
     val triangle = remember { RoundedPolygon(numVertices = 3, rounding = CornerRounding(0.25f)) }
     val square = remember { RoundedPolygon(numVertices = 4, rounding = CornerRounding(0.3f)) }
@@ -111,35 +115,32 @@ fun PlayStoreRefreshIndicator(
                 shadowElevation = 6.dp.toPx()
                 shape = CircleShape
             }
-            .background(MaterialTheme.colorScheme.surface), // White/Dark surface background
+            .background(MaterialTheme.colorScheme.surface), 
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.size(26.dp)) {
             val currentMorphProgress = if (isRefreshing) morphProgress else 0f
             val currentRotation = if (isRefreshing) rotation else progress * 180f
-            val currentColor = if (isRefreshing) color else Color(0xFF4285F4) // Khinchte waqt sirf Blue rahega
+            val currentColor = if (isRefreshing) color else Color(0xFF4285F4) 
 
-            // Calculate current shape
             val morph = when (currentMorphProgress.toInt() % 4) {
                 0 -> morph1
                 1 -> morph2
                 2 -> morph3
                 else -> morph4
             }
-            // Morph ke beech ki timing
+            
             val fraction = currentMorphProgress - currentMorphProgress.toInt()
 
-            // Shape ko Android Path mein convert karna
+            // FIX 2: toPath() ka import ab file ke top par theek se add kar diya gaya hai
             val androidPath = morph.toPath(progress = fraction)
 
-            // Shape ko Canvas ke size ke hisaab se scale aur rotate karna
-            val matrix = android.graphics.Matrix()
+            val matrix = Matrix()
             matrix.setScale(size.width / 2f, size.height / 2f)
             matrix.postTranslate(size.width / 2f, size.height / 2f)
             matrix.postRotate(currentRotation, size.width / 2f, size.height / 2f)
             androidPath.transform(matrix)
 
-            // Compose Canvas par draw karna
             drawPath(
                 path = androidPath.asComposePath(),
                 color = currentColor
