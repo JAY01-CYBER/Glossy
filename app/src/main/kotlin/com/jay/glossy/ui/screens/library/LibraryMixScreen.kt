@@ -409,29 +409,22 @@ fun LibraryMixScreen(
                 viewModel.updateSearchQuery("")
             },
             keyboardController = keyboardController,
-            // Yahan top = 12.dp aur bottom = 12.dp padding add ki gayi hai spacing theek karne ke liye
             modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp),
         ) {
-            // Pill shape for SortHeader
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(50.dp))
-                    .background(inactivePillGradient)
-            ) {
-                SortHeader(
-                    sortType = sortType,
-                    sortDescending = sortDescending,
-                    onSortTypeChange = onSortTypeChange,
-                    onSortDescendingChange = onSortDescendingChange,
-                    sortTypeText = { sortType ->
-                        when (sortType) {
-                            MixSortType.CREATE_DATE -> R.string.sort_by_create_date
-                            MixSortType.LAST_UPDATED -> R.string.sort_by_last_updated
-                            MixSortType.NAME -> R.string.sort_by_name
-                        }
-                    },
-                )
-            }
+            // Yahan se Box wala pill shape nikal diya hai, seedha SortHeader laga diya
+            SortHeader(
+                sortType = sortType,
+                sortDescending = sortDescending,
+                onSortTypeChange = onSortTypeChange,
+                onSortDescendingChange = onSortDescendingChange,
+                sortTypeText = { sortType ->
+                    when (sortType) {
+                        MixSortType.CREATE_DATE -> R.string.sort_by_create_date
+                        MixSortType.LAST_UPDATED -> R.string.sort_by_last_updated
+                        MixSortType.NAME -> R.string.sort_by_name
+                    }
+                },
+            )
 
             Spacer(Modifier.weight(1f))
 
