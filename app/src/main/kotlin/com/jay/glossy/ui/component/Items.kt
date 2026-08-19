@@ -23,6 +23,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -61,6 +62,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
@@ -286,7 +289,7 @@ fun ClickableArtistText(
 }
 
 // ------------------------------------------------------------------------
-// PREMIUM LIST ITEM DESIGN (Matches 78310 screenshot)
+// PREMIUM LIST ITEM DESIGN (Dividers & Aligned Thumbnails)
 // ------------------------------------------------------------------------
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
@@ -302,32 +305,50 @@ inline fun ListItem(
     isActive: Boolean = false,
     isAvailable: Boolean = true,
 ) {
+    val dividerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+    
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = if (isActive) {
-            modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(
-                    color = if (isSelected == true) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f)
-                            else MaterialTheme.colorScheme.secondaryContainer
-                )
-        } else if (isSelected == true) {
-            modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-        } else {
-            modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp) // Screenshot spacing
-        }
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                color = if (isActive) MaterialTheme.colorScheme.secondaryContainer 
+                        else if (isSelected == true) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f) 
+                        else Color.Transparent,
+                shape = if (isActive || isSelected == true) RoundedCornerShape(8.dp) else RoundedCornerShape(0.dp)
+            )
+            .drawBehind {
+                // Draw a patli (thin) line starting exactly below the text
+                if (!isActive && isSelected != true) {
+                    val strokeWidth = 0.5.dp.toPx() 
+                    val y = size.height - strokeWidth / 2
+                    // 16dp pad + 56dp image + 14dp text pad = 86dp perfectly aligns with text
+                    val startX = 86.dp.toPx() 
+                    
+                    drawLine(
+                        color = dividerColor,
+                        start = Offset(startX, y),
+                        end = Offset(size.width, y),
+                        strokeWidth = strokeWidth
+                    )
+                }
+            }
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        // Star Icon Area
+        // Zero-Width Leading Content (Star)
         if (leadingContent != null) {
-            leadingContent()
+            Box(
+                modifier = Modifier.width(0.dp) 
+            ) {
+                Box(
+                    modifier = Modifier
+                        .offset(x = (-16).dp) 
+                        .width(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    leadingContent()
+                }
+            }
         }
 
         // Thumbnail Area
@@ -342,7 +363,7 @@ inline fun ListItem(
                     modifier = Modifier
                         .matchParentSize()
                         .background(
-                            Color.Black.copy(alpha = 0.25f),
+                            Color.Black.copy(alpha = 0.35f),
                             RoundedCornerShape(12.dp)
                         )
                 ) {
@@ -362,7 +383,7 @@ inline fun ListItem(
         // Texts Area
         Column(
             modifier = Modifier.weight(1f),
-            verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center
+            verticalArrangement = Arrangement.Center
         ) {
             Text(
                 text = title,
@@ -570,7 +591,6 @@ fun SongListItem(
     subtitleOverride: String? = null,
     thumbnailShape: Shape = RoundedCornerShape(12.dp),
     badges: @Composable RowScope.() -> Unit = {
-        // Favorite Icon is moved to leadingContent for premium look
         if (song.song.explicit) {
             Icon.Explicit()
         }
@@ -594,18 +614,14 @@ fun SongListItem(
     val content: @Composable () -> Unit = {
          ListItem(
              title = song.song.title,
-             leadingContent = if (showLikedIcon) {
+             leadingContent = if (showLikedIcon && song.song.liked) {
                  {
-                     if (song.song.liked) {
-                         Icon(
-                             painter = painterResource(R.drawable.favorite),
-                             contentDescription = null,
-                             tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                             modifier = Modifier.size(18.dp).padding(end = 12.dp)
-                         )
-                     } else {
-                         Spacer(modifier = Modifier.width(30.dp))
-                     }
+                     Icon(
+                         painter = painterResource(R.drawable.favorite),
+                         contentDescription = null,
+                         tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                         modifier = Modifier.size(14.dp)
+                     )
                  }
              } else null,
              subtitle = {
@@ -639,7 +655,7 @@ fun SongListItem(
                      isActive = isActive,
                      isPlaying = isPlaying,
                      shape = thumbnailShape,
-                     modifier = Modifier.size(56.dp) // Premium fixed size
+                     modifier = Modifier.size(56.dp)
                  )
              },
              trailingContent = trailingContent,
@@ -739,8 +755,8 @@ fun ArtistListItem(
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.error,
                 modifier = Modifier
-                    .size(18.dp)
-                    .padding(end = 2.dp),
+                    .size(16.dp)
+                    .padding(end = 4.dp),
             )
         }
     },
@@ -834,7 +850,12 @@ fun AlbumListItem(
         }
 
         if (showLikedIcon && album.album.bookmarkedAt != null) {
-            Icon.Favorite()
+            Icon(
+                painter = painterResource(R.drawable.favorite),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                modifier = Modifier.size(16.dp).padding(end = 4.dp)
+            )
         }
         if (album.album.explicit) {
             Icon.Explicit()
@@ -1219,7 +1240,6 @@ fun YouTubeListItem(
     trailingContent: @Composable RowScope.() -> Unit = {},
     thumbnailShape: Shape = if (item is ArtistItem) CircleShape else RoundedCornerShape(12.dp),
     badges: @Composable RowScope.() -> Unit = {
-        // Favorite Icon moved to leadingContent
         if (item.explicit) Icon.Explicit()
         if (item is SongItem) {
             val download by LocalDownloadUtil.current.getDownload(item.id).collectAsStateWithLifecycle(null)
@@ -1242,18 +1262,16 @@ fun YouTubeListItem(
     val content: @Composable () -> Unit = {
         ListItem(
             title = item.title,
-            leadingContent = {
-                if (isLiked) {
+            leadingContent = if (isLiked) {
+                {
                     Icon(
                         painter = painterResource(R.drawable.favorite),
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                        modifier = Modifier.size(18.dp).padding(end = 12.dp)
+                        modifier = Modifier.size(14.dp)
                     )
-                } else if (item is SongItem) {
-                    Spacer(modifier = Modifier.width(30.dp))
                 }
-            },
+            } else null,
             subtitle = when (item) {
                 is SongItem -> joinByBullet(item.artists.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name }, makeTimeString(item.duration?.times(1000L)))
                 is AlbumItem -> joinByBullet(item.artists?.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name }, item.year?.toString())
@@ -1987,8 +2005,8 @@ object Icon {
             contentDescription = null,
             tint = MaterialTheme.colorScheme.error,
             modifier = Modifier
-                .size(18.dp)
-                .padding(end = 2.dp)
+                .size(16.dp)
+                .padding(end = 4.dp)
         )
     }
 
@@ -1997,9 +2015,10 @@ object Icon {
         Icon(
             painter = painterResource(R.drawable.library_add_check),
             contentDescription = null,
+            tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
             modifier = Modifier
-                .size(18.dp)
-                .padding(end = 2.dp)
+                .size(16.dp)
+                .padding(end = 4.dp)
         )
     }
 
@@ -2009,15 +2028,16 @@ object Icon {
             STATE_COMPLETED -> Icon(
                 painter = painterResource(R.drawable.offline),
                 contentDescription = null,
+                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                 modifier = Modifier
-                    .size(18.dp)
-                    .padding(end = 2.dp)
+                    .size(16.dp)
+                    .padding(end = 4.dp)
             )
             STATE_QUEUED, STATE_DOWNLOADING -> CircularProgressIndicator(
                 strokeWidth = 2.dp,
                 modifier = Modifier
-                    .size(16.dp)
-                    .padding(end = 2.dp)
+                    .size(14.dp)
+                    .padding(end = 4.dp)
             )
             else -> { /* no icon */ }
         }
@@ -2028,9 +2048,10 @@ object Icon {
         Icon(
             painter = painterResource(R.drawable.explicit),
             contentDescription = null,
+            tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
             modifier = Modifier
-                .size(18.dp)
-                .padding(end = 2.dp)
+                .size(16.dp)
+                .padding(end = 4.dp)
         )
     }
 }
