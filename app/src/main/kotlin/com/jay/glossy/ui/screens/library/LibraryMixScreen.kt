@@ -39,7 +39,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults.Indicator
 import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
@@ -104,6 +103,7 @@ import com.jay.glossy.ui.component.CreatePlaylistDialog
 import com.jay.glossy.ui.component.LibrarySearchEmptyPlaceholder
 import com.jay.glossy.ui.component.LibrarySearchHeader
 import com.jay.glossy.ui.component.LocalMenuState
+import com.jay.glossy.ui.component.PlayStoreRefreshIndicator
 import com.jay.glossy.ui.component.PlaylistGridItem
 import com.jay.glossy.ui.component.PlaylistListItem
 import com.jay.glossy.ui.component.SongGridItem
@@ -409,22 +409,29 @@ fun LibraryMixScreen(
                 viewModel.updateSearchQuery("")
             },
             keyboardController = keyboardController,
-            modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp),
+            // Yahan top = 12.dp aur bottom = 12.dp padding add ki gayi hai spacing theek karne ke liye
+            modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp),
         ) {
-            // Box hata diya gaya hai, seedha SortHeader call kiya
-            SortHeader(
-                sortType = sortType,
-                sortDescending = sortDescending,
-                onSortTypeChange = onSortTypeChange,
-                onSortDescendingChange = onSortDescendingChange,
-                sortTypeText = { sortType ->
-                    when (sortType) {
-                        MixSortType.CREATE_DATE -> R.string.sort_by_create_date
-                        MixSortType.LAST_UPDATED -> R.string.sort_by_last_updated
-                        MixSortType.NAME -> R.string.sort_by_name
-                    }
-                },
-            )
+            // Pill shape for SortHeader
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50.dp))
+                    .background(inactivePillGradient)
+            ) {
+                SortHeader(
+                    sortType = sortType,
+                    sortDescending = sortDescending,
+                    onSortTypeChange = onSortTypeChange,
+                    onSortDescendingChange = onSortDescendingChange,
+                    sortTypeText = { sortType ->
+                        when (sortType) {
+                            MixSortType.CREATE_DATE -> R.string.sort_by_create_date
+                            MixSortType.LAST_UPDATED -> R.string.sort_by_last_updated
+                            MixSortType.NAME -> R.string.sort_by_name
+                        }
+                    },
+                )
+            }
 
             Spacer(Modifier.weight(1f))
 
@@ -962,7 +969,7 @@ fun LibraryMixScreen(
             )
         }
 
-        Indicator(
+        PlayStoreRefreshIndicator(
             isRefreshing = isRefreshing,
             state = pullRefreshState,
             modifier =
