@@ -289,7 +289,7 @@ fun ClickableArtistText(
 }
 
 // ------------------------------------------------------------------------
-// PREMIUM LIST ITEM DESIGN (Compact Spacing, Thin Dividers & Aligned Thumbnails)
+// PREMIUM LIST ITEM DESIGN (Compact Spacing, Thin Dividers & Exact Star Aligned)
 // ------------------------------------------------------------------------
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
@@ -312,17 +312,16 @@ inline fun ListItem(
         modifier = modifier
             .fillMaxWidth()
             .background(
-                color = if (isActive) MaterialTheme.colorScheme.secondaryContainer 
-                        else if (isSelected == true) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f) 
-                        else Color.Transparent,
-                shape = if (isActive || isSelected == true) RoundedCornerShape(8.dp) else RoundedCornerShape(0.dp)
+                color = if (isSelected == true) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f) 
+                        else Color.Transparent, // Active Highlight hat gaya, ab transparent rahega Apple Music jaisa!
+                shape = if (isSelected == true) RoundedCornerShape(8.dp) else RoundedCornerShape(0.dp)
             )
             .drawBehind {
-                // Draw thin line at the bottom
+                // Patli si bottom line draw karna
                 if (!isActive && isSelected != true) {
                     val strokeWidth = 0.5.dp.toPx() 
                     val y = size.height - strokeWidth / 2
-                    val startX = 86.dp.toPx() // 16dp pad + 56dp image + 14dp text pad = 86dp
+                    val startX = 86.dp.toPx() // 2dp pad + 14dp Box + 56dp image + 14dp spacing = 86dp
                     
                     drawLine(
                         color = dividerColor,
@@ -332,28 +331,22 @@ inline fun ListItem(
                     )
                 }
             }
-            // YAHAN PE PADDING KO 8.dp SE GHATAKAR 4.dp KAR DIYA HAI APPLE MUSIC LOOK KE LIYE
-            .padding(horizontal = 16.dp, vertical = 4.dp)
+            // 2dp start padding aur 14dp ka Box milakar exact 16dp maintain karega image ke liye
+            .padding(start = 2.dp, end = 16.dp, top = 4.dp, bottom = 4.dp)
     ) {
-        // Zero-Width Leading Content (Star)
-        if (leadingContent != null) {
-            Box(
-                modifier = Modifier.width(0.dp) 
-            ) {
-                Box(
-                    modifier = Modifier
-                        .offset(x = (-16).dp) 
-                        .width(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    leadingContent()
-                }
+        // Leading Content (Star / Liked Icon) fixed space allocation
+        Box(
+            modifier = Modifier.width(14.dp), 
+            contentAlignment = Alignment.CenterStart
+        ) {
+            if (leadingContent != null) {
+                leadingContent()
             }
         }
 
         // Thumbnail Area
         Box(
-            modifier = Modifier.padding(end = 14.dp),
+            modifier = Modifier.padding(end = 14.dp), 
             contentAlignment = Alignment.Center
         ) {
             thumbnailContent()
@@ -620,7 +613,7 @@ fun SongListItem(
                          painter = painterResource(R.drawable.favorite),
                          contentDescription = null,
                          tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                         modifier = Modifier.size(14.dp)
+                         modifier = Modifier.size(12.dp) // Perfect subtle size
                      )
                  }
              } else null,
@@ -1609,20 +1602,22 @@ fun ItemThumbnail(
             }
         }
 
-        PlayingIndicatorBox(
-            isActive = isActive,
-            playWhenReady = isPlaying,
-            color = if (albumIndex != null) MaterialTheme.colorScheme.onBackground else Color.White,
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    color = if (albumIndex != null)
-                        Color.Transparent
-                    else
-                        Color.Black.copy(alpha = ActiveBoxAlpha),
-                    shape = shape
+        // Ye raha Active visualizer and Dim Thumbnail fix
+        if (isActive) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.5f), shape)
+            ) {
+                PlayingIndicatorBox(
+                    isActive = true,
+                    playWhenReady = isPlaying,
+                    color = Color.White,
+                    modifier = Modifier.fillMaxSize()
                 )
-        )
+            }
+        }
     }
 }
 
@@ -1666,7 +1661,7 @@ fun LocalThumbnail(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.4f), shape)
+                    .background(Color.Black.copy(alpha = 0.5f), shape)
             ) {
                 if (isPlaying) {
                     PlayingIndicator(
@@ -2005,7 +2000,7 @@ object Icon {
             contentDescription = null,
             tint = MaterialTheme.colorScheme.error,
             modifier = Modifier
-                .size(16.dp)
+                .size(14.dp)
                 .padding(end = 4.dp)
         )
     }
@@ -2017,7 +2012,7 @@ object Icon {
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
             modifier = Modifier
-                .size(16.dp)
+                .size(14.dp)
                 .padding(end = 4.dp)
         )
     }
@@ -2030,13 +2025,13 @@ object Icon {
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                 modifier = Modifier
-                    .size(16.dp)
+                    .size(14.dp)
                     .padding(end = 4.dp)
             )
             STATE_QUEUED, STATE_DOWNLOADING -> CircularProgressIndicator(
                 strokeWidth = 2.dp,
                 modifier = Modifier
-                    .size(14.dp)
+                    .size(12.dp)
                     .padding(end = 4.dp)
             )
             else -> { /* no icon */ }
@@ -2050,7 +2045,7 @@ object Icon {
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
             modifier = Modifier
-                .size(16.dp)
+                .size(14.dp)
                 .padding(end = 4.dp)
         )
     }
