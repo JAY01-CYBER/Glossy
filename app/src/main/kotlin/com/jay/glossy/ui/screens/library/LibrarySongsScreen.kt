@@ -366,7 +366,10 @@ fun LibrarySongsScreen(
                 key = "filter",
                 contentType = CONTENT_TYPE_HEADER,
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Spacer(Modifier.width(12.dp))
                     FilterChip(
                         modifier = Modifier.padding(end = 8.dp).height(36.dp),
@@ -419,29 +422,22 @@ fun LibrarySongsScreen(
                         viewModel.updateSearchQuery("")
                     },
                     keyboardController = keyboardController,
-                    modifier = Modifier.padding(start = 16.dp),
+                    modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp),
                 ) {
-                    // Pill shape for SortHeader
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50.dp))
-                            .background(inactivePillGradient)
-                    ) {
-                        SortHeader(
-                            sortType = sortType,
-                            sortDescending = sortDescending,
-                            onSortTypeChange = onSortTypeChange,
-                            onSortDescendingChange = onSortDescendingChange,
-                            sortTypeText = { sortType ->
-                                when (sortType) {
-                                    SongSortType.CREATE_DATE -> R.string.sort_by_create_date
-                                    SongSortType.NAME -> R.string.sort_by_name
-                                    SongSortType.ARTIST -> R.string.sort_by_artist
-                                    SongSortType.PLAY_TIME -> R.string.sort_by_play_time
-                                }
-                            },
-                        )
-                    }
+                    SortHeader(
+                        sortType = sortType,
+                        sortDescending = sortDescending,
+                        onSortTypeChange = onSortTypeChange,
+                        onSortDescendingChange = onSortDescendingChange,
+                        sortTypeText = { sortType ->
+                            when (sortType) {
+                                SongSortType.CREATE_DATE -> R.string.sort_by_create_date
+                                SongSortType.NAME -> R.string.sort_by_name
+                                SongSortType.ARTIST -> R.string.sort_by_artist
+                                SongSortType.PLAY_TIME -> R.string.sort_by_play_time
+                            }
+                        },
+                    )
 
                     Spacer(Modifier.weight(1f))
 
