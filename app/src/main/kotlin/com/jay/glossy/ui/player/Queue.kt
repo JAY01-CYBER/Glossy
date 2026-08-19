@@ -122,6 +122,7 @@ import androidx.media3.common.Timeline
 import androidx.media3.exoplayer.source.ShuffleOrder.DefaultShuffleOrder
 import coil3.imageLoader
 import coil3.toBitmap
+import coil3.request.allowHardware
 import com.jay.glossy.LocalListenTogetherManager
 import com.jay.glossy.LocalNavController
 import com.jay.glossy.LocalPlayerConnection
