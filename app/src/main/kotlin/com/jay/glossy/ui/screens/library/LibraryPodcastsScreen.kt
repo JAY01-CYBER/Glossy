@@ -360,7 +360,9 @@ fun LibraryPodcastsScreen(
                     item(key = "sort_header", contentType = CONTENT_TYPE_HEADER) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 16.dp, top = 8.dp, bottom = 8.dp),
+                            // Error Yahan Tha: modifier = Modifier.padding(horizontal = 16.dp, top = 8.dp, bottom = 8.dp)
+                            // Fix: Ise start, end, top, bottom me tod diya
+                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
                         ) {
                             // Replaced outer Box with pure SortHeader for Vivi SplitButton Design
                             SortHeader(
