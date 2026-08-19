@@ -34,7 +34,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults.Indicator
 import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
@@ -86,6 +85,7 @@ import com.jay.glossy.ui.component.HideOnScrollFAB
 import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.component.Material3MenuGroup
 import com.jay.glossy.ui.component.Material3MenuItemData
+import com.jay.glossy.ui.component.PlayStoreRefreshIndicator
 import com.jay.glossy.ui.component.SongListItem
 import com.jay.glossy.ui.component.SortHeader
 import com.jay.glossy.ui.menu.SongMenu
@@ -177,15 +177,11 @@ fun LibraryPodcastsScreen(
                     },
                 ),
     ) {
-        // Chip row header
+        // Chip row header — same pattern as LibrarySongsScreen
         val chipsHeader = @Composable {
-            Row(
-                modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row {
                 Spacer(Modifier.width(12.dp))
                 FilterChip(
-                    modifier = Modifier.padding(end = 8.dp).height(36.dp),
                     label = { Text(stringResource(R.string.filter_podcasts)) },
                     selected = true,
                     colors =
@@ -358,28 +354,38 @@ fun LibraryPodcastsScreen(
                     }
 
                     item(key = "sort_header", contentType = CONTENT_TYPE_HEADER) {
+                        val inactivePillGradient = Brush.horizontalGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
+                            )
+                        )
+
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            // Error Yahan Tha: modifier = Modifier.padding(horizontal = 16.dp, top = 8.dp, bottom = 8.dp)
-                            // Fix: Ise start, end, top, bottom me tod diya
-                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                         ) {
-                            // Replaced outer Box with pure SortHeader for Vivi SplitButton Design
-                            SortHeader(
-                                sortType = sortType,
-                                sortDescending = sortDescending,
-                                onSortTypeChange = onSortTypeChange,
-                                onSortDescendingChange = onSortDescendingChange,
-                                sortTypeText = { st ->
-                                    when (st) {
-                                        SongSortType.CREATE_DATE -> R.string.sort_by_create_date
-                                        SongSortType.NAME -> R.string.sort_by_name
-                                        SongSortType.ARTIST -> R.string.sort_by_artist
-                                        SongSortType.PLAY_TIME -> R.string.sort_by_play_time
-                                    }
-                                },
-                            )
-                            
+                            // Pill shape for SortHeader
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(50.dp))
+                                    .background(inactivePillGradient)
+                            ) {
+                                SortHeader(
+                                    sortType = sortType,
+                                    sortDescending = sortDescending,
+                                    onSortTypeChange = onSortTypeChange,
+                                    onSortDescendingChange = onSortDescendingChange,
+                                    sortTypeText = { st ->
+                                        when (st) {
+                                            SongSortType.CREATE_DATE -> R.string.sort_by_create_date
+                                            SongSortType.NAME -> R.string.sort_by_name
+                                            SongSortType.ARTIST -> R.string.sort_by_artist
+                                            SongSortType.PLAY_TIME -> R.string.sort_by_play_time
+                                        }
+                                    },
+                                )
+                            }
                             Spacer(Modifier.weight(1f))
                             Text(
                                 text =
@@ -489,7 +495,7 @@ fun LibraryPodcastsScreen(
             }
         }
 
-        Indicator(
+        PlayStoreRefreshIndicator(
             isRefreshing = isRefreshing,
             state = pullToRefreshState,
             modifier =
