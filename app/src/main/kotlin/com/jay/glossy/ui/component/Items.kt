@@ -289,7 +289,7 @@ fun ClickableArtistText(
 }
 
 // ------------------------------------------------------------------------
-// PREMIUM LIST ITEM DESIGN (Dividers & Aligned Thumbnails)
+// PREMIUM LIST ITEM DESIGN (Compact Spacing, Thin Dividers & Aligned Thumbnails)
 // ------------------------------------------------------------------------
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
@@ -318,12 +318,11 @@ inline fun ListItem(
                 shape = if (isActive || isSelected == true) RoundedCornerShape(8.dp) else RoundedCornerShape(0.dp)
             )
             .drawBehind {
-                // Draw a patli (thin) line starting exactly below the text
+                // Draw thin line at the bottom
                 if (!isActive && isSelected != true) {
                     val strokeWidth = 0.5.dp.toPx() 
                     val y = size.height - strokeWidth / 2
-                    // 16dp pad + 56dp image + 14dp text pad = 86dp perfectly aligns with text
-                    val startX = 86.dp.toPx() 
+                    val startX = 86.dp.toPx() // 16dp pad + 56dp image + 14dp text pad = 86dp
                     
                     drawLine(
                         color = dividerColor,
@@ -333,7 +332,8 @@ inline fun ListItem(
                     )
                 }
             }
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            // YAHAN PE PADDING KO 8.dp SE GHATAKAR 4.dp KAR DIYA HAI APPLE MUSIC LOOK KE LIYE
+            .padding(horizontal = 16.dp, vertical = 4.dp)
     ) {
         // Zero-Width Leading Content (Star)
         if (leadingContent != null) {
@@ -353,7 +353,7 @@ inline fun ListItem(
 
         // Thumbnail Area
         Box(
-            modifier = Modifier.padding(end = 14.dp), // Space between image and text
+            modifier = Modifier.padding(end = 14.dp),
             contentAlignment = Alignment.Center
         ) {
             thumbnailContent()
