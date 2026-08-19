@@ -117,7 +117,10 @@ fun LibraryAlbumsScreen(
     val hideExplicit by rememberPreference(key = HideExplicitKey, defaultValue = false)
 
     val filterContent = @Composable {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Spacer(Modifier.width(12.dp))
             FilterChip(
                 modifier = Modifier.padding(end = 8.dp).height(36.dp),
@@ -201,32 +204,25 @@ fun LibraryAlbumsScreen(
                 viewModel.updateSearchQuery("")
             },
             keyboardController = keyboardController,
-            modifier = Modifier.padding(start = 16.dp),
+            modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp),
         ) {
-            // Pill shape for SortHeader (Date Added)
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(50.dp))
-                    .background(inactivePillGradient)
-            ) {
-                SortHeader(
-                    sortType = sortType,
-                    sortDescending = sortDescending,
-                    onSortTypeChange = onSortTypeChange,
-                    onSortDescendingChange = onSortDescendingChange,
-                    sortTypeText = { sortType ->
-                        when (sortType) {
-                            AlbumSortType.CREATE_DATE -> R.string.sort_by_create_date
-                            AlbumSortType.NAME -> R.string.sort_by_name
-                            AlbumSortType.ARTIST -> R.string.sort_by_artist
-                            AlbumSortType.YEAR -> R.string.sort_by_year
-                            AlbumSortType.SONG_COUNT -> R.string.sort_by_song_count
-                            AlbumSortType.LENGTH -> R.string.sort_by_length
-                            AlbumSortType.PLAY_TIME -> R.string.sort_by_play_time
-                        }
-                    },
-                )
-            }
+            SortHeader(
+                sortType = sortType,
+                sortDescending = sortDescending,
+                onSortTypeChange = onSortTypeChange,
+                onSortDescendingChange = onSortDescendingChange,
+                sortTypeText = { sortType ->
+                    when (sortType) {
+                        AlbumSortType.CREATE_DATE -> R.string.sort_by_create_date
+                        AlbumSortType.NAME -> R.string.sort_by_name
+                        AlbumSortType.ARTIST -> R.string.sort_by_artist
+                        AlbumSortType.YEAR -> R.string.sort_by_year
+                        AlbumSortType.SONG_COUNT -> R.string.sort_by_song_count
+                        AlbumSortType.LENGTH -> R.string.sort_by_length
+                        AlbumSortType.PLAY_TIME -> R.string.sort_by_play_time
+                    }
+                },
+            )
 
             Spacer(Modifier.weight(1f))
 
