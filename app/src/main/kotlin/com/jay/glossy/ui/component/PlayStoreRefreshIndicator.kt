@@ -18,14 +18,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asComposePath
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 
-// Nayi library ke imports + toPath() import jo miss ho gaya tha
 import androidx.graphics.shapes.CornerRounding
 import androidx.graphics.shapes.Morph
 import androidx.graphics.shapes.RoundedPolygon
@@ -42,13 +42,10 @@ fun PlayStoreRefreshIndicator(
     state: PullToRefreshState,
     modifier: Modifier = Modifier
 ) {
-    // FIX 1: Naye Material 3 mein 'progress' ko 'distanceFraction' kehte hain
     val progress = state.distanceFraction.coerceIn(0f, 1f)
     
-    // Infinite Animations
     val infiniteTransition = rememberInfiniteTransition(label = "refresh_transition")
 
-    // Rotation Animation
     val rotation by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
@@ -59,7 +56,6 @@ fun PlayStoreRefreshIndicator(
         label = "rotation"
     )
 
-    // Morph Progress (4 shapes ke liye 0 se 4 tak)
     val morphProgress by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 4f,
@@ -70,37 +66,33 @@ fun PlayStoreRefreshIndicator(
         label = "morph"
     )
 
-    // Play Store Colors Animation
     val color by infiniteTransition.animateColor(
         initialValue = Color(0xFF4285F4),
         targetValue = Color(0xFF4285F4),
         animationSpec = infiniteRepeatable(
             animation = keyframes {
                 durationMillis = 3000
-                Color(0xFF4285F4) at 0    // Google Blue
-                Color(0xFFDB4437) at 750  // Google Red
-                Color(0xFFF4B400) at 1500 // Google Yellow
-                Color(0xFF0F9D58) at 2250 // Google Green
-                Color(0xFF4285F4) at 3000 // Wapas Blue
+                Color(0xFF4285F4) at 0    
+                Color(0xFFDB4437) at 750  
+                Color(0xFFF4B400) at 1500 
+                Color(0xFF0F9D58) at 2250 
+                Color(0xFF4285F4) at 3000 
             },
             repeatMode = RepeatMode.Restart
         ),
         label = "color"
     )
 
-    // Shapes Define Karna 
     val starburst = remember { RoundedPolygon.star(numVerticesPerRadius = 12, innerRadius = 0.7f, rounding = CornerRounding(0.15f)) }
     val triangle = remember { RoundedPolygon(numVertices = 3, rounding = CornerRounding(0.25f)) }
     val square = remember { RoundedPolygon(numVertices = 4, rounding = CornerRounding(0.3f)) }
     val circle = remember { RoundedPolygon.circle() }
 
-    // Morphing sequences
     val morph1 = remember { Morph(starburst, triangle) }
     val morph2 = remember { Morph(triangle, square) }
     val morph3 = remember { Morph(square, circle) }
     val morph4 = remember { Morph(circle, starburst) }
 
-    // Khinchte waqt indicator ko neeche slide karne ka logic
     val slideOffset = (progress * 150f).coerceAtMost(200f)
     val currentScale = if (isRefreshing) 1f else progress
     val currentAlpha = if (isRefreshing) 1f else progress
@@ -108,17 +100,15 @@ fun PlayStoreRefreshIndicator(
     Box(
         modifier = modifier
             .offset { IntOffset(0, slideOffset.roundToInt()) }
-            .size(46.dp)
+            .size(58.dp) 
             .scale(currentScale)
             .alpha(currentAlpha)
-            .graphicsLayer {
-                shadowElevation = 6.dp.toPx()
-                shape = CircleShape
-            }
-            .background(MaterialTheme.colorScheme.surface), 
+            .shadow(elevation = 6.dp, shape = CircleShape) 
+            .clip(CircleShape)
+            .background(color = MaterialTheme.colorScheme.primaryContainer), 
         contentAlignment = Alignment.Center
     ) {
-        Canvas(modifier = Modifier.size(26.dp)) {
+        Canvas(modifier = Modifier.size(34.dp)) {
             val currentMorphProgress = if (isRefreshing) morphProgress else 0f
             val currentRotation = if (isRefreshing) rotation else progress * 180f
             val currentColor = if (isRefreshing) color else Color(0xFF4285F4) 
@@ -131,8 +121,6 @@ fun PlayStoreRefreshIndicator(
             }
             
             val fraction = currentMorphProgress - currentMorphProgress.toInt()
-
-            // FIX 2: toPath() ka import ab file ke top par theek se add kar diya gaya hai
             val androidPath = morph.toPath(progress = fraction)
 
             val matrix = Matrix()
