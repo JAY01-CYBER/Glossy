@@ -25,6 +25,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -93,12 +94,16 @@ import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -115,6 +120,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.exoplayer.source.ShuffleOrder.DefaultShuffleOrder
+import coil3.imageLoader
+import coil3.toBitmap
 import com.jay.glossy.LocalListenTogetherManager
 import com.jay.glossy.LocalNavController
 import com.jay.glossy.LocalPlayerConnection
@@ -125,9 +132,9 @@ import com.jay.glossy.constants.SleepTimerDefaultKey
 import com.jay.glossy.constants.SleepTimerFadeOutKey
 import com.jay.glossy.constants.SleepTimerStopAfterCurrentSongKey
 import com.jay.glossy.constants.UseNewPlayerDesignKey
+import com.jay.glossy.extensions.metadata
 import com.jay.glossy.extensions.move
 import com.jay.glossy.extensions.toggleRepeatMode
-import com.jay.glossy.extensions.metadata
 import com.jay.glossy.listentogether.RoomRole
 import com.jay.glossy.ui.component.ActionPromptDialog
 import com.jay.glossy.ui.component.BottomSheet
@@ -143,10 +150,12 @@ import com.jay.glossy.utils.makeTimeString
 import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.utils.safeDataStoreEdit
 import com.metrolist.models.MediaMetadata
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import kotlin.math.roundToInt
@@ -176,7 +185,6 @@ fun Queue(
     val sleepTimerDefaultSetTemplate = stringResource(R.string.sleep_timer_default_set)
     val bottomSheetPageState = LocalBottomSheetPageState.current
 
-    // Listen Together state
     val listenTogetherManager = LocalListenTogetherManager.current
     val listenTogetherRoleState = listenTogetherManager?.role?.collectAsStateWithLifecycle(initialValue = RoomRole.NONE)
     val isListenTogetherGuest = listenTogetherRoleState?.value == RoomRole.GUEST
@@ -188,12 +196,9 @@ fun Queue(
     val currentWindowIndex by playerConnection.currentWindowIndex.collectAsStateWithLifecycle()
     val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
 
-    val currentFormat by playerConnection.currentFormat.collectAsStateWithLifecycle(initialValue = null)
-
     val selectedSongs = remember { mutableStateListOf<MediaMetadata>() }
     val selectedItems = remember { mutableStateListOf<Timeline.Window>() }
 
-    // Cast state
     val castHandler =
         remember(playerConnection) {
             try {
@@ -265,12 +270,109 @@ fun Queue(
         }
     }
 
+    // --- Dynamic Gradient/Blur Extraction for Queue ---
+    var gradientColors by remember { mutableStateOf<List<Color>>(emptyList()) }
+    val gradientColorsCache = remember { mutableMapOf<String, List<Color>>() }
+    val fallbackColor = MaterialTheme.colorScheme.surface.toArgb()
+
+    LaunchedEffect(mediaMetadata?.id, playerBackground) {
+        if (playerBackground == PlayerBackgroundStyle.GRADIENT) {
+            val currentMetadata = mediaMetadata
+            if (currentMetadata != null && currentMetadata.thumbnailUrl != null) {
+                val cachedColors = gradientColorsCache[currentMetadata.id]
+                if (cachedColors != null) {
+                    gradientColors = cachedColors
+                    return@LaunchedEffect
+                }
+                withContext(Dispatchers.IO) {
+                    val request = coil3.request.ImageRequest.Builder(context)
+                        .data(currentMetadata.thumbnailUrl)
+                        .size(100, 100)
+                        .allowHardware(false)
+                        .memoryCacheKey("queue_gradient_${currentMetadata.id}")
+                        .build()
+
+                    val result = runCatching { context.imageLoader.execute(request) }.getOrNull()
+                    if (result != null) {
+                        val bitmap = result.image?.toBitmap()
+                        if (bitmap != null) {
+                            val palette = withContext(Dispatchers.Default) {
+                                androidx.palette.graphics.Palette.from(bitmap)
+                                    .maximumColorCount(8)
+                                    .resizeBitmapArea(100 * 100)
+                                    .generate()
+                            }
+                            val extractedColors = com.jay.glossy.ui.theme.PlayerColorExtractor.extractGradientColors(
+                                palette = palette,
+                                fallbackColor = fallbackColor,
+                            )
+                            gradientColorsCache[currentMetadata.id] = extractedColors
+                            withContext(Dispatchers.Main) { gradientColors = extractedColors }
+                        }
+                    }
+                }
+            }
+        } else {
+            gradientColors = emptyList()
+        }
+    }
+
     BottomSheet(
         state = state,
         modifier = modifier,
         background = {
-            // Added slight transparency for glassmorphism
-            Box(Modifier.fillMaxSize().background(background.copy(alpha = 0.95f)))
+            // FULLY OPAQUE BACKGROUND logic based on user setting (Hides Player underneath)
+            Box(Modifier.fillMaxSize().background(background)) {
+                when (playerBackground) {
+                    PlayerBackgroundStyle.BLUR -> {
+                        AnimatedContent(
+                            targetState = mediaMetadata?.thumbnailUrl,
+                            transitionSpec = { fadeIn(tween(800)).togetherWith(fadeOut(tween(800))) },
+                            label = "blurBackground",
+                        ) { thumbnailUrl ->
+                            if (thumbnailUrl != null) {
+                                Box {
+                                    coil3.compose.AsyncImage(
+                                        model = coil3.request.ImageRequest.Builder(context)
+                                            .data(thumbnailUrl)
+                                            .size(100, 100)
+                                            .allowHardware(false)
+                                            .build(),
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize().blur(100.dp),
+                                    )
+                                    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.3f)))
+                                }
+                            }
+                        }
+                    }
+                    PlayerBackgroundStyle.GRADIENT -> {
+                        AnimatedContent(
+                            targetState = gradientColors,
+                            transitionSpec = { fadeIn(tween(800)).togetherWith(fadeOut(tween(800))) },
+                            label = "gradientBackground",
+                        ) { colors ->
+                            if (colors.isNotEmpty()) {
+                                val gradientColorStops = if (colors.size >= 3) {
+                                    arrayOf(0.0f to colors[0], 0.5f to colors[1], 1.0f to colors[2])
+                                } else {
+                                    arrayOf(0.0f to colors[0], 0.6f to colors[0].copy(alpha = 0.7f), 1.0f to Color.Black)
+                                }
+                                Box(
+                                    Modifier
+                                        .fillMaxSize()
+                                        .background(Brush.verticalGradient(colorStops = gradientColorStops))
+                                        .background(Color.Black.copy(alpha = 0.2f))
+                                )
+                            }
+                        }
+                    }
+                    else -> {
+                        // Inherits the solid 'background' passed from Player.kt
+                    }
+                }
+            }
         },
         collapsedContent = {
             if (useNewPlayerDesign) {
@@ -671,9 +773,7 @@ fun Queue(
                 queueWindows.sumOf { it.mediaItem.metadata!!.duration }
             }
 
-        val coroutineScope = rememberCoroutineScope()
-
-        val headerItems = 2 // Updated for sticky headers
+        val headerItems = 2 // Sticky headers
         val lazyListState = rememberLazyListState()
         var dragInfo by remember { mutableStateOf<Pair<Int, Int>?>(null) }
 
@@ -754,21 +854,19 @@ fun Queue(
             modifier =
             Modifier
                 .fillMaxSize()
-                .background(Color.Transparent),
+                .background(Color.Transparent), // Queue List background transparent so parent background is visible
         ) {
             LazyColumn(
                 state = lazyListState,
-                // Adjusted padding to account for Floating Action Pill
                 contentPadding = WindowInsets.systemBars.add(WindowInsets(bottom = 120.dp)).asPaddingValues(),
                 modifier = Modifier.nestedScroll(state.preUpPostDownNestedScrollConnection),
             ) {
 
-                // --- STICKY HEADER 1: Queue Details & Clear Button ---
                 stickyHeader(key = "queue_header_main") {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(background.copy(alpha = 0.95f))
+                            .background(if (pureBlack) Color.Black else background.copy(alpha = 0.85f))
                             .windowInsetsPadding(
                                 WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
                             )
@@ -795,7 +893,6 @@ fun Queue(
                                 exit = fadeOut() + slideOutVertically { it },
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    // Clear Queue Button added!
                                     TextButton(onClick = {
                                         if (!isListenTogetherGuest) {
                                             playerConnection.player.clearMediaItems()
@@ -833,7 +930,6 @@ fun Queue(
                             }
                         }
 
-                        // Selection Mode UI
                         AnimatedVisibility(
                             visible = inSelectMode,
                             enter = fadeIn() + expandVertically(),
@@ -898,7 +994,6 @@ fun Queue(
                     Spacer(modifier = Modifier.animateContentSize().height(if (inSelectMode) 8.dp else 0.dp))
                 }
 
-                // --- QUEUE LIST ITEMS (Modern Cards) ---
                 itemsIndexed(
                     items = mutableQueueWindows,
                     key = { _, item -> item.uid.hashCode() },
@@ -955,7 +1050,6 @@ fun Queue(
                         }
 
                         val content: @Composable () -> Unit = {
-                            // Glossy Card Container
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -982,7 +1076,6 @@ fun Queue(
                                     isPlaying = isPlaying && isActive,
                                     trailingContent = {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
-                                            // DYNAMIC PLAYING INDICATOR (Animated Equalizer)
                                             if (isActive && isPlaying) {
                                                 AnimatedEqualizer(
                                                     color = MaterialTheme.colorScheme.primary,
@@ -1088,13 +1181,12 @@ fun Queue(
                     }
                 }
 
-                // --- AUTOMIX STICKY HEADER ---
                 if (automix.isNotEmpty()) {
                     stickyHeader(key = "automix_divider") {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(background.copy(alpha = 0.95f))
+                                .background(if (pureBlack) Color.Black else background.copy(alpha = 0.85f))
                                 .padding(vertical = 12.dp)
                         ) {
                             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
@@ -1107,7 +1199,6 @@ fun Queue(
                         }
                     }
 
-                    // AUTOMIX CARDS
                     itemsIndexed(
                         items = automix,
                         key = { _, it -> it.mediaId },
@@ -1172,7 +1263,6 @@ fun Queue(
                 }
             }
 
-            // --- FLOATING ACTION PILL (Replaces Bottom Bar) ---
             val shuffleModeEnabled by playerConnection.shuffleModeEnabled.collectAsStateWithLifecycle()
 
             Box(
@@ -1182,7 +1272,7 @@ fun Queue(
                     .padding(bottom = 24.dp + WindowInsets.systemBars.asPaddingValues().calculateBottomPadding())
                     .fillMaxWidth()
                     .height(64.dp)
-                    .clip(RoundedCornerShape(50)) // Pill Shape!
+                    .clip(RoundedCornerShape(50))
                     .background(
                         if (pureBlack) Color.DarkGray else MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.95f)
                     )
@@ -1250,7 +1340,6 @@ fun Queue(
     }
 }
 
-// Custom Animated Equalizer Composable
 @Composable
 fun AnimatedEqualizer(color: Color, modifier: Modifier = Modifier) {
     val infiniteTransition = rememberInfiniteTransition(label = "equalizer")
