@@ -354,30 +354,23 @@ fun LibraryPlaylistsScreen(
                 viewModel.updateSearchQuery("")
             },
             keyboardController = keyboardController,
-            // Yahan top = 12.dp aur bottom = 12.dp padding add ki gayi hai spacing theek karne ke liye
-            modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp),
+            modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp),
         ) {
-            // Pill shape for SortHeader
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(50.dp))
-                    .background(inactivePillGradient)
-            ) {
-                SortHeader(
-                    sortType = sortType,
-                    sortDescending = sortDescending,
-                    onSortTypeChange = onSortTypeChange,
-                    onSortDescendingChange = onSortDescendingChange,
-                    sortTypeText = { sortType ->
-                        when (sortType) {
-                            PlaylistSortType.CREATE_DATE -> R.string.sort_by_create_date
-                            PlaylistSortType.NAME -> R.string.sort_by_name
-                            PlaylistSortType.SONG_COUNT -> R.string.sort_by_song_count
-                            PlaylistSortType.LAST_UPDATED -> R.string.sort_by_last_updated
-                        }
-                    },
-                )
-            }
+            // Box hata diya gaya hai, seedha SortHeader call kiya jisse naya UI kaam kare
+            SortHeader(
+                sortType = sortType,
+                sortDescending = sortDescending,
+                onSortTypeChange = onSortTypeChange,
+                onSortDescendingChange = onSortDescendingChange,
+                sortTypeText = { sortType ->
+                    when (sortType) {
+                        PlaylistSortType.CREATE_DATE -> R.string.sort_by_create_date
+                        PlaylistSortType.NAME -> R.string.sort_by_name
+                        PlaylistSortType.SONG_COUNT -> R.string.sort_by_song_count
+                        PlaylistSortType.LAST_UPDATED -> R.string.sort_by_last_updated
+                    }
+                },
+            )
 
             Spacer(Modifier.weight(1f))
 
