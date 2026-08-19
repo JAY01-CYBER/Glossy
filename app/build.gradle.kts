@@ -382,6 +382,7 @@ dependencies {
     implementation(libs.room.ktx)
 
     implementation(libs.apache.lang3)
+    implementation("androidx.graphics:graphics-shapes:1.0.1")
 
     implementation(libs.hilt)
     implementation(libs.jsoup)
