@@ -107,7 +107,7 @@ import com.jay.glossy.constants.SwipeToRemoveSongKey
 import com.jay.glossy.constants.SwipeToSongKey
 import com.jay.glossy.constants.UseNewMiniPlayerDesignKey
 import com.jay.glossy.constants.UseNewPlayerDesignKey
-import com.jay.glossy.constants.UseWavyPlayerDesignKey // NAYA IMPORT 
+import com.jay.glossy.constants.UseWavyPlayerDesignKey
 import com.jay.glossy.constants.QuickPickShape
 import com.jay.glossy.constants.QuickPickShapeKey
 import com.jay.glossy.constants.QuickPicksStyle
@@ -182,7 +182,6 @@ fun AppearanceSettings(
             defaultValue = true,
         )
         
-    // NAYA TOGGLE VARIABLE WAVY PLAYER KE LIYE
     val (useWavyPlayerDesign, onUseWavyPlayerDesignChange) =
         rememberPreference(
             UseWavyPlayerDesignKey,
@@ -488,7 +487,7 @@ fun AppearanceSettings(
         )
     }
 
-        if (showLyricsTextSizeDialog) {
+    if (showLyricsTextSizeDialog) {
         var tempTextSize by remember { mutableFloatStateOf(lyricsTextSize) }
         DefaultDialog(
             onDismiss = {
@@ -704,6 +703,7 @@ fun AppearanceSettings(
                     LibraryFilter.PLAYLISTS -> stringResource(R.string.playlists)
                     LibraryFilter.PODCASTS -> stringResource(R.string.filter_podcasts)
                     LibraryFilter.LIBRARY -> stringResource(R.string.filter_library)
+                    else -> ""
                 }
             },
         )
@@ -1267,7 +1267,6 @@ fun AppearanceSettings(
             title = stringResource(R.string.player),
             items =
                 listOf(
-                    // YAHAN 3RD WAVY PLAYER KA OPTION ADD KIYA GAYA HAI
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.palette),
                         title = { Text("Use Wavy Player (New 3rd Design)") },
@@ -1277,7 +1276,10 @@ fun AppearanceSettings(
                                 onCheckedChange = onUseWavyPlayerDesignChange,
                                 thumbContent = {
                                     Icon(
-                                        painter = painterResource(id = if (useWavyPlayerDesign) R.drawable.check else R.drawable.close),
+                                        painter =
+                                            painterResource(
+                                                id = if (useWavyPlayerDesign) R.drawable.check else R.drawable.close,
+                                            ),
                                         contentDescription = null,
                                         modifier = Modifier.size(SwitchDefaults.IconSize),
                                     )
@@ -1792,8 +1794,10 @@ fun AppearanceSettings(
                                     LibraryFilter.SONGS -> stringResource(R.string.songs)
                                     LibraryFilter.ARTISTS -> stringResource(R.string.artists)
                                     LibraryFilter.ALBUMS -> stringResource(R.string.albums)
-                                    LibraryFilter.PLAYLISTS -> stringResource(R.string.filter_podcasts)
+                                    LibraryFilter.PLAYLISTS -> stringResource(R.string.playlists)
+                                    LibraryFilter.PODCASTS -> stringResource(R.string.filter_podcasts)
                                     LibraryFilter.LIBRARY -> stringResource(R.string.filter_library)
+                                    else -> ""
                                 },
                             )
                         },
@@ -2104,3 +2108,5 @@ enum class PlayerTextAlignment {
     SIDED,
     CENTER,
 }
+
+    
