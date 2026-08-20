@@ -2282,3 +2282,323 @@ fun AnimatedMeshBackground(colors: List<Color>, modifier: Modifier = Modifier) {
         }
     }
 }
+
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
+@Composable
+fun WavyPlayerDesign(
+    mediaMetadata: MediaMetadata,
+    playerConnection: PlayerConnection,
+    state: BottomSheetState,
+    effectivePosition: Long,
+    duration: Long,
+    sliderPosition: Long?,
+    effectiveIsPlaying: Boolean,
+    isListenTogetherGuest: Boolean,
+    isMuted: Boolean,
+    canSkipPrevious: Boolean,
+    canSkipNext: Boolean,
+    repeatMode: Int,
+    textButtonColor: Color, // Dark element color (Play button)
+    iconButtonColor: Color, // Icon inside Play button
+    sideButtonContainerColor: Color, // Light background for next/prev
+    sideButtonContentColor: Color, // Icon color for next/prev
+    TextBackgroundColor: Color, // Text color based on background
+    playerBackground: PlayerBackgroundStyle,
+    useDarkTheme: Boolean,
+    onSliderChange: (Long) -> Unit,
+    onSliderChangeFinished: () -> Unit,
+    onToggleLyrics: () -> Unit,
+    onShowQueue: () -> Unit
+) {
+    val context = LocalContext.current
+    val currentSong by playerConnection.currentSong.collectAsStateWithLifecycle(initialValue = null)
+    
+    // Top Bar, Image aur Controls sab is Column me aayenge
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp)
+            .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top)),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        
+        // 1. TOP BAR (Back, Now Playing, Moon/Settings)
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 24.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            FilledIconButton(
+                onClick = { state.collapseSoft() },
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = sideButtonContainerColor.copy(alpha = 0.5f),
+                    contentColor = TextBackgroundColor
+                ),
+                shape = CircleShape
+            ) {
+                Icon(painterResource(R.drawable.arrow_back), contentDescription = "Back")
+            }
+
+            Text(
+                text = stringResource(R.string.now_playing),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = TextBackgroundColor
+            )
+
+            // Sleep Timer / Moon Icon
+            FilledIconButton(
+                onClick = { /* Handle Sleep Timer / Moon action here */ },
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = sideButtonContainerColor.copy(alpha = 0.5f),
+                    contentColor = TextBackgroundColor
+                ),
+                shape = CircleShape
+            ) {
+                Icon(painterResource(R.drawable.bedtime), contentDescription = "Sleep Timer")
+            }
+        }
+
+        // 2. ALBUM ART (Large, Square, 24dp Rounded Corners)
+        AsyncImage(
+            model = mediaMetadata.thumbnailUrl,
+            contentDescription = "Album Art",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f) // Makes it perfectly square
+                .clip(RoundedCornerShape(24.dp))
+        )
+        
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // 3. SONG INFO (Title, Artist, 3-Dot Menu)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = mediaMetadata.title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = TextBackgroundColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.basicMarquee()
+                )
+                if (mediaMetadata.artists.any { it.name.isNotBlank() }) {
+                    Text(
+                        text = mediaMetadata.artists.joinToString { it.name },
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = TextBackgroundColor.copy(alpha = 0.7f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            
+            IconButton(onClick = { /* Show Menu */ }) {
+                Icon(
+                    painter = painterResource(R.drawable.more_horiz), 
+                    contentDescription = "Menu", 
+                    tint = TextBackgroundColor
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 4. WAVY SLIDER WITH TIMESTAMPS (Like 80647.jpg)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = makeTimeString(sliderPosition ?: effectivePosition),
+                style = MaterialTheme.typography.labelMedium,
+                color = TextBackgroundColor.copy(alpha = 0.7f)
+            )
+            
+            // Using your existing SquigglySlider!
+            SquigglySlider(
+                value = (sliderPosition ?: effectivePosition).toFloat(),
+                valueRange = 0f..(if (duration == androidx.media3.common.C.TIME_UNSET) 0f else duration.toFloat()),
+                onValueChange = { onSliderChange(it.toLong()) },
+                onValueChangeFinished = onSliderChangeFinished,
+                colors = PlayerSliderColors.getSliderColors(textButtonColor, playerBackground, useDarkTheme),
+                modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
+                isPlaying = effectiveIsPlaying
+            )
+
+            Text(
+                text = if (duration != androidx.media3.common.C.TIME_UNSET) makeTimeString(duration) else "",
+                style = MaterialTheme.typography.labelMedium,
+                color = TextBackgroundColor.copy(alpha = 0.7f)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // 5. MAIN PLAYBACK CONTROLS (Prev, Play, Next)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Previous
+            FilledIconButton(
+                onClick = playerConnection::seekToPrevious,
+                enabled = canSkipPrevious && !isListenTogetherGuest,
+                shape = RoundedCornerShape(24.dp), // Soft square look
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = sideButtonContainerColor,
+                    contentColor = sideButtonContentColor
+                ),
+                modifier = Modifier.size(72.dp)
+            ) {
+                Icon(painterResource(R.drawable.skip_previous), null, Modifier.size(32.dp))
+            }
+
+            // Play / Pause (Bada aur dark button)
+            FilledIconButton(
+                onClick = {
+                    if (isListenTogetherGuest) playerConnection.toggleMute()
+                    else playerConnection.togglePlayPause()
+                },
+                shape = RoundedCornerShape(32.dp),
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = textButtonColor,
+                    contentColor = iconButtonColor
+                ),
+                modifier = Modifier.size(88.dp) // Larger than skip buttons
+            ) {
+                Icon(
+                    painter = painterResource(
+                        if (isListenTogetherGuest) {
+                            if (isMuted) R.drawable.volume_off else R.drawable.volume_up
+                        } else {
+                            if (effectiveIsPlaying) R.drawable.pause else R.drawable.play
+                        }
+                    ),
+                    contentDescription = null,
+                    modifier = Modifier.size(40.dp)
+                )
+            }
+
+            // Next
+            FilledIconButton(
+                onClick = playerConnection::seekToNext,
+                enabled = canSkipNext && !isListenTogetherGuest,
+                shape = RoundedCornerShape(24.dp),
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = sideButtonContainerColor,
+                    contentColor = sideButtonContentColor
+                ),
+                modifier = Modifier.size(72.dp)
+            ) {
+                Icon(painterResource(R.drawable.skip_next), null, Modifier.size(32.dp))
+            }
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // 6. ACTION PILLS ROW 1 (Like, Download, Repeat)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            val isEpisode = currentSong?.song?.isEpisode == true
+            val isFavorite = if (isEpisode) currentSong?.song?.inLibrary != null else currentSong?.song?.liked == true
+
+            // Heart Pill
+            Surface(
+                shape = CircleShape,
+                color = sideButtonContainerColor.copy(alpha = 0.5f),
+                modifier = Modifier.clickable { playerConnection.toggleLike() }
+            ) {
+                PaddingValues(horizontal = 24.dp, vertical = 12.dp).let {
+                    Icon(
+                        painter = painterResource(if (isFavorite) R.drawable.favorite else R.drawable.favorite_border),
+                        contentDescription = "Like",
+                        tint = if (isFavorite) MaterialTheme.colorScheme.error else TextBackgroundColor,
+                        modifier = Modifier.padding(it).size(20.dp)
+                    )
+                }
+            }
+            
+            // Download Pill
+            Surface(
+                shape = CircleShape,
+                color = sideButtonContainerColor.copy(alpha = 0.5f),
+                modifier = Modifier.clickable { /* Trigger Download */ }
+            ) {
+                Row(modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(painterResource(R.drawable.offline), null, tint = TextBackgroundColor, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Download", color = TextBackgroundColor, style = MaterialTheme.typography.labelLarge)
+                }
+            }
+
+            // Repeat Pill
+            Surface(
+                shape = CircleShape,
+                color = sideButtonContainerColor.copy(alpha = 0.5f),
+                modifier = Modifier.clickable { playerConnection.toggleRepeatMode() }
+            ) {
+                Row(modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        painter = painterResource(
+                            when (repeatMode) {
+                                Player.REPEAT_MODE_ONE -> R.drawable.repeat_one
+                                else -> R.drawable.repeat
+                            }
+                        ),
+                        contentDescription = "Repeat",
+                        tint = if (repeatMode != Player.REPEAT_MODE_OFF) textButtonColor else TextBackgroundColor,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Repeat", color = TextBackgroundColor, style = MaterialTheme.typography.labelLarge)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 7. ACTION PILLS ROW 2 (Lyrics & Queue)
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            // Lyrics Button
+            Surface(
+                shape = CircleShape,
+                color = sideButtonContainerColor.copy(alpha = 0.7f),
+                modifier = Modifier.clickable { onToggleLyrics() }
+            ) {
+                Row(modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(painterResource(R.drawable.lyrics), null, tint = TextBackgroundColor, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Lyrics", color = TextBackgroundColor, style = MaterialTheme.typography.labelLarge)
+                }
+            }
+
+            // Queue Button
+            Surface(
+                shape = CircleShape,
+                color = sideButtonContainerColor.copy(alpha = 0.7f),
+                modifier = Modifier.clickable { onShowQueue() }
+            ) {
+                Row(modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(painterResource(R.drawable.queue_music), null, tint = TextBackgroundColor, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Queue", color = TextBackgroundColor, style = MaterialTheme.typography.labelLarge)
+                }
+            }
+        }
+    }
+}
+
