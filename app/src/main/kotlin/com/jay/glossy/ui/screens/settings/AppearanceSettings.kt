@@ -626,6 +626,7 @@ fun AppearanceSettings(
                     PlayerBackgroundStyle.DEFAULT -> stringResource(R.string.follow_theme)
                     PlayerBackgroundStyle.GRADIENT -> stringResource(R.string.gradient)
                     PlayerBackgroundStyle.BLUR -> stringResource(R.string.player_background_blur)
+                    PlayerBackgroundStyle.ANIMATED_MESH -> "Animated Mesh"
                 }
             },
         )
@@ -648,6 +649,7 @@ fun AppearanceSettings(
                     MiniPlayerBackgroundStyle.BLUR -> stringResource(R.string.player_background_blur)
                     MiniPlayerBackgroundStyle.GRADIENT -> stringResource(R.string.gradient)
                     MiniPlayerBackgroundStyle.PURE_BLACK -> stringResource(R.string.pure_black)
+                    MiniPlayerBackgroundStyle.ANIMATED_MESH -> "Animated Mesh"
                 }
             },
         )
@@ -1232,6 +1234,7 @@ fun AppearanceSettings(
                                                 MiniPlayerBackgroundStyle.BLUR -> stringResource(R.string.player_background_blur)
                                                 MiniPlayerBackgroundStyle.GRADIENT -> stringResource(R.string.gradient)
                                                 MiniPlayerBackgroundStyle.PURE_BLACK -> stringResource(R.string.pure_black)
+                                                MiniPlayerBackgroundStyle.ANIMATED_MESH -> "Animated Mesh"
                                             }
                                         },
                                     color =
@@ -1286,6 +1289,7 @@ fun AppearanceSettings(
                                     PlayerBackgroundStyle.DEFAULT -> stringResource(R.string.follow_theme)
                                     PlayerBackgroundStyle.GRADIENT -> stringResource(R.string.gradient)
                                     PlayerBackgroundStyle.BLUR -> stringResource(R.string.player_background_blur)
+                                    PlayerBackgroundStyle.ANIMATED_MESH -> "Animated Mesh"
                                 },
                             )
                         },
