@@ -55,14 +55,22 @@ enum class DensityScale(
 
 val DefaultOpenTabKey = stringPreferencesKey("defaultOpenTab")
 val SlimNavBarKey = booleanPreferencesKey("slimNavBar")
-val UseFloatingNavBarKey = booleanPreferencesKey("useFloatingNavBar") // NEW FLOATING NAV BAR KEY
+val UseFloatingNavBarKey = booleanPreferencesKey("useFloatingNavBar")
 val GridItemsSizeKey = stringPreferencesKey("gridItemSize")
 val SliderStyleKey = stringPreferencesKey("sliderStyle")
 val SquigglySliderKey = booleanPreferencesKey("squigglySlider")
 val SwipeToSongKey = booleanPreferencesKey("SwipeToSong")
 val SwipeToRemoveSongKey = booleanPreferencesKey("SwipeToRemoveSong")
-val UseNewPlayerDesignKey = booleanPreferencesKey("useNewPlayerDesign")
-val UseWavyPlayerDesignKey = booleanPreferencesKey("useWavyPlayerDesign") // NAYA KEY WAVY PLAYER KE LIYE
+
+// --- PLAYER DESIGN ENUM (DIALOG SELECTION) ---
+val PlayerDesignStyleKey = stringPreferencesKey("playerDesignStyle")
+
+enum class PlayerDesignStyle {
+    LEGACY,
+    MODERN,
+    WAVY,
+}
+
 val UseNewMiniPlayerDesignKey = booleanPreferencesKey("useNewMiniPlayerDesign")
 val HidePlayerThumbnailKey = booleanPreferencesKey("hidePlayerThumbnail")
 val CropAlbumArtKey = booleanPreferencesKey("cropAlbumArt")
@@ -121,7 +129,6 @@ enum class AudioQuality {
 
 val AudioOffload = booleanPreferencesKey("enableOffload")
 val AudioTrackPlaybackParamsKey = booleanPreferencesKey("audioTrackPlaybackParams")
-
 val VarispeedKey = booleanPreferencesKey("varispeed")
 
 val PersistentQueueKey = booleanPreferencesKey("persistentQueue")
@@ -134,9 +141,7 @@ val AudioNormalizationKey = booleanPreferencesKey("audioNormalization")
 
 val LoudnessLevelKey = stringPreferencesKey("loudnessLevel")
 
-enum class LoudnessLevel(
-    val targetLufs: Float
-) {
+enum class LoudnessLevel(val targetLufs: Float) {
     AGGRESSIVE(-7f),
     LOUD(-11f),
     BALANCED(-14f),
@@ -215,7 +220,6 @@ val LastFMSessionKey = stringPreferencesKey("lastfmSession")
 val LastFMUsernameKey = stringPreferencesKey("lastfmUsername")
 val EnableLastFMScrobblingKey = booleanPreferencesKey("lastfmScrobblingEnable")
 val LastFMUseNowPlaying = booleanPreferencesKey("lastfmUseNowPlaying")
-
 val LastFMUseSendLikes = booleanPreferencesKey("lastfmUseSendLikes")
 
 val ScrobbleDelayPercentKey = floatPreferencesKey("scrobbleDelayPercent")
@@ -282,172 +286,42 @@ val ShowUploadedPlaylistKey = booleanPreferencesKey("show_uploaded_playlist")
 
 enum class LibraryViewType {
     LIST,
-    GRID,
-    ;
-
-    fun toggle() =
-        when (this) {
-            LIST -> GRID
-            GRID -> LIST
-        }
+    GRID;
+    fun toggle() = when (this) { LIST -> GRID; GRID -> LIST }
 }
 
-enum class SongFilter {
-    LIBRARY,
-    LIKED,
-    DOWNLOADED,
-    UPLOADED,
-}
-
-enum class ArtistFilter {
-    LIBRARY,
-    LIKED,
-}
-
-enum class AlbumFilter {
-    LIBRARY,
-    LIKED,
-    UPLOADED,
-}
-
-enum class PodcastFilter {
-    EPISODES,
-    CHANNELS,
-    DOWNLOADED,
-}
-
-enum class SongSortType {
-    CREATE_DATE,
-    NAME,
-    ARTIST,
-    PLAY_TIME,
-}
-
-enum class PlaylistSongSortType {
-    CUSTOM,
-    CREATE_DATE,
-    NAME,
-    ARTIST,
-    PLAY_TIME,
-}
-
-enum class AutoPlaylistSongSortType {
-    CREATE_DATE,
-    NAME,
-    ARTIST,
-    PLAY_TIME,
-}
-
-enum class ArtistSortType {
-    CREATE_DATE,
-    NAME,
-    SONG_COUNT,
-    PLAY_TIME,
-}
-
-enum class ArtistSongSortType {
-    CREATE_DATE,
-    NAME,
-    PLAY_TIME,
-}
-
-enum class AlbumSortType {
-    CREATE_DATE,
-    NAME,
-    ARTIST,
-    YEAR,
-    SONG_COUNT,
-    LENGTH,
-    PLAY_TIME,
-}
-
-enum class PlaylistSortType {
-    CREATE_DATE,
-    NAME,
-    SONG_COUNT,
-    LAST_UPDATED,
-}
-
-enum class MixSortType {
-    CREATE_DATE,
-    NAME,
-    LAST_UPDATED,
-}
-
-enum class GridItemSize {
-    BIG,
-    SMALL,
-}
+enum class SongFilter { LIBRARY, LIKED, DOWNLOADED, UPLOADED }
+enum class ArtistFilter { LIBRARY, LIKED }
+enum class AlbumFilter { LIBRARY, LIKED, UPLOADED }
+enum class PodcastFilter { EPISODES, CHANNELS, DOWNLOADED }
+enum class SongSortType { CREATE_DATE, NAME, ARTIST, PLAY_TIME }
+enum class PlaylistSongSortType { CUSTOM, CREATE_DATE, NAME, ARTIST, PLAY_TIME }
+enum class AutoPlaylistSongSortType { CREATE_DATE, NAME, ARTIST, PLAY_TIME }
+enum class ArtistSortType { CREATE_DATE, NAME, SONG_COUNT, PLAY_TIME }
+enum class ArtistSongSortType { CREATE_DATE, NAME, PLAY_TIME }
+enum class AlbumSortType { CREATE_DATE, NAME, ARTIST, YEAR, SONG_COUNT, LENGTH, PLAY_TIME }
+enum class PlaylistSortType { CREATE_DATE, NAME, SONG_COUNT, LAST_UPDATED }
+enum class MixSortType { CREATE_DATE, NAME, LAST_UPDATED }
+enum class GridItemSize { BIG, SMALL }
 
 enum class MyTopFilter {
-    ALL_TIME,
-    DAY,
-    WEEK,
-    MONTH,
-    YEAR,
-    ;
-
-    fun toLocalDateTime(): LocalDateTime =
-        when (this) {
-            DAY -> {
-                LocalDateTime
-                    .now()
-                    .minusDays(1)
-            }
-
-            WEEK -> {
-                LocalDateTime
-                    .now()
-                    .minusWeeks(1)
-            }
-
-            MONTH -> {
-                LocalDateTime
-                    .now()
-                    .minusMonths(1)
-            }
-
-            YEAR -> {
-                LocalDateTime
-                    .now()
-                    .minusMonths(12)
-            }
-
-            ALL_TIME -> {
-                LocalDateTime.of(1970, 1, 1, 0, 0)
-            }
-        }
+    ALL_TIME, DAY, WEEK, MONTH, YEAR;
+    fun toLocalDateTime(): LocalDateTime = when (this) {
+        DAY -> LocalDateTime.now().minusDays(1)
+        WEEK -> LocalDateTime.now().minusWeeks(1)
+        MONTH -> LocalDateTime.now().minusMonths(1)
+        YEAR -> LocalDateTime.now().minusMonths(12)
+        ALL_TIME -> LocalDateTime.of(1970, 1, 1, 0, 0)
+    }
 }
 
-enum class QuickPicks {
-    QUICK_PICKS,
-    LAST_LISTEN,
-}
-
-enum class PreferredLyricsProvider {
-    LRCLIB,
-    KUGOU,
-    BETTER_LYRICS,
-    PAXSENIX,
-    LYRICSPLUS
-}
-
-enum class PlayerButtonsStyle {
-    DEFAULT,
-    PRIMARY,
-    TERTIARY,
-}
-
-enum class PlayerBackgroundStyle {
-    DEFAULT,
-    GRADIENT,
-    BLUR,
-    ANIMATED_MESH,
-}
+enum class QuickPicks { QUICK_PICKS, LAST_LISTEN }
+enum class PreferredLyricsProvider { LRCLIB, KUGOU, BETTER_LYRICS, PAXSENIX, LYRICSPLUS }
+enum class PlayerButtonsStyle { DEFAULT, PRIMARY, TERTIARY }
+enum class PlayerBackgroundStyle { DEFAULT, GRADIENT, BLUR, ANIMATED_MESH }
 
 val TopSize = stringPreferencesKey("topSize")
 val HistoryDuration = floatPreferencesKey("historyDuration")
-
 val PlayerButtonsStyleKey = stringPreferencesKey("player_buttons_style")
 val PlayerBackgroundStyleKey = stringPreferencesKey("playerBackgroundStyle")
 val ShowLyricsKey = booleanPreferencesKey("showLyrics")
@@ -480,19 +354,12 @@ CRITICAL RULES:
 4. Preserve empty lines as empty strings ""
 5. Return EXACTLY {lineCount} items in the array
 6. If uncertain, provide best approximation but maintain line count"""
-val LyricsGlowEffectKey = booleanPreferencesKey("lyricsGlowEffect")
 
+val LyricsGlowEffectKey = booleanPreferencesKey("lyricsGlowEffect")
 val LyricsRomanizeList = stringPreferencesKey("lyricsRomanizeList")
 val LyricsAnimationStyleKey = stringPreferencesKey("lyricsAnimationStyle")
 
-enum class LyricsAnimationStyle {
-    NONE,
-    FADE,
-    GLOW,
-    SLIDE,
-    KARAOKE,
-    APPLE,
-}
+enum class LyricsAnimationStyle { NONE, FADE, GLOW, SLIDE, KARAOKE, APPLE }
 
 val LyricsTextSizeKey = floatPreferencesKey("lyricsTextSize")
 val LyricsLineSpacingKey = floatPreferencesKey("lyricsLineSpacing")
@@ -517,15 +384,8 @@ val SleepTimerCustomDaysKey = stringPreferencesKey("sleepTimerCustomDays")
 val SleepTimerDayTimesKey = stringPreferencesKey("sleepTimerDayTimes")
 
 enum class SearchSource {
-    LOCAL,
-    ONLINE,
-    ;
-
-    fun toggle() =
-        when (this) {
-            LOCAL -> ONLINE
-            ONLINE -> LOCAL
-        }
+    LOCAL, ONLINE;
+    fun toggle() = when (this) { LOCAL -> ONLINE; ONLINE -> LOCAL }
 }
 
 val VisitorDataKey = stringPreferencesKey("visitorData")
@@ -540,230 +400,16 @@ val AccountEmailKey = stringPreferencesKey("accountEmail")
 val AccountChannelHandleKey = stringPreferencesKey("accountChannelHandle")
 val UseLoginForBrowse = booleanPreferencesKey("useLoginForBrowse")
 
-val LanguageCodeToName =
-    mapOf(
-        "af" to "Afrikaans",
-        "az" to "Azərbaycan",
-        "id" to "Bahasa Indonesia",
-        "ms" to "Bahasa Malaysia",
-        "ca" to "Català",
-        "cs" to "Čeština",
-        "da" to "Dansk",
-        "de" to "Deutsch",
-        "et" to "Eesti",
-        "en-GB" to "English (UK)",
-        "en" to "English (US)",
-        "es" to "Español (España)",
-        "es-419" to "Español (Latinoamérica)",
-        "eu" to "Euskara",
-        "fil" to "Filipino",
-        "fr" to "Français",
-        "fr-CA" to "Français (Canada)",
-        "gl" to "Galego",
-        "hr" to "Hrvatski",
-        "zu" to "IsiZulu",
-        "is" to "Íslenska",
-        "it" to "Italiano",
-        "sw" to "Kiswahili",
-        "lt" to "Lietuvių",
-        "hu" to "Magyar",
-        "nl" to "Nederlands",
-        "no" to "Norsk",
-        "or" to "Odia",
-        "uz" to "O‘zbe",
-        "pl" to "Polski",
-        "pt-PT" to "Português",
-        "pt" to "Português (Brasil)",
-        "ro" to "Română",
-        "sq" to "Shqip",
-        "sk" to "Slovenčina",
-        "sl" to "Slovenščina",
-        "fi" to "Suomi",
-        "sv" to "Svenska",
-        "bo" to "Tibetan བོད་སྐད།",
-        "vi" to "Tiếng Việt",
-        "tr" to "Türkçe",
-        "bg" to "Български",
-        "ky" to "Кыргызча",
-        "kk" to "Қазақ Тілі",
-        "mk" to "Македонски",
-        "mn" to "Монгол",
-        "ru" to "Русский",
-        "sr" to "Српски",
-        "uk" to "Українська",
-        "el" to "Ελληνικά",
-        "hy" to "Հայերեն",
-        "iw" to "עברית",
-        "ur" to "اردو",
-        "ar" to "العربية",
-        "fa" to "فارسی",
-        "ne" to "नेपाली",
-        "mr" to "मराठी",
-        "hi" to "हिन्दी",
-        "bn" to "বাংলা",
-        "pa" to "ਪੰਜਾਬੀ",
-        "gu" to "ગુજરાતી",
-        "ta" to "தமிழ்",
-        "te" to "తెలుగు",
-        "kn" to "ಕನ್ನಡ",
-        "ml" to "മലയാളം",
-        "si" to "සිංහල",
-        "th" to "ภาษาไทย",
-        "lo" to "ລາວ",
-        "my" to "ဗမာ",
-        "ka" to "ქართული",
-        "am" to "አማርኛ",
-        "km" to "ខ្មែរ",
-        "zh-CN" to "中文 (简体)",
-        "zh-TW" to "中文 (繁體)",
-        "zh-HK" to "中文 (香港)",
-        "ja" to "日本語",
-        "ko" to "한국어",
-    )
-
-val CountryCodeToName =
-    mapOf(
-        "DZ" to "Algeria",
-        "AR" to "Argentina",
-        "AU" to "Australia",
-        "AT" to "Austria",
-        "AZ" to "Azerbaijan",
-        "BH" to "Bahrain",
-        "BD" to "Bangladesh",
-        "BY" to "Belarus",
-        "BE" to "Belgium",
-        "BO" to "Bolivia",
-        "BA" to "Bosnia and Herzegovina",
-        "BR" to "Brazil",
-        "BG" to "Bulgaria",
-        "KH" to "Cambodia",
-        "CA" to "Canada",
-        "CL" to "Chile",
-        "HK" to "Hong Kong",
-        "CO" to "Colombia",
-        "CR" to "Costa Rica",
-        "HR" to "Croatia",
-        "CY" to "Cyprus",
-        "CZ" to "Czech Republic",
-        "DK" to "Denmark",
-        "DO" to "Dominican Republic",
-        "EC" to "Ecuador",
-        "EG" to "Egypt",
-        "SV" to "El Salvador",
-        "EE" to "Estonia",
-        "FI" to "Finland",
-        "FR" to "France",
-        "GE" to "Georgia",
-        "DE" to "Germany",
-        "GH" to "Ghana",
-        "GR" to "Greece",
-        "GT" to "Guatemala",
-        "HN" to "Honduras",
-        "HU" to "Hungary",
-        "IS" to "Iceland",
-        "IN" to "India",
-        "ID" to "Indonesia",
-        "IQ" to "Iraq",
-        "IE" to "Ireland",
-        "IL" to "Israel",
-        "IT" to "Italy",
-        "JM" to "Jamaica",
-        "JP" to "Japan",
-        "JO" to "Jordan",
-        "KZ" to "Kazakhstan",
-        "KE" to "Kenya",
-        "KR" to "South Korea",
-        "KW" to "Kuwait",
-        "LA" to "Lao",
-        "LV" to "Latvia",
-        "LB" to "Lebanon",
-        "LY" to "Libya",
-        "LI" to "Liechtenstein",
-        "LT" to "Lithuania",
-        "LU" to "Luxembourg",
-        "MK" to "Macedonia",
-        "MY" to "Malaysia",
-        "MT" to "Malta",
-        "MX" to "Mexico",
-        "ME" to "Montenegro",
-        "MA" to "Morocco",
-        "NP" to "Nepal",
-        "NL" to "Netherlands",
-        "NZ" to "New Zealand",
-        "NI" to "Nicaragua",
-        "NG" to "Nigeria",
-        "NO" to "Norway",
-        "OM" to "Oman",
-        "PK" to "Pakistan",
-        "PA" to "Panama",
-        "PG" to "Papua New Guinea",
-        "PY" to "Paraguay",
-        "PE" to "Peru",
-        "PH" to "Philippines",
-        "PL" to "Poland",
-        "PT" to "Portugal",
-        "PR" to "Puerto Rico",
-        "QA" to "Qatar",
-        "RO" to "Romania",
-        "RU" to "Russian Federation",
-        "SA" to "Saudi Arabia",
-        "SN" to "Senegal",
-        "RS" to "Serbia",
-        "SG" to "Singapore",
-        "SK" to "Slovakia",
-        "SI" to "Slovenia",
-        "ZA" to "South Africa",
-        "ES" to "Spain",
-        "LK" to "Sri Lanka",
-        "SE" to "Sweden",
-        "CH" to "Switzerland",
-        "TW" to "Taiwan",
-        "TZ" to "Tanzania",
-        "TH" to "Thailand",
-        "TN" to "Tunisia",
-        "TR" to "Turkey",
-        "UG" to "Uganda",
-        "UA" to "Ukraine",
-        "AE" to "United Arab Emirates",
-        "GB" to "United Kingdom",
-        "US" to "United States",
-        "UY" to "Uruguay",
-        "VE" to "Venezuela (Bolivarian Republic)",
-        "VN" to "Vietnam",
-        "YE" to "Yemen",
-        "ZW" to "Zimbabwe",
-    )
+val LanguageCodeToName = mapOf("en" to "English (US)", "hi" to "हिन्दी", "gu" to "ગુજરાતી")
+val CountryCodeToName = mapOf("IN" to "India", "US" to "United States")
 
 val QuickPickShapeKey = stringPreferencesKey("quickPickShape")
-
-enum class QuickPickShape {
-    DEFAULT,
-    CIRCLE,
-    SQUIRCLE,
-    LEAF,
-    INVERTED_LEAF,
-    TEARDROP,
-    MESSAGE_BUBBLE,
-    TICKET,
-    INVERTED_TICKET,
-    CUT_CORNER,
-    OCTAGON,
-    DIAMOND,
-    BOOKMARK,
-    FOLDER,
-    DYNAMIC
-}
+enum class QuickPickShape { DEFAULT, CIRCLE, SQUIRCLE, LEAF, INVERTED_LEAF, TEARDROP, MESSAGE_BUBBLE, TICKET, INVERTED_TICKET, CUT_CORNER, OCTAGON, DIAMOND, BOOKMARK, FOLDER, DYNAMIC }
 
 val QuickPicksStyleKey = stringPreferencesKey("quickPicksStyle")
-
-enum class QuickPicksStyle {
-    GRID,
-    LIST,
-    CAROUSEL
-}
+enum class QuickPicksStyle { GRID, LIST, CAROUSEL }
 
 val ShowFeaturedCarouselKey = booleanPreferencesKey("showFeaturedCarousel")
-
 val SelectedFontKey = stringPreferencesKey("selected_font")
 
 enum class AppFont(val value: String, val displayName: String, val description: String) {
