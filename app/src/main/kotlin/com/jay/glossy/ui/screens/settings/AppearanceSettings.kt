@@ -107,6 +107,7 @@ import com.jay.glossy.constants.SwipeToRemoveSongKey
 import com.jay.glossy.constants.SwipeToSongKey
 import com.jay.glossy.constants.UseNewMiniPlayerDesignKey
 import com.jay.glossy.constants.UseNewPlayerDesignKey
+import com.jay.glossy.constants.UseWavyPlayerDesignKey // NAYA IMPORT 
 import com.jay.glossy.constants.QuickPickShape
 import com.jay.glossy.constants.QuickPickShapeKey
 import com.jay.glossy.constants.QuickPicksStyle
@@ -180,6 +181,14 @@ fun AppearanceSettings(
             UseNewPlayerDesignKey,
             defaultValue = true,
         )
+        
+    // NAYA TOGGLE VARIABLE WAVY PLAYER KE LIYE
+    val (useWavyPlayerDesign, onUseWavyPlayerDesignChange) =
+        rememberPreference(
+            UseWavyPlayerDesignKey,
+            defaultValue = false,
+        )
+        
     val (miniPlayerBackground, onMiniPlayerBackgroundChange) =
         rememberEnumPreference(
             MiniPlayerBackgroundStyleKey,
@@ -479,7 +488,7 @@ fun AppearanceSettings(
         )
     }
 
-    if (showLyricsTextSizeDialog) {
+        if (showLyricsTextSizeDialog) {
         var tempTextSize by remember { mutableFloatStateOf(lyricsTextSize) }
         DefaultDialog(
             onDismiss = {
@@ -1003,7 +1012,7 @@ fun AppearanceSettings(
         }
     }
 
-    Column(
+        Column(
         Modifier
             .windowInsetsPadding(LocalPlayerAwareWindowInsets.current)
             .verticalScroll(rememberScrollState())
@@ -1161,7 +1170,6 @@ fun AppearanceSettings(
                         ),
                     )
                     
-                    // NAYI SCREEN NAVIGATE KARNE WALA FONT OPTION
                     add(
                         Material3SettingsItem(
                             icon = painterResource(R.drawable.palette),
@@ -1259,6 +1267,25 @@ fun AppearanceSettings(
             title = stringResource(R.string.player),
             items =
                 listOf(
+                    // YAHAN 3RD WAVY PLAYER KA OPTION ADD KIYA GAYA HAI
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.palette),
+                        title = { Text("Use Wavy Player (New 3rd Design)") },
+                        trailingContent = {
+                            Switch(
+                                checked = useWavyPlayerDesign,
+                                onCheckedChange = onUseWavyPlayerDesignChange,
+                                thumbContent = {
+                                    Icon(
+                                        painter = painterResource(id = if (useWavyPlayerDesign) R.drawable.check else R.drawable.close),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize),
+                                    )
+                                },
+                            )
+                        },
+                        onClick = { onUseWavyPlayerDesignChange(!useWavyPlayerDesign) },
+                    ),
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.palette),
                         title = { Text(stringResource(R.string.new_player_design)) },
@@ -1765,8 +1792,7 @@ fun AppearanceSettings(
                                     LibraryFilter.SONGS -> stringResource(R.string.songs)
                                     LibraryFilter.ARTISTS -> stringResource(R.string.artists)
                                     LibraryFilter.ALBUMS -> stringResource(R.string.albums)
-                                    LibraryFilter.PLAYLISTS -> stringResource(R.string.playlists)
-                                    LibraryFilter.PODCASTS -> stringResource(R.string.filter_podcasts)
+                                    LibraryFilter.PLAYLISTS -> stringResource(R.string.filter_podcasts)
                                     LibraryFilter.LIBRARY -> stringResource(R.string.filter_library)
                                 },
                             )
