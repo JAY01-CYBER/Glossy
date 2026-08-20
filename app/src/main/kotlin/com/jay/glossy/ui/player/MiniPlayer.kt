@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  *
  * Performance optimized MiniPlayer - prevents unnecessary recomposition
@@ -252,7 +252,9 @@ private fun NewMiniPlayer(
 
     LaunchedEffect(mediaMetadata?.id, miniPlayerBackground) {
         gradientColors = emptyList()
-        if (miniPlayerBackground == MiniPlayerBackgroundStyle.GRADIENT) {
+        // GRADIENT aur ANIMATED_MESH dono ko palette ki zaroorat hoti hai
+        if (miniPlayerBackground == MiniPlayerBackgroundStyle.GRADIENT || 
+            miniPlayerBackground == MiniPlayerBackgroundStyle.ANIMATED_MESH) {
             val url = mediaMetadata?.thumbnailUrl
             if (url != null) {
                 withContext(Dispatchers.IO) {
@@ -295,11 +297,13 @@ private fun NewMiniPlayer(
         MiniPlayerBackgroundStyle.TRANSPARENT -> Color.Black.copy(alpha = 0.25f)
         MiniPlayerBackgroundStyle.BLUR       -> MaterialTheme.colorScheme.surfaceContainer
         MiniPlayerBackgroundStyle.GRADIENT   -> MaterialTheme.colorScheme.surfaceContainer
+        MiniPlayerBackgroundStyle.ANIMATED_MESH -> MaterialTheme.colorScheme.surfaceContainer
         MiniPlayerBackgroundStyle.PURE_BLACK -> Color.Black
     }
     val forceLightColors = !useDarkTheme && (miniPlayerBackground == MiniPlayerBackgroundStyle.PURE_BLACK ||
             miniPlayerBackground == MiniPlayerBackgroundStyle.BLUR ||
-            miniPlayerBackground == MiniPlayerBackgroundStyle.GRADIENT)
+            miniPlayerBackground == MiniPlayerBackgroundStyle.GRADIENT ||
+            miniPlayerBackground == MiniPlayerBackgroundStyle.ANIMATED_MESH)
 
     val primaryColor = if (forceLightColors) Color.White else MaterialTheme.colorScheme.primary
     val outlineColor = if (forceLightColors) Color.White else MaterialTheme.colorScheme.outline
@@ -427,6 +431,19 @@ private fun NewMiniPlayer(
                             .background(Color.Black.copy(alpha = 0.15f)),
                     )
                 }
+                MiniPlayerBackgroundStyle.ANIMATED_MESH -> {
+                    val colors = if (gradientColors.isNotEmpty()) gradientColors
+                    else listOf(
+                        MaterialTheme.colorScheme.surfaceContainer,
+                        MaterialTheme.colorScheme.surfaceContainer,
+                    )
+                    AnimatedMeshBackground(
+                        colors = colors,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.2f))
+                    )
+                }
                 else -> {}
             }
             Row(
@@ -469,7 +486,7 @@ private fun NewMiniPlayer(
                     Spacer(modifier = Modifier.width(12.dp))
                 }
 
-// Subscribe button - isolated composable
+                // Subscribe button - isolated composable
                 mediaMetadata?.artists?.firstOrNull()?.id?.let { artistId ->
                     SubscribeButton(
                         artistId = artistId,
@@ -482,7 +499,7 @@ private fun NewMiniPlayer(
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-// Add to playlist button - isolated composable
+                // Add to playlist button - isolated composable
                 mediaMetadata?.let { metadata ->
                     AddToPlaylistButton(
                         onClick = {
@@ -501,7 +518,7 @@ private fun NewMiniPlayer(
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-// Favorite button - isolated composable
+                // Favorite button - isolated composable
                 mediaMetadata?.let { FavoriteButton(
                     songId = it.id,
                     errorColor = errorColor,
