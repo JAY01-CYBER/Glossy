@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -190,8 +190,9 @@ private fun getMediaItems(
 private fun getTextColor(playerBackground: PlayerBackgroundStyle): Color {
     return when (playerBackground) {
         PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.onBackground
-        PlayerBackgroundStyle.BLUR -> Color.White
-        PlayerBackgroundStyle.GRADIENT -> Color.White
+        PlayerBackgroundStyle.BLUR,
+        PlayerBackgroundStyle.GRADIENT,
+        PlayerBackgroundStyle.ANIMATED_MESH -> Color.White
     }
 }
 
