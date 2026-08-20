@@ -1519,7 +1519,7 @@ fun BottomSheetPlayer(
                     val isEpisode = currentSong?.song?.isEpisode == true
                     val isFavorite = if (isEpisode) currentSong?.song?.inLibrary != null else currentSong?.song?.liked == true
                     
-                    val onPlayPauseLogic = {
+                    val onPlayPauseLogic: () -> Unit = {
                         if (isListenTogetherGuest) {
                             playerConnection.toggleMute()
                         } else if (isCasting) {
