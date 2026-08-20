@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -20,8 +20,12 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -30,6 +34,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
@@ -173,7 +178,6 @@ import com.jay.glossy.ui.component.PlayerSliderTrack
 import com.jay.glossy.ui.component.ResizableIconButton
 import com.jay.glossy.ui.component.SquigglySlider
 import com.jay.glossy.ui.component.WavySlider
-import com.jay.glossy.ui.component.rememberBottomSheetState
 import com.jay.glossy.ui.menu.PlayerMenu
 import com.jay.glossy.ui.screens.settings.DarkMode
 import com.jay.glossy.ui.theme.PlayerColorExtractor
@@ -195,10 +199,6 @@ import kotlinx.coroutines.withContext
 import kotlin.math.max
 import kotlin.math.roundToInt
 import com.jay.glossy.ui.component.Icon as MIcon
-import com.jay.glossy.constants.SleepTimerDefaultKey
-import com.jay.glossy.constants.SleepTimerFadeOutKey
-import com.jay.glossy.constants.SleepTimerStopAfterCurrentSongKey
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -253,7 +253,7 @@ fun BottomSheetPlayer(
     val shouldUseDarkButtonColors =
         remember(playerBackground, useDarkTheme) {
             when (playerBackground) {
-                PlayerBackgroundStyle.BLUR, PlayerBackgroundStyle.GRADIENT -> true
+                PlayerBackgroundStyle.BLUR, PlayerBackgroundStyle.GRADIENT, PlayerBackgroundStyle.ANIMATED_MESH -> true
                 PlayerBackgroundStyle.DEFAULT -> useDarkTheme
             }
         }
@@ -268,7 +268,7 @@ fun BottomSheetPlayer(
             val insetsController = WindowCompat.getInsetsController(window, window.decorView)
 
             when (playerBackground) {
-                PlayerBackgroundStyle.BLUR, PlayerBackgroundStyle.GRADIENT -> {
+                PlayerBackgroundStyle.BLUR, PlayerBackgroundStyle.GRADIENT, PlayerBackgroundStyle.ANIMATED_MESH -> {
                     insetsController.isAppearanceLightStatusBars = false
                 }
 
@@ -366,9 +366,6 @@ fun BottomSheetPlayer(
 
     // Use State objects for position/duration to pass to MiniPlayer without causing recomposition
     // These states persist across playback state changes to ensure continuous progress updates.
-    // Seed from the player's current values so re-entering composition on resume shows the real
-    // time immediately instead of flashing 0:00 until the first poll fires. runCatching guards the
-    // player-not-ready race; the poll loop corrects duration if it isn't known yet.
     val positionState = remember { mutableLongStateOf(runCatching { playerConnection.player.currentPosition }.getOrDefault(0L)) }
     val durationState = remember {
         mutableLongStateOf(
@@ -377,7 +374,6 @@ fun BottomSheetPlayer(
         )
     }
 
-    // Convenience accessors for local use
     var position by positionState
     var duration by durationState
 
@@ -410,7 +406,7 @@ fun BottomSheetPlayer(
     val fallbackColor = MaterialTheme.colorScheme.surface.toArgb()
 
     LaunchedEffect(mediaMetadata?.id, playerBackground) {
-        if (playerBackground == PlayerBackgroundStyle.GRADIENT) {
+        if (playerBackground == PlayerBackgroundStyle.GRADIENT || playerBackground == PlayerBackgroundStyle.ANIMATED_MESH) {
             val currentMetadata = mediaMetadata
             if (currentMetadata != null && currentMetadata.thumbnailUrl != null) {
                 val cachedColors = gradientColorsCache[currentMetadata.id]
@@ -462,6 +458,7 @@ fun BottomSheetPlayer(
                 PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.onBackground
                 PlayerBackgroundStyle.BLUR -> Color.White
                 PlayerBackgroundStyle.GRADIENT -> Color.White
+                PlayerBackgroundStyle.ANIMATED_MESH -> Color.White
             },
         label = "TextBackgroundColor",
     )
@@ -472,6 +469,7 @@ fun BottomSheetPlayer(
                 PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.surface
                 PlayerBackgroundStyle.BLUR -> Color.Black
                 PlayerBackgroundStyle.GRADIENT -> Color.Black
+                PlayerBackgroundStyle.ANIMATED_MESH -> Color.Black
             },
         label = "icBackgroundColor",
     )
@@ -479,7 +477,8 @@ fun BottomSheetPlayer(
     val (textButtonColor, iconButtonColor) =
         when {
             playerBackground == PlayerBackgroundStyle.BLUR ||
-                playerBackground == PlayerBackgroundStyle.GRADIENT -> {
+                playerBackground == PlayerBackgroundStyle.GRADIENT ||
+                playerBackground == PlayerBackgroundStyle.ANIMATED_MESH -> {
                 when (playerButtonsStyle) {
                     PlayerButtonsStyle.DEFAULT -> {
                         Pair(Color.White, Color.Black)
@@ -528,11 +527,11 @@ fun BottomSheetPlayer(
             }
         }
 
-    // Separate colors for Previous/Next buttons in PRIMARY/TERTIARY modes
     val (sideButtonContainerColor, sideButtonContentColor) =
         when {
             playerBackground == PlayerBackgroundStyle.BLUR ||
-                playerBackground == PlayerBackgroundStyle.GRADIENT -> {
+                playerBackground == PlayerBackgroundStyle.GRADIENT ||
+                playerBackground == PlayerBackgroundStyle.ANIMATED_MESH -> {
                 when (playerButtonsStyle) {
                     PlayerButtonsStyle.DEFAULT -> {
                         Pair(
@@ -741,43 +740,30 @@ fun BottomSheetPlayer(
         mutableStateOf(false)
     }
 
-    // Position update - only for local playback
-    // When casting, we use castPosition directly to avoid sync issues
-    // Use isPlaying instead of playbackState to ensure continuous updates during playback
     LaunchedEffect(isPlaying, isCasting) {
         if (!isCasting && isPlaying) {
             while (isActive) {
-                delay(100) // Update more frequently for smoother progress bar
-                if (sliderPosition == null) { // Only update if user isn't dragging
+                delay(100)
+                if (sliderPosition == null) {
                     position = playerConnection.player.currentPosition
-                    // Don't clobber a valid (metadata-derived) duration with 0/UNSET mid-resolve.
                     playerConnection.player.duration.takeIf { it > 0 }?.let { duration = it }
                 }
             }
         }
     }
 
-    // Also update position when playback state changes (e.g., song change, seek)
     LaunchedEffect(playbackState, mediaMetadata?.id) {
         if (!isCasting) {
             position = playerConnection.player.currentPosition
-            // Prefer the song's known duration (from metadata, available instantly from the restored
-            // queue) so the slider range is right even when restored paused / before the stream
-            // resolves; fall back to the player's duration once it is known.
             duration = (mediaMetadata?.duration?.takeIf { it > 0 }?.toLong()?.times(1000L))
                 ?: playerConnection.player.duration
         }
     }
 
-    // Auto-switch from repeat one to repeat all when song ends naturally
     var previousMediaId by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(playbackState, mediaMetadata?.id) {
         val currentId = mediaMetadata?.id
-
-        // Only switch from REPEAT_ONE to REPEAT_ALL when playback naturally ended
-        // (i.e., the player transitioned to ENDED state and then moved to next track).
-        // Do NOT switch on manual skips.
         if (currentId != null &&
             currentId != previousMediaId &&
             previousMediaId != null &&
@@ -786,17 +772,13 @@ fun BottomSheetPlayer(
             !isListenTogetherGuest) {
             playerConnection.player.setRepeatMode(Player.REPEAT_MODE_ALL)
         }
-
         previousMediaId = currentId
     }
 
-    // When casting, use Cast position/duration directly
-    // But wait a bit after manual seeks to let Cast catch up
     LaunchedEffect(isCasting, castPosition, castDuration) {
         if (isCasting && sliderPosition == null) {
             val timeSinceManualSeek = System.currentTimeMillis() - lastManualSeekTime
             if (timeSinceManualSeek > 1500) {
-                // Only update from Cast if we haven't manually seeked recently
                 position = castPosition
                 if (castDuration > 0) duration = castDuration
             }
@@ -806,7 +788,7 @@ fun BottomSheetPlayer(
     val dismissedBound = QueuePeekHeight + WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
     val queueSheetState =
-        rememberBottomSheetState(
+        com.jay.glossy.ui.component.rememberBottomSheetState(
             dismissedBound = dismissedBound,
             expandedBound = state.expandedBound,
             collapsedBound = dismissedBound + 1.dp,
@@ -815,10 +797,9 @@ fun BottomSheetPlayer(
 
     val bottomSheetBackgroundColor =
         when (playerBackground) {
-            PlayerBackgroundStyle.BLUR, PlayerBackgroundStyle.GRADIENT -> {
+            PlayerBackgroundStyle.BLUR, PlayerBackgroundStyle.GRADIENT, PlayerBackgroundStyle.ANIMATED_MESH -> {
                 MaterialTheme.colorScheme.surfaceContainer
             }
-
             else -> {
                 if (useBlackBackground) {
                     Color.Black
@@ -906,6 +887,26 @@ fun BottomSheetPlayer(
                                         .alpha(backgroundAlpha)
                                         .background(Brush.verticalGradient(colorStops = gradientColorStops))
                                         .background(Color.Black.copy(alpha = 0.2f)),
+                                )
+                            }
+                        }
+                    }
+
+                    PlayerBackgroundStyle.ANIMATED_MESH -> {
+                        AnimatedContent(
+                            targetState = gradientColors,
+                            transitionSpec = {
+                                fadeIn(tween(800)).togetherWith(fadeOut(tween(800)))
+                            },
+                            label = "meshBackground",
+                        ) { colors ->
+                            if (colors.isNotEmpty()) {
+                                AnimatedMeshBackground(
+                                    colors = colors,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .alpha(backgroundAlpha)
+                                        .background(Color.Black.copy(alpha = 0.2f))
                                 )
                             }
                         }
@@ -1231,7 +1232,6 @@ fun BottomSheetPlayer(
                                     )
                                 }
                             } else {
-                                // For episodes, show saved state (inLibrary); for songs, show liked state
                                 val isEpisode = currentSong?.song?.isEpisode == true
                                 val isFavorite = if (isEpisode) currentSong?.song?.inLibrary != null else currentSong?.song?.liked == true
                                 FilledIconButton(
@@ -1815,7 +1815,6 @@ fun BottomSheetPlayer(
                             }
 
                             Box(modifier = Modifier.weight(1f)) {
-                                // For episodes, show saved state (inLibrary); for songs, show liked state
                                 val isEpisode = currentSong?.song?.isEpisode == true
                                 val isFavorite = if (isEpisode) currentSong?.song?.inLibrary != null else currentSong?.song?.liked == true
                                 ResizableIconButton(
@@ -1837,7 +1836,6 @@ fun BottomSheetPlayer(
 
         when (LocalConfiguration.current.orientation) {
             Configuration.ORIENTATION_LANDSCAPE -> {
-                // Calculate vertical padding like OuterTune
                 val density = LocalDensity.current
                 val verticalPadding =
                     max(
@@ -1862,7 +1860,6 @@ fun BottomSheetPlayer(
                                 .weight(1f)
                                 .nestedScroll(state.preUpPostDownNestedScrollConnection),
                     ) {
-                        // Remember lambdas to prevent unnecessary recomposition
                         val currentSliderPosition by rememberUpdatedState(sliderPosition)
                         val sliderPositionProvider = remember { { currentSliderPosition } }
                         val isExpandedProvider = remember(state) { { state.isExpanded } }
@@ -1925,7 +1922,6 @@ fun BottomSheetPlayer(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier.weight(1f),
                     ) {
-                        // Remember lambdas to prevent unnecessary recomposition
                         val currentSliderPosition by rememberUpdatedState(sliderPosition)
                         val sliderPositionProvider = remember { { currentSliderPosition } }
                         val isExpandedProvider = remember(state) { { state.isExpanded } }
@@ -2051,9 +2047,6 @@ fun InlineLyricsView(
         }
     }
 
-    // Prefetch lyrics for the next queue item only while the lyrics pane is visible, the app is in the
-    // foreground, and the current track's lyrics row has finished loading (avoids competing with the
-    // active fetch).
     LaunchedEffect(
         nextMetadata?.id,
         showLyrics,
@@ -2214,5 +2207,78 @@ private fun PlayerMoreMenuButton(
             contentDescription = null,
             colorFilter = ColorFilter.tint(iconButtonColor),
         )
+    }
+}
+
+@Composable
+fun AnimatedMeshBackground(colors: List<Color>, modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition(label = "mesh")
+    
+    // Smooth infinite animations for positions
+    val offset1 = infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(8000, easing = LinearEasing), RepeatMode.Reverse),
+        label = "offset1"
+    )
+    val offset2 = infiniteTransition.animateFloat(
+        initialValue = 1f, targetValue = 0f,
+        animationSpec = infiniteRepeatable(tween(10000, easing = LinearEasing), RepeatMode.Reverse),
+        label = "offset2"
+    )
+    val offset3 = infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(12000, easing = LinearEasing), RepeatMode.Reverse),
+        label = "offset3"
+    )
+
+    // Fallback colors agar image se colors na milein
+    val safeColors = if (colors.size >= 3) colors else listOf(
+        MaterialTheme.colorScheme.primaryContainer,
+        MaterialTheme.colorScheme.secondaryContainer,
+        MaterialTheme.colorScheme.tertiaryContainer
+    )
+
+    Canvas(modifier = modifier.fillMaxSize().blur(60.dp)) {
+        val w = size.width
+        val h = size.height
+        
+        // Draw phase optimization
+        val o1 = offset1.value
+        val o2 = offset2.value
+        val o3 = offset3.value
+
+        drawRect(color = safeColors[0].copy(alpha = 0.3f))
+
+        drawCircle(
+            brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                colors = listOf(safeColors[0], Color.Transparent),
+                center = Offset(w * o1, h * o2),
+                radius = w * 0.9f
+            ),
+            radius = w * 0.9f,
+            center = Offset(w * o1, h * o2)
+        )
+        
+        drawCircle(
+            brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                colors = listOf(safeColors[1], Color.Transparent),
+                center = Offset(w * o2, h * o3),
+                radius = w * 0.9f
+            ),
+            radius = w * 0.9f,
+            center = Offset(w * o2, h * o3)
+        )
+        
+        if (safeColors.size > 2) {
+            drawCircle(
+                brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                    colors = listOf(safeColors[2], Color.Transparent),
+                    center = Offset(w * o3, h * o1),
+                    radius = w * 0.9f
+                ),
+                radius = w * 0.9f,
+                center = Offset(w * o3, h * o1)
+            )
+        }
     }
 }
