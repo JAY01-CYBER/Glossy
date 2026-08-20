@@ -62,16 +62,13 @@ val SquigglySliderKey = booleanPreferencesKey("squigglySlider")
 val SwipeToSongKey = booleanPreferencesKey("SwipeToSong")
 val SwipeToRemoveSongKey = booleanPreferencesKey("SwipeToRemoveSong")
 
-// --- PLAYER DESIGN ENUM (DIALOG SELECTION) ---
+// --- PLAYER DESIGN KEYS ---
 val PlayerDesignStyleKey = stringPreferencesKey("playerDesignStyle")
-
-enum class PlayerDesignStyle {
-    LEGACY,
-    MODERN,
-    WAVY,
-}
-
+enum class PlayerDesignStyle { LEGACY, MODERN, WAVY }
+val UseNewPlayerDesignKey = booleanPreferencesKey("useNewPlayerDesign") // Queue.kt error fix
+val UseWavyPlayerDesignKey = booleanPreferencesKey("useWavyPlayerDesign")
 val UseNewMiniPlayerDesignKey = booleanPreferencesKey("useNewMiniPlayerDesign")
+
 val HidePlayerThumbnailKey = booleanPreferencesKey("hidePlayerThumbnail")
 val CropAlbumArtKey = booleanPreferencesKey("cropAlbumArt")
 val SeekExtraSeconds = booleanPreferencesKey("seekExtraSeconds")
@@ -87,11 +84,7 @@ val AlarmNextTriggerAtKey = longPreferencesKey("alarmNextTriggerAt")
 val AlarmEntriesKey = stringPreferencesKey("alarmEntries")
 val DeveloperModeKey = booleanPreferencesKey("developerMode")
 
-enum class SliderStyle {
-    DEFAULT,
-    WAVY,
-    SLIM,
-}
+enum class SliderStyle { DEFAULT, WAVY, SLIM }
 
 const val SYSTEM_DEFAULT = "SYSTEM_DEFAULT"
 val AppLanguageKey = stringPreferencesKey("appLanguage")
@@ -120,12 +113,7 @@ val UpdateNotificationsEnabledKey = booleanPreferencesKey("updateNotifications")
 val LastUpdateCheckTimeKey = longPreferencesKey("lastUpdateCheckTime")
 
 val AudioQualityKey = stringPreferencesKey("audioQuality")
-
-enum class AudioQuality {
-    AUTO,
-    LOW,
-    HIGH,
-}
+enum class AudioQuality { AUTO, LOW, HIGH }
 
 val AudioOffload = booleanPreferencesKey("enableOffload")
 val AudioTrackPlaybackParamsKey = booleanPreferencesKey("audioTrackPlaybackParams")
@@ -140,13 +128,7 @@ val SkipSilenceInstantKey = booleanPreferencesKey("skipSilenceInstant")
 val AudioNormalizationKey = booleanPreferencesKey("audioNormalization")
 
 val LoudnessLevelKey = stringPreferencesKey("loudnessLevel")
-
-enum class LoudnessLevel(val targetLufs: Float) {
-    AGGRESSIVE(-7f),
-    LOUD(-11f),
-    BALANCED(-14f),
-    QUIET(-19f),
-}
+enum class LoudnessLevel(val targetLufs: Float) { AGGRESSIVE(-7f), LOUD(-11f), BALANCED(-14f), QUIET(-19f) }
 
 val AutoLoadMoreKey = booleanPreferencesKey("autoLoadMore")
 val AutoRadioQueueKey = booleanPreferencesKey("autoRadioQueue")
@@ -285,8 +267,7 @@ val ShowCachedPlaylistKey = booleanPreferencesKey("show_cached_playlist")
 val ShowUploadedPlaylistKey = booleanPreferencesKey("show_uploaded_playlist")
 
 enum class LibraryViewType {
-    LIST,
-    GRID;
+    LIST, GRID;
     fun toggle() = when (this) { LIST -> GRID; GRID -> LIST }
 }
 
