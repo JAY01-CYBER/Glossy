@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -299,7 +299,7 @@ fun ExperimentalLyrics(
 
     val expressiveAccent = when (playerBackground) {
         PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.primary
-        PlayerBackgroundStyle.BLUR, PlayerBackgroundStyle.GRADIENT -> Color.White
+        PlayerBackgroundStyle.BLUR, PlayerBackgroundStyle.GRADIENT, PlayerBackgroundStyle.ANIMATED_MESH -> Color.White
     }
 
     var activeLineIndices by remember { mutableStateOf(emptySet<Int>()) }
