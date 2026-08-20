@@ -106,7 +106,6 @@ import com.jay.glossy.constants.SwipeThumbnailKey
 import com.jay.glossy.constants.SwipeToRemoveSongKey
 import com.jay.glossy.constants.SwipeToSongKey
 import com.jay.glossy.constants.UseNewMiniPlayerDesignKey
-import com.jay.glossy.constants.UseNewPlayerDesignKey
 import com.jay.glossy.constants.QuickPickShape
 import com.jay.glossy.constants.QuickPickShapeKey
 import com.jay.glossy.constants.QuickPicksStyle
@@ -175,11 +174,12 @@ fun AppearanceSettings(
     val (selectedFontValue) = rememberPreference(SelectedFontKey, defaultValue = AppFont.SYSTEM.value)
     val currentFont = AppFont.fromValue(selectedFontValue)
 
-    val (useNewPlayerDesign, onUseNewPlayerDesignChange) =
-        rememberPreference(
-            UseNewPlayerDesignKey,
-            defaultValue = true,
-        )
+    val (playerStyle, onPlayerStyleChange) = rememberEnumPreference(
+        com.jay.glossy.constants.PlayerStyleKey, 
+        defaultValue = com.jay.glossy.constants.PlayerStyle.MODERN
+    )
+    var showPlayerStyleDialog by rememberSaveable { mutableStateOf(false) }
+
     val (miniPlayerBackground, onMiniPlayerBackgroundChange) =
         rememberEnumPreference(
             MiniPlayerBackgroundStyleKey,
@@ -383,6 +383,26 @@ fun AppearanceSettings(
     var showPlayerBackgroundDialog by rememberSaveable { mutableStateOf(false) }
     var showPlayerButtonsStyleDialog by rememberSaveable { mutableStateOf(false) }
     var showLyricsPositionDialog by rememberSaveable { mutableStateOf(false) }
+
+    if (showPlayerStyleDialog) {
+        EnumDialog(
+            onDismiss = { showPlayerStyleDialog = false },
+            onSelect = {
+                onPlayerStyleChange(it)
+                showPlayerStyleDialog = false
+            },
+            title = "Player Design Style",
+            current = playerStyle,
+            values = com.jay.glossy.constants.PlayerStyle.values().toList(),
+            valueText = {
+                when (it) {
+                    com.jay.glossy.constants.PlayerStyle.CLASSIC -> "Classic (Old Style)"
+                    com.jay.glossy.constants.PlayerStyle.MODERN -> "Modern (Animated Style)"
+                    com.jay.glossy.constants.PlayerStyle.WAVY -> "Glossy Wavy (New!)"
+                }
+            },
+        )
+    }
 
     if (showQuickPicksStyleDialog) {
         EnumDialog(
@@ -1261,24 +1281,17 @@ fun AppearanceSettings(
                 listOf(
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.palette),
-                        title = { Text(stringResource(R.string.new_player_design)) },
-                        trailingContent = {
-                            Switch(
-                                checked = useNewPlayerDesign,
-                                onCheckedChange = onUseNewPlayerDesignChange,
-                                thumbContent = {
-                                    Icon(
-                                        painter =
-                                            painterResource(
-                                                id = if (useNewPlayerDesign) R.drawable.check else R.drawable.close,
-                                            ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize),
-                                    )
-                                },
+                        title = { Text("Player Design Style") },
+                        description = {
+                            Text(
+                                when (playerStyle) {
+                                    com.jay.glossy.constants.PlayerStyle.CLASSIC -> "Classic (Old Style)"
+                                    com.jay.glossy.constants.PlayerStyle.MODERN -> "Modern (Animated Style)"
+                                    com.jay.glossy.constants.PlayerStyle.WAVY -> "Glossy Wavy (New!)"
+                                }
                             )
                         },
-                        onClick = { onUseNewPlayerDesignChange(!useNewPlayerDesign) },
+                        onClick = { showPlayerStyleDialog = true },
                     ),
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.gradient),
