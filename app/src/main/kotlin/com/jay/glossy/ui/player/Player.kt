@@ -215,12 +215,7 @@ fun BottomSheetPlayer(
     val bottomSheetPageState = LocalBottomSheetPageState.current
     val playerConnection = LocalPlayerConnection.current ?: return
 
-    // --- PLAYER DESIGN SELECTION STATE ---
-    val playerDesignStyle by rememberEnumPreference(
-        key = PlayerDesignStyleKey,
-        defaultValue = PlayerDesignStyle.MODERN,
-    )
-
+    val playerDesignStyle by rememberEnumPreference(key = PlayerDesignStyleKey, defaultValue = PlayerDesignStyle.MODERN)
     val (hidePlayerThumbnail, onHidePlayerThumbnailChange) = rememberPreference(HidePlayerThumbnailKey, false)
     val (hideStatusBarOnFullscreen) = rememberPreference(HideStatusBarOnFullscreenKey, false)
     val cropAlbumArt by rememberPreference(CropAlbumArtKey, false)
@@ -233,9 +228,7 @@ fun BottomSheetPlayer(
 
     val isSystemInDarkTheme = isSystemInDarkTheme()
     val darkTheme by rememberEnumPreference(DarkModeKey, defaultValue = DarkMode.AUTO)
-    val useDarkTheme = remember(darkTheme, isSystemInDarkTheme) {
-        if (darkTheme == DarkMode.AUTO) isSystemInDarkTheme else darkTheme == DarkMode.ON
-    }
+    val useDarkTheme = remember(darkTheme, isSystemInDarkTheme) { if (darkTheme == DarkMode.AUTO) isSystemInDarkTheme else darkTheme == DarkMode.ON }
 
     val isPlaying by playerConnection.isPlaying.collectAsState()
     val isKeepScreenOn by rememberPreference(KeepScreenOn, false)
@@ -301,15 +294,11 @@ fun BottomSheetPlayer(
     val castIsPlaying by castHandler?.castIsPlaying?.collectAsState() ?: remember { mutableStateOf(false) }
 
     val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(state.isExpanded) {
-        if (state.isExpanded) { delay(100); try { focusRequester.requestFocus() } catch (e: Exception) {} }
-    }
+    LaunchedEffect(state.isExpanded) { if (state.isExpanded) { delay(100); try { focusRequester.requestFocus() } catch (e: Exception) {} } }
 
     val effectiveIsPlaying = if (isCasting) castIsPlaying else isPlaying
     val positionState = remember { mutableLongStateOf(runCatching { playerConnection.player.currentPosition }.getOrDefault(0L)) }
-    val durationState = remember {
-        mutableLongStateOf((mediaMetadata?.duration?.takeIf { it > 0 }?.toLong()?.times(1000L)) ?: runCatching { playerConnection.player.duration }.getOrDefault(0L).coerceAtLeast(0L))
-    }
+    val durationState = remember { mutableLongStateOf((mediaMetadata?.duration?.takeIf { it > 0 }?.toLong()?.times(1000L)) ?: runCatching { playerConnection.player.duration }.getOrDefault(0L).coerceAtLeast(0L)) }
 
     var position by positionState
     var duration by durationState
@@ -317,7 +306,6 @@ fun BottomSheetPlayer(
     val effectivePosition by remember { derivedStateOf { if (isCasting) castPosition else position } }
     var sliderPosition by remember { mutableStateOf<Long?>(null) }
     var lastManualSeekTime by remember { mutableLongStateOf(0L) }
-
     var gradientColors by remember { mutableStateOf<List<Color>>(emptyList()) }
     val gradientColorsCache = remember { mutableMapOf<String, List<Color>>() }
 
@@ -346,13 +334,7 @@ fun BottomSheetPlayer(
         } else gradientColors = emptyList()
     }
 
-    val TextBackgroundColor by animateColorAsState(
-        targetValue = when (playerBackground) {
-            PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.onBackground
-            else -> Color.White
-        }, label = "TextBackgroundColor",
-    )
-
+    val TextBackgroundColor by animateColorAsState(targetValue = when (playerBackground) { PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.onBackground; else -> Color.White }, label = "TextBackgroundColor")
     val (textButtonColor, iconButtonColor) = when {
         playerBackground == PlayerBackgroundStyle.BLUR || playerBackground == PlayerBackgroundStyle.GRADIENT || playerBackground == PlayerBackgroundStyle.ANIMATED_MESH -> {
             when (playerButtonsStyle) {
@@ -414,12 +396,7 @@ fun BottomSheetPlayer(
             icon = { Icon(painterResource(R.drawable.bedtime), null) },
             title = { Text(stringResource(R.string.sleep_timer)) },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        showSleepTimerDialog = false
-                        playerConnection.service.sleepTimer?.start(minute = sleepTimerValue.roundToInt(), stopAfterCurrentSong = sleepTimerStopAfterCurrentSong, fadeOut = sleepTimerFadeOut)
-                    },
-                ) { Text(stringResource(android.R.string.ok)) }
+                TextButton(onClick = { showSleepTimerDialog = false; playerConnection.service.sleepTimer?.start(minute = sleepTimerValue.roundToInt(), stopAfterCurrentSong = sleepTimerStopAfterCurrentSong, fadeOut = sleepTimerFadeOut) }) { Text(stringResource(android.R.string.ok)) }
             },
             dismissButton = { TextButton(onClick = { showSleepTimerDialog = false }) { Text(stringResource(android.R.string.cancel)) } },
             text = {
@@ -430,7 +407,7 @@ fun BottomSheetPlayer(
                         OutlinedIconButton(onClick = { showSleepTimerDialog = false; playerConnection.service.sleepTimer?.start(minute = -1) }) { Text(stringResource(R.string.end_of_song)) }
                     }
                 }
-            },
+            }
         )
     }
 
@@ -438,25 +415,34 @@ fun BottomSheetPlayer(
         if (!isCasting && isPlaying) {
             while (isActive) {
                 delay(100)
-                if (sliderPosition == null) {
-                    position = playerConnection.player.currentPosition
-                    playerConnection.player.duration.takeIf { it > 0 }?.let { duration = it }
-                }
+                if (sliderPosition == null) { position = playerConnection.player.currentPosition; playerConnection.player.duration.takeIf { it > 0 }?.let { duration = it } }
             }
         }
     }
 
     LaunchedEffect(playbackState, mediaMetadata?.id) {
-        if (!isCasting) {
-            position = playerConnection.player.currentPosition
-            duration = (mediaMetadata?.duration?.takeIf { it > 0 }?.toLong()?.times(1000L)) ?: playerConnection.player.duration
+        if (!isCasting) { position = playerConnection.player.currentPosition; duration = (mediaMetadata?.duration?.takeIf { it > 0 }?.toLong()?.times(1000L)) ?: playerConnection.player.duration }
+    }
+
+    var previousMediaId by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(playbackState, mediaMetadata?.id) {
+        val currentId = mediaMetadata?.id
+        if (currentId != null && currentId != previousMediaId && previousMediaId != null && playbackState == Player.STATE_ENDED && repeatMode == Player.REPEAT_MODE_ONE && !isListenTogetherGuest) {
+            playerConnection.player.setRepeatMode(Player.REPEAT_MODE_ALL)
+        }
+        previousMediaId = currentId
+    }
+
+    LaunchedEffect(isCasting, castPosition, castDuration) {
+        if (isCasting && sliderPosition == null) {
+            val timeSinceManualSeek = System.currentTimeMillis() - lastManualSeekTime
+            if (timeSinceManualSeek > 1500) { position = castPosition; if (castDuration > 0) duration = castDuration }
         }
     }
 
     val dismissedBound = QueuePeekHeight + WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
     val queueSheetState = com.jay.glossy.ui.component.rememberBottomSheetState(
-        dismissedBound = dismissedBound,
-        expandedBound = state.expandedBound,
+        dismissedBound = dismissedBound, expandedBound = state.expandedBound,
         collapsedBound = if (playerDesignStyle == PlayerDesignStyle.WAVY) 0.dp else (dismissedBound + 1.dp),
         initialAnchor = 1,
     )
@@ -467,7 +453,7 @@ fun BottomSheetPlayer(
     }
     val backgroundAlpha = state.progress.coerceIn(0f, 1f)
 
-    BottomSheet(
+        BottomSheet(
         state = state,
         modifier = modifier,
         background = {
@@ -501,7 +487,7 @@ fun BottomSheetPlayer(
             }
         },
         onDismiss = if (!isListenTogetherGuest) { { playerConnection.service.clearAutomix(); playerConnection.player.stop(); playerConnection.player.clearMediaItems() } } else null,
-        collapsedContent = { MiniPlayer(positionState = positionState, durationState = durationState, onClick = { state.expandSoft() }) },
+        collapsedContent = { MiniPlayer(positionState = positionState, durationState = durationState, onClick = { state.expandSoft() }) }
     ) {
         val controlsContent: @Composable ColumnScope.(MediaMetadata) -> Unit = { mediaMetadata ->
             val playPauseRoundness by animateDpAsState(targetValue = if (isPlaying) 24.dp else 36.dp, animationSpec = tween(durationMillis = 90, easing = LinearEasing), label = "playPauseRoundness")
@@ -568,7 +554,6 @@ fun BottomSheetPlayer(
                     }
                 }
             } else {
-                // LEGACY CLASSIC 5 BUTTONS
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(horizontal = PlayerHorizontalPadding)) {
                     Box(modifier = Modifier.weight(1f)) {
                         ResizableIconButton(
@@ -579,9 +564,7 @@ fun BottomSheetPlayer(
                     Box(modifier = Modifier.weight(1f)) {
                         ResizableIconButton(icon = R.drawable.skip_previous, enabled = canSkipPrevious && !isListenTogetherGuest, color = TextBackgroundColor, modifier = Modifier.size(32.dp).align(Alignment.Center), onClick = playerConnection::seekToPrevious)
                     }
-                    Box(
-                        modifier = Modifier.size(72.dp).clip(RoundedCornerShape(playPauseRoundness)).background(textButtonColor).clickable { playerConnection.togglePlayPause() },
-                    ) {
+                    Box(modifier = Modifier.size(72.dp).clip(RoundedCornerShape(playPauseRoundness)).background(textButtonColor).clickable { playerConnection.togglePlayPause() }) {
                         Image(painter = painterResource(if (effectiveIsPlaying) R.drawable.pause else R.drawable.play), contentDescription = null, colorFilter = ColorFilter.tint(iconButtonColor), modifier = Modifier.align(Alignment.Center).size(36.dp))
                     }
                     Box(modifier = Modifier.weight(1f)) {
@@ -595,81 +578,167 @@ fun BottomSheetPlayer(
             }
         }
 
-        if (playerDesignStyle == PlayerDesignStyle.WAVY && mediaMetadata != null) {
-            // --- 3RD WAVY PLAYER (DESIGN) ---
-            WavyPlayerDesign(
-                mediaMetadata = mediaMetadata!!,
-                state = state,
-                effectivePosition = effectivePosition,
-                duration = duration,
-                sliderPosition = sliderPosition,
-                onSliderPositionChange = { newPos -> if (!isListenTogetherGuest) sliderPosition = newPos },
-                onSliderPositionChangeFinished = {
-                    if (!isListenTogetherGuest) {
-                        sliderPosition?.let { pos -> playerConnection.player.seekTo(pos); position = pos }
-                        sliderPosition = null
-                    }
-                },
-                effectiveIsPlaying = effectiveIsPlaying,
-                isListenTogetherGuest = isListenTogetherGuest,
-                isMuted = isMuted,
-                canSkipPrevious = canSkipPrevious,
-                canSkipNext = canSkipNext,
-                repeatMode = repeatMode,
-                isFavorite = if (currentSong?.song?.isEpisode == true) currentSong?.song?.inLibrary != null else currentSong?.song?.liked == true,
-                textButtonColor = textButtonColor,
-                iconButtonColor = iconButtonColor,
-                sideButtonContainerColor = sideButtonContainerColor,
-                sideButtonContentColor = sideButtonContentColor,
-                TextBackgroundColor = TextBackgroundColor,
-                playerBackground = playerBackground,
-                useDarkTheme = useDarkTheme,
-                onToggleLyrics = { showInlineLyrics = !showInlineLyrics },
-                onShowQueue = { scope.launch { queueSheetState.expandSoft() } },
-                onShowSleepTimer = { showSleepTimerDialog = true },
-                onShowMenu = {
-                    menuState.show {
-                        PlayerMenu(mediaMetadata = mediaMetadata!!, playerBottomSheetState = state, onShowDetailsDialog = { mediaMetadata!!.id.let { id -> bottomSheetPageState.show { ShowMediaInfo(id) } } }, onDismiss = menuState::dismiss)
-                    }
-                },
-                onSkipPrevious = { playerConnection.seekToPrevious() },
-                onSkipNext = { playerConnection.seekToNext() },
-                onPlayPause = { playerConnection.togglePlayPause() },
-                onToggleLike = { playerConnection.toggleLike() },
-                onToggleRepeatMode = { playerConnection.player.toggleRepeatMode() },
-            )
-        } else {
-            // --- STANDARD LEGACY & MODERN PORTRAIT / LANDSCAPE ---
-            val bottomPadding by animateDpAsState(targetValue = if (isFullScreen) 0.dp else queueSheetState.collapsedBound, label = "bottomPadding")
-            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal)).padding(bottom = bottomPadding).animateContentSize()) {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.weight(1f)) {
-                    val currentSliderPosition by rememberUpdatedState(sliderPosition)
-                    val sliderPositionProvider = remember { { currentSliderPosition } }
-                    val isExpandedProvider = remember(state) { { state.isExpanded } }
-                    AnimatedContent(targetState = showInlineLyrics, label = "Lyrics", transitionSpec = { fadeIn() togetherWith fadeOut() }) { showLyrics ->
-                        if (showLyrics) {
-                            InlineLyricsView(mediaMetadata = mediaMetadata, showLyrics = showLyrics, positionProvider = { effectivePosition })
-                        } else {
-                            Thumbnail(sliderPositionProvider = sliderPositionProvider, modifier = Modifier.nestedScroll(state.preUpPostDownNestedScrollConnection), isPlayerExpanded = isExpandedProvider, isListenTogetherGuest = isListenTogetherGuest)
+                when (LocalConfiguration.current.orientation) {
+            Configuration.ORIENTATION_LANDSCAPE -> {
+                val density = LocalDensity.current
+                val verticalPadding = max(WindowInsets.systemBars.getTop(density), WindowInsets.systemBars.getBottom(density))
+                val verticalPaddingDp = with(density) { verticalPadding.toDp() }
+                val verticalWindowInsets = WindowInsets(left = 0.dp, top = verticalPaddingDp, right = 0.dp, bottom = verticalPaddingDp)
+
+                Row(modifier = Modifier.windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal).add(verticalWindowInsets)).padding(bottom = 24.dp).fillMaxSize()) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.weight(1f).nestedScroll(state.preUpPostDownNestedScrollConnection)) {
+                        val currentSliderPosition by rememberUpdatedState(sliderPosition)
+                        val sliderPositionProvider = remember { { currentSliderPosition } }
+                        val isExpandedProvider = remember(state) { { state.isExpanded } }
+                        AnimatedContent(targetState = showInlineLyrics, label = "Lyrics", transitionSpec = { fadeIn() togetherWith fadeOut() }) { showLyrics ->
+                            if (showLyrics) { InlineLyricsView(mediaMetadata = mediaMetadata, showLyrics = showLyrics, positionProvider = { effectivePosition }) } else { Thumbnail(sliderPositionProvider = sliderPositionProvider, modifier = Modifier.animateContentSize(), isPlayerExpanded = isExpandedProvider, isLandscape = true, isListenTogetherGuest = isListenTogetherGuest) }
                         }
                     }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(if (showInlineLyrics) 0.65f else 1f, false).animateContentSize().windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top))) {
+                        Spacer(Modifier.weight(1f))
+                        mediaMetadata?.let { controlsContent(it) }
+                        Spacer(Modifier.weight(1f))
+                    }
                 }
-                mediaMetadata?.let { controlsContent(it) }
-                Spacer(Modifier.height(30.dp))
+            }
+            else -> {
+                val bottomPadding by animateDpAsState(targetValue = if (isFullScreen) 0.dp else queueSheetState.collapsedBound, label = "bottomPadding")
+                
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal)).padding(bottom = bottomPadding).animateContentSize()) {
+                    if (playerDesignStyle == PlayerDesignStyle.WAVY && mediaMetadata != null) {
+                        WavyPlayerDesign(
+                            mediaMetadata = mediaMetadata!!,
+                            state = state,
+                            effectivePosition = effectivePosition,
+                            duration = duration,
+                            sliderPosition = sliderPosition,
+                            onSliderPositionChange = { newPos -> if (!isListenTogetherGuest) sliderPosition = newPos },
+                            onSliderPositionChangeFinished = {
+                                if (!isListenTogetherGuest) {
+                                    sliderPosition?.let { pos ->
+                                        if (isCasting) { castHandler?.seekTo(pos); lastManualSeekTime = System.currentTimeMillis() } else { playerConnection.player.seekTo(pos) }
+                                        position = pos
+                                    }
+                                    sliderPosition = null
+                                }
+                            },
+                            effectiveIsPlaying = effectiveIsPlaying,
+                            isListenTogetherGuest = isListenTogetherGuest,
+                            isMuted = isMuted,
+                            canSkipPrevious = canSkipPrevious,
+                            canSkipNext = canSkipNext,
+                            repeatMode = repeatMode,
+                            isFavorite = if (currentSong?.song?.isEpisode == true) currentSong?.song?.inLibrary != null else currentSong?.song?.liked == true,
+                            textButtonColor = textButtonColor,
+                            iconButtonColor = iconButtonColor,
+                            sideButtonContainerColor = sideButtonContainerColor,
+                            sideButtonContentColor = sideButtonContentColor,
+                            TextBackgroundColor = TextBackgroundColor,
+                            playerBackground = playerBackground,
+                            useDarkTheme = useDarkTheme,
+                            onToggleLyrics = { showInlineLyrics = !showInlineLyrics },
+                            onShowQueue = { scope.launch { queueSheetState.expandSoft() } },
+                            onShowSleepTimer = { showSleepTimerDialog = true },
+                            onShowMenu = {
+                                menuState.show { PlayerMenu(mediaMetadata = mediaMetadata!!, playerBottomSheetState = state, onShowDetailsDialog = { mediaMetadata!!.id.let { id -> bottomSheetPageState.show { ShowMediaInfo(id) } } }, onDismiss = menuState::dismiss) }
+                            },
+                            onSkipPrevious = { playerConnection.seekToPrevious() },
+                            onSkipNext = { playerConnection.seekToNext() },
+                            onPlayPause = {
+                                if (isListenTogetherGuest) { playerConnection.toggleMute() } else if (isCasting) { if (castIsPlaying) castHandler?.pause() else castHandler?.play() } else if (playbackState == Player.STATE_ENDED) { playerConnection.player.seekTo(0, 0); playerConnection.player.playWhenReady = true } else { playerConnection.togglePlayPause() }
+                            },
+                            onToggleLike = { playerConnection.toggleLike() },
+                            onToggleRepeatMode = { playerConnection.player.toggleRepeatMode() }
+                        )
+                    } else {
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.weight(1f)) {
+                            val currentSliderPosition by rememberUpdatedState(sliderPosition)
+                            val sliderPositionProvider = remember { { currentSliderPosition } }
+                            val isExpandedProvider = remember(state) { { state.isExpanded } }
+                            AnimatedContent(targetState = showInlineLyrics, label = "Lyrics", transitionSpec = { fadeIn() togetherWith fadeOut() }) { showLyrics ->
+                                if (showLyrics) { InlineLyricsView(mediaMetadata = mediaMetadata, showLyrics = showLyrics, positionProvider = { effectivePosition }) } else { Thumbnail(sliderPositionProvider = sliderPositionProvider, modifier = Modifier.nestedScroll(state.preUpPostDownNestedScrollConnection), isPlayerExpanded = isExpandedProvider, isListenTogetherGuest = isListenTogetherGuest) }
+                            }
+                        }
+                        mediaMetadata?.let { controlsContent(it) }
+                        Spacer(Modifier.height(30.dp))
+                    }
+                }
             }
         }
 
-        // QUEUE BOTTOM SHEET OVERLAY
         AnimatedVisibility(visible = !isFullScreen && playerDesignStyle != PlayerDesignStyle.WAVY, enter = slideInVertically(initialOffsetY = { it }) + fadeIn(), exit = shrinkVertically(shrinkTowards = Alignment.Top) + slideOutVertically(targetOffsetY = { it }) + fadeOut()) {
             Queue(state = queueSheetState, playerBottomSheetState = state, background = if (useBlackBackground) Color.Black else MaterialTheme.colorScheme.surfaceContainer, onBackgroundColor = onBackgroundColor, TextBackgroundColor = TextBackgroundColor, textButtonColor = textButtonColor, iconButtonColor = iconButtonColor, pureBlack = pureBlack, showInlineLyrics = showInlineLyrics, playerBackground = playerBackground, onToggleLyrics = { showInlineLyrics = !showInlineLyrics })
         }
     }
 }
 
-// -----------------------------------------------------------------------------
-// WAVY PLAYER DESIGN COMPOSABLE (80647.jpg Clean Layout)
-// -----------------------------------------------------------------------------
+// Helper Composables (InlineLyricsView & AnimatedMeshBackground)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun InlineLyricsView(mediaMetadata: MediaMetadata?, showLyrics: Boolean, positionProvider: () -> Long) {
+    val playerConnection = LocalPlayerConnection.current ?: return
+    val currentLyrics by playerConnection.currentLyrics.collectAsStateWithLifecycle(initialValue = null)
+    val queueWindows by playerConnection.queueWindows.collectAsStateWithLifecycle(initialValue = emptyList())
+    val currentWindowIndex by playerConnection.currentWindowIndex.collectAsStateWithLifecycle(initialValue = -1)
+    val lyrics = remember(currentLyrics) { currentLyrics?.lyrics?.trim() }
+    val context = LocalContext.current
+    val database = LocalDatabase.current
+    val coroutineScope = rememberCoroutineScope()
+    var appInForeground by remember { mutableStateOf(ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) }
+    DisposableEffect(Unit) {
+        val lifecycle = ProcessLifecycleOwner.get().lifecycle
+        val observer = LifecycleEventObserver { _, _ -> appInForeground = lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED) }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
+    val nextMetadata = remember(queueWindows, currentWindowIndex) { if (currentWindowIndex >= 0 && currentWindowIndex + 1 < queueWindows.size) queueWindows[currentWindowIndex + 1].mediaItem.metadata else null }
 
+    LaunchedEffect(mediaMetadata?.id, currentLyrics) {
+        if (mediaMetadata != null && currentLyrics == null) {
+            delay(500)
+            coroutineScope.launch(Dispatchers.IO) {
+                try {
+                    val entryPoint = EntryPointAccessors.fromApplication(context.applicationContext, com.jay.glossy.di.LyricsHelperEntryPoint::class.java)
+                    val fetchedLyricsWithProvider = entryPoint.lyricsHelper().getLyrics(mediaMetadata)
+                    database.query { upsert(LyricsEntity(mediaMetadata.id, fetchedLyricsWithProvider.lyrics, fetchedLyricsWithProvider.provider)) }
+                } catch (e: Exception) { }
+            }
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
+        when {
+            lyrics == null -> ContainedLoadingIndicator()
+            lyrics == LyricsEntity.LYRICS_NOT_FOUND -> Text(text = stringResource(R.string.lyrics_not_found), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f), textAlign = TextAlign.Center)
+            else -> ProvideTextStyle(value = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp, textAlign = TextAlign.Center)) { Lyrics(sliderPositionProvider = positionProvider, modifier = Modifier.padding(horizontal = 24.dp), showLyrics = showLyrics) }
+        }
+    }
+}
+
+@Composable
+fun AnimatedMeshBackground(colors: List<Color>, modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition(label = "mesh")
+    val offset1 = infiniteTransition.animateFloat(initialValue = 0f, targetValue = 1f, animationSpec = infiniteRepeatable(tween(8000, easing = LinearEasing), RepeatMode.Reverse), label = "offset1")
+    val offset2 = infiniteTransition.animateFloat(initialValue = 1f, targetValue = 0f, animationSpec = infiniteRepeatable(tween(10000, easing = LinearEasing), RepeatMode.Reverse), label = "offset2")
+    val offset3 = infiniteTransition.animateFloat(initialValue = 0f, targetValue = 1f, animationSpec = infiniteRepeatable(tween(12000, easing = LinearEasing), RepeatMode.Reverse), label = "offset3")
+
+    val safeColors = if (colors.size >= 3) colors else listOf(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.tertiaryContainer)
+
+    Canvas(modifier = modifier.fillMaxSize().blur(60.dp)) {
+        val w = size.width
+        val h = size.height
+        val o1 = offset1.value
+        val o2 = offset2.value
+        val o3 = offset3.value
+
+        drawRect(color = safeColors[0].copy(alpha = 0.3f))
+        drawCircle(brush = Brush.radialGradient(colors = listOf(safeColors[0], Color.Transparent), center = Offset(w * o1, h * o2), radius = w * 0.9f), radius = w * 0.9f, center = Offset(w * o1, h * o2))
+        drawCircle(brush = Brush.radialGradient(colors = listOf(safeColors[1], Color.Transparent), center = Offset(w * o2, h * o3), radius = w * 0.9f), radius = w * 0.9f, center = Offset(w * o2, h * o3))
+        if (safeColors.size > 2) { drawCircle(brush = Brush.radialGradient(colors = listOf(safeColors[2], Color.Transparent), center = Offset(w * o3, h * o1), radius = w * 0.9f), radius = w * 0.9f, center = Offset(w * o3, h * o1)) }
+    }
+}
+
+// THE NEW WAVY PLAYER UI
 @Composable
 fun WavyPlayerDesign(
     mediaMetadata: MediaMetadata,
@@ -808,8 +877,8 @@ fun WavyPlayerDesign(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // PILLS ROW 2
-        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, bottom = 16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+        // PILLS ROW 2 (MODIFIER PADDING FIXED)
+        Row(modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
             androidx.compose.material3.Surface(shape = CircleShape, color = sideButtonContainerColor.copy(alpha = 0.5f), modifier = Modifier.clickable { onToggleLyrics() }) {
                 Row(modifier = Modifier.padding(horizontal = 28.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(painterResource(R.drawable.lyrics), null, tint = TextBackgroundColor, modifier = Modifier.size(16.dp))
@@ -825,38 +894,5 @@ fun WavyPlayerDesign(
                 }
             }
         }
-    }
-}
-
-// INLINE LYRICS & MESH BACKGROUND
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-fun InlineLyricsView(mediaMetadata: MediaMetadata?, showLyrics: Boolean, positionProvider: () -> Long) {
-    val playerConnection = LocalPlayerConnection.current ?: return
-    val currentLyrics by playerConnection.currentLyrics.collectAsStateWithLifecycle(initialValue = null)
-    val lyrics = remember(currentLyrics) { currentLyrics?.lyrics?.trim() }
-
-    Box(modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
-        when {
-            lyrics == null -> ContainedLoadingIndicator()
-            lyrics == LyricsEntity.LYRICS_NOT_FOUND -> Text(text = stringResource(R.string.lyrics_not_found), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f), textAlign = TextAlign.Center)
-            else -> ProvideTextStyle(value = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp, textAlign = TextAlign.Center)) { Lyrics(sliderPositionProvider = positionProvider, modifier = Modifier.padding(horizontal = 24.dp), showLyrics = showLyrics) }
-        }
-    }
-}
-
-@Composable
-fun AnimatedMeshBackground(colors: List<Color>, modifier: Modifier = Modifier) {
-    val infiniteTransition = rememberInfiniteTransition(label = "mesh")
-    val offset1 = infiniteTransition.animateFloat(initialValue = 0f, targetValue = 1f, animationSpec = infiniteRepeatable(tween(8000, easing = LinearEasing), RepeatMode.Reverse), label = "offset1")
-    val offset2 = infiniteTransition.animateFloat(initialValue = 1f, targetValue = 0f, animationSpec = infiniteRepeatable(tween(10000, easing = LinearEasing), RepeatMode.Reverse), label = "offset2")
-
-    val safeColors = if (colors.size >= 2) colors else listOf(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.secondaryContainer)
-
-    Canvas(modifier = modifier.fillMaxSize().blur(60.dp)) {
-        val w = size.width
-        val h = size.height
-        drawRect(color = safeColors[0].copy(alpha = 0.3f))
-        drawCircle(brush = Brush.radialGradient(colors = listOf(safeColors[0], Color.Transparent), center = Offset(w * offset1.value, h * offset2.value), radius = w * 0.9f), radius = w * 0.9f, center = Offset(w * offset1.value, h * offset2.value))
     }
 }
