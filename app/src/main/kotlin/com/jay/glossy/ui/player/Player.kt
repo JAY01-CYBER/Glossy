@@ -1898,16 +1898,21 @@ fun BottomSheetPlayer(
                                 
                                 Spacer(modifier = Modifier.height(16.dp))
 
-                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
                                     Surface(
                                         shape = RoundedCornerShape(50),
                                         color = sideButtonContainerColor,
                                         contentColor = sideButtonContentColor,
-                                        modifier = Modifier.height(52.dp).weight(1f),
+                                        modifier = Modifier.height(40.dp).weight(1f),
                                         onClick = { showInlineLyrics = !showInlineLyrics }
                                     ) {
                                         Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(painterResource(R.drawable.lyrics), null, modifier = Modifier.size(20.dp))
+                                            Icon(painterResource(R.drawable.lyrics), null, modifier = Modifier.size(18.dp))
                                             Spacer(Modifier.width(6.dp))
                                             Text("Lyrics", style = MaterialTheme.typography.labelMedium, maxLines = 1)
                                         }
@@ -1917,11 +1922,11 @@ fun BottomSheetPlayer(
                                         shape = RoundedCornerShape(50),
                                         color = sideButtonContainerColor,
                                         contentColor = sideButtonContentColor,
-                                        modifier = Modifier.height(52.dp).weight(1f),
+                                        modifier = Modifier.height(40.dp).weight(1f),
                                         onClick = { scope.launch { queueSheetState.expandSoft() } }
                                     ) {
                                         Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(painterResource(R.drawable.queue_music), null, modifier = Modifier.size(20.dp))
+                                            Icon(painterResource(R.drawable.queue_music), null, modifier = Modifier.size(18.dp))
                                             Spacer(Modifier.width(6.dp))
                                             Text("Queue", style = MaterialTheme.typography.labelMedium, maxLines = 1)
                                         }
@@ -2018,6 +2023,50 @@ fun BottomSheetPlayer(
                             .padding(bottom = bottomPadding)
                             .animateContentSize(),
                 ) {
+                    if (playerStyle == PlayerStyle.WAVY) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = PlayerHorizontalPadding)
+                                .padding(top = 16.dp, bottom = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(50),
+                                color = sideButtonContainerColor,
+                                contentColor = sideButtonContentColor,
+                                modifier = Modifier.size(44.dp),
+                                onClick = { state.collapseSoft() }
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(painterResource(R.drawable.arrow_back), null, modifier = Modifier.size(24.dp))
+                                }
+                            }
+
+                            Text(
+                                text = "Now Playing",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = TextBackgroundColor
+                            )
+
+                            Surface(
+                                shape = RoundedCornerShape(50),
+                                color = sideButtonContainerColor,
+                                contentColor = sideButtonContentColor,
+                                modifier = Modifier.size(44.dp),
+                                onClick = { showSleepTimerDialog = true }
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(painterResource(R.drawable.bedtime), null, modifier = Modifier.size(22.dp))
+                                }
+                            }
+                        }
+                    } else {
+                        Spacer(Modifier.height(24.dp))
+                    }
+
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier.weight(1f),
