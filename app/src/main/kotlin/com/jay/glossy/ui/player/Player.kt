@@ -1839,7 +1839,7 @@ fun BottomSheetPlayer(
                                     }
                                 }
 
-                                Spacer(modifier = Modifier.height(32.dp))
+                                Spacer(modifier = Modifier.height(24.dp))
 
                                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                     val isEpisode = currentSong?.song?.isEpisode == true
@@ -2046,7 +2046,7 @@ fun BottomSheetPlayer(
                         controlsContent(it)
                     }
 
-                    Spacer(Modifier.height(30.dp))
+                    Spacer(Modifier.height(if (playerStyle == PlayerStyle.WAVY) 8.dp else 30.dp))
                 }
             }
         }
