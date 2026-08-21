@@ -2023,49 +2023,7 @@ fun BottomSheetPlayer(
                             .padding(bottom = bottomPadding)
                             .animateContentSize(),
                 ) {
-                    if (playerStyle == PlayerStyle.WAVY) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = PlayerHorizontalPadding)
-                                .padding(top = 16.dp, bottom = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Surface(
-                                shape = RoundedCornerShape(50),
-                                color = sideButtonContainerColor,
-                                contentColor = sideButtonContentColor,
-                                modifier = Modifier.size(44.dp),
-                                onClick = { state.collapseSoft() }
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(painterResource(R.drawable.arrow_back), null, modifier = Modifier.size(24.dp))
-                                }
-                            }
-
-                            Text(
-                                text = "Now Playing",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = TextBackgroundColor
-                            )
-
-                            Surface(
-                                shape = RoundedCornerShape(50),
-                                color = sideButtonContainerColor,
-                                contentColor = sideButtonContentColor,
-                                modifier = Modifier.size(44.dp),
-                                onClick = { showSleepTimerDialog = true }
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(painterResource(R.drawable.bedtime), null, modifier = Modifier.size(22.dp))
-                                }
-                            }
-                        }
-                    } else {
-                        Spacer(Modifier.height(24.dp))
-                    }
+                    Spacer(Modifier.height(24.dp))
 
                     Box(
                         contentAlignment = Alignment.Center,
@@ -2100,7 +2058,7 @@ fun BottomSheetPlayer(
                         controlsContent(it)
                     }
 
-                    Spacer(Modifier.height(if (playerStyle == PlayerStyle.WAVY) 24.dp else 30.dp))
+                    Spacer(Modifier.height(if (playerStyle == PlayerStyle.WAVY) 64.dp else 30.dp))
                 }
             }
         }
