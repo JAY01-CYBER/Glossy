@@ -692,7 +692,7 @@ fun BottomSheetPlayer(
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         if (isAtDefault) {
-                            androidx.compose.material3.Button(
+                            FilledIconButton(
                                 onClick = {
                                     scope.launch {
                                         context.safeDataStoreEdit { settings ->
@@ -705,7 +705,7 @@ fun BottomSheetPlayer(
                                         Toast.LENGTH_SHORT,
                                     ).show()
                                 },
-                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                colors = IconButtonDefaults.filledIconButtonColors(
                                     containerColor = MaterialTheme.colorScheme.primary,
                                     contentColor = MaterialTheme.colorScheme.onPrimary,
                                 ),
@@ -713,7 +713,7 @@ fun BottomSheetPlayer(
                                 Text(stringResource(R.string.set_as_default))
                             }
                         } else {
-                            androidx.compose.material3.OutlinedButton(
+                            OutlinedIconButton(
                                 onClick = {
                                     scope.launch {
                                         context.safeDataStoreEdit { settings ->
@@ -731,7 +731,7 @@ fun BottomSheetPlayer(
                             }
                         }
 
-                        androidx.compose.material3.OutlinedButton(
+                        OutlinedIconButton(
                             onClick = {
                                 showSleepTimerDialog = false
                                 playerConnection.service.sleepTimer?.start(minute = -1)
@@ -1844,7 +1844,7 @@ fun BottomSheetPlayer(
                                     }
                                 }
 
-                                Spacer(modifier = Modifier.height(24.dp))
+                                Spacer(modifier = Modifier.height(32.dp))
 
                                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                     val isEpisode = currentSong?.song?.isEpisode == true
@@ -2023,8 +2023,6 @@ fun BottomSheetPlayer(
                             .padding(bottom = bottomPadding)
                             .animateContentSize(),
                 ) {
-                    Spacer(Modifier.height(24.dp))
-
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier.weight(1f),
@@ -2058,7 +2056,7 @@ fun BottomSheetPlayer(
                         controlsContent(it)
                     }
 
-                    Spacer(Modifier.height(if (playerStyle == PlayerStyle.WAVY) 64.dp else 30.dp))
+                    Spacer(Modifier.height(if (playerStyle == PlayerStyle.WAVY) 8.dp else 30.dp))
                 }
             }
         }
