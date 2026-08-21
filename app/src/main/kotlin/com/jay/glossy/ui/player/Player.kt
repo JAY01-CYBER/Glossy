@@ -74,8 +74,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Text
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -221,14 +221,13 @@ fun BottomSheetPlayer(
     val playerConnection = LocalPlayerConnection.current ?: return
 
     val (playerStyle) = rememberEnumPreference(PlayerStyleKey, defaultValue = PlayerStyle.MODERN)
-    
-    // Sirf is ek variable ne problem create ki thi. Ab ye Modern pe true hoga, baki dono styles pe false.
-    // Jisse Queue.kt ka bottom bar Classic aur Wavy me bilkul hide ho jayega!
-    val useNewPlayerDesign = playerStyle == PlayerStyle.MODERN
+    val (useNewPlayerDesignSetting, setUseNewPlayerDesign) = rememberPreference(UseNewPlayerDesignKey, defaultValue = true)
 
+    // Syncing Classic vs Modern Queue bottom bar design
     LaunchedEffect(playerStyle) {
-        context.safeDataStoreEdit { settings ->
-            settings[UseNewPlayerDesignKey] = (playerStyle == PlayerStyle.MODERN)
+        val shouldBeModern = playerStyle != PlayerStyle.CLASSIC
+        if (useNewPlayerDesignSetting != shouldBeModern) {
+            setUseNewPlayerDesign(shouldBeModern)
         }
     }
 
@@ -795,7 +794,9 @@ fun BottomSheetPlayer(
         }
     }
 
-    val dismissedBound = QueuePeekHeight + WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
+    // WAVY PLAYER KE LIYE BOTTOM BAR COMPLETELY HIDE KAR DIYA GAYA HAI (0.dp)
+    val actualPeekHeight = if (playerStyle == PlayerStyle.WAVY) 0.dp else QueuePeekHeight
+    val dismissedBound = actualPeekHeight + WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
     val queueSheetState =
         com.jay.glossy.ui.component.rememberBottomSheetState(
