@@ -1798,22 +1798,25 @@ fun BottomSheetPlayer(
                         }
                         PlayerStyle.WAVY -> {
                             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                                
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                                     FilledIconButton(
                                         onClick = playerConnection::seekToPrevious,
                                         enabled = canSkipPrevious && !isListenTogetherGuest,
                                         shape = RoundedCornerShape(24.dp),
                                         colors = IconButtonDefaults.filledIconButtonColors(containerColor = sideButtonContainerColor, contentColor = sideButtonContentColor),
-                                        modifier = Modifier.size(72.dp)
+                                        modifier = Modifier.height(72.dp).width(80.dp)
                                     ) {
                                         Icon(painter = painterResource(R.drawable.skip_previous), contentDescription = null, modifier = Modifier.size(32.dp))
                                     }
 
+                                    Spacer(modifier = Modifier.width(16.dp))
+
                                     FilledIconButton(
                                         onClick = onPlayPauseLogic,
-                                        shape = RoundedCornerShape(32.dp),
+                                        shape = RoundedCornerShape(24.dp),
                                         colors = IconButtonDefaults.filledIconButtonColors(containerColor = textButtonColor, contentColor = iconButtonColor),
-                                        modifier = Modifier.size(96.dp).focusRequester(focusRequester)
+                                        modifier = Modifier.height(72.dp).width(112.dp).focusRequester(focusRequester)
                                     ) {
                                         Icon(
                                             painter = painterResource(
@@ -1828,54 +1831,56 @@ fun BottomSheetPlayer(
                                         )
                                     }
 
+                                    Spacer(modifier = Modifier.width(16.dp))
+
                                     FilledIconButton(
                                         onClick = playerConnection::seekToNext,
                                         enabled = canSkipNext && !isListenTogetherGuest,
                                         shape = RoundedCornerShape(24.dp),
                                         colors = IconButtonDefaults.filledIconButtonColors(containerColor = sideButtonContainerColor, contentColor = sideButtonContentColor),
-                                        modifier = Modifier.size(72.dp)
+                                        modifier = Modifier.height(72.dp).width(80.dp)
                                     ) {
                                         Icon(painter = painterResource(R.drawable.skip_next), contentDescription = null, modifier = Modifier.size(32.dp))
                                     }
                                 }
 
-                                Spacer(modifier = Modifier.height(24.dp))
+                                Spacer(modifier = Modifier.height(32.dp))
 
-                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                     val isEpisode = currentSong?.song?.isEpisode == true
                                     val isFavorite = if (isEpisode) currentSong?.song?.inLibrary != null else currentSong?.song?.liked == true
                                     
                                     Surface(
-                                        shape = RoundedCornerShape(24.dp),
+                                        shape = RoundedCornerShape(50),
                                         color = sideButtonContainerColor,
                                         contentColor = if (isFavorite) MaterialTheme.colorScheme.error else sideButtonContentColor,
-                                        modifier = Modifier.height(48.dp).weight(1f),
+                                        modifier = Modifier.height(52.dp).weight(0.8f),
                                         onClick = { playerConnection.toggleLike() }
                                     ) {
-                                        Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(painterResource(if (isFavorite) R.drawable.favorite else R.drawable.favorite_border), null, modifier = Modifier.size(20.dp))
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(painterResource(if (isFavorite) R.drawable.favorite else R.drawable.favorite_border), null, modifier = Modifier.size(22.dp))
                                         }
                                     }
                                     
                                     Surface(
-                                        shape = RoundedCornerShape(24.dp),
+                                        shape = RoundedCornerShape(50),
                                         color = sideButtonContainerColor,
                                         contentColor = sideButtonContentColor,
-                                        modifier = Modifier.height(48.dp).weight(1.5f),
+                                        modifier = Modifier.height(52.dp).weight(1.5f),
                                         onClick = { /* Add Download logic */ }
                                     ) {
                                         Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                                             Icon(painterResource(R.drawable.offline), null, modifier = Modifier.size(20.dp))
                                             Spacer(Modifier.width(6.dp))
-                                            Text("Download", style = MaterialTheme.typography.labelLarge, maxLines = 1)
+                                            Text("Download", style = MaterialTheme.typography.labelMedium, maxLines = 1)
                                         }
                                     }
 
                                     Surface(
-                                        shape = RoundedCornerShape(24.dp),
+                                        shape = RoundedCornerShape(50),
                                         color = sideButtonContainerColor,
                                         contentColor = if (repeatMode != Player.REPEAT_MODE_OFF) textButtonColor else sideButtonContentColor,
-                                        modifier = Modifier.height(48.dp).weight(1.5f),
+                                        modifier = Modifier.height(52.dp).weight(1.5f),
                                         onClick = { playerConnection.player.toggleRepeatMode() }
                                     ) {
                                         Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
@@ -1886,39 +1891,39 @@ fun BottomSheetPlayer(
                                                 }
                                             ), null, modifier = Modifier.size(20.dp))
                                             Spacer(Modifier.width(6.dp))
-                                            Text("Repeat", style = MaterialTheme.typography.labelLarge, maxLines = 1)
+                                            Text("Repeat", style = MaterialTheme.typography.labelMedium, maxLines = 1)
                                         }
                                     }
                                 }
                                 
-                                Spacer(modifier = Modifier.height(12.dp))
+                                Spacer(modifier = Modifier.height(16.dp))
 
-                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Surface(
-                                        shape = RoundedCornerShape(24.dp),
+                                        shape = RoundedCornerShape(50),
                                         color = sideButtonContainerColor,
                                         contentColor = sideButtonContentColor,
-                                        modifier = Modifier.height(48.dp).weight(1f),
+                                        modifier = Modifier.height(52.dp).weight(1f),
                                         onClick = { showInlineLyrics = !showInlineLyrics }
                                     ) {
                                         Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                                             Icon(painterResource(R.drawable.lyrics), null, modifier = Modifier.size(20.dp))
                                             Spacer(Modifier.width(6.dp))
-                                            Text("Lyrics", style = MaterialTheme.typography.labelLarge, maxLines = 1)
+                                            Text("Lyrics", style = MaterialTheme.typography.labelMedium, maxLines = 1)
                                         }
                                     }
 
                                     Surface(
-                                        shape = RoundedCornerShape(24.dp),
+                                        shape = RoundedCornerShape(50),
                                         color = sideButtonContainerColor,
                                         contentColor = sideButtonContentColor,
-                                        modifier = Modifier.height(48.dp).weight(1f),
+                                        modifier = Modifier.height(52.dp).weight(1f),
                                         onClick = { scope.launch { queueSheetState.expandSoft() } }
                                     ) {
                                         Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                                             Icon(painterResource(R.drawable.queue_music), null, modifier = Modifier.size(20.dp))
                                             Spacer(Modifier.width(6.dp))
-                                            Text("Queue", style = MaterialTheme.typography.labelLarge, maxLines = 1)
+                                            Text("Queue", style = MaterialTheme.typography.labelMedium, maxLines = 1)
                                         }
                                     }
                                 }
