@@ -353,7 +353,7 @@ fun Thumbnail(
                     
                     // THUMBNAIL PUSH DOWN (Gap to avoid sticking to "Now Playing")
                     if (playerStyle.name == "VIVI_NEW") {
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(32.dp))
                     }
                 }
                 
@@ -574,7 +574,8 @@ private fun ThumbnailItem(
                     }
                 )
             },
-        contentAlignment = Alignment.Center
+        // Alignment TopCenter ensures the extra vertical space sits BELOW the thumbnail for VIVI_NEW
+        contentAlignment = if (isLandscape) Alignment.Center else if (playerStyleName == "VIVI_NEW") Alignment.TopCenter else Alignment.Center
     ) {
         Box(
             modifier = Modifier
