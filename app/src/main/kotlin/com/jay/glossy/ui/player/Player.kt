@@ -1468,13 +1468,46 @@ fun BottomSheetPlayer(
                     "VIVI_NEW" -> {
                         // VIVI NEW EXCLUSIVE MEDIA INFO ACTIONS
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            // More Vert Button
+                            // Like/Heart Button
+                            val isEpisode = currentSong?.song?.isEpisode == true
+                            val isFavorite = if (isEpisode) currentSong?.song?.inLibrary != null else currentSong?.song?.liked == true
+                            val likeInteractionSource = remember { MutableInteractionSource() }
+                            val isLikePressed by likeInteractionSource.collectIsPressedAsState()
+                            val likeScale by animateFloatAsState(if (isLikePressed) 0.7f else 1f, spring(0.6f, 500f), label = "likeScale")
+                            
                             Box(
                                 modifier = Modifier
                                     .size(42.dp)
+                                    .graphicsLayer(scaleX = likeScale, scaleY = likeScale)
                                     .clip(CircleShape)
-                                    .background(textButtonColor.copy(alpha = 0.2f))
-                                    .clickable {
+                                    .clickable(
+                                        interactionSource = likeInteractionSource,
+                                        indication = androidx.compose.foundation.LocalIndication.current
+                                    ) { playerConnection.toggleLike() },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    painterResource(if (isFavorite) R.drawable.favorite else R.drawable.favorite_border), 
+                                    contentDescription = "Like", 
+                                    tint = if (isFavorite) MaterialTheme.colorScheme.error else TextBackgroundColor, 
+                                    modifier = Modifier.size(26.dp)
+                                )
+                            }
+                            
+                            // More Vert Button
+                            val moreInteractionSource = remember { MutableInteractionSource() }
+                            val isMorePressed by moreInteractionSource.collectIsPressedAsState()
+                            val moreScale by animateFloatAsState(if (isMorePressed) 0.7f else 1f, spring(0.6f, 500f), label = "moreScale")
+                            
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .graphicsLayer(scaleX = moreScale, scaleY = moreScale)
+                                    .clip(CircleShape)
+                                    .clickable(
+                                        interactionSource = moreInteractionSource,
+                                        indication = androidx.compose.foundation.LocalIndication.current
+                                    ) {
                                         menuState.show {
                                             PlayerMenu(
                                                 mediaMetadata = mediaMetadata,
@@ -1493,27 +1526,8 @@ fun BottomSheetPlayer(
                                 Icon(
                                     painterResource(R.drawable.more_vert), 
                                     contentDescription = "Options", 
-                                    tint = iconButtonColor, 
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                            
-                            // Like/Heart Button
-                            val isEpisode = currentSong?.song?.isEpisode == true
-                            val isFavorite = if (isEpisode) currentSong?.song?.inLibrary != null else currentSong?.song?.liked == true
-                            Box(
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .clip(CircleShape)
-                                    .background(textButtonColor.copy(alpha = 0.2f))
-                                    .clickable { playerConnection.toggleLike() },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    painterResource(if (isFavorite) R.drawable.favorite else R.drawable.favorite_border), 
-                                    contentDescription = "Like", 
-                                    tint = if (isFavorite) MaterialTheme.colorScheme.error else iconButtonColor, 
-                                    modifier = Modifier.size(24.dp)
+                                    tint = TextBackgroundColor, 
+                                    modifier = Modifier.size(26.dp)
                                 )
                             }
                         }
@@ -2019,10 +2033,15 @@ fun BottomSheetPlayer(
                                 modifier = Modifier.fillMaxWidth().padding(horizontal = PlayerHorizontalPadding)
                             ) {
                                 // Previous
+                                val prevInteractionSource = remember { MutableInteractionSource() }
+                                val isPrevPressed by prevInteractionSource.collectIsPressedAsState()
+                                val prevScale by animateFloatAsState(if (isPrevPressed) 0.7f else 1f, spring(0.6f, 500f), label = "prevScale")
+                                
                                 androidx.compose.material3.IconButton(
                                     onClick = playerConnection::seekToPrevious,
                                     enabled = canSkipPrevious && !isListenTogetherGuest,
-                                    modifier = Modifier.size(56.dp)
+                                    interactionSource = prevInteractionSource,
+                                    modifier = Modifier.size(56.dp).graphicsLayer(scaleX = prevScale, scaleY = prevScale)
                                 ) {
                                     Icon(
                                         painterResource(R.drawable.apple_skip_previous), 
@@ -2035,9 +2054,14 @@ fun BottomSheetPlayer(
                                 Spacer(Modifier.width(32.dp))
 
                                 // Play / Pause
+                                val playInteractionSource = remember { MutableInteractionSource() }
+                                val isPlayPressed by playInteractionSource.collectIsPressedAsState()
+                                val playScale by animateFloatAsState(if (isPlayPressed) 0.75f else 1f, spring(0.6f, 500f), label = "playScale")
+                                
                                 androidx.compose.material3.IconButton(
                                     onClick = onPlayPauseLogic,
-                                    modifier = Modifier.size(84.dp).focusRequester(focusRequester)
+                                    interactionSource = playInteractionSource,
+                                    modifier = Modifier.size(84.dp).focusRequester(focusRequester).graphicsLayer(scaleX = playScale, scaleY = playScale)
                                 ) {
                                     Icon(
                                         painter = painterResource(
@@ -2060,10 +2084,15 @@ fun BottomSheetPlayer(
                                 Spacer(Modifier.width(32.dp))
 
                                 // Next
+                                val nextInteractionSource = remember { MutableInteractionSource() }
+                                val isNextPressed by nextInteractionSource.collectIsPressedAsState()
+                                val nextScale by animateFloatAsState(if (isNextPressed) 0.7f else 1f, spring(0.6f, 500f), label = "nextScale")
+                                
                                 androidx.compose.material3.IconButton(
                                     onClick = playerConnection::seekToNext,
                                     enabled = canSkipNext && !isListenTogetherGuest,
-                                    modifier = Modifier.size(56.dp)
+                                    interactionSource = nextInteractionSource,
+                                    modifier = Modifier.size(56.dp).graphicsLayer(scaleX = nextScale, scaleY = nextScale)
                                 ) {
                                     Icon(
                                         painterResource(R.drawable.apple_skip_next), 
