@@ -284,7 +284,7 @@ fun Queue(
         },
         collapsedContent = {
             if (playerStyle.name == "VIVI_NEW") {
-                // EXAACT VIVI NEW Bottom Bar Layout (No text, just clean spaced icons)
+                // Exact VIVI NEW Bottom Bar Layout (No text, just clean spaced icons)
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
@@ -313,7 +313,7 @@ fun Queue(
                                 .clickable { Toast.makeText(context, "Bluetooth settings", Toast.LENGTH_SHORT).show() },
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(painterResource(R.drawable.speaker_apple), contentDescription = "Audio Devices", tint = iconTint, modifier = Modifier.size(20.dp))
+                            Icon(painterResource(R.drawable.volume_up), contentDescription = "Audio Devices", tint = iconTint, modifier = Modifier.size(20.dp))
                         }
                         
                         // Sleep Timer Button (Pill Box)
