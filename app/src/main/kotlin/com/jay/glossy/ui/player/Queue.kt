@@ -143,6 +143,7 @@ import com.jay.glossy.ui.utils.ShowMediaInfo
 import com.jay.glossy.utils.makeTimeString
 import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.utils.safeDataStoreEdit
+import com.jay.glossy.utils.rememberEnumPreference
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -179,6 +180,11 @@ fun Queue(
     val menuState = LocalMenuState.current
     val sleepTimerDefaultSetTemplate = stringResource(R.string.sleep_timer_default_set)
     val bottomSheetPageState = LocalBottomSheetPageState.current
+
+    val (playerStyle) = rememberEnumPreference(
+        com.jay.glossy.constants.PlayerStyleKey, 
+        defaultValue = com.jay.glossy.constants.PlayerStyle.MODERN
+    )
 
     // Listen Together state
     val listenTogetherManager = LocalListenTogetherManager.current
@@ -277,7 +283,62 @@ fun Queue(
             Box(Modifier.fillMaxSize().background(Color.Unspecified))
         },
         collapsedContent = {
-            if (useNewPlayerDesign) {
+            if (playerStyle.name == "VIVI_NEW") {
+                // EXAACT VIVI NEW Bottom Bar Layout (No text, just clean spaced icons)
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 30.dp, vertical = 12.dp)
+                        .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal))
+                ) {
+                    val iconTint = TextBackgroundColor
+                    val pillBg = TextBackgroundColor.copy(alpha = 0.15f)
+                    
+                    // Queue Button (Left, Just Icon)
+                    androidx.compose.material3.IconButton(onClick = { state.expandSoft() }) {
+                        Icon(painterResource(R.drawable.queue_music), contentDescription = "Queue", tint = iconTint, modifier = Modifier.size(26.dp))
+                    }
+                    
+                    // Middle Group (Devices & Timer)
+                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        // Devices Button (Pill Box)
+                        Box(
+                            modifier = Modifier
+                                .height(40.dp)
+                                .width(64.dp)
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(pillBg)
+                                .clickable { Toast.makeText(context, "Bluetooth settings", Toast.LENGTH_SHORT).show() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(painterResource(R.drawable.speaker_apple), contentDescription = "Audio Devices", tint = iconTint, modifier = Modifier.size(20.dp))
+                        }
+                        
+                        // Sleep Timer Button (Pill Box)
+                        Box(
+                            modifier = Modifier
+                                .height(40.dp)
+                                .width(64.dp)
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(if (sleepTimerEnabled) TextBackgroundColor.copy(alpha = 0.4f) else pillBg)
+                                .clickable {
+                                    if (sleepTimerEnabled) playerConnection.service.sleepTimer?.clear()
+                                    else showSleepTimerDialog = true
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(painterResource(R.drawable.bedtime), contentDescription = "Sleep Timer", tint = if (sleepTimerEnabled) MaterialTheme.colorScheme.surface else iconTint, modifier = Modifier.size(20.dp))
+                        }
+                    }
+                    
+                    // Lyrics Button (Right, Just Icon)
+                    androidx.compose.material3.IconButton(onClick = onToggleLyrics) {
+                        Icon(painterResource(R.drawable.lyrics), contentDescription = "Lyrics", tint = if(showInlineLyrics) MaterialTheme.colorScheme.primary else iconTint, modifier = Modifier.size(26.dp))
+                    }
+                }
+            } else if (useNewPlayerDesign) {
                 // New design
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -576,11 +637,12 @@ fun Queue(
                     content = {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = pluralStringResource(
-                                    R.plurals.minute,
-                                    sleepTimerValue.roundToInt(),
-                                    sleepTimerValue.roundToInt(),
-                                ),
+                                text =
+                                    pluralStringResource(
+                                        R.plurals.minute,
+                                        sleepTimerValue.roundToInt(),
+                                        sleepTimerValue.roundToInt(),
+                                    ),
                                 style = MaterialTheme.typography.bodyLarge,
                             )
 
