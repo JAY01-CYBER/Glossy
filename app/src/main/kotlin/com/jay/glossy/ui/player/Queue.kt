@@ -19,13 +19,18 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -284,7 +289,7 @@ fun Queue(
         },
         collapsedContent = {
             if (playerStyle.name == "VIVI_NEW") {
-                // EXACT VIVI NEW Bottom Bar Layout (No text, clean spaced icons, outlined pills)
+                // EXACT VIVI NEW Bottom Bar Layout (Spring Animations, clean spaced icons, circle outlines)
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
@@ -294,13 +299,18 @@ fun Queue(
                         .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal))
                 ) {
                     val iconTint = TextBackgroundColor
-                    val pillBorder = TextBackgroundColor.copy(alpha = 0.3f)
-                    val pillBg = Color.Transparent
+                    val circleBorder = TextBackgroundColor.copy(alpha = 0.35f)
+                    val circleBg = Color.Transparent
                     
-                    // Queue Button (Left, Just Icon)
+                    // Queue Button (Left)
+                    val queueInteractionSource = remember { MutableInteractionSource() }
+                    val isQueuePressed by queueInteractionSource.collectIsPressedAsState()
+                    val queueScale by animateFloatAsState(if (isQueuePressed) 0.7f else 1f, spring(0.6f, 500f), label = "queueScale")
+                    
                     androidx.compose.material3.IconButton(
                         onClick = { state.expandSoft() },
-                        modifier = Modifier.size(48.dp)
+                        interactionSource = queueInteractionSource,
+                        modifier = Modifier.size(48.dp).graphicsLayer(scaleX = queueScale, scaleY = queueScale)
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.queue_music), 
@@ -310,17 +320,24 @@ fun Queue(
                         )
                     }
                     
-                    // Middle Group (Devices & Timer Pills)
-                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        // Devices Button (Pill Box)
+                    // Middle Group (Devices & Timer Circles)
+                    Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                        // Devices Button (Circle Box)
+                        val devicesInteractionSource = remember { MutableInteractionSource() }
+                        val isDevicesPressed by devicesInteractionSource.collectIsPressedAsState()
+                        val devicesScale by animateFloatAsState(if (isDevicesPressed) 0.7f else 1f, spring(0.6f, 500f), label = "devicesScale")
+                        
                         Box(
                             modifier = Modifier
-                                .height(40.dp)
-                                .width(64.dp)
-                                .clip(RoundedCornerShape(20.dp))
-                                .border(1.dp, pillBorder, RoundedCornerShape(20.dp))
-                                .background(pillBg)
-                                .clickable { Toast.makeText(context, "Devices", Toast.LENGTH_SHORT).show() },
+                                .size(44.dp)
+                                .graphicsLayer(scaleX = devicesScale, scaleY = devicesScale)
+                                .clip(CircleShape)
+                                .border(1.dp, circleBorder, CircleShape)
+                                .background(circleBg)
+                                .clickable(
+                                    interactionSource = devicesInteractionSource,
+                                    indication = LocalIndication.current
+                                ) { Toast.makeText(context, "Devices", Toast.LENGTH_SHORT).show() },
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -331,15 +348,22 @@ fun Queue(
                             )
                         }
                         
-                        // Sleep Timer Button (Pill Box)
+                        // Sleep Timer Button (Circle Box)
+                        val sleepInteractionSource = remember { MutableInteractionSource() }
+                        val isSleepPressed by sleepInteractionSource.collectIsPressedAsState()
+                        val sleepScale by animateFloatAsState(if (isSleepPressed) 0.7f else 1f, spring(0.6f, 500f), label = "sleepScale")
+                        
                         Box(
                             modifier = Modifier
-                                .height(40.dp)
-                                .width(64.dp)
-                                .clip(RoundedCornerShape(20.dp))
-                                .border(1.dp, pillBorder, RoundedCornerShape(20.dp))
-                                .background(if (sleepTimerEnabled) TextBackgroundColor.copy(alpha = 0.2f) else pillBg)
-                                .clickable {
+                                .size(44.dp)
+                                .graphicsLayer(scaleX = sleepScale, scaleY = sleepScale)
+                                .clip(CircleShape)
+                                .border(1.dp, if (sleepTimerEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else circleBorder, CircleShape)
+                                .background(if (sleepTimerEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else circleBg)
+                                .clickable(
+                                    interactionSource = sleepInteractionSource,
+                                    indication = LocalIndication.current
+                                ) {
                                     if (sleepTimerEnabled) playerConnection.service.sleepTimer?.clear()
                                     else showSleepTimerDialog = true
                                 },
@@ -354,10 +378,15 @@ fun Queue(
                         }
                     }
                     
-                    // Lyrics Button (Right, Just Icon)
+                    // Lyrics Button (Right)
+                    val lyricsInteractionSource = remember { MutableInteractionSource() }
+                    val isLyricsPressed by lyricsInteractionSource.collectIsPressedAsState()
+                    val lyricsScale by animateFloatAsState(if (isLyricsPressed) 0.7f else 1f, spring(0.6f, 500f), label = "lyricsScale")
+                    
                     androidx.compose.material3.IconButton(
                         onClick = onToggleLyrics,
-                        modifier = Modifier.size(48.dp)
+                        interactionSource = lyricsInteractionSource,
+                        modifier = Modifier.size(48.dp).graphicsLayer(scaleX = lyricsScale, scaleY = lyricsScale)
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.lyrics), 
