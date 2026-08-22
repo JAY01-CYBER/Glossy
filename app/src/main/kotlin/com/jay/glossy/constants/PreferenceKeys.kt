@@ -68,7 +68,8 @@ val PlayerStyleKey = stringPreferencesKey("playerStyle")
 enum class PlayerStyle {
     CLASSIC,
     MODERN,
-    WAVY
+    WAVY,
+    VIVI_NEW
 }
 
 val UseNewMiniPlayerDesignKey = booleanPreferencesKey("useNewMiniPlayerDesign")
