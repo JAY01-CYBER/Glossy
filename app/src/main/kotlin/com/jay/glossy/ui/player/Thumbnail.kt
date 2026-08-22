@@ -79,6 +79,8 @@ import com.jay.glossy.constants.HidePlayerThumbnailKey
 import com.jay.glossy.constants.PlayerBackgroundStyle
 import com.jay.glossy.constants.PlayerBackgroundStyleKey
 import com.jay.glossy.constants.PlayerHorizontalPadding
+import com.jay.glossy.constants.PlayerStyle
+import com.jay.glossy.constants.PlayerStyleKey
 import com.jay.glossy.constants.SeekExtraSeconds
 import com.jay.glossy.constants.SwipeThumbnailKey
 import com.jay.glossy.constants.ThumbnailCornerRadius
@@ -222,9 +224,14 @@ fun Thumbnail(
     val swipeThumbnail = swipeThumbnailPref && !isListenTogetherGuest
     val hidePlayerThumbnail by rememberPreference(HidePlayerThumbnailKey, false)
     val cropAlbumArt by rememberPreference(CropAlbumArtKey, false)
+    
     val playerBackground by rememberEnumPreference(
         key = PlayerBackgroundStyleKey,
         defaultValue = PlayerBackgroundStyle.DEFAULT
+    )
+    val (playerStyle) = rememberEnumPreference(
+        key = PlayerStyleKey,
+        defaultValue = PlayerStyle.MODERN
     )
     
     // Pre-calculate text color based on background style
@@ -338,9 +345,10 @@ fun Thumbnail(
                 // Now Playing header - hide in landscape mode
                 if (!isLandscape) {
                     ThumbnailHeader(
-                        queueTitle = queueTitle,
-                        albumTitle = mediaMetadata?.album?.title,
-                        textColor = textBackgroundColor
+                        queueTitle = queueTitle, 
+                        albumTitle = mediaMetadata?.album?.title, 
+                        textColor = textBackgroundColor,
+                        playerStyleName = playerStyle.name
                     )
                 }
                 
@@ -405,7 +413,8 @@ fun Thumbnail(
                                 isLandscape = isLandscape,
                                 isListenTogetherGuest = isListenTogetherGuest,
                                 currentMediaId = mediaMetadata?.id,
-                                currentMediaThumbnail = mediaMetadata?.thumbnailUrl
+                                currentMediaThumbnail = mediaMetadata?.thumbnailUrl,
+                                playerStyleName = playerStyle.name
                             )
                         }
                     }
@@ -440,6 +449,7 @@ private fun ThumbnailHeader(
     queueTitle: String?,
     albumTitle: String?,
     textColor: Color,
+    playerStyleName: String,
     modifier: Modifier = Modifier
 ) {
     val listenTogetherManager = LocalListenTogetherManager.current
@@ -470,8 +480,10 @@ private fun ThumbnailHeader(
                     color = textColor
                 )
             }
+            
+            // Subtitle - Hide only for VIVI_NEW
             val playingFrom = queueTitle ?: albumTitle
-            if (!playingFrom.isNullOrBlank()) {
+            if (playerStyleName != "VIVI_NEW" && !playingFrom.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = playingFrom,
@@ -503,6 +515,7 @@ private fun ThumbnailItem(
     isListenTogetherGuest: Boolean = false,
     currentMediaId: String? = null,
     currentMediaThumbnail: String? = null,
+    playerStyleName: String,
     modifier: Modifier = Modifier,
 ) {
     val incrementalSeekSkipEnabled by rememberPreference(SeekExtraSeconds, defaultValue = false)
@@ -564,7 +577,10 @@ private fun ThumbnailItem(
                 .clip(RoundedCornerShape(dimensions.cornerRadius))
         ) {
             if (hidePlayerThumbnail) {
-                HiddenThumbnailPlaceholder(textBackgroundColor = textBackgroundColor)
+                HiddenThumbnailPlaceholder(
+                    textBackgroundColor = textBackgroundColor,
+                    playerStyleName = playerStyleName
+                )
             } else {
                 val artworkUriToUse = if (item.mediaId == currentMediaId && !currentMediaThumbnail.isNullOrBlank()) {
                     currentMediaThumbnail
@@ -574,7 +590,8 @@ private fun ThumbnailItem(
 
                 ThumbnailImage(
                     artworkUri = artworkUriToUse,
-                    cropArtwork = cropAlbumArt
+                    cropArtwork = cropAlbumArt,
+                    playerStyleName = playerStyleName
                 )
             }
             
@@ -595,12 +612,16 @@ private fun ThumbnailItem(
 @Composable
 private fun HiddenThumbnailPlaceholder(
     textBackgroundColor: Color,
+    playerStyleName: String,
     modifier: Modifier = Modifier
 ) {
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surfaceVariant),
+            .then(
+                if (playerStyleName == "VIVI_NEW") Modifier 
+                else Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
+            ),
         contentAlignment = Alignment.Center
     ) {
         Icon(
@@ -618,6 +639,7 @@ private fun HiddenThumbnailPlaceholder(
 private fun ThumbnailImage(
     artworkUri: String?,
     cropArtwork: Boolean,
+    playerStyleName: String,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -627,7 +649,11 @@ private fun ThumbnailImage(
                 // Use offscreen compositing for hardware acceleration during animations
                 compositingStrategy = CompositingStrategy.Offscreen
             }
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .then(
+                // Remove surfaceVariant color (grey) for VIVI_NEW to avoid ugly borders
+                if (playerStyleName == "VIVI_NEW") Modifier 
+                else Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
+            )
     ) {
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
@@ -637,7 +663,8 @@ private fun ThumbnailImage(
                 .networkCachePolicy(CachePolicy.ENABLED)
                 .build(),
             contentDescription = null,
-            contentScale = if (cropArtwork) ContentScale.Crop else ContentScale.Fit,
+            // Force Crop for VIVI_NEW so it perfectly fills the box, removing letterboxes
+            contentScale = if (cropArtwork || playerStyleName == "VIVI_NEW") ContentScale.Crop else ContentScale.Fit,
             modifier = Modifier.fillMaxSize()
         )
     }
