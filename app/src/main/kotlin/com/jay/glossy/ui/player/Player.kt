@@ -351,7 +351,7 @@ fun BottomSheetPlayer(
     val listenTogetherRoleState = listenTogetherManager?.role?.collectAsStateWithLifecycle(initialValue = RoomRole.NONE)
     val isListenTogetherGuest = listenTogetherRoleState?.value == RoomRole.GUEST
 
-    // Cast state
+    // Cast state - safely access castConnectionHandler to prevent crashes during service lifecycle changes
     val castHandler =
         remember(playerConnection) {
             try {
@@ -378,8 +378,11 @@ fun BottomSheetPlayer(
         }
     }
 
+    // Use Cast state when casting, otherwise local player
     val effectiveIsPlaying = if (isCasting) castIsPlaying else isPlaying
 
+    // Use State objects for position/duration to pass to MiniPlayer without causing recomposition
+    // These states persist across playback state changes to ensure continuous progress updates.
     val positionState = remember { mutableLongStateOf(runCatching { playerConnection.player.currentPosition }.getOrDefault(0L)) }
     val durationState = remember {
         mutableLongStateOf(
@@ -404,6 +407,7 @@ fun BottomSheetPlayer(
     var sliderPosition by remember {
         mutableStateOf<Long?>(null)
     }
+    // Track when we last manually set position to avoid Cast overwriting it
     var lastManualSeekTime by remember { mutableLongStateOf(0L) }
 
     var gradientColors by remember {
