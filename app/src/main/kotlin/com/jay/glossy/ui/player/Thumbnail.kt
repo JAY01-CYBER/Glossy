@@ -350,6 +350,11 @@ fun Thumbnail(
                         textColor = textBackgroundColor,
                         playerStyleName = playerStyle.name
                     )
+                    
+                    // THUMBNAIL PUSH DOWN (Gap to avoid sticking to "Now Playing")
+                    if (playerStyle.name == "VIVI_NEW") {
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
                 }
                 
                 // Thumbnail content
