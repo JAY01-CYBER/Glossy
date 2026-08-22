@@ -284,24 +284,33 @@ fun Queue(
         },
         collapsedContent = {
             if (playerStyle.name == "VIVI_NEW") {
-                // Exact VIVI NEW Bottom Bar Layout (No text, just clean spaced icons)
+                // EXACT VIVI NEW Bottom Bar Layout (No text, clean spaced icons, outlined pills)
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 30.dp, vertical = 12.dp)
+                        .padding(horizontal = 32.dp, vertical = 12.dp)
                         .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal))
                 ) {
                     val iconTint = TextBackgroundColor
-                    val pillBg = TextBackgroundColor.copy(alpha = 0.15f)
+                    val pillBorder = TextBackgroundColor.copy(alpha = 0.3f)
+                    val pillBg = Color.Transparent
                     
                     // Queue Button (Left, Just Icon)
-                    androidx.compose.material3.IconButton(onClick = { state.expandSoft() }) {
-                        Icon(painterResource(R.drawable.queue_music), contentDescription = "Queue", tint = iconTint, modifier = Modifier.size(26.dp))
+                    androidx.compose.material3.IconButton(
+                        onClick = { state.expandSoft() },
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.queue_music), 
+                            contentDescription = "Queue", 
+                            tint = iconTint, 
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                     
-                    // Middle Group (Devices & Timer)
+                    // Middle Group (Devices & Timer Pills)
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         // Devices Button (Pill Box)
                         Box(
@@ -309,11 +318,17 @@ fun Queue(
                                 .height(40.dp)
                                 .width(64.dp)
                                 .clip(RoundedCornerShape(20.dp))
+                                .border(1.dp, pillBorder, RoundedCornerShape(20.dp))
                                 .background(pillBg)
-                                .clickable { Toast.makeText(context, "Bluetooth settings", Toast.LENGTH_SHORT).show() },
+                                .clickable { Toast.makeText(context, "Devices", Toast.LENGTH_SHORT).show() },
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(painterResource(R.drawable.volume_up), contentDescription = "Audio Devices", tint = iconTint, modifier = Modifier.size(20.dp))
+                            Icon(
+                                painter = painterResource(R.drawable.volume_up), 
+                                contentDescription = "Audio Devices", 
+                                tint = iconTint, 
+                                modifier = Modifier.size(20.dp)
+                            )
                         }
                         
                         // Sleep Timer Button (Pill Box)
@@ -322,20 +337,34 @@ fun Queue(
                                 .height(40.dp)
                                 .width(64.dp)
                                 .clip(RoundedCornerShape(20.dp))
-                                .background(if (sleepTimerEnabled) TextBackgroundColor.copy(alpha = 0.4f) else pillBg)
+                                .border(1.dp, pillBorder, RoundedCornerShape(20.dp))
+                                .background(if (sleepTimerEnabled) TextBackgroundColor.copy(alpha = 0.2f) else pillBg)
                                 .clickable {
                                     if (sleepTimerEnabled) playerConnection.service.sleepTimer?.clear()
                                     else showSleepTimerDialog = true
                                 },
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(painterResource(R.drawable.bedtime), contentDescription = "Sleep Timer", tint = if (sleepTimerEnabled) MaterialTheme.colorScheme.surface else iconTint, modifier = Modifier.size(20.dp))
+                            Icon(
+                                painter = painterResource(R.drawable.bedtime), 
+                                contentDescription = "Sleep Timer", 
+                                tint = if (sleepTimerEnabled) MaterialTheme.colorScheme.primary else iconTint, 
+                                modifier = Modifier.size(20.dp)
+                            )
                         }
                     }
                     
                     // Lyrics Button (Right, Just Icon)
-                    androidx.compose.material3.IconButton(onClick = onToggleLyrics) {
-                        Icon(painterResource(R.drawable.lyrics), contentDescription = "Lyrics", tint = if(showInlineLyrics) MaterialTheme.colorScheme.primary else iconTint, modifier = Modifier.size(26.dp))
+                    androidx.compose.material3.IconButton(
+                        onClick = onToggleLyrics,
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.lyrics), 
+                            contentDescription = "Lyrics", 
+                            tint = if(showInlineLyrics) MaterialTheme.colorScheme.primary else iconTint, 
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                 }
             } else if (useNewPlayerDesign) {
