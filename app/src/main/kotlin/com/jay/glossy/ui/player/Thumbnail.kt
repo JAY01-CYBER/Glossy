@@ -353,13 +353,14 @@ fun Thumbnail(
                     
                     // THUMBNAIL PUSH DOWN (Gap to avoid sticking to "Now Playing")
                     if (playerStyle.name == "VIVI_NEW") {
-                        Spacer(modifier = Modifier.height(32.dp))
+                        Spacer(modifier = Modifier.height(24.dp))
                     }
                 }
                 
                 // Thumbnail content
                 BoxWithConstraints(
-                    contentAlignment = Alignment.Center,
+                    // Alignment.TopCenter pushes all extra height down, sending controls to the bottom!
+                    contentAlignment = if (isLandscape) Alignment.Center else if (playerStyle.name == "VIVI_NEW") Alignment.TopCenter else Alignment.Center,
                     modifier = if (isLandscape) {
                         Modifier.weight(1f, false)
                     } else {
