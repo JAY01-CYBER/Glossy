@@ -114,7 +114,6 @@ data class MediaItemsData(
 /**
  * Calculate thumbnail dimensions once based on container size.
  * This function is marked as @Stable to indicate it produces stable results.
- * In landscape mode, uses the smaller dimension (height) to ensure square thumbnail fits.
  */
 @Stable
 private fun calculateThumbnailDimensions(
@@ -124,11 +123,13 @@ private fun calculateThumbnailDimensions(
     cornerRadius: Dp = ThumbnailCornerRadius,
     isLandscape: Boolean = false
 ): ThumbnailDimensions {
-    // In landscape, use height as the constraining dimension for a square thumbnail
+    // CRASH FREE FIX: Mathematics approach
+    // Yahan hum ensure kar rahe hain ki size hamesha ek PERFECT SQUARE ho jo containerHeight ko cross na kare.
+    // Isse layout crash nahi hoga aur `ContentScale.Crop` bilkul bhi image ko katega nahi!
     val effectiveSize = if (isLandscape) {
         minOf(containerWidth, containerHeight) - (horizontalPadding * 2)
     } else {
-        containerWidth - (horizontalPadding * 2)
+        minOf(containerWidth - (horizontalPadding * 2), containerHeight)
     }
     return ThumbnailDimensions(
         itemWidth = containerWidth,
@@ -396,14 +397,7 @@ fun Thumbnail(
                         modifier = if (isLandscape) {
                             Modifier.size(dimensions.thumbnailSize + (PlayerHorizontalPadding * 2))
                         } else {
-                            Modifier
-                                .fillMaxWidth()
-                                .then(
-                                    // CRASH FIX: LazyGrid ko explicitly exact bounds dena zaruri hai.
-                                    // VIVI_NEW ko ekdum perfect square height (maxWidth ke barabar) de raha hoon.
-                                    if (playerStyle.name == "VIVI_NEW") Modifier.height(maxWidth)
-                                    else Modifier.fillMaxSize()
-                                )
+                            Modifier.fillMaxSize() // Pure fillMaxSize. No hacks, no crashes!
                         }
                     ) {
                         items(
@@ -675,7 +669,7 @@ private fun ThumbnailImage(
                 .networkCachePolicy(CachePolicy.ENABLED)
                 .build(),
             contentDescription = null,
-            // Force Crop for VIVI_NEW so it perfectly fills the box without letterboxes
+            // Force Crop for VIVI_NEW so it perfectly fills the box, removing letterboxes
             contentScale = if (cropArtwork || playerStyleName == "VIVI_NEW") ContentScale.Crop else ContentScale.Fit,
             modifier = Modifier.fillMaxSize()
         )
