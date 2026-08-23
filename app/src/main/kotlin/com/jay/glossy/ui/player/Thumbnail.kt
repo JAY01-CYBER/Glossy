@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,7 +27,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -401,8 +399,9 @@ fun Thumbnail(
                             Modifier
                                 .fillMaxWidth()
                                 .then(
-                                    // VIVI_NEW override: Ignore height constraints to force a perfect large square
-                                    if (playerStyle.name == "VIVI_NEW") Modifier.wrapContentHeight(unbounded = true)
+                                    // CRASH FIX: LazyGrid ko explicitly exact bounds dena zaruri hai.
+                                    // VIVI_NEW ko ekdum perfect square height (maxWidth ke barabar) de raha hoon.
+                                    if (playerStyle.name == "VIVI_NEW") Modifier.height(maxWidth)
                                     else Modifier.fillMaxSize()
                                 )
                         }
@@ -543,11 +542,7 @@ private fun ThumbnailItem(
                 } else {
                     Modifier
                         .width(dimensions.itemWidth)
-                        .then(
-                            // VIVI_NEW override: Remove height constraint to allow square ratio
-                            if (playerStyleName == "VIVI_NEW") Modifier.wrapContentHeight(unbounded = true)
-                            else Modifier.fillMaxSize()
-                        )
+                        .fillMaxSize()
                 }
             )
             .padding(horizontal = PlayerHorizontalPadding)
@@ -589,16 +584,9 @@ private fun ThumbnailItem(
         contentAlignment = if (isLandscape) Alignment.Center else if (playerStyleName == "VIVI_NEW") Alignment.TopCenter else Alignment.Center
     ) {
         Box(
-            modifier = if (playerStyleName == "VIVI_NEW") {
-                Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f) // Forces a perfect square taking up full width!
-                    .clip(RoundedCornerShape(dimensions.cornerRadius))
-            } else {
-                Modifier
-                    .size(dimensions.thumbnailSize)
-                    .clip(RoundedCornerShape(dimensions.cornerRadius))
-            }
+            modifier = Modifier
+                .size(dimensions.thumbnailSize)
+                .clip(RoundedCornerShape(dimensions.cornerRadius))
         ) {
             if (hidePlayerThumbnail) {
                 HiddenThumbnailPlaceholder(
@@ -687,7 +675,7 @@ private fun ThumbnailImage(
                 .networkCachePolicy(CachePolicy.ENABLED)
                 .build(),
             contentDescription = null,
-            // Restore crop for VIVI_NEW so it perfectly fills our new aspect ratio 1:1 box without letterboxes
+            // Force Crop for VIVI_NEW so it perfectly fills the box without letterboxes
             contentScale = if (cropArtwork || playerStyleName == "VIVI_NEW") ContentScale.Crop else ContentScale.Fit,
             modifier = Modifier.fillMaxSize()
         )
