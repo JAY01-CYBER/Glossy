@@ -670,8 +670,8 @@ private fun ThumbnailImage(
                 .networkCachePolicy(CachePolicy.ENABLED)
                 .build(),
             contentDescription = null,
-            // Force Crop for VIVI_NEW so it perfectly fills the box, removing letterboxes
-            contentScale = if (cropArtwork || playerStyleName == "VIVI_NEW") ContentScale.Crop else ContentScale.Fit,
+            // CHANGED: Fixed the forced crop issue for VIVI_NEW style here
+            contentScale = if (cropArtwork) ContentScale.Crop else ContentScale.Fit,
             modifier = Modifier.fillMaxSize()
         )
     }
