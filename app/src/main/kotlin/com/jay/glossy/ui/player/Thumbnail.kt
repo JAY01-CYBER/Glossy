@@ -13,6 +13,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Arrangement
@@ -90,7 +91,6 @@ import com.jay.glossy.listentogether.RoomRole
 import com.jay.glossy.ui.component.CastButton
 import com.jay.glossy.utils.rememberEnumPreference
 import com.jay.glossy.utils.rememberPreference
-import com.jay.glossy.extensions.SwipeGesture
 import kotlinx.coroutines.delay
 
 /**
@@ -399,11 +399,23 @@ fun Thumbnail(
                                 .fillMaxWidth()
                                 .padding(horizontal = PlayerHorizontalPadding)
                                 .aspectRatio(1f) // Forces PERFECT SQUARE independent of height bounds!
-                                .SwipeGesture(
-                                    enabled = swipeThumbnail,
-                                    onSwipeLeft = { if (canSkipNext) playerConnection.player.seekToNext() },
-                                    onSwipeRight = { if (canSkipPrevious) playerConnection.player.seekToPreviousMediaItem() }
-                                )
+                                .pointerInput(swipeThumbnail) {
+                                    if (!swipeThumbnail) return@pointerInput
+                                    var totalDrag = 0f
+                                    detectHorizontalDragGestures(
+                                        onDragStart = { totalDrag = 0f },
+                                        onDragEnd = {
+                                            if (totalDrag < -50f && canSkipNext) {
+                                                playerConnection.player.seekToNext()
+                                            } else if (totalDrag > 50f && canSkipPrevious) {
+                                                playerConnection.player.seekToPreviousMediaItem()
+                                            }
+                                        },
+                                        onHorizontalDrag = { change, dragAmount ->
+                                            totalDrag += dragAmount
+                                        }
+                                    )
+                                }
                                 .pointerInput(Unit) {
                                     detectTapGestures(
                                         onDoubleTap = { offset ->
