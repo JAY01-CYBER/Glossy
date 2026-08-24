@@ -126,11 +126,7 @@ private fun calculateThumbnailDimensions(
     cornerRadius: Dp = ThumbnailCornerRadius,
     isLandscape: Boolean = false
 ): ThumbnailDimensions {
-    val effectiveSize = if (isLandscape) {
-        minOf(containerWidth, containerHeight) - (horizontalPadding * 2)
-    } else {
-        containerWidth - (horizontalPadding * 2)
-    }
+    val effectiveSize = minOf(containerWidth, containerHeight) - (horizontalPadding * 2)
     return ThumbnailDimensions(
         itemWidth = containerWidth,
         containerSize = containerWidth,
@@ -396,9 +392,7 @@ fun Thumbnail(
 
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = PlayerHorizontalPadding)
-                                .aspectRatio(1f) // Forces PERFECT SQUARE independent of height bounds!
+                                .size(dimensions.thumbnailSize)
                                 .pointerInput(swipeThumbnail) {
                                     if (!swipeThumbnail) return@pointerInput
                                     var totalDrag = 0f
