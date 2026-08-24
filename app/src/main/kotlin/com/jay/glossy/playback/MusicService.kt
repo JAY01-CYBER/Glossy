@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -375,10 +375,26 @@ class MusicService :
         return (volume * sleepTimerMultiplier * focusMultiplier).coerceIn(0f, 1f)
     }
 
-    private fun applyEffectiveVolume() {
+        private fun applyEffectiveVolume() {
         if (!::player.isInitialized || isCrossfading) return
         player.volume = calculateEffectiveVolume()
     }
+
+    // ========== GLOSSY AUDIO ROUTING LOGIC ==========
+    var preferredDeviceId: Int? = null
+        private set
+
+    fun setPreferredAudioDevice(deviceId: Int?) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+            val deviceInfo = devices.find { it.id == deviceId }
+            if (::player.isInitialized) {
+                player.setPreferredAudioDevice(deviceInfo)
+            }
+            preferredDeviceId = deviceId
+        }
+    }
+    // ==============================================
 
     var sleepTimer: SleepTimer? = null
 
