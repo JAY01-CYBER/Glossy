@@ -165,27 +165,24 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
     val service = playerConnection?.service
     var showDevicePopup by remember { mutableStateOf(false) }
 
-    val bluetoothLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            loadDevices(context, null, onSuccess = { devices ->
-                audioDevices = devices
-                isLoading = false
-            }, onError = { error ->
-                errorMessage = error
-                isLoading = false
-            })
-        } else {
-            errorMessage = "Bluetooth permission required"
-            isLoading = false
-        }
-    }
+    // State to locally manage selection so the UI updates instantly
+    var selectedDeviceId by rememberSaveable { mutableStateOf<Int?>(null) }
 
     fun refreshDevices() {
-        loadDevices(context, null, onSuccess = { devices ->
+        loadDevices(context, selectedDeviceId, onSuccess = { devices ->
             audioDevices = devices
-        }, onError = {})
+            isLoading = false
+        }, onError = { error ->
+            errorMessage = error
+            isLoading = false
+        })
+    }
+
+    val bluetoothLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { _ ->
+        // Proceed regardless of permission grant (permission is only for battery)
+        refreshDevices()
     }
 
     DisposableEffect(Unit) {
@@ -224,28 +221,27 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
             )
         }
 
-        if (checkBluetoothPermission(context)) {
-            loadDevices(context, null, onSuccess = { devices ->
-                audioDevices = devices
-                isLoading = false
-            }, onError = { error ->
-                errorMessage = error
-                isLoading = false
-            })
-        } else {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        // Load immediately so UI is not blocked
+        refreshDevices()
+
+        // Ask permission for battery quietly
+        if (!checkBluetoothPermission(context) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            try {
                 bluetoothLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
-            }
+            } catch (e: Exception) {}
         }
 
         val handler = Handler(Looper.getMainLooper())
-
         val audioDeviceCallback = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             object : android.media.AudioDeviceCallback() {
                 override fun onAudioDevicesAdded(addedDevices: Array<out android.media.AudioDeviceInfo>?) {
                     refreshDevices()
                 }
                 override fun onAudioDevicesRemoved(removedDevices: Array<out android.media.AudioDeviceInfo>?) {
+                    // Check if selected device was removed
+                    if (addedDevices?.none { it.id == selectedDeviceId } == true) {
+                        selectedDeviceId = null
+                    }
                     refreshDevices()
                 }
             }
@@ -288,8 +284,7 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
                 context.unregisterReceiver(audioDeviceReceiver)
                 context.unregisterReceiver(bluetoothReceiver)
                 handler.removeCallbacksAndMessages(null)
-            } catch (e: IllegalArgumentException) {
-            }
+            } catch (e: IllegalArgumentException) {}
         }
     }
 
@@ -452,12 +447,12 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
                                         key(dev.deviceId) {
                                             val isSelected = dev.isActive
                                             val deviceIcon = when (dev.type) {
-                                                AudioDeviceType.BLUETOOTH -> Icons.Filled.Bluetooth
-                                                AudioDeviceType.WIRED_HEADPHONES -> Icons.Filled.Headphones
-                                                AudioDeviceType.USB_HEADSET -> Icons.Filled.Usb
-                                                AudioDeviceType.HDMI -> Icons.Filled.Tv
-                                                AudioDeviceType.EXTERNAL_SPEAKER -> Icons.Filled.Speaker
-                                                AudioDeviceType.PHONE_SPEAKER -> Icons.Filled.PhoneAndroid
+                                                AudioDeviceType.BLUETOOTH -> R.drawable.headset_applemusic
+                                                AudioDeviceType.WIRED_HEADPHONES -> R.drawable.headset_applemusic
+                                                AudioDeviceType.USB_HEADSET -> R.drawable.headset_applemusic
+                                                AudioDeviceType.HDMI -> R.drawable.speaker_apple
+                                                AudioDeviceType.EXTERNAL_SPEAKER -> R.drawable.speaker_apple
+                                                AudioDeviceType.PHONE_SPEAKER -> R.drawable.speaker_apple
                                             }
                                             
                                             val itemShape = remember(index, audioDevices.size) {
@@ -471,10 +466,55 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
 
                                             Surface(
                                                 onClick = {
-                                                    try {
-                                                        service?.javaClass?.getMethod("setPreferredAudioDevice", Int::class.javaObjectType)?.invoke(service, dev.deviceId)
-                                                    } catch (e: Exception) {
-                                                        e.printStackTrace()
+                                                    // Set Selected State UI manually
+                                                    selectedDeviceId = dev.deviceId
+                                                    
+                                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                                                        val targetDevice = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).find { it.id == dev.deviceId }
+                                                        if (targetDevice != null) {
+                                                            var success = false
+                                                            try {
+                                                                var exoPlayer: Any? = null
+                                                                try {
+                                                                    exoPlayer = service?.javaClass?.getMethod("getPlayer")?.invoke(service)
+                                                                } catch (e: Exception) {}
+                                                                
+                                                                if (exoPlayer == null && service != null) {
+                                                                    for (field in service.javaClass.declaredFields) {
+                                                                        field.isAccessible = true
+                                                                        val obj = field.get(service)
+                                                                        if (obj?.javaClass?.name?.contains("ExoPlayer") == true || obj?.javaClass?.name?.contains("PlayerImpl") == true) {
+                                                                            exoPlayer = obj
+                                                                            break
+                                                                        }
+                                                                    }
+                                                                }
+
+                                                                if (exoPlayer == null) exoPlayer = playerConnection?.player
+                                                                
+                                                                if (exoPlayer != null) {
+                                                                    val method = exoPlayer.javaClass.getMethod("setPreferredAudioDevice", AudioDeviceInfo::class.java)
+                                                                    method.invoke(exoPlayer, targetDevice)
+                                                                    success = true
+                                                                }
+                                                            } catch (e: Exception) {
+                                                                e.printStackTrace()
+                                                            }
+
+                                                            if (!success) {
+                                                                try {
+                                                                    if (dev.type == AudioDeviceType.PHONE_SPEAKER) {
+                                                                        audioManager.isSpeakerphoneOn = true
+                                                                        @Suppress("DEPRECATION")
+                                                                        audioManager.isBluetoothA2dpOn = false
+                                                                    } else if (dev.type == AudioDeviceType.BLUETOOTH) {
+                                                                        audioManager.isSpeakerphoneOn = false
+                                                                        @Suppress("DEPRECATION")
+                                                                        audioManager.isBluetoothA2dpOn = true
+                                                                    }
+                                                                } catch(e: Exception) {}
+                                                            }
+                                                        }
                                                     }
                                                     refreshDevices()
                                                     showDevicePopup = false
@@ -495,7 +535,7 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
                                                     horizontalArrangement = Arrangement.spacedBy(14.dp)
                                                 ) {
                                                     Icon(
-                                                        imageVector = deviceIcon,
+                                                        painter = painterResource(id = deviceIcon),
                                                         contentDescription = null,
                                                         modifier = Modifier.size(20.dp),
                                                         tint = if (isSelected)
@@ -517,7 +557,7 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
                                                     )
                                                     if (isSelected) {
                                                         Icon(
-                                                            imageVector = Icons.Filled.VolumeUp,
+                                                            painter = painterResource(R.drawable.volume_up),
                                                             contentDescription = null,
                                                             modifier = Modifier.size(16.dp),
                                                             tint = MaterialTheme.colorScheme.secondary
@@ -683,7 +723,7 @@ fun VolumeControlRow(
                     modifier = Modifier.padding(start = 24.dp)
                 ) {
                     Icon(
-                        imageVector = if (currentValue > 0) Icons.Filled.VolumeUp else Icons.Filled.VolumeOff,
+                        painter = painterResource(if (currentValue > 0) R.drawable.volume_up else R.drawable.volume_off),
                         contentDescription = null,
                         tint = if (currentValue / maxVolume > 0.2f) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(24.dp)
