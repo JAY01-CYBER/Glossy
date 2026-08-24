@@ -67,6 +67,44 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 // ============================================================================
+// EXOPLAYER EXTRACTION (For Guaranteed Routing)
+// ============================================================================
+
+fun extractExoPlayer(service: Any?, playerConnectionPlayer: Any?): Any? {
+    val candidates = mutableListOf<Any?>()
+    if (playerConnectionPlayer != null) candidates.add(playerConnectionPlayer)
+    if (service != null) {
+        try { candidates.add(service.javaClass.getMethod("getPlayer").invoke(service)) } catch (e: Exception) {}
+        try { 
+            val f = service.javaClass.getDeclaredField("player")
+            f.isAccessible = true
+            candidates.add(f.get(service))
+        } catch (e: Exception) {}
+    }
+
+    for (candidate in candidates) {
+        var current = candidate
+        var maxDepth = 5
+        while (current != null && maxDepth > 0) {
+            maxDepth--
+            try {
+                // Return if it's the actual engine that handles audio routing
+                current.javaClass.getMethod("setPreferredAudioDevice", AudioDeviceInfo::class.java)
+                return current
+            } catch (e: Exception) {}
+
+            try {
+                // Unwrap wrappers (like ForwardingPlayer) to find the core engine
+                current = current.javaClass.getMethod("getWrappedPlayer").invoke(current)
+            } catch (e: Exception) {
+                break
+            }
+        }
+    }
+    return null
+}
+
+// ============================================================================
 // BLUETOOTH & DEVICE DETECTION UTILS
 // ============================================================================
 
@@ -85,6 +123,23 @@ fun isBluetoothHeadphoneConnected(context: Context): Boolean {
     }
 }
 
+fun isWiredHeadphoneConnected(context: Context): Boolean {
+    val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        val audioDevices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+        audioDevices.any { device ->
+            device.type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES ||
+            device.type == AudioDeviceInfo.TYPE_WIRED_HEADSET ||
+            device.type == AudioDeviceInfo.TYPE_USB_HEADSET ||
+            device.type == AudioDeviceInfo.TYPE_USB_DEVICE ||
+            device.type == AudioDeviceInfo.TYPE_AUX_LINE
+        }
+    } else {
+        @Suppress("DEPRECATION")
+        audioManager.isWiredHeadsetOn
+    }
+}
+
 fun getConnectedBluetoothDeviceName(context: Context): String? {
     val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     val isBluetoothActive = audioManager.isBluetoothA2dpOn || audioManager.isBluetoothScoOn
@@ -98,35 +153,6 @@ fun getConnectedBluetoothDeviceName(context: Context): String? {
     } else {
         return null
     }
-}
-
-fun isBuds(name: String?): Boolean {
-    if (name == null) return false
-    val lowerName = name.lowercase()
-    return lowerName.contains("buds") || 
-           lowerName.contains("airpods") || 
-           lowerName.contains("earpods") || 
-           lowerName.contains("earphone") ||
-           lowerName.contains("freebuds") ||
-           lowerName.contains("pods")
-}
-
-fun isSpeaker(name: String?): Boolean {
-    if (name == null) return false
-    val lowerName = name.lowercase()
-    return lowerName.contains("speaker") || 
-           lowerName.contains("soundbar") || 
-           lowerName.contains("homepod") || 
-           lowerName.contains("echo") ||
-           lowerName.contains("boombox") ||
-           lowerName.contains("audio system") ||
-           lowerName.contains("sound") ||
-           lowerName.contains("audio") ||
-           lowerName.contains("stereo") ||
-           lowerName.contains("music") ||
-           lowerName.contains("box") ||
-           lowerName.contains("party") ||
-           lowerName.contains("waves")
 }
 
 // ============================================================================
@@ -166,10 +192,20 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
     val service = playerConnection?.service
     var showDevicePopup by remember { mutableStateOf(false) }
 
-    var selectedDeviceId by rememberSaveable { mutableStateOf<Int?>(null) }
+    val exoPlayer = remember(service, playerConnection?.player) {
+        extractExoPlayer(service, playerConnection?.player)
+    }
 
     fun refreshDevices() {
-        loadDevices(context, selectedDeviceId, onSuccess = { devices ->
+        var prefId: Int? = null
+        if (exoPlayer != null) {
+            try {
+                val prefDevice = exoPlayer.javaClass.getMethod("getPreferredAudioDevice").invoke(exoPlayer) as? AudioDeviceInfo
+                prefId = prefDevice?.id
+            } catch (e: Exception) {}
+        }
+        
+        loadDevices(context, prefId, onSuccess = { devices ->
             audioDevices = devices
             isLoading = false
         }, onError = { error ->
@@ -235,9 +271,6 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
                     refreshDevices()
                 }
                 override fun onAudioDevicesRemoved(removedDevices: Array<out android.media.AudioDeviceInfo>?) {
-                    if (removedDevices?.any { it.id == selectedDeviceId } == true) {
-                        selectedDeviceId = null
-                    }
                     refreshDevices()
                 }
             }
@@ -462,61 +495,23 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
 
                                             Surface(
                                                 onClick = {
-                                                    selectedDeviceId = dev.deviceId
-                                                    
                                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                                                         val targetDevice = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).find { it.id == dev.deviceId }
                                                         if (targetDevice != null) {
-                                                            var success = false
-                                                            try {
-                                                                var exoPlayer: Any? = null
+                                                            if (exoPlayer != null) {
                                                                 try {
-                                                                    exoPlayer = service?.javaClass?.getMethod("getPlayer")?.invoke(service)
-                                                                } catch (e: Exception) {}
-                                                                
-                                                                if (exoPlayer == null && service != null) {
-                                                                    for (field in service.javaClass.declaredFields) {
-                                                                        field.isAccessible = true
-                                                                        val obj = field.get(service)
-                                                                        if (obj?.javaClass?.name?.contains("ExoPlayer") == true || obj?.javaClass?.name?.contains("PlayerImpl") == true) {
-                                                                            exoPlayer = obj
-                                                                            break
-                                                                        }
-                                                                    }
-                                                                }
-
-                                                                if (exoPlayer == null) exoPlayer = playerConnection?.player
-                                                                
-                                                                if (exoPlayer != null) {
                                                                     val method = exoPlayer.javaClass.getMethod("setPreferredAudioDevice", AudioDeviceInfo::class.java)
                                                                     method.invoke(exoPlayer, targetDevice)
-                                                                    success = true
+                                                                } catch (e: Exception) {
+                                                                    e.printStackTrace()
                                                                 }
-                                                            } catch (e: Exception) {
-                                                                e.printStackTrace()
-                                                            }
-
-                                                            if (!success) {
+                                                            } else {
+                                                                // Ultimate Fallback if reflection fails
                                                                 try {
-                                                                    if (dev.type == AudioDeviceType.PHONE_SPEAKER) {
-                                                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                                                                            val speakerDevice = audioManager.availableCommunicationDevices.find { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
-                                                                            if (speakerDevice != null) audioManager.setCommunicationDevice(speakerDevice)
-                                                                        }
-                                                                        audioManager.isSpeakerphoneOn = true
-                                                                        audioManager.stopBluetoothSco()
-                                                                        @Suppress("DEPRECATION")
-                                                                        audioManager.isBluetoothA2dpOn = false
-                                                                    } else if (dev.type == AudioDeviceType.BLUETOOTH) {
-                                                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                                                                            val btDevice = audioManager.availableCommunicationDevices.find { it.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || it.type == AudioDeviceInfo.TYPE_BLE_HEADSET || it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO }
-                                                                            if (btDevice != null) audioManager.setCommunicationDevice(btDevice)
-                                                                        }
-                                                                        audioManager.isSpeakerphoneOn = false
-                                                                        audioManager.startBluetoothSco()
-                                                                        @Suppress("DEPRECATION")
-                                                                        audioManager.isBluetoothA2dpOn = true
+                                                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                                                        audioManager.setCommunicationDevice(targetDevice)
                                                                     }
+                                                                    audioManager.isSpeakerphoneOn = dev.type == AudioDeviceType.PHONE_SPEAKER
                                                                 } catch(e: Exception) {}
                                                             }
                                                         }
@@ -771,7 +766,7 @@ private fun loadDevices(
 
             audioDevices.forEach { deviceInfo ->
                 val device = when (deviceInfo.type) {
-                    AudioDeviceInfo.TYPE_BLUETOOTH_A2DP -> {
+                    AudioDeviceInfo.TYPE_BLUETOOTH_A2DP, AudioDeviceInfo.TYPE_BLE_HEADSET, AudioDeviceInfo.TYPE_BLUETOOTH_SCO -> {
                         val batteryLevel = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                             try {
                                 if (ActivityCompat.checkSelfPermission(
@@ -817,7 +812,7 @@ private fun loadDevices(
                         )
                     }
 
-                    AudioDeviceInfo.TYPE_WIRED_HEADPHONES, AudioDeviceInfo.TYPE_WIRED_HEADSET -> {
+                    AudioDeviceInfo.TYPE_WIRED_HEADPHONES, AudioDeviceInfo.TYPE_WIRED_HEADSET, AudioDeviceInfo.TYPE_AUX_LINE -> {
                         AudioDevice(
                             name = "Wired Headphones",
                             type = AudioDeviceType.WIRED_HEADPHONES,
@@ -893,15 +888,21 @@ private fun determineActiveDevice(
         } else null
 
         preferred ?: when {
-            audioDevices.any { it.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP } ->
-                audioDevices.find { it.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP }
+            audioDevices.any { it.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || it.type == AudioDeviceInfo.TYPE_BLE_HEADSET || it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO } ->
+                audioDevices.find { it.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || it.type == AudioDeviceInfo.TYPE_BLE_HEADSET || it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO }
             audioDevices.any {
                 it.type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES ||
-                        it.type == AudioDeviceInfo.TYPE_WIRED_HEADSET
+                        it.type == AudioDeviceInfo.TYPE_WIRED_HEADSET ||
+                        it.type == AudioDeviceInfo.TYPE_USB_HEADSET ||
+                        it.type == AudioDeviceInfo.TYPE_USB_DEVICE ||
+                        it.type == AudioDeviceInfo.TYPE_AUX_LINE
             } ->
                 audioDevices.find {
                     it.type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES ||
-                            it.type == AudioDeviceInfo.TYPE_WIRED_HEADSET
+                            it.type == AudioDeviceInfo.TYPE_WIRED_HEADSET ||
+                            it.type == AudioDeviceInfo.TYPE_USB_HEADSET ||
+                            it.type == AudioDeviceInfo.TYPE_USB_DEVICE ||
+                            it.type == AudioDeviceInfo.TYPE_AUX_LINE
                 }
             else -> audioDevices.find { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
         }
