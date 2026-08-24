@@ -340,8 +340,9 @@ fun Queue(
                                 ) {
                                     try {
                                         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                                            val intent = android.content.Intent(android.provider.Settings.Panel.ACTION_MEDIA_OUTPUT).apply {
-                                                putExtra(android.provider.Settings.Panel.EXTRA_PACKAGE_NAME, context.packageName)
+                                            // Hardcoded string action aur extra use kiya hai compilation error avoid karne ke liye
+                                            val intent = android.content.Intent("com.android.settings.panel.action.MEDIA_OUTPUT").apply {
+                                                putExtra("com.android.settings.panel.extra.PACKAGE_NAME", context.packageName)
                                             }
                                             context.startActivity(intent)
                                         } else {
