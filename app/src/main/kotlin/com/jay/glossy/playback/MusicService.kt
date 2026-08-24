@@ -386,46 +386,24 @@ class MusicService :
 
     fun setPreferredAudioDevice(deviceId: Int?) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            // Agar device null ya -1 hai, toh system default par wapas chale jao
+            if (deviceId == null || deviceId == -1) {
+                if (::player.isInitialized) {
+                    player.clearPreferredAudioDevice()
+                }
+                preferredDeviceId = null
+                return
+            }
+
             val devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
             val deviceInfo = devices.find { it.id == deviceId }
-            if (::player.isInitialized) {
-                player.setPreferredAudioDevice(deviceInfo)
-            }
-            preferredDeviceId = deviceId
-
-            // Force Android Audio Manager to comply (Bypass Bluetooth lock)
+            
+            // ExoPlayer ko directly high-quality media route karne do
             if (deviceInfo != null) {
-                try {
-                    if (deviceInfo.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                            audioManager.setCommunicationDevice(deviceInfo)
-                        }
-                        @Suppress("DEPRECATION")
-                        audioManager.isSpeakerphoneOn = true
-                        audioManager.stopBluetoothSco()
-                        @Suppress("DEPRECATION")
-                        audioManager.isBluetoothA2dpOn = false
-                    } else if (deviceInfo.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
-                        deviceInfo.type == AudioDeviceInfo.TYPE_BLE_HEADSET ||
-                        deviceInfo.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO) {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                            audioManager.setCommunicationDevice(deviceInfo)
-                        }
-                        @Suppress("DEPRECATION")
-                        audioManager.isSpeakerphoneOn = false
-                        audioManager.startBluetoothSco()
-                        @Suppress("DEPRECATION")
-                        audioManager.isBluetoothA2dpOn = true
-                    }
-                } catch (e: Exception) {
-                    Timber.tag(TAG).e(e, "Failed to force system audio routing")
+                if (::player.isInitialized) {
+                    player.setPreferredAudioDevice(deviceInfo)
                 }
-            } else {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    audioManager.clearCommunicationDevice()
-                }
-                @Suppress("DEPRECATION")
-                audioManager.isSpeakerphoneOn = false
+                preferredDeviceId = deviceId
             }
         }
     }
@@ -3406,21 +3384,32 @@ class MusicService :
                             OkHttpDataSource.Factory(
                                 OkHttpClient
                                     .Builder()
+                                    .dns(object : Dns {
+                                        override fun lookup(hostname: String): List<InetAddress> {
+                                            val addresses = Dns.SYSTEM.lookup(hostname)
+                                            return when (this@MusicService.ipVersion) {
+                                                IpVersion.IPV4 -> addresses.filter { it is Inet4Address }.ifEmpty { addresses }
+                                                IpVersion.IPV6 -> addresses.filter { it is Inet6Address }.ifEmpty { addresses }
+                                                IpVersion.AUTO -> addresses
+                                            }
+                                        }
+                                    })
                                     .proxy(YouTube.proxy)
                                     .proxyAuthenticator { _, response ->
                                         YouTube.proxyAuth?.let { auth ->
-                                            response.request
-                                                .newBuilder()
+                                            response.request.newBuilder()
                                                 .header("Proxy-Authorization", auth)
                                                 .build()
                                         } ?: response.request
-                                    }.build(),
+                                    }
+                                    .build(),
                             ),
                         ),
                     ),
             ).setCacheWriteDataSinkFactory(null)
             .setFlags(FLAG_IGNORE_CACHE_ON_ERROR)
 
+    // Flag to prevent queue saving during silence skip operations
     private var isSilenceSkipping = false
 
     private fun handleLongSilenceDetected() {
