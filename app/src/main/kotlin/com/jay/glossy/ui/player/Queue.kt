@@ -342,7 +342,7 @@ fun Queue(
         },
         collapsedContent = {
             if (playerStyle.name == "VIVI_NEW") {
-                // EXACT VIVI NEW Bottom Bar Layout (Spring Animations, clean spaced icons, circle outlines)
+                // EXACT VIVI NEW Bottom Bar Layout
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
@@ -375,7 +375,7 @@ fun Queue(
                     
                     // Middle Group (Devices & Timer Circles)
                     Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                        // Devices Button (Circle Box)
+                        // Devices Button (Circle Box) - WITH ORIGINAL VIVI ICONS
                         val devicesInteractionSource = remember { MutableInteractionSource() }
                         val isDevicesPressed by devicesInteractionSource.collectIsPressedAsState()
                         val devicesScale by animateFloatAsState(if (isDevicesPressed) 0.7f else 1f, spring(0.6f, 500f), label = "devicesScale")
@@ -719,7 +719,6 @@ fun Queue(
                 }
             }
             
-            // Call device selector bottom sheet
             if (showAudioDeviceBottomSheet) {
                 AudioDeviceBottomSheet(onDismiss = { showAudioDeviceBottomSheet = false })
             }
