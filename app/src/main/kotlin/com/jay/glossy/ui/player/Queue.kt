@@ -375,7 +375,7 @@ fun Queue(
                     
                     // Middle Group (Devices & Timer Circles)
                     Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                        // Devices Button (Circle Box) - WITH ORIGINAL VIVI ICONS
+                        // Devices Button (Circle Box)
                         val devicesInteractionSource = remember { MutableInteractionSource() }
                         val isDevicesPressed by devicesInteractionSource.collectIsPressedAsState()
                         val devicesScale by animateFloatAsState(if (isDevicesPressed) 0.7f else 1f, spring(0.6f, 500f), label = "devicesScale")
