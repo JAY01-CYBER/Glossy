@@ -53,6 +53,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -405,14 +406,16 @@ fun Queue(
                             )
                         }
                         
-                        // Sleep Timer Button (Circle Box)
+                        // Sleep Timer Button (Circle to Pill Box)
                         val sleepInteractionSource = remember { MutableInteractionSource() }
                         val isSleepPressed by sleepInteractionSource.collectIsPressedAsState()
                         val sleepScale by animateFloatAsState(if (isSleepPressed) 0.7f else 1f, spring(0.6f, 500f), label = "sleepScale")
                         
                         Box(
                             modifier = Modifier
-                                .size(44.dp)
+                                .height(44.dp)
+                                .widthIn(min = 44.dp)
+                                .animateContentSize()
                                 .graphicsLayer(scaleX = sleepScale, scaleY = sleepScale)
                                 .clip(CircleShape)
                                 .border(1.dp, if (sleepTimerEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else circleBorder, CircleShape)
@@ -426,12 +429,30 @@ fun Queue(
                                 },
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                painter = painterResource(R.drawable.bedtime), 
-                                contentDescription = "Sleep Timer", 
-                                tint = if (sleepTimerEnabled) MaterialTheme.colorScheme.primary else iconTint, 
-                                modifier = Modifier.size(20.dp)
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
+                                modifier = Modifier.padding(horizontal = if (sleepTimerEnabled) 12.dp else 0.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.bedtime), 
+                                    contentDescription = "Sleep Timer", 
+                                    tint = if (sleepTimerEnabled) MaterialTheme.colorScheme.primary else iconTint, 
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                // Yahan aayega live countdown timer pill shape mein
+                                if (sleepTimerEnabled) {
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = makeTimeString(sleepTimerTimeLeft),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        modifier = Modifier.basicMarquee()
+                                    )
+                                }
+                            }
                         }
                     }
                     
