@@ -76,7 +76,8 @@ fun isBluetoothHeadphoneConnected(context: Context): Boolean {
         val audioDevices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
         audioDevices.any { device ->
             device.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
-                    device.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO
+                    device.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+                    device.type == AudioDeviceInfo.TYPE_BLE_HEADSET
         }
     } else {
         @Suppress("DEPRECATION")
@@ -165,7 +166,6 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
     val service = playerConnection?.service
     var showDevicePopup by remember { mutableStateOf(false) }
 
-    // State to locally manage selection so the UI updates instantly
     var selectedDeviceId by rememberSaveable { mutableStateOf<Int?>(null) }
 
     fun refreshDevices() {
@@ -181,7 +181,6 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
     val bluetoothLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { _ ->
-        // Proceed regardless of permission grant (permission is only for battery)
         refreshDevices()
     }
 
@@ -221,10 +220,8 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
             )
         }
 
-        // Load immediately so UI is not blocked
         refreshDevices()
 
-        // Ask permission for battery quietly
         if (!checkBluetoothPermission(context) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             try {
                 bluetoothLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
@@ -238,8 +235,7 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
                     refreshDevices()
                 }
                 override fun onAudioDevicesRemoved(removedDevices: Array<out android.media.AudioDeviceInfo>?) {
-                    // Check if selected device was removed
-                    if (addedDevices?.none { it.id == selectedDeviceId } == true) {
+                    if (removedDevices?.any { it.id == selectedDeviceId } == true) {
                         selectedDeviceId = null
                     }
                     refreshDevices()
@@ -466,7 +462,6 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
 
                                             Surface(
                                                 onClick = {
-                                                    // Set Selected State UI manually
                                                     selectedDeviceId = dev.deviceId
                                                     
                                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -504,11 +499,21 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
                                                             if (!success) {
                                                                 try {
                                                                     if (dev.type == AudioDeviceType.PHONE_SPEAKER) {
+                                                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                                                            val speakerDevice = audioManager.availableCommunicationDevices.find { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+                                                                            if (speakerDevice != null) audioManager.setCommunicationDevice(speakerDevice)
+                                                                        }
                                                                         audioManager.isSpeakerphoneOn = true
+                                                                        audioManager.stopBluetoothSco()
                                                                         @Suppress("DEPRECATION")
                                                                         audioManager.isBluetoothA2dpOn = false
                                                                     } else if (dev.type == AudioDeviceType.BLUETOOTH) {
+                                                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                                                            val btDevice = audioManager.availableCommunicationDevices.find { it.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || it.type == AudioDeviceInfo.TYPE_BLE_HEADSET || it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO }
+                                                                            if (btDevice != null) audioManager.setCommunicationDevice(btDevice)
+                                                                        }
                                                                         audioManager.isSpeakerphoneOn = false
+                                                                        audioManager.startBluetoothSco()
                                                                         @Suppress("DEPRECATION")
                                                                         audioManager.isBluetoothA2dpOn = true
                                                                     }
