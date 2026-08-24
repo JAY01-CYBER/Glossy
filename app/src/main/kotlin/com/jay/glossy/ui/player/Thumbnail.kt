@@ -126,7 +126,6 @@ private fun calculateThumbnailDimensions(
     cornerRadius: Dp = ThumbnailCornerRadius,
     isLandscape: Boolean = false
 ): ThumbnailDimensions {
-    // Portait mode me Modern style jaisa large size rakhne ke liye hum height ignore karenge
     val effectiveSize = if (isLandscape) {
         minOf(containerWidth, containerHeight) - (horizontalPadding * 2)
     } else {
@@ -221,7 +220,6 @@ fun Thumbnail(
     val canSkipNext by playerConnection.canSkipNext.collectAsStateWithLifecycle()
 
     // Preferences - computed once
-    // Disable swipe for Listen Together guests
     val swipeThumbnailPref by rememberPreference(SwipeThumbnailKey, true)
     val swipeThumbnail = swipeThumbnailPref && !isListenTogetherGuest
     val hidePlayerThumbnail by rememberPreference(HidePlayerThumbnailKey, false)
@@ -309,7 +307,6 @@ fun Thumbnail(
     Box(
         modifier = modifier
             .graphicsLayer {
-                // Use hardware layer for entire Thumbnail to ensure smooth 120Hz animations
                 compositingStrategy = CompositingStrategy.Offscreen
             }
     ) {
@@ -346,6 +343,12 @@ fun Thumbnail(
             ) {
                 // Now Playing header - hide in landscape mode
                 if (!isLandscape) {
+                    
+                    // Spacer ADDED ABOVE header for VIVI_NEW to push text down like Modern style
+                    if (playerStyle.name == "VIVI_NEW") {
+                        Spacer(modifier = Modifier.height(28.dp))
+                    }
+                    
                     ThumbnailHeader(
                         queueTitle = queueTitle, 
                         albumTitle = mediaMetadata?.album?.title, 
@@ -353,14 +356,11 @@ fun Thumbnail(
                         playerStyleName = playerStyle.name
                     )
                     
-                    if (playerStyle.name == "VIVI_NEW") {
-                        Spacer(modifier = Modifier.height(24.dp))
-                    }
+                    // Spacer REMOVED from below header so Album art spacing matches Modern style
                 }
                 
                 // Thumbnail content
                 BoxWithConstraints(
-                    // Yahan pe VIVI_NEW ko Alignment.TopCenter pass hota hai, jise hum niche override karenge
                     contentAlignment = if (isLandscape) Alignment.Center else if (playerStyle.name == "VIVI_NEW") Alignment.TopCenter else Alignment.Center,
                     modifier = if (isLandscape) {
                         Modifier.weight(1f, false)
@@ -394,7 +394,7 @@ fun Thumbnail(
                         var skipMultiplier by remember { mutableIntStateOf(1) }
                         var lastTapTime by remember { mutableLongStateOf(0L) }
 
-                        // WRAPPER BOX: Ye box fillMaxSize aur Alignment.Center ke sath TopCenter wali problem fix karega
+                        // WRAPPER BOX forces Perfect centering of the square, perfectly replicating Modern style
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center 
@@ -403,7 +403,7 @@ fun Thumbnail(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = PlayerHorizontalPadding)
-                                    .aspectRatio(1f) // Ab perfect square banega aur center me rahega, Modern style jaisa!
+                                    .aspectRatio(1f) // Perfect square aspect ratio
                                     .pointerInput(swipeThumbnail) {
                                         if (!swipeThumbnail) return@pointerInput
                                         var totalDrag = 0f
