@@ -256,9 +256,9 @@ import timber.log.Timber
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 import java.time.LocalDateTime
+import java.util.Collections
 import javax.inject.Inject
 import kotlin.random.Random
-import java.util.Collections
 
 private const val INSTANT_SILENCE_SKIP_STEP_MS = 15_000L
 private const val INSTANT_SILENCE_SKIP_SETTLE_MS = 350L
@@ -389,7 +389,7 @@ class MusicService :
             // Agar device null ya -1 hai, toh system default par wapas chale jao
             if (deviceId == null || deviceId == -1) {
                 if (::player.isInitialized) {
-                    player.clearPreferredAudioDevice()
+                    player.setPreferredAudioDevice(null)
                 }
                 preferredDeviceId = null
                 return
@@ -3384,32 +3384,21 @@ class MusicService :
                             OkHttpDataSource.Factory(
                                 OkHttpClient
                                     .Builder()
-                                    .dns(object : Dns {
-                                        override fun lookup(hostname: String): List<InetAddress> {
-                                            val addresses = Dns.SYSTEM.lookup(hostname)
-                                            return when (this@MusicService.ipVersion) {
-                                                IpVersion.IPV4 -> addresses.filter { it is Inet4Address }.ifEmpty { addresses }
-                                                IpVersion.IPV6 -> addresses.filter { it is Inet6Address }.ifEmpty { addresses }
-                                                IpVersion.AUTO -> addresses
-                                            }
-                                        }
-                                    })
                                     .proxy(YouTube.proxy)
                                     .proxyAuthenticator { _, response ->
                                         YouTube.proxyAuth?.let { auth ->
-                                            response.request.newBuilder()
+                                            response.request
+                                                .newBuilder()
                                                 .header("Proxy-Authorization", auth)
                                                 .build()
                                         } ?: response.request
-                                    }
-                                    .build(),
+                                    }.build(),
                             ),
                         ),
                     ),
             ).setCacheWriteDataSinkFactory(null)
             .setFlags(FLAG_IGNORE_CACHE_ON_ERROR)
 
-    // Flag to prevent queue saving during silence skip operations
     private var isSilenceSkipping = false
 
     private fun handleLongSilenceDetected() {
