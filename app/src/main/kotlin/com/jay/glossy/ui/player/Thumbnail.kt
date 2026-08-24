@@ -126,7 +126,12 @@ private fun calculateThumbnailDimensions(
     cornerRadius: Dp = ThumbnailCornerRadius,
     isLandscape: Boolean = false
 ): ThumbnailDimensions {
-    val effectiveSize = minOf(containerWidth, containerHeight) - (horizontalPadding * 2)
+    // Portait mode me Modern style jaisa large size rakhne ke liye hum height ignore karenge
+    val effectiveSize = if (isLandscape) {
+        minOf(containerWidth, containerHeight) - (horizontalPadding * 2)
+    } else {
+        containerWidth - (horizontalPadding * 2)
+    }
     return ThumbnailDimensions(
         itemWidth = containerWidth,
         containerSize = containerWidth,
@@ -355,6 +360,7 @@ fun Thumbnail(
                 
                 // Thumbnail content
                 BoxWithConstraints(
+                    // Yahan pe VIVI_NEW ko Alignment.TopCenter pass hota hai, jise hum niche override karenge
                     contentAlignment = if (isLandscape) Alignment.Center else if (playerStyle.name == "VIVI_NEW") Alignment.TopCenter else Alignment.Center,
                     modifier = if (isLandscape) {
                         Modifier.weight(1f, false)
@@ -362,7 +368,6 @@ fun Thumbnail(
                         Modifier.fillMaxSize()
                     }
                 ) {
-                    // Calculate dimensions once per size change, considering landscape mode
                     val dimensions = remember(maxWidth, maxHeight, isLandscape) {
                         calculateThumbnailDimensions(
                             containerWidth = maxWidth,
@@ -382,86 +387,93 @@ fun Thumbnail(
                         derivedStateOf { swipeThumbnail && isPlayerExpanded() }
                     }
                     
-                    // VIVI_NEW OVERRIDE: 
-                    // Bypass Grid completely to avoid height clipping crash and give a perfect square aspect ratio
+                    // VIVI_NEW OVERRIDE
                     if (playerStyle.name == "VIVI_NEW" && !isLandscape) {
                         val currentMedia = mediaItems.getOrNull(currentMediaIndex)
                         val incrementalSeekSkipEnabled by rememberPreference(SeekExtraSeconds, defaultValue = false)
                         var skipMultiplier by remember { mutableIntStateOf(1) }
                         var lastTapTime by remember { mutableLongStateOf(0L) }
 
+                        // WRAPPER BOX: Ye box fillMaxSize aur Alignment.Center ke sath TopCenter wali problem fix karega
                         Box(
-                            modifier = Modifier
-                                .size(dimensions.thumbnailSize)
-                                .pointerInput(swipeThumbnail) {
-                                    if (!swipeThumbnail) return@pointerInput
-                                    var totalDrag = 0f
-                                    detectHorizontalDragGestures(
-                                        onDragStart = { totalDrag = 0f },
-                                        onDragEnd = {
-                                            if (totalDrag < -50f && canSkipNext) {
-                                                playerConnection.player.seekToNext()
-                                            } else if (totalDrag > 50f && canSkipPrevious) {
-                                                playerConnection.player.seekToPreviousMediaItem()
-                                            }
-                                        },
-                                        onHorizontalDrag = { change, dragAmount ->
-                                            totalDrag += dragAmount
-                                        }
-                                    )
-                                }
-                                .pointerInput(Unit) {
-                                    detectTapGestures(
-                                        onDoubleTap = { offset ->
-                                            if (isListenTogetherGuest) return@detectTapGestures
-                                            val currentPosition = playerConnection.player.currentPosition
-                                            val songDuration = playerConnection.player.duration
-                                            val now = System.currentTimeMillis()
-                                            if (incrementalSeekSkipEnabled && now - lastTapTime < 1000) skipMultiplier++ else skipMultiplier = 1
-                                            lastTapTime = now
-                                            val skipAmount = 5000 * skipMultiplier
-                                            val isLeftSide = (layoutDirection == LayoutDirection.Ltr && offset.x < size.width / 2) ||
-                                                    (layoutDirection == LayoutDirection.Rtl && offset.x > size.width / 2)
-
-                                            if (isLeftSide) {
-                                                playerConnection.player.seekTo((currentPosition - skipAmount).coerceAtLeast(0))
-                                                onSeekCallback(context.getString(R.string.seek_backward_dynamic, skipAmount / 1000), true)
-                                            } else {
-                                                playerConnection.player.seekTo((currentPosition + skipAmount).coerceAtMost(songDuration))
-                                                onSeekCallback(context.getString(R.string.seek_forward_dynamic, skipAmount / 1000), true)
-                                            }
-                                        }
-                                    )
-                                },
-                            contentAlignment = Alignment.Center
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center 
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .fillMaxSize()
-                                    .clip(RoundedCornerShape(dimensions.cornerRadius))
-                            ) {
-                                if (hidePlayerThumbnail) {
-                                    HiddenThumbnailPlaceholder(
-                                        textBackgroundColor = textBackgroundColor,
-                                        playerStyleName = playerStyle.name
-                                    )
-                                } else {
-                                    val artworkUriToUse = if (currentMedia?.mediaId == mediaMetadata?.id && !mediaMetadata?.thumbnailUrl.isNullOrBlank()) {
-                                        mediaMetadata?.thumbnailUrl
-                                    } else {
-                                        currentMedia?.mediaMetadata?.artworkUri?.toString()
+                                    .fillMaxWidth()
+                                    .padding(horizontal = PlayerHorizontalPadding)
+                                    .aspectRatio(1f) // Ab perfect square banega aur center me rahega, Modern style jaisa!
+                                    .pointerInput(swipeThumbnail) {
+                                        if (!swipeThumbnail) return@pointerInput
+                                        var totalDrag = 0f
+                                        detectHorizontalDragGestures(
+                                            onDragStart = { totalDrag = 0f },
+                                            onDragEnd = {
+                                                if (totalDrag < -50f && canSkipNext) {
+                                                    playerConnection.player.seekToNext()
+                                                } else if (totalDrag > 50f && canSkipPrevious) {
+                                                    playerConnection.player.seekToPreviousMediaItem()
+                                                }
+                                            },
+                                            onHorizontalDrag = { change, dragAmount ->
+                                                totalDrag += dragAmount
+                                            }
+                                        )
                                     }
-                                    ThumbnailImage(
-                                        artworkUri = artworkUriToUse,
-                                        cropArtwork = cropAlbumArt,
-                                        playerStyleName = playerStyle.name
+                                    .pointerInput(Unit) {
+                                        detectTapGestures(
+                                            onDoubleTap = { offset ->
+                                                if (isListenTogetherGuest) return@detectTapGestures
+                                                val currentPosition = playerConnection.player.currentPosition
+                                                val songDuration = playerConnection.player.duration
+                                                val now = System.currentTimeMillis()
+                                                if (incrementalSeekSkipEnabled && now - lastTapTime < 1000) skipMultiplier++ else skipMultiplier = 1
+                                                lastTapTime = now
+                                                val skipAmount = 5000 * skipMultiplier
+                                                val isLeftSide = (layoutDirection == LayoutDirection.Ltr && offset.x < size.width / 2) ||
+                                                        (layoutDirection == LayoutDirection.Rtl && offset.x > size.width / 2)
+
+                                                if (isLeftSide) {
+                                                    playerConnection.player.seekTo((currentPosition - skipAmount).coerceAtLeast(0))
+                                                    onSeekCallback(context.getString(R.string.seek_backward_dynamic, skipAmount / 1000), true)
+                                                } else {
+                                                    playerConnection.player.seekTo((currentPosition + skipAmount).coerceAtMost(songDuration))
+                                                    onSeekCallback(context.getString(R.string.seek_forward_dynamic, skipAmount / 1000), true)
+                                                }
+                                            }
+                                        )
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(RoundedCornerShape(dimensions.cornerRadius))
+                                ) {
+                                    if (hidePlayerThumbnail) {
+                                        HiddenThumbnailPlaceholder(
+                                            textBackgroundColor = textBackgroundColor,
+                                            playerStyleName = playerStyle.name
+                                        )
+                                    } else {
+                                        val artworkUriToUse = if (currentMedia?.mediaId == mediaMetadata?.id && !mediaMetadata?.thumbnailUrl.isNullOrBlank()) {
+                                            mediaMetadata?.thumbnailUrl
+                                        } else {
+                                            currentMedia?.mediaMetadata?.artworkUri?.toString()
+                                        }
+                                        ThumbnailImage(
+                                            artworkUri = artworkUriToUse,
+                                            cropArtwork = cropAlbumArt,
+                                            playerStyleName = playerStyle.name
+                                        )
+                                    }
+                                    
+                                    CastButton(
+                                        modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
+                                        tintColor = textBackgroundColor
                                     )
                                 }
-                                
-                                CastButton(
-                                    modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
-                                    tintColor = textBackgroundColor
-                                )
                             }
                         }
                     } else {
@@ -743,10 +755,9 @@ private fun ThumbnailImage(
                 .memoryCachePolicy(CachePolicy.ENABLED)
                 .diskCachePolicy(CachePolicy.ENABLED)
                 .networkCachePolicy(CachePolicy.ENABLED)
-                .crossfade(true) // Crossfade enable kiya taaki sliding ke bina changes smooth lagen!
+                .crossfade(true)
                 .build(),
             contentDescription = null,
-            // Force Crop for VIVI_NEW so it perfectly fills the box without letterboxes
             contentScale = if (cropArtwork || playerStyleName == "VIVI_NEW") ContentScale.Crop else ContentScale.Fit,
             modifier = Modifier.fillMaxSize()
         )
