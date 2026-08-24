@@ -8,6 +8,14 @@ package com.jay.glossy.ui.player
 import com.jay.glossy.R
 
 import android.annotation.SuppressLint
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.media.AudioManager
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
@@ -87,6 +95,7 @@ import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.produceState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -149,6 +158,8 @@ import com.jay.glossy.utils.makeTimeString
 import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.utils.safeDataStoreEdit
 import com.jay.glossy.utils.rememberEnumPreference
+import com.jay.glossy.vivimusic.AudioDeviceBottomSheet
+import com.jay.glossy.vivimusic.isBluetoothHeadphoneConnected
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -185,6 +196,48 @@ fun Queue(
     val menuState = LocalMenuState.current
     val sleepTimerDefaultSetTemplate = stringResource(R.string.sleep_timer_default_set)
     val bottomSheetPageState = LocalBottomSheetPageState.current
+    var showAudioDeviceBottomSheet by remember { mutableStateOf(false) }
+
+    val isBluetoothConnected by produceState(initialValue = isBluetoothHeadphoneConnected(context)) {
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                value = isBluetoothHeadphoneConnected(context)
+            }
+        }
+
+        val callback = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            object : android.media.AudioDeviceCallback() {
+                override fun onAudioDevicesAdded(addedDevices: Array<out android.media.AudioDeviceInfo>?) {
+                    value = isBluetoothHeadphoneConnected(context)
+                }
+                override fun onAudioDevicesRemoved(removedDevices: Array<out android.media.AudioDeviceInfo>?) {
+                    value = isBluetoothHeadphoneConnected(context)
+                }
+            }
+        } else null
+
+        val filter = IntentFilter().apply {
+            addAction(AudioManager.ACTION_HEADSET_PLUG)
+            addAction("android.bluetooth.adapter.action.STATE_CHANGED")
+            addAction("android.bluetooth.device.action.ACL_CONNECTED")
+            addAction("android.bluetooth.device.action.ACL_DISCONNECTED")
+            addAction("android.media.AUDIO_BECOMING_NOISY")
+        }
+        
+        context.registerReceiver(receiver, filter)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && callback != null) {
+            audioManager.registerAudioDeviceCallback(callback, Handler(Looper.getMainLooper()))
+        }
+
+        awaitDispose {
+            context.unregisterReceiver(receiver)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && callback != null) {
+                audioManager.unregisterAudioDeviceCallback(callback)
+            }
+        }
+    }
 
     val (playerStyle) = rememberEnumPreference(
         com.jay.glossy.constants.PlayerStyleKey, 
@@ -338,20 +391,8 @@ fun Queue(
                                     interactionSource = devicesInteractionSource,
                                     indication = LocalIndication.current
                                 ) {
-                                    try {
-                                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                                            // Hardcoded string action aur extra use kiya hai compilation error avoid karne ke liye
-                                            val intent = android.content.Intent("com.android.settings.panel.action.MEDIA_OUTPUT").apply {
-                                                putExtra("com.android.settings.panel.extra.PACKAGE_NAME", context.packageName)
-                                            }
-                                            context.startActivity(intent)
-                                        } else {
-                                            val intent = android.content.Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS)
-                                            context.startActivity(intent)
-                                        }
-                                    } catch (e: Exception) {
-                                        android.widget.Toast.makeText(context, "Routing not supported on this device", android.widget.Toast.LENGTH_SHORT).show()
-                                    }
+                                    // YAHAN PAR AAGAYA AAPKA CUSTOM BOTTOM SHEET WALA LOGIC
+                                    showAudioDeviceBottomSheet = true
                                 },
                             contentAlignment = Alignment.Center
                         ) {
@@ -675,6 +716,11 @@ fun Queue(
                         }
                     }
                 }
+            }
+            
+            // Ye call karna zaruri hai taaki sheet dikh sake jab flag true ho
+            if (showAudioDeviceBottomSheet) {
+                AudioDeviceBottomSheet(onDismiss = { showAudioDeviceBottomSheet = false })
             }
 
             if (showSleepTimerDialog) {
