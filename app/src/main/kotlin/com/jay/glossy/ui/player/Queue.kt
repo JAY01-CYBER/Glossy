@@ -158,8 +158,8 @@ import com.jay.glossy.utils.makeTimeString
 import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.utils.safeDataStoreEdit
 import com.jay.glossy.utils.rememberEnumPreference
-import com.jay.glossy.vivimusic.AudioDeviceBottomSheet
-import com.jay.glossy.vivimusic.isBluetoothHeadphoneConnected
+import com.jay.glossy.jayaudioutils.AudioDeviceBottomSheet
+import com.jay.glossy.jayaudioutils.isBluetoothHeadphoneConnected
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -391,13 +391,14 @@ fun Queue(
                                     interactionSource = devicesInteractionSource,
                                     indication = LocalIndication.current
                                 ) {
-                                    // YAHAN PAR AAGAYA AAPKA CUSTOM BOTTOM SHEET WALA LOGIC
                                     showAudioDeviceBottomSheet = true
                                 },
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                painter = painterResource(R.drawable.volume_up), 
+                                painter = painterResource(
+                                    if (isBluetoothConnected) R.drawable.headset_applemusic else R.drawable.speaker_apple
+                                ), 
                                 contentDescription = "Audio Devices", 
                                 tint = iconTint, 
                                 modifier = Modifier.size(20.dp)
@@ -718,7 +719,7 @@ fun Queue(
                 }
             }
             
-            // Ye call karna zaruri hai taaki sheet dikh sake jab flag true ho
+            // Call device selector bottom sheet
             if (showAudioDeviceBottomSheet) {
                 AudioDeviceBottomSheet(onDismiss = { showAudioDeviceBottomSheet = false })
             }
