@@ -161,6 +161,7 @@ import com.jay.glossy.utils.safeDataStoreEdit
 import com.jay.glossy.utils.rememberEnumPreference
 import com.jay.glossy.jayaudioutils.AudioDeviceBottomSheet
 import com.jay.glossy.jayaudioutils.isBluetoothHeadphoneConnected
+import com.jay.glossy.jayaudioutils.isWiredHeadphoneConnected
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -199,22 +200,22 @@ fun Queue(
     val bottomSheetPageState = LocalBottomSheetPageState.current
     var showAudioDeviceBottomSheet by remember { mutableStateOf(false) }
 
-    val isBluetoothConnected by produceState(initialValue = isBluetoothHeadphoneConnected(context)) {
+    val isHeadsetConnected by produceState(initialValue = isBluetoothHeadphoneConnected(context) || isWiredHeadphoneConnected(context)) {
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
-                value = isBluetoothHeadphoneConnected(context)
+                value = isBluetoothHeadphoneConnected(context) || isWiredHeadphoneConnected(context)
             }
         }
 
         val callback = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             object : android.media.AudioDeviceCallback() {
                 override fun onAudioDevicesAdded(addedDevices: Array<out android.media.AudioDeviceInfo>?) {
-                    value = isBluetoothHeadphoneConnected(context)
+                    value = isBluetoothHeadphoneConnected(context) || isWiredHeadphoneConnected(context)
                 }
                 override fun onAudioDevicesRemoved(removedDevices: Array<out android.media.AudioDeviceInfo>?) {
-                    value = isBluetoothHeadphoneConnected(context)
+                    value = isBluetoothHeadphoneConnected(context) || isWiredHeadphoneConnected(context)
                 }
             }
         } else null
@@ -398,7 +399,7 @@ fun Queue(
                         ) {
                             Icon(
                                 painter = painterResource(
-                                    if (isBluetoothConnected) R.drawable.headset_applemusic else R.drawable.speaker_apple
+                                    if (isHeadsetConnected) R.drawable.headset_applemusic else R.drawable.speaker_apple
                                 ), 
                                 contentDescription = "Audio Devices", 
                                 tint = iconTint, 
