@@ -414,4 +414,6 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.ktor.client.mock)
+
+    implementation("androidx.compose.material:material-icons-extended")
 }
