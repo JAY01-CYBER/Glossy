@@ -38,6 +38,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -86,7 +87,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
@@ -105,6 +105,11 @@ import androidx.core.content.ContextCompat
 import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.R
 import com.jay.glossy.ui.shapes.RoundedStarShape
+
+// Global state to sync UI instantly without waiting for playback engine
+object AudioDeviceState {
+    var preferredDeviceId: Int? = null
+}
 
 // ============================================================================
 // BLUETOOTH & DEVICE DETECTION UTILS
@@ -193,14 +198,16 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
     val service = playerConnection?.service
     var showDevicePopup by remember { mutableStateOf(false) }
 
-    var selectedDeviceId by rememberSaveable { mutableStateOf<Int?>(null) }
+    var selectedDeviceId by rememberSaveable { mutableStateOf(AudioDeviceState.preferredDeviceId) }
 
     fun refreshDevices() {
-        var prefId: Int? = null
-        if (service != null) {
+        var prefId: Int? = AudioDeviceState.preferredDeviceId
+        
+        if (prefId == null && service != null) {
             try {
-                // Read preferred device directly from MusicService
-                prefId = service.javaClass.getMethod("getPreferredDeviceId").invoke(service) as? Int
+                val actualService = (service as? com.jay.glossy.playback.MusicService) ?: 
+                                    (service.javaClass.getMethod("getService").invoke(service) as? com.jay.glossy.playback.MusicService)
+                prefId = actualService?.preferredDeviceId
             } catch (e: Exception) {}
         }
         
@@ -272,6 +279,7 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
                 override fun onAudioDevicesRemoved(removedDevices: Array<out android.media.AudioDeviceInfo>?) {
                     if (removedDevices?.any { it.id == selectedDeviceId } == true) {
                         selectedDeviceId = null
+                        AudioDeviceState.preferredDeviceId = null
                     }
                     refreshDevices()
                 }
@@ -467,15 +475,28 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
                                             
                                             Surface(
                                                 onClick = {
+                                                    AudioDeviceState.preferredDeviceId = dev.deviceId
                                                     selectedDeviceId = dev.deviceId
-                                                    if (service != null && dev.deviceId != null) {
-                                                        try {
-                                                            service.javaClass.getMethod("setPreferredAudioDevice", Int::class.javaObjectType)
-                                                                .invoke(service, dev.deviceId)
-                                                        } catch (e: Exception) {
-                                                            e.printStackTrace()
+                                                    
+                                                    var serviceSuccess = false
+                                                    try {
+                                                        val actualService = (service as? com.jay.glossy.playback.MusicService) ?: 
+                                                                            (service?.javaClass?.getMethod("getService")?.invoke(service) as? com.jay.glossy.playback.MusicService)
+                                                        if (actualService != null) {
+                                                            actualService.setPreferredAudioDevice(dev.deviceId)
+                                                            serviceSuccess = true
                                                         }
+                                                    } catch(e: Exception) {}
+
+                                                    // Use reliable intent if direct reflection fails
+                                                    if (!serviceSuccess) {
+                                                        val intent = Intent(context, com.jay.glossy.playback.MusicService::class.java).apply {
+                                                            action = "SET_AUDIO_DEVICE"
+                                                            putExtra("device_id", dev.deviceId ?: -1)
+                                                        }
+                                                        context.startService(intent)
                                                     }
+                                                    
                                                     refreshDevices()
                                                     showDevicePopup = false
                                                 },
@@ -502,14 +523,26 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
                                                         color = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                                                         maxLines = 1,
                                                         overflow = TextOverflow.Ellipsis,
-                                                        modifier = Modifier.weight(1f)
+                                                        modifier = Modifier.weight(1f) // pushes rest to right edge
                                                     )
+                                                    
+                                                    // EXACT VIVI UI: Selected Volume Icon OR Unselected Empty Circle
                                                     if (isSelected) {
                                                         Icon(
                                                             painter = painterResource(R.drawable.volume_up),
                                                             contentDescription = null,
                                                             modifier = Modifier.size(20.dp),
                                                             tint = MaterialTheme.colorScheme.primary
+                                                        )
+                                                    } else {
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .size(20.dp)
+                                                                .border(
+                                                                    width = 2.dp,
+                                                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                                                                    shape = CircleShape
+                                                                )
                                                         )
                                                     }
                                                 }
@@ -612,7 +645,7 @@ private fun AudioDeviceActiveCard(
             modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Apply the custom RoundedStarShape here!
+            // Applying your shiny new RoundedStarShape!
             val scallopShape = RoundedStarShape(sides = 8, curve = 0.10, rotation = 0f)
             
             Box(
