@@ -87,6 +87,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
@@ -475,27 +476,16 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
                                             
                                             Surface(
                                                 onClick = {
+                                                    // UPDATE UI STATE
                                                     AudioDeviceState.preferredDeviceId = dev.deviceId
                                                     selectedDeviceId = dev.deviceId
                                                     
-                                                    var serviceSuccess = false
-                                                    try {
-                                                        val actualService = (service as? com.jay.glossy.playback.MusicService) ?: 
-                                                                            (service?.javaClass?.getMethod("getService")?.invoke(service) as? com.jay.glossy.playback.MusicService)
-                                                        if (actualService != null) {
-                                                            actualService.setPreferredAudioDevice(dev.deviceId)
-                                                            serviceSuccess = true
-                                                        }
-                                                    } catch(e: Exception) {}
-
-                                                    // Use reliable intent if direct reflection fails
-                                                    if (!serviceSuccess) {
-                                                        val intent = Intent(context, com.jay.glossy.playback.MusicService::class.java).apply {
-                                                            action = "SET_AUDIO_DEVICE"
-                                                            putExtra("device_id", dev.deviceId ?: -1)
-                                                        }
-                                                        context.startService(intent)
+                                                    // FIRE INTENT TO MUSIC SERVICE FOR 100% RELIABLE SWITCHING
+                                                    val intent = Intent(context, com.jay.glossy.playback.MusicService::class.java).apply {
+                                                        action = "SET_AUDIO_DEVICE"
+                                                        putExtra("device_id", dev.deviceId ?: -1)
                                                     }
+                                                    context.startService(intent)
                                                     
                                                     refreshDevices()
                                                     showDevicePopup = false
