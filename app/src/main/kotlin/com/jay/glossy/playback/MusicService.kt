@@ -375,7 +375,7 @@ class MusicService :
         return (volume * sleepTimerMultiplier * focusMultiplier).coerceIn(0f, 1f)
     }
 
-        private fun applyEffectiveVolume() {
+    private fun applyEffectiveVolume() {
         if (!::player.isInitialized || isCrossfading) return
         player.volume = calculateEffectiveVolume()
     }
@@ -392,6 +392,41 @@ class MusicService :
                 player.setPreferredAudioDevice(deviceInfo)
             }
             preferredDeviceId = deviceId
+
+            // Force Android Audio Manager to comply (Bypass Bluetooth lock)
+            if (deviceInfo != null) {
+                try {
+                    if (deviceInfo.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            audioManager.setCommunicationDevice(deviceInfo)
+                        }
+                        @Suppress("DEPRECATION")
+                        audioManager.isSpeakerphoneOn = true
+                        audioManager.stopBluetoothSco()
+                        @Suppress("DEPRECATION")
+                        audioManager.isBluetoothA2dpOn = false
+                    } else if (deviceInfo.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
+                        deviceInfo.type == AudioDeviceInfo.TYPE_BLE_HEADSET ||
+                        deviceInfo.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            audioManager.setCommunicationDevice(deviceInfo)
+                        }
+                        @Suppress("DEPRECATION")
+                        audioManager.isSpeakerphoneOn = false
+                        audioManager.startBluetoothSco()
+                        @Suppress("DEPRECATION")
+                        audioManager.isBluetoothA2dpOn = true
+                    }
+                } catch (e: Exception) {
+                    Timber.tag(TAG).e(e, "Failed to force system audio routing")
+                }
+            } else {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    audioManager.clearCommunicationDevice()
+                }
+                @Suppress("DEPRECATION")
+                audioManager.isSpeakerphoneOn = false
+            }
         }
     }
     // ==============================================
@@ -4210,6 +4245,11 @@ class MusicService :
         }
 
         when (intent?.action) {
+            "SET_AUDIO_DEVICE" -> {
+                val deviceId = intent.getIntExtra("device_id", -1)
+                setPreferredAudioDevice(if (deviceId == -1) null else deviceId)
+            }
+
             ACTION_ALARM_TRIGGER -> {
                 handleAlarmTrigger(intent)
             }
