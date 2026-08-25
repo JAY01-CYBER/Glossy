@@ -1,5 +1,5 @@
 /**
- * Glossy Project (C) 2026
+ * Metrolist Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -167,7 +167,6 @@ fun PlayerMenu(
     val listenTogetherRoleState = listenTogetherManager?.role?.collectAsStateWithLifecycle(initialValue = com.jay.glossy.listentogether.RoomRole.NONE)
     val isListenTogetherGuest = listenTogetherRoleState?.value == com.jay.glossy.listentogether.RoomRole.GUEST
     
-    // FIX: ADDED MISSING pendingSuggestions VARIABLE HERE
     val pendingSuggestions by listenTogetherManager?.pendingSuggestions?.collectAsStateWithLifecycle(initialValue = emptyList())
         ?: remember { mutableStateOf(emptyList()) }
 
@@ -307,7 +306,7 @@ fun PlayerMenu(
                     }
 
                     // ========================================================
-                    // PREMIUM ANIMATED AUDIO OUTPUT SELECTOR BUTTON (Pill Shape + Star Icon)
+                    // PREMIUM ANIMATED AUDIO OUTPUT SELECTOR BUTTON
                     // ========================================================
                     ViviStyleAudioDeviceButton(
                         deviceName = if (isCasting) castDeviceName ?: "Cast Device" else activeDeviceName,
@@ -319,7 +318,7 @@ fun PlayerMenu(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     // ========================================================
-                    // PREMIUM DARK VOLUME SLIDER PILL (Animated Fill)
+                    // PREMIUM DARK VOLUME SLIDER PILL 
                     // ========================================================
                     MenuVolumeControlRow(
                         volume = if (isCasting) castVolume else playerVolume.value,
@@ -574,7 +573,7 @@ fun PlayerMenu(
 }
 
 // ============================================================================
-// PREMIUM VIVI STYLE COMPONENTS (Exactly matching the screenshot)
+// PREMIUM VIVI STYLE COMPONENTS (Matching the screenshot perfectly)
 // ============================================================================
 
 @Composable
@@ -589,7 +588,7 @@ fun ViviStyleAudioDeviceButton(deviceName: String, isCasting: Boolean, isBluetoo
 
     Surface(
         onClick = onClick,
-        shape = CircleShape, // Fully Pill Shaped like BottomSheet
+        shape = CircleShape, // Fully Pill Shaped
         color = MaterialTheme.colorScheme.secondaryContainer,
         interactionSource = interactionSource,
         modifier = Modifier.fillMaxWidth().height(72.dp).graphicsLayer(scaleX = scale, scaleY = scale)
@@ -712,14 +711,23 @@ fun MenuVolumeControlRow(
                 Row(
                     verticalAlignment = Alignment.CenterVertically, 
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier.padding(start = 24.dp)
+                    modifier = Modifier.padding(start = 14.dp) // Adjusted padding for star shape
                 ) {
-                    Icon(
-                        painter = painterResource(if (currentValue > 0) R.drawable.volume_up else R.drawable.volume_off),
-                        contentDescription = null,
-                        tint = if (currentValue > 0.15f) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.surface,
-                        modifier = Modifier.size(24.dp)
-                    )
+                    val scallopShape = RoundedStarShape(sides = 8, curve = 0.10, rotation = 0f)
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(scallopShape) // Apply wavy star shape to volume icon
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            painter = painterResource(if (currentValue > 0) R.drawable.volume_up else R.drawable.volume_off),
+                            contentDescription = null,
+                            tint = if (currentValue > 0.15f) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.surface,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
                 }
                 
                 Box(
@@ -822,22 +830,24 @@ fun ViviStyleMenuItem(
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.08f),
-                modifier = Modifier.size(44.dp)
+            val scallopShape = RoundedStarShape(sides = 8, curve = 0.10, rotation = 0f)
+            
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(scallopShape) // Apply wavy star shape to menu icons
+                    .background(MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.08f)),
+                contentAlignment = Alignment.Center
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    if (iconRes != null) {
-                        Icon(
-                            painter = painterResource(iconRes),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    } else if (icon != null) {
-                        icon()
-                    }
+                if (iconRes != null) {
+                    Icon(
+                        painter = painterResource(iconRes),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.size(22.dp)
+                    )
+                } else if (icon != null) {
+                    icon()
                 }
             }
             
