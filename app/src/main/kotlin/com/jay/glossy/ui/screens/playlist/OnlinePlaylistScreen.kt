@@ -46,7 +46,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -58,7 +57,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -196,38 +194,21 @@ fun OnlinePlaylistScreen(
     }
 
     Box(Modifier.fillMaxSize()) {
-        // Apple Music Style: Fixed Blurred Background at the top
-        if (playlist?.thumbnail != null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(500.dp)
-            ) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(playlist?.thumbnail?.resize(1080, 1080))
-                        .build(),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .matchParentSize()
-                        .blur(80.dp)
+        // Soft Color Gradient Background (No Image Blur)
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f), // Soft top color
+                            MaterialTheme.colorScheme.background // Fades into standard background
+                        ),
+                        startY = 0f,
+                        endY = 1200f // Controls how far down the gradient fades
+                    )
                 )
-                // Dark Gradient overlay to blend with the background color
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    Color.Black.copy(alpha = 0.4f), // Darker overlay for better text contrast
-                                    MaterialTheme.colorScheme.background
-                                )
-                            )
-                        )
-                )
-            }
-        }
+        )
 
         LazyColumn(
             state = lazyListState,
@@ -398,10 +379,6 @@ fun OnlinePlaylistScreen(
         }
 
         TopAppBar(
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = Color.Transparent, // Allows blurred background to show through
-                scrolledContainerColor = MaterialTheme.colorScheme.background
-            ),
             title = {
                 if (inSelectMode) {
                     Text(
@@ -504,6 +481,7 @@ fun OnlinePlaylistScreen(
                         )
                     }
                 } else if (!isSearching) {
+                    // Search Button
                     IconButton(
                         onClick = { isSearching = true },
                     ) {
@@ -511,6 +489,27 @@ fun OnlinePlaylistScreen(
                             painter = painterResource(R.drawable.search),
                             contentDescription = null,
                         )
+                    }
+                    
+                    // Playlist Menu Button (Moved to TopAppBar)
+                    if (playlist != null) {
+                        IconButton(
+                            onClick = {
+                                menuState.show {
+                                    YouTubePlaylistMenu(
+                                        playlist = playlist!!,
+                                        songs = songs,
+                                        coroutineScope = coroutineScope,
+                                        onDismiss = menuState::dismiss,
+                                    )
+                                }
+                            }
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.more_vert),
+                                contentDescription = null,
+                            )
+                        }
                     }
                 }
             },
@@ -538,23 +537,21 @@ private fun OnlinePlaylistHeader(
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
     val database = LocalDatabase.current
-    val menuState = LocalMenuState.current
-    val syncUtils = LocalSyncUtils.current
 
     Column(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(top = 24.dp, bottom = 20.dp),
+                .padding(top = 16.dp, bottom = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // Apple Music Cover Art Style: Soft rounded corners, no harsh shadow
+        // Apple Music Cover Art Style: Soft rounded corners
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current).data(playlist.thumbnail?.resize(1080, 1080)).build(),
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier
-                .size(240.dp)
+                .size(260.dp)
                 .clip(RoundedCornerShape(12.dp))
         )
 
@@ -591,13 +588,13 @@ private fun OnlinePlaylistHeader(
                 Text(
                     text = author.name,
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary, // Giving it a distinct accent color
+                    color = MaterialTheme.colorScheme.primary, // Apple Music style accent color
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))
         }
 
-        // Meta Text (Type • Year • Duration)
+        // Meta Text (Playlist • X songs • Duration)
         val totalDuration = songs.sumOf { it.duration ?: 0 }
         val nSongs = pluralStringResource(
             if (isPodcastPlaylist) R.plurals.n_episode else R.plurals.n_song,
@@ -653,7 +650,7 @@ private fun OnlinePlaylistHeader(
                             YouTubePlaylistQueue(
                                 playlistId = playlist.id,
                                 playlistTitle = playlist.title,
-                                initialSongs = songs.shuffled(), // Simple shuffle approach
+                                initialSongs = songs.shuffled(),
                                 initialContinuation = continuation,
                             ),
                         )
@@ -778,28 +775,6 @@ private fun OnlinePlaylistHeader(
                     )
                 }
             }
-
-            // Optional Extra Menu Button if needed (Hidden in this layout by default, uncomment if required)
-            /*
-            IconButton(
-                onClick = {
-                    menuState.show {
-                        YouTubePlaylistMenu(
-                            playlist = playlist,
-                            songs = songs,
-                            coroutineScope = coroutineScope,
-                            onDismiss = menuState::dismiss,
-                        )
-                    }
-                }
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.more_vert),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onBackground
-                )
-            }
-            */
         }
     }
 }
