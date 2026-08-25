@@ -392,10 +392,6 @@ class MusicService :
                     player.setPreferredAudioDevice(null)
                     secondaryPlayer?.setPreferredAudioDevice(null)
                     fadingPlayer?.setPreferredAudioDevice(null)
-                    
-                    if (player.playbackState == Player.STATE_READY && player.isPlaying) {
-                        player.seekTo(player.currentPosition)
-                    }
                 }
                 preferredDeviceId = null
                 return
@@ -409,10 +405,6 @@ class MusicService :
                     player.setPreferredAudioDevice(deviceInfo)
                     secondaryPlayer?.setPreferredAudioDevice(deviceInfo)
                     fadingPlayer?.setPreferredAudioDevice(deviceInfo)
-                    
-                    if (player.playbackState == Player.STATE_READY && player.isPlaying) {
-                        player.seekTo(player.currentPosition)
-                    }
                 }
                 preferredDeviceId = deviceId
             }
