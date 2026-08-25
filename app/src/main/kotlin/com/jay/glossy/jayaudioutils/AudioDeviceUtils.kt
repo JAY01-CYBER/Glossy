@@ -57,6 +57,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.outlined.Error
@@ -389,13 +390,15 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
 
                 else -> {
                     val activeDevice = audioDevices.firstOrNull { it.isActive }
-                    val hasMultipleDevices = audioDevices.size > 1
+                    
+                    // FIX: Isko always true kar diya taaki "Connect a device" tak jaane ke liye arrow hamesha dikhe
+                    val hasMultipleDevices = true 
 
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(bottom = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp) // Exact Vivi spacing
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         activeDevice?.let { device ->
                             Row(
@@ -480,7 +483,7 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
                                                     AudioDeviceState.preferredDeviceId = dev.deviceId
                                                     selectedDeviceId = dev.deviceId
                                                     
-                                                    // DIRECT SERVICE CALL (Vivi Style)
+                                                    // DIRECT CALL TO SERVICE
                                                     val actualService = (service as? com.jay.glossy.playback.MusicService) ?: 
                                                                         (service?.javaClass?.getMethod("getService")?.invoke(service) as? com.jay.glossy.playback.MusicService)
                                                     actualService?.setPreferredAudioDevice(dev.deviceId)
@@ -488,7 +491,7 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
                                                     refreshDevices()
                                                     showDevicePopup = false
                                                 },
-                                                shape = CircleShape, // Fully rounded rows in expanded list
+                                                shape = CircleShape,
                                                 color = if (isSelected) MaterialTheme.colorScheme.surface else Color.Transparent,
                                                 modifier = Modifier.fillMaxWidth().height(64.dp)
                                             ) {
@@ -514,7 +517,6 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
                                                         modifier = Modifier.weight(1f) // pushes rest to right edge
                                                     )
                                                     
-                                                    // EXACT VIVI UI: Selected Volume Icon OR Unselected Empty Circle
                                                     if (isSelected) {
                                                         Icon(
                                                             painter = painterResource(R.drawable.volume_up),
@@ -535,6 +537,61 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
                                                     }
                                                 }
                                             }
+                                        }
+                                    }
+
+                                    // =========================================================
+                                    // NAYA BUTTON: CONNECT A DEVICE (In-App Panel)
+                                    // =========================================================
+                                    Surface(
+                                        onClick = {
+                                            try {
+                                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                                    // In-App floating Bluetooth panel (Android 10+)
+                                                    val panelIntent = Intent(android.provider.Settings.Panel.ACTION_BLUETOOTH).apply {
+                                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                                    }
+                                                    context.startActivity(panelIntent)
+                                                } else {
+                                                    // Standard Settings fallback
+                                                    val intent = Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS).apply {
+                                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                                    }
+                                                    context.startActivity(intent)
+                                                }
+                                            } catch (e: Exception) {
+                                                val fallback = Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS).apply {
+                                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                                }
+                                                context.startActivity(fallback)
+                                            }
+                                            // NOTE: Yahan showDevicePopup = false aur onDismiss() hataye gaye hain,
+                                            // taaki tumhara bottom sheet open hi rahe panel ke peeche!
+                                        },
+                                        shape = CircleShape,
+                                        color = Color.Transparent,
+                                        modifier = Modifier.fillMaxWidth().height(64.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .padding(horizontal = 16.dp)
+                                                .fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Filled.Add,
+                                                contentDescription = "Connect a device",
+                                                modifier = Modifier.size(24.dp),
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            Spacer(modifier = Modifier.width(16.dp))
+                                            Text(
+                                                text = "Connect a device",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 1,
+                                                modifier = Modifier.weight(1f)
+                                            )
                                         }
                                     }
                                 }
