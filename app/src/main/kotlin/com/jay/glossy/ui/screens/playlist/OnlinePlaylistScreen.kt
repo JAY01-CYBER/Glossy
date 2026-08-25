@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -8,6 +8,8 @@ package com.jay.glossy.ui.screens.playlist
 import com.jay.glossy.R
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -46,6 +48,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -58,6 +61,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
@@ -144,6 +148,9 @@ fun OnlinePlaylistScreen(
 
     var isSearching by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
+    
+    // Extracted Color State
+    var dominantColor by remember { mutableStateOf(Color.Transparent) }
 
     val filteredSongs =
         remember(songs, query) {
@@ -158,11 +165,9 @@ fun OnlinePlaylistScreen(
         }
 
     var inSelectMode by remember { mutableStateOf(false) }
-    val selection =
-        remember {
-            mutableStateListOf<String>()
-        }
+    val selection = remember { mutableStateListOf<String>() }
     var selectionAnchorSongId by remember { mutableStateOf<String?>(null) }
+    
     val onExitSelectionMode = {
         inSelectMode = false
         selection.clear()
@@ -193,19 +198,28 @@ fun OnlinePlaylistScreen(
         BackHandler(onBack = onExitSelectionMode)
     }
 
+    // Color Animation Logic
+    val defaultSurface = MaterialTheme.colorScheme.surface
+    val animatedGradientColor by animateColorAsState(
+        targetValue = if (dominantColor == Color.Transparent) defaultSurface else dominantColor,
+        animationSpec = tween(durationMillis = 800), // Smooth fade-in
+        label = "gradientColor"
+    )
+
     Box(Modifier.fillMaxSize()) {
-        // Soft Color Gradient Background (No Image Blur)
+        // Apple Music Style Background Fade
         Box(
             modifier = Modifier
                 .matchParentSize()
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f), // Soft top color
-                            MaterialTheme.colorScheme.background // Fades into standard background
+                            animatedGradientColor.copy(alpha = 0.85f), // Strong top color
+                            animatedGradientColor.copy(alpha = 0.4f),  // Mid fade
+                            MaterialTheme.colorScheme.background       // Fades to standard background
                         ),
                         startY = 0f,
-                        endY = 1200f // Controls how far down the gradient fades
+                        endY = 1600f // Long deep fade 
                     )
                 )
         )
@@ -275,6 +289,9 @@ fun OnlinePlaylistScreen(
                                 coroutineScope = coroutineScope,
                                 continuation = viewModel.continuation,
                                 isPodcastPlaylist = isPodcastPlaylist,
+                                onDominantColorExtracted = { extractedColor ->
+                                    dominantColor = extractedColor
+                                },
                                 modifier = Modifier.animateItem(),
                             )
                         }
@@ -379,6 +396,14 @@ fun OnlinePlaylistScreen(
         }
 
         TopAppBar(
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.Transparent, 
+                // Exactly matches video: Takes solid color when scrolled!
+                scrolledContainerColor = animatedGradientColor,
+                titleContentColor = MaterialTheme.colorScheme.onSurface,
+                navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                actionIconContentColor = MaterialTheme.colorScheme.onSurface
+            ),
             title = {
                 if (inSelectMode) {
                     Text(
@@ -417,6 +442,7 @@ fun OnlinePlaylistScreen(
                                 .focusRequester(focusRequester),
                     )
                 } else if (lazyListState.firstVisibleItemIndex > 0) {
+                    // Shows title in TopAppBar only when scrolled down, just like Apple Music
                     Text(playlist?.title ?: "")
                 }
             },
@@ -491,7 +517,7 @@ fun OnlinePlaylistScreen(
                         )
                     }
                     
-                    // Playlist Menu Button (Moved to TopAppBar)
+                    // Playlist Menu Button (Next to search)
                     if (playlist != null) {
                         IconButton(
                             onClick = {
@@ -506,7 +532,7 @@ fun OnlinePlaylistScreen(
                             }
                         ) {
                             Icon(
-                                painter = painterResource(R.drawable.more_vert),
+                                painter = painterResource(R.drawable.more_vert), // Either 3 dots or share icon
                                 contentDescription = null,
                             )
                         }
@@ -530,6 +556,7 @@ private fun OnlinePlaylistHeader(
     coroutineScope: CoroutineScope,
     continuation: String?,
     isPodcastPlaylist: Boolean = false,
+    onDominantColorExtracted: (Color) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val navController = LocalNavController.current
@@ -545,23 +572,39 @@ private fun OnlinePlaylistHeader(
                 .padding(top = 16.dp, bottom = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // Apple Music Cover Art Style: Soft rounded corners
+        // Thumbnail with Native Color Extraction (No heavy shadow)
         AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current).data(playlist.thumbnail?.resize(1080, 1080)).build(),
+            model = ImageRequest.Builder(LocalContext.current)
+                .data(playlist.thumbnail?.resize(1080, 1080))
+                .build(),
             contentDescription = null,
             contentScale = ContentScale.Crop,
+            onSuccess = { state ->
+                try {
+                    val drawable = state.result.drawable
+                    val bitmap = android.graphics.Bitmap.createBitmap(1, 1, android.graphics.Bitmap.Config.ARGB_8888)
+                    val canvas = android.graphics.Canvas(bitmap)
+                    drawable.setBounds(0, 0, canvas.width, canvas.height)
+                    drawable.draw(canvas)
+                    val color = Color(bitmap.getPixel(0, 0))
+                    bitmap.recycle()
+                    onDominantColorExtracted(color)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            },
             modifier = Modifier
                 .size(260.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(12.dp)) // Apple Music style rounded corners
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Title
+        // Title 
         Text(
             text = playlist.title,
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.headlineLarge, // Extra Large
+            fontWeight = FontWeight.ExtraBold, // Extra Bold
             textAlign = TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
@@ -570,7 +613,7 @@ private fun OnlinePlaylistHeader(
 
         Spacer(modifier = Modifier.height(6.dp))
 
-        // Artist Name
+        // Artist / Subtitle
         val author = playlist.author
         if (author != null) {
             Row(
@@ -588,13 +631,13 @@ private fun OnlinePlaylistHeader(
                 Text(
                     text = author.name,
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary, // Apple Music style accent color
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f), 
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))
         }
 
-        // Meta Text (Playlist • X songs • Duration)
+        // Meta Text 
         val totalDuration = songs.sumOf { it.duration ?: 0 }
         val nSongs = pluralStringResource(
             if (isPodcastPlaylist) R.plurals.n_episode else R.plurals.n_song,
