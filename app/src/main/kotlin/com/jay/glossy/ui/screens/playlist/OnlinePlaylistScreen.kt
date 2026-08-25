@@ -572,7 +572,7 @@ private fun OnlinePlaylistHeader(
                 .padding(top = 16.dp, bottom = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // Thumbnail with Native Color Extraction (No heavy shadow)
+        // Thumbnail with Native Color Extraction via Coil 3 BitmapImage
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
                 .data(playlist.thumbnail?.resize(1080, 1080))
@@ -581,14 +581,16 @@ private fun OnlinePlaylistHeader(
             contentScale = ContentScale.Crop,
             onSuccess = { state ->
                 try {
-                    val drawable = state.result.drawable
-                    val bitmap = android.graphics.Bitmap.createBitmap(1, 1, android.graphics.Bitmap.Config.ARGB_8888)
-                    val canvas = android.graphics.Canvas(bitmap)
-                    drawable.setBounds(0, 0, canvas.width, canvas.height)
-                    drawable.draw(canvas)
-                    val color = Color(bitmap.getPixel(0, 0))
-                    bitmap.recycle()
-                    onDominantColorExtracted(color)
+                    val coilImage = state.result.image
+                    val originalBitmap = (coilImage as? coil3.BitmapImage)?.bitmap
+                    
+                    if (originalBitmap != null) {
+                        // Native fast way to extract average color by scaling to 1x1
+                        val scaledBitmap = android.graphics.Bitmap.createScaledBitmap(originalBitmap, 1, 1, true)
+                        val color = Color(scaledBitmap.getPixel(0, 0))
+                        scaledBitmap.recycle()
+                        onDominantColorExtracted(color)
+                    }
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
