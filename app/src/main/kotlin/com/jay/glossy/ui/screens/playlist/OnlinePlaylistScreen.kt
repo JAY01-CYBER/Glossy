@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -19,7 +19,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -35,7 +34,6 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -50,16 +48,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.listSaver
@@ -69,6 +62,8 @@ import androidx.compose.runtime.toMutableStateList
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -80,13 +75,11 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.util.fastForEachReversed
@@ -100,10 +93,9 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.metrolist.innertube.models.PlaylistItem
 import com.metrolist.innertube.models.SongItem
-import com.metrolist.innertube.models.ArtistItem
-import com.metrolist.innertube.models.AlbumItem
-import com.metrolist.innertube.models.WatchEndpoint
 import com.jay.glossy.LocalDatabase
+import com.jay.glossy.LocalListenTogetherManager
+import com.jay.glossy.LocalNavController
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.R
@@ -115,25 +107,19 @@ import com.metrolist.models.toMediaMetadata
 import com.jay.glossy.playback.queues.YouTubePlaylistQueue
 import com.jay.glossy.ui.component.IconButton
 import com.jay.glossy.ui.component.LocalMenuState
-import com.jay.glossy.ui.component.NavigationTitle
-import com.jay.glossy.ui.component.YouTubeGridItem
 import com.jay.glossy.ui.component.YouTubeListItem
-import com.jay.glossy.ui.menu.YouTubeAlbumMenu
-import com.jay.glossy.ui.menu.YouTubeArtistMenu
 import com.jay.glossy.ui.menu.YouTubePlaylistMenu
 import com.jay.glossy.ui.menu.YouTubeSelectionSongMenu
 import com.jay.glossy.ui.menu.YouTubeSongMenu
 import com.jay.glossy.ui.utils.backToMain
-import com.jay.glossy.utils.listItemShape
+import com.jay.glossy.ui.utils.resize
 import com.jay.glossy.utils.makeTimeString
 import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.viewmodels.OnlinePlaylistViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import com.jay.glossy.playback.queues.YouTubeQueue
 import com.jay.glossy.ui.component.ExpandableText
-import com.jay.glossy.ui.component.OnlineBlur
 import com.jay.glossy.constants.AppBarHeight
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
@@ -144,11 +130,10 @@ import androidx.compose.foundation.layout.systemBars
 @Composable
 fun OnlinePlaylistScreen(
     navController: NavController,
-    scrollBehavior: TopAppBarScrollBehavior,
+    // Removed scrollBehavior to fix NavigationBuilder compilation error
     viewModel: OnlinePlaylistViewModel = hiltViewModel(),
 ) {
     val menuState = LocalMenuState.current
-    val database = LocalDatabase.current
     val haptic = LocalHapticFeedback.current
     val playerConnection = LocalPlayerConnection.current ?: return
     val coroutineScope = rememberCoroutineScope()
@@ -159,7 +144,6 @@ fun OnlinePlaylistScreen(
     val playlist by viewModel.playlist.collectAsState()
     val songs by viewModel.playlistSongs.collectAsState()
     val dbPlaylist by viewModel.dbPlaylist.collectAsState()
-    val relatedItems by viewModel.relatedItems.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val isLoadingMore by viewModel.isLoadingMore.collectAsState()
     val error by viewModel.error.collectAsState()
@@ -265,7 +249,6 @@ fun OnlinePlaylistScreen(
                             isActive = mediaMetadata?.id == songItem.id,
                             isPlaying = isPlaying,
                             isSelected = inSelectMode && songItem.id in selection,
-                            shape = listItemShape(index, filteredSongs.size),
                             modifier = Modifier
                                 .combinedClickable(
                                     enabled = !hideExplicit || !songItem.explicit,
@@ -304,7 +287,8 @@ fun OnlinePlaylistScreen(
                                 } else {
                                     IconButton(onClick = {
                                         menuState.show {
-                                            YouTubeSongMenu(songItem, navController, menuState::dismiss)
+                                            // Fixed Menu Error: Removed navController
+                                            YouTubeSongMenu(songItem, menuState::dismiss)
                                         }
                                     }) {
                                         Icon(painterResource(R.drawable.more_vert), null)
@@ -323,71 +307,6 @@ fun OnlinePlaylistScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 ContainedLoadingIndicator()
-                            }
-                        }
-                    }
-
-                    if (relatedItems.isNotEmpty() && !isSearching) {
-                        item(key = "related_title") {
-                            NavigationTitle(
-                                title = stringResource(R.string.you_might_also_like),
-                                modifier = Modifier.animateItem()
-                            )
-                        }
-
-                        item(key = "related_items") {
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 12.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .animateItem()
-                            ) {
-                                items(relatedItems) { item ->
-                                    YouTubeGridItem(
-                                        item = item,
-                                        modifier = Modifier
-                                            .width(160.dp)
-                                            .combinedClickable(
-                                                onClick = {
-                                                    when (item) {
-                                                        is PlaylistItem -> navController.navigate("online_playlist/${item.id}")
-                                                        is AlbumItem -> navController.navigate("album/${item.browseId}")
-                                                        is ArtistItem -> navController.navigate("artist/${item.id}")
-                                                        is SongItem -> playerConnection.playQueue(
-                                                            YouTubeQueue(WatchEndpoint(videoId = item.id))
-                                                        )
-                                                    }
-                                                },
-                                                onLongClick = {
-                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    menuState.show {
-                                                        when (item) {
-                                                            is PlaylistItem -> YouTubePlaylistMenu(
-                                                                playlist = item,
-                                                                coroutineScope = coroutineScope,
-                                                                onDismiss = menuState::dismiss
-                                                            )
-                                                            is SongItem -> YouTubeSongMenu(
-                                                                song = item,
-                                                                navController = navController,
-                                                                onDismiss = menuState::dismiss
-                                                            )
-                                                            is AlbumItem -> YouTubeAlbumMenu(
-                                                                albumItem = item,
-                                                                navController = navController,
-                                                                onDismiss = menuState::dismiss
-                                                            )
-                                                            is ArtistItem -> YouTubeArtistMenu(
-                                                                artist = item,
-                                                                onDismiss = menuState::dismiss
-                                                            )
-                                                        }
-                                                    }
-                                                }
-                                            )
-                                    )
-                                }
                             }
                         }
                     }
@@ -576,12 +495,12 @@ private fun OnlinePlaylistHeader(
     continuation: String?,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
     val playerConnection = LocalPlayerConnection.current ?: return
     val database = LocalDatabase.current
-    val menuState = LocalMenuState.current
     val isPlaying by playerConnection.isEffectivelyPlaying.collectAsState()
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
+    val listenTogetherManager = LocalListenTogetherManager.current
+    val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
 
     val hasExplicitContent = remember(songs) {
         songs.any { it.explicit }
@@ -597,12 +516,17 @@ private fun OnlinePlaylistHeader(
         modifier = modifier
             .fillMaxWidth()
     ) {
-        OnlineBlur(
-            thumbnailUrl = playlist.thumbnail,
+        // Replaced custom OnlineBlur with standard AsyncImage with Blur Modifier
+        AsyncImage(
+            model = ImageRequest.Builder(LocalContext.current).data(playlist.thumbnail).build(),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
                 .offset { IntOffset(0, headerOffset) }
+                .blur(80.dp)
+                .alpha(0.5f)
         )
 
         Column(
@@ -611,9 +535,8 @@ private fun OnlinePlaylistHeader(
                 .padding(bottom = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(Modifier.height(20.dp)) // Space for top app bar
+            Spacer(Modifier.height(20.dp)) 
 
-            // Artwork - Large and centered
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -633,7 +556,6 @@ private fun OnlinePlaylistHeader(
 
             Spacer(Modifier.height(32.dp))
 
-            // Title
             Text(
                 text = playlist.title,
                 style = MaterialTheme.typography.headlineMedium,
@@ -645,7 +567,6 @@ private fun OnlinePlaylistHeader(
 
             Spacer(Modifier.height(8.dp))
 
-            // Total Song and Time Row (Plain Text, no badges)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
@@ -686,7 +607,6 @@ private fun OnlinePlaylistHeader(
 
             Spacer(Modifier.height(12.dp))
 
-            // Action Buttons Row (Save, Play, Shuffle) - Expressive Design
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -694,7 +614,6 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Save Button
                 Surface(
                     onClick = {
                         coroutineScope.launch(Dispatchers.IO) {
@@ -753,7 +672,6 @@ private fun OnlinePlaylistHeader(
                     }
                 }
 
-                // Play Button (Large Pill-Shaped Capsule)
                 Box(
                     modifier = Modifier
                         .height(52.dp)
@@ -761,7 +679,7 @@ private fun OnlinePlaylistHeader(
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.primary)
                         .clickable {
-                            if (songs.isNotEmpty()) {
+                            if (!isListenTogetherGuest && songs.isNotEmpty()) {
                                 playerConnection.playQueue(
                                     YouTubePlaylistQueue(
                                         playlistId = playlist.id,
@@ -798,10 +716,9 @@ private fun OnlinePlaylistHeader(
                     }
                 }
 
-                // Shuffle Button
                 Surface(
                     onClick = {
-                        if (songs.isNotEmpty()) {
+                        if (!isListenTogetherGuest && songs.isNotEmpty()) {
                             playerConnection.playQueue(
                                 YouTubePlaylistQueue(
                                     playlistId = playlist.id,
@@ -822,7 +739,7 @@ private fun OnlinePlaylistHeader(
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.shuffle),
-                            contentDescription = stringResource(R.string.shuffle_content_desc),
+                            contentDescription = stringResource(R.string.shuffle),
                             modifier = Modifier.size(22.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -832,7 +749,6 @@ private fun OnlinePlaylistHeader(
 
             Spacer(Modifier.height(16.dp))
 
-            // Author Name
             playlist.author?.name?.let { authorName ->
                 Text(
                     text = authorName,
@@ -844,7 +760,6 @@ private fun OnlinePlaylistHeader(
                 )
             }
 
-            // Description
             val description = playlist.description
             if (!description.isNullOrBlank()) {
                 Spacer(Modifier.height(12.dp))
@@ -856,7 +771,6 @@ private fun OnlinePlaylistHeader(
                     ExpandableText(
                         text = description,
                         collapsedMaxLines = 3,
-                        textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
