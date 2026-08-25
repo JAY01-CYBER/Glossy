@@ -281,13 +281,6 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
                     if (removedDevices?.any { it.id == selectedDeviceId } == true) {
                         selectedDeviceId = null
                         AudioDeviceState.preferredDeviceId = null
-                        
-                        // FIX: Notify MusicService to revert back to default device
-                        val intent = Intent(context, com.jay.glossy.playback.MusicService::class.java).apply {
-                            action = "SET_AUDIO_DEVICE"
-                            putExtra("device_id", -1)
-                        }
-                        context.startService(intent)
                     }
                     refreshDevices()
                 }
@@ -487,12 +480,10 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
                                                     AudioDeviceState.preferredDeviceId = dev.deviceId
                                                     selectedDeviceId = dev.deviceId
                                                     
-                                                    // FIRE INTENT TO MUSIC SERVICE FOR 100% RELIABLE SWITCHING
-                                                    val intent = Intent(context, com.jay.glossy.playback.MusicService::class.java).apply {
-                                                        action = "SET_AUDIO_DEVICE"
-                                                        putExtra("device_id", dev.deviceId ?: -1)
-                                                    }
-                                                    context.startService(intent)
+                                                    // DIRECT SERVICE CALL (Vivi Style)
+                                                    val actualService = (service as? com.jay.glossy.playback.MusicService) ?: 
+                                                                        (service?.javaClass?.getMethod("getService")?.invoke(service) as? com.jay.glossy.playback.MusicService)
+                                                    actualService?.setPreferredAudioDevice(dev.deviceId)
                                                     
                                                     refreshDevices()
                                                     showDevicePopup = false
