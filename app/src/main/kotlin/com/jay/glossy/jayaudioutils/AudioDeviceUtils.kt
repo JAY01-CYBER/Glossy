@@ -398,7 +398,7 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(bottom = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(12.dp) // Exact Vivi spacing
                     ) {
                         activeDevice?.let { device ->
                             Row(
@@ -491,7 +491,7 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
                                                     refreshDevices()
                                                     showDevicePopup = false
                                                 },
-                                                shape = CircleShape,
+                                                shape = CircleShape, // Fully rounded rows in expanded list
                                                 color = if (isSelected) MaterialTheme.colorScheme.surface else Color.Transparent,
                                                 modifier = Modifier.fillMaxWidth().height(64.dp)
                                             ) {
@@ -517,6 +517,7 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
                                                         modifier = Modifier.weight(1f) // pushes rest to right edge
                                                     )
                                                     
+                                                    // EXACT VIVI UI: Selected Volume Icon OR Unselected Empty Circle
                                                     if (isSelected) {
                                                         Icon(
                                                             painter = painterResource(R.drawable.volume_up),
@@ -541,32 +542,23 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
                                     }
 
                                     // =========================================================
-                                    // NAYA BUTTON: CONNECT A DEVICE (In-App Panel)
+                                    // NAYA BUTTON: CONNECT A DEVICE
                                     // =========================================================
                                     Surface(
                                         onClick = {
                                             try {
-                                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                                                    // In-App floating Bluetooth panel (Android 10+)
-                                                    val panelIntent = Intent(android.provider.Settings.Panel.ACTION_BLUETOOTH).apply {
-                                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                                    }
-                                                    context.startActivity(panelIntent)
-                                                } else {
-                                                    // Standard Settings fallback
-                                                    val intent = Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS).apply {
-                                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                                    }
-                                                    context.startActivity(intent)
+                                                // Standard Bluetooth Settings Intent
+                                                val intent = Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS).apply {
+                                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                                 }
+                                                context.startActivity(intent)
                                             } catch (e: Exception) {
-                                                val fallback = Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS).apply {
+                                                // Fallback to Main Settings
+                                                val fallback = Intent(android.provider.Settings.ACTION_SETTINGS).apply {
                                                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                                 }
                                                 context.startActivity(fallback)
                                             }
-                                            // NOTE: Yahan showDevicePopup = false aur onDismiss() hataye gaye hain,
-                                            // taaki tumhara bottom sheet open hi rahe panel ke peeche!
                                         },
                                         shape = CircleShape,
                                         color = Color.Transparent,
