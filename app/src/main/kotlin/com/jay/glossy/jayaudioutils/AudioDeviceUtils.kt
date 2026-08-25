@@ -281,6 +281,13 @@ fun AudioDeviceBottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier)
                     if (removedDevices?.any { it.id == selectedDeviceId } == true) {
                         selectedDeviceId = null
                         AudioDeviceState.preferredDeviceId = null
+                        
+                        // FIX: Notify MusicService to revert back to default device
+                        val intent = Intent(context, com.jay.glossy.playback.MusicService::class.java).apply {
+                            action = "SET_AUDIO_DEVICE"
+                            putExtra("device_id", -1)
+                        }
+                        context.startService(intent)
                     }
                     refreshDevices()
                 }
