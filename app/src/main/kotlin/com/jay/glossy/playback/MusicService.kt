@@ -386,10 +386,16 @@ class MusicService :
 
     fun setPreferredAudioDevice(deviceId: Int?) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            // Agar device null ya -1 hai, toh system default par wapas chale jao
+            
             if (deviceId == null || deviceId == -1) {
                 if (::player.isInitialized) {
                     player.setPreferredAudioDevice(null)
+                    secondaryPlayer?.setPreferredAudioDevice(null)
+                    fadingPlayer?.setPreferredAudioDevice(null)
+                    
+                    if (player.playbackState == Player.STATE_READY && player.isPlaying) {
+                        player.seekTo(player.currentPosition)
+                    }
                 }
                 preferredDeviceId = null
                 return
@@ -397,11 +403,16 @@ class MusicService :
 
             val devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
             val deviceInfo = devices.find { it.id == deviceId }
-            
-            // ExoPlayer ko directly high-quality media route karne do
+
             if (deviceInfo != null) {
                 if (::player.isInitialized) {
                     player.setPreferredAudioDevice(deviceInfo)
+                    secondaryPlayer?.setPreferredAudioDevice(deviceInfo)
+                    fadingPlayer?.setPreferredAudioDevice(deviceInfo)
+                    
+                    if (player.playbackState == Player.STATE_READY && player.isPlaying) {
+                        player.seekTo(player.currentPosition)
+                    }
                 }
                 preferredDeviceId = deviceId
             }
@@ -1379,6 +1390,15 @@ class MusicService :
 
         playerNormalizationProcessors[player] = normalizationProcessor
         playerSilenceProcessors[player] = silenceProcessor
+
+        // FIX: Ensure new ExoPlayer instances inherit the selected routing!
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && preferredDeviceId != null) {
+            val localAudioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            val devices = localAudioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+            devices.find { it.id == preferredDeviceId }?.let {
+                player.setPreferredAudioDevice(it)
+            }
+        }
 
         if (prefs != null) {
             val offload = prefs[AudioOffload] ?: false
