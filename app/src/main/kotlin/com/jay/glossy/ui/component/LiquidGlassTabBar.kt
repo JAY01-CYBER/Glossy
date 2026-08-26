@@ -43,7 +43,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.isSpecified
@@ -100,7 +99,7 @@ fun LiquidGlassTabBar(
     val isLtr = LocalLayoutDirection.current == LayoutDirection.Ltr
     val animationScope = rememberCoroutineScope()
     val barInteraction = rememberGlassInteraction()
-    val isDark = true // Defaulted to true for Dark Mode
+    val isDark = true
 
     var currentIndex by remember { mutableIntStateOf(selectedTab.coerceAtLeast(0)) }
     val draggedFlag = remember { booleanArrayOf(false) }
@@ -152,10 +151,8 @@ fun LiquidGlassTabBar(
                 .pointerInput(barInteraction) { barInteraction.detectPress(this) },
         contentAlignment = Alignment.CenterStart,
     ) {
-        // Main glass capsule
         Box(Modifier.matchParentSize().drawInteractiveGlass(isDark, backdrop, layer, luminance, CapsuleShape, barInteraction))
 
-        // Frosted Blob (Squish effect)
         Box(
             Modifier
                 .graphicsLayer {
@@ -248,7 +245,7 @@ private fun LiquidGlassTab(
         CompositionLocalProvider(LocalContentColor provides color) {
             screen.icon()
             Text(
-                text = stringResource(id = screen.title),
+                text = screen.title, // DIRECT STRING USE (Fixed Error)
                 style = MaterialTheme.typography.bodySmall,
                 color = color,
                 maxLines = 1,
