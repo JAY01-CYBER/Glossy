@@ -1,9 +1,9 @@
 /**
  * Glossy Project (C) 2026
- * Liquid Glass Navigation Bar
  */
 package com.jay.glossy.ui.component
 
+import android.graphics.Bitmap
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -41,17 +41,25 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.rememberGraphicsLayer // FIXED IMPORT
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.scale
 import androidx.navigation.NavController
 import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.ui.player.MiniPlayer
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.withContext
+import java.nio.IntBuffer
+import kotlin.time.Duration.Companion.seconds
 
-// Generic Screens for Glossy
-sealed class BottomNavScreen(val ordinal: Int, val route: String, val icon: @Composable () -> Unit) {
-    data object Home : BottomNavScreen(0, "home", { Icon(Icons.Default.Home, contentDescription = null) })
-    data object Search : BottomNavScreen(1, "search", { Icon(Icons.Default.Search, contentDescription = null) })
-    data object Library : BottomNavScreen(2, "library", { Icon(Icons.Default.LibraryMusic, contentDescription = null) })
+// FIXED: Using direct String instead of StringRes
+sealed class BottomNavScreen(val ordinal: Int, val route: String, val title: String, val icon: @Composable () -> Unit) {
+    data object Home : BottomNavScreen(0, "home", "Home", { Icon(Icons.Default.Home, contentDescription = null) })
+    data object Search : BottomNavScreen(1, "search", "Search", { Icon(Icons.Default.Search, contentDescription = null) })
+    data object Library : BottomNavScreen(2, "library", "Library", { Icon(Icons.Default.LibraryMusic, contentDescription = null) })
 }
 
 @Composable
@@ -66,13 +74,35 @@ fun LiquidGlassAppBottomNavigationBar(
     val playerConnection = LocalPlayerConnection.current ?: return
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
     
-    // Check if song is playing to show MiniPlayer
     val isShowMiniPlayer = mediaMetadata != null
 
     val layer = rememberGraphicsLayer()
     val toolbarInteraction = rememberGlassInteraction()
     val searchFabInteraction = rememberGlassInteraction()
-    val luminanceAnimation = remember { Animatable(0.5f) } // Default luminance
+    val luminanceAnimation = remember { Animatable(0.5f) } 
+
+    LaunchedEffect(layer) {
+        val buffer = IntBuffer.allocate(25)
+        while (isActive) {
+            try {
+                withContext(Dispatchers.IO) {
+                    val imageBitmap = layer.toImageBitmap()
+                    val thumbnail = imageBitmap.asAndroidBitmap().scale(5, 5, false).copy(Bitmap.Config.ARGB_8888, false)
+                    buffer.rewind()
+                    thumbnail.copyPixelsToBuffer(buffer)
+                }
+            } catch (e: Exception) { }
+            val averageLuminance = (0 until 25).sumOf { index ->
+                val color = buffer.get(index)
+                val r = (color shr 16 and 0xFF) / 255f
+                val g = (color shr 8 and 0xFF) / 255f
+                val b = (color and 0xFF) / 255f
+                0.2126 * r + 0.7152 * g + 0.0722 * b
+            } / 25
+            luminanceAnimation.animateTo(averageLuminance.coerceIn(0.3, 0.8).toFloat(), tween(500))
+            delay(1.seconds)
+        }
+    }
 
     val bottomNavScreens = listOf(BottomNavScreen.Home, BottomNavScreen.Library, BottomNavScreen.Search)
     val barTabs = listOf(BottomNavScreen.Home, BottomNavScreen.Library)
@@ -84,7 +114,6 @@ fun LiquidGlassAppBottomNavigationBar(
         isExpanded = isScrolledToTop
     }
 
-    // Standard Compose Column (No ConstraintLayout needed)
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -93,7 +122,6 @@ fun LiquidGlassAppBottomNavigationBar(
             .imePadding(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // --- 1. MiniPlayer Attached on Top ---
         AnimatedVisibility(visible = isShowMiniPlayer) {
             MiniPlayer(
                 positionState = positionState,
@@ -110,7 +138,6 @@ fun LiquidGlassAppBottomNavigationBar(
             )
         }
 
-        // --- 2. Liquid Glass Bottom Bar ---
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
@@ -134,18 +161,10 @@ fun LiquidGlassAppBottomNavigationBar(
                     )
                 }
                 Spacer(Modifier.size(12.dp))
-                // Search FAB
                 Box(
                     modifier = Modifier
                         .size(56.dp)
-                        .drawInteractiveGlass(
-                            isDark = true,
-                            backdrop = backdrop,
-                            layer = layer,
-                            luminanceAnimation = luminanceAnimation.value,
-                            shape = CircleShape,
-                            interaction = searchFabInteraction
-                        )
+                        .drawInteractiveGlass(true, backdrop, layer, luminanceAnimation.value, CircleShape, searchFabInteraction)
                         .clickable {
                             selectedIndex = BottomNavScreen.Search.ordinal
                             try { navController.navigate(BottomNavScreen.Search.route) } catch (e: Exception) { }
@@ -159,14 +178,7 @@ fun LiquidGlassAppBottomNavigationBar(
                 Box(
                     modifier = Modifier
                         .size(48.dp)
-                        .drawInteractiveGlass(
-                            isDark = true,
-                            backdrop = backdrop,
-                            layer = layer,
-                            luminanceAnimation = luminanceAnimation.value,
-                            shape = CircleShape,
-                            interaction = toolbarInteraction
-                        )
+                        .drawInteractiveGlass(true, backdrop, layer, luminanceAnimation.value, CircleShape, toolbarInteraction)
                         .clickable { isExpanded = true },
                     contentAlignment = Alignment.Center,
                 ) {
