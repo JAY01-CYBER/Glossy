@@ -321,12 +321,6 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
     }
 }
 
-// Android provides org.json as a platform API (/apex/com.android.art/javalib/core-libart.jar).
-// The standalone org.json:json artefact bundles an older Apache Harmony copy of JSONArray that
-// contains an internal `myArrayList` field absent from the platform class.  Without obfuscation
-// R8 inlines against this internal field; at runtime the platform class is resolved instead,
-// producing a NoSuchFieldError.  Excluding the artefact globally ensures only the platform
-// class is ever referenced.
 configurations.configureEach {
     exclude(group = "org.json", module = "json")
 }
@@ -416,4 +410,11 @@ dependencies {
     testImplementation(libs.ktor.client.mock)
 
     implementation("androidx.compose.material:material-icons-extended:1.7.8")
+
+    // --- LIBRARIES FOR LIQUID GLASS & BLUR EFFECTS ---
+    implementation("com.github.Kyant0:Backdrop:master-SNAPSHOT")
+    implementation("dev.chrisbanes.haze:haze:1.1.1")
+    implementation("dev.chrisbanes.haze:haze-materials:1.1.1")
+    implementation("com.kmpalette:kmpalette-core:3.1.0")
+    implementation("com.kmpalette:kmpalette-bitmap:3.1.0")
 }
