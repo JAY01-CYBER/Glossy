@@ -5,44 +5,6 @@
 
 package com.jay.glossy.ui.screens.playlist
 
-import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.only
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.union
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -62,10 +24,42 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -91,6 +85,8 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.fastAny
+import androidx.compose.ui.util.fastForEachReversed
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -118,7 +114,6 @@ import com.jay.glossy.ui.menu.YouTubePlaylistMenu
 import com.jay.glossy.ui.menu.YouTubeSelectionSongMenu
 import com.jay.glossy.ui.menu.YouTubeSongMenu
 import com.jay.glossy.ui.utils.resize
-import com.jay.glossy.utils.makeTimeString
 import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.viewmodels.OnlinePlaylistViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -161,20 +156,34 @@ fun OnlinePlaylistScreen(
         if (query.text.isEmpty()) songs.mapIndexed { i, s -> i to s }
         else songs.mapIndexed { i, s -> i to s }.filter {
             it.second.title.contains(query.text, true) ||
-                    it.second.artists.any { a -> a.name.contains(query.text, true) }
+                    it.second.artists.fastAny { a -> a.name.contains(query.text, true) }
         }
     }
 
     var inSelectMode by remember { mutableStateOf(false) }
     val selection = remember { mutableStateListOf<String>() }
+    var selectionAnchorSongId by remember { mutableStateOf<String?>(null) }
 
     val onExitSelectionMode = {
         inSelectMode = false
         selection.clear()
+        selectionAnchorSongId = null
     }
 
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(isSearching) { if (isSearching) focusRequester.requestFocus() }
+
+    LaunchedEffect(filteredSongs) {
+        selection.fastForEachReversed { songId ->
+            if (filteredSongs.find { it.second.id == songId } == null) {
+                selection.remove(songId)
+            }
+        }
+
+        if (selectionAnchorSongId != null && filteredSongs.none { it.second.id == selectionAnchorSongId }) {
+            selectionAnchorSongId = filteredSongs.firstOrNull { it.second.id in selection }?.second?.id
+        }
+    }
 
     if (isSearching) {
         BackHandler {
@@ -185,36 +194,33 @@ fun OnlinePlaylistScreen(
         BackHandler(onBack = onExitSelectionMode)
     }
 
-    // Background Color Logic
+    // THE FIX: Assigning the delegated property to a local immutable variable
+    // This allows the Kotlin compiler to smart-cast it safely down below.
+    val currentPlaylist = playlist
+
+    // Color Animation Logic
     val fallbackColor = Color(0xFF121212)
     val animatedExtractedColor by animateColorAsState(
         targetValue = if (dominantColor == Color.Transparent) fallbackColor else dominantColor,
         animationSpec = tween(durationMillis = 800),
         label = "gradientColor"
     )
-    val mutedPaletteBg = lerp(animatedExtractedColor, Color.Black, 0.65f)
+    val mutedPaletteBg = lerp(animatedExtractedColor, Color.Black, 0.6f)
 
-    // Detect if the user has scrolled past the header to show the Slide-in TopAppBar
-    val showScrolledTopBar by remember {
-        derivedStateOf {
-            !isSearching && !inSelectMode && lazyListState.firstVisibleItemIndex > 0
-        }
-    }
-
+    // Wrap the entire screen in a Dark Color Scheme so list items and text are ALWAYS white/readable
     MaterialTheme(colorScheme = darkColorScheme()) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(mutedPaletteBg) // Deep immersive background
+                .background(mutedPaletteBg) 
         ) {
             LazyColumn(
                 state = lazyListState,
-                // Top padding is 0 by default so image bleeds to the top.
                 contentPadding = LocalPlayerAwareWindowInsets.current
                     .only(WindowInsetsSides.Bottom)
                     .union(WindowInsets.ime).asPaddingValues(),
             ) {
-                if (playlist == null || songs.isEmpty()) {
+                if (currentPlaylist == null || songs.isEmpty()) {
                     if (isLoading) {
                         item(key = "loading_placeholder") {
                             Box(
@@ -249,118 +255,123 @@ fun OnlinePlaylistScreen(
                         }
                     }
                 } else {
-                    playlist?.let { playlist ->
-                        // Fix for 2nd Photo: Search Cut-off
-                        // If searching or selecting, we add a spacer so songs don't hide behind the top bar
-                        if (isSearching || inSelectMode) {
-                            item {
-                                Spacer(
-                                    modifier = Modifier.height(
-                                        WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp
-                                    )
-                                )
-                            }
-                        } else {
-                            item(key = "playlist_header") {
-                                OnlinePlaylistHeader(
-                                    playlist = playlist,
-                                    songs = songs,
-                                    dbPlaylist = dbPlaylist,
-                                    navController = navController,
-                                    coroutineScope = coroutineScope,
-                                    continuation = viewModel.continuation,
-                                    mutedPaletteBg = mutedPaletteBg,
-                                    onSearchClick = { isSearching = true },
-                                    onDominantColorExtracted = { dominantColor = it }
-                                )
-                            }
-                        }
-
-                        itemsIndexed(filteredSongs) { index, (_, songItem) ->
-                            val onCheckedChange: (Boolean) -> Unit = {
-                                if (it) {
-                                    selection.add(songItem.id)
-                                } else {
-                                    selection.remove(songItem.id)
-                                }
-                            }
-
-                            YouTubeListItem(
-                                item = songItem,
-                                isActive = mediaMetadata?.id == songItem.id,
-                                isPlaying = isPlaying,
-                                isSelected = inSelectMode && songItem.id in selection,
-                                modifier = Modifier
-                                    .combinedClickable(
-                                        enabled = !hideExplicit || !songItem.explicit,
-                                        onClick = {
-                                            if (inSelectMode) {
-                                                onCheckedChange(songItem.id !in selection)
-                                            } else if (songItem.id == mediaMetadata?.id) {
-                                                playerConnection.togglePlayPause()
-                                            } else {
-                                                playerConnection.playQueue(
-                                                    YouTubePlaylistQueue(
-                                                        playlistId = playlist.id,
-                                                        playlistTitle = playlist.title,
-                                                        initialSongs = filteredSongs.map { it.second },
-                                                        initialContinuation = viewModel.continuation,
-                                                        startIndex = index
-                                                    )
-                                                )
-                                            }
-                                        },
-                                        onLongClick = {
-                                            if (!inSelectMode) {
-                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                inSelectMode = true
-                                                onCheckedChange(true)
-                                            }
-                                        }
-                                    )
-                                    .animateItem(),
-                                trailingContent = {
-                                    if (inSelectMode) {
-                                        Checkbox(
-                                            checked = songItem.id in selection,
-                                            onCheckedChange = onCheckedChange
-                                        )
-                                    } else {
-                                        IconButton(onClick = {
-                                            menuState.show {
-                                                YouTubeSongMenu(songItem, menuState::dismiss)
-                                            }
-                                        }) {
-                                            Icon(painterResource(R.drawable.more_vert), null, tint = Color.White)
-                                        }
-                                    }
-                                }
+                    if (!isSearching) {
+                        item(key = "playlist_header") {
+                            OnlinePlaylistHeader(
+                                playlist = currentPlaylist,
+                                songs = songs,
+                                dbPlaylist = dbPlaylist,
+                                navController = navController,
+                                coroutineScope = coroutineScope,
+                                continuation = viewModel.continuation,
+                                mutedPaletteBg = mutedPaletteBg,
+                                onSearchClick = { isSearching = true },
+                                onDominantColorExtracted = { dominantColor = it }
                             )
                         }
+                    }
 
-                        if (isLoadingMore) {
-                            item(key = "loading_more") {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    ContainedLoadingIndicator()
-                                }
+                    itemsIndexed(filteredSongs) { index, (_, songItem) ->
+                        val onCheckedChange: (Boolean) -> Unit = {
+                            if (it) {
+                                selection.add(songItem.id)
+                            } else {
+                                selection.remove(songItem.id)
                             }
                         }
 
-                        item(key = "bottom_spacer") {
-                            Spacer(Modifier.height(50.dp))
+                        YouTubeListItem(
+                            item = songItem,
+                            isActive = mediaMetadata?.id == songItem.id,
+                            isPlaying = isPlaying,
+                            isSelected = inSelectMode && songItem.id in selection,
+                            modifier = Modifier
+                                .combinedClickable(
+                                    enabled = !hideExplicit || !songItem.explicit,
+                                    onClick = {
+                                        if (inSelectMode) {
+                                            onCheckedChange(songItem.id !in selection)
+                                        } else if (songItem.id == mediaMetadata?.id) {
+                                            playerConnection.togglePlayPause()
+                                        } else {
+                                            playerConnection.playQueue(
+                                                YouTubePlaylistQueue(
+                                                    playlistId = currentPlaylist.id,
+                                                    playlistTitle = currentPlaylist.title,
+                                                    initialSongs = filteredSongs.map { it.second },
+                                                    initialContinuation = viewModel.continuation,
+                                                    startIndex = index
+                                                )
+                                            )
+                                        }
+                                    },
+                                    onLongClick = {
+                                        if (!inSelectMode) {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            inSelectMode = true
+                                            onCheckedChange(true)
+                                            selectionAnchorSongId = songItem.id
+                                        } else {
+                                            val anchorIndex =
+                                                selectionAnchorSongId?.let { anchorSongId ->
+                                                    filteredSongs.indexOfFirst { it.second.id == anchorSongId }
+                                                } ?: -1
+
+                                            if (anchorIndex == -1) {
+                                                onCheckedChange(true)
+                                                selectionAnchorSongId = songItem.id
+                                            } else {
+                                                val range = if (anchorIndex <= index) anchorIndex..index else index..anchorIndex
+                                                for (rangeIndex in range) {
+                                                    val rangeSongId = filteredSongs[rangeIndex].second.id
+                                                    if (rangeSongId !in selection) {
+                                                        selection.add(rangeSongId)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                )
+                                .animateItem(),
+                            trailingContent = {
+                                if (inSelectMode) {
+                                    Checkbox(
+                                        checked = songItem.id in selection,
+                                        onCheckedChange = onCheckedChange
+                                    )
+                                } else {
+                                    IconButton(onClick = {
+                                        menuState.show {
+                                            YouTubeSongMenu(songItem, menuState::dismiss)
+                                        }
+                                    }) {
+                                        Icon(painterResource(R.drawable.more_vert), null, tint = Color.White)
+                                    }
+                                }
+                            }
+                        )
+                    }
+
+                    if (isLoadingMore) {
+                        item(key = "loading_more") {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                ContainedLoadingIndicator()
+                            }
                         }
+                    }
+
+                    item(key = "bottom_spacer") {
+                        Spacer(Modifier.height(50.dp))
                     }
                 }
             }
 
-            // --- Top App Bars ---
-            
-            // 1. Search and Selection TopAppBar
+            // Overlay Solid TopAppBar specifically for Search and Selection Modes
             if (inSelectMode || isSearching) {
                 TopAppBar(
                     title = {
@@ -434,59 +445,19 @@ fun OnlinePlaylistScreen(
                                 onClick = {
                                     menuState.show {
                                         YouTubeSelectionSongMenu(
-                                            songSelection = filteredSongs.filter { it.second.id in selection }.map { it.second },
+                                            songSelection = filteredSongs.filter { it.second.id in selection }
+                                                .map { it.second },
                                             onDismiss = menuState::dismiss,
                                             clearAction = onExitSelectionMode
                                         )
                                     }
                                 }
                             ) {
-                                Icon(painterResource(R.drawable.more_vert), null, tint = Color.White)
-                            }
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = mutedPaletteBg)
-                )
-            }
-
-            // 2. Fix for 1st Photo: Scrolled TopAppBar (Shows only when scrolled past image)
-            AnimatedVisibility(
-                visible = showScrolledTopBar,
-                enter = fadeIn() + slideInVertically(),
-                exit = fadeOut() + slideOutVertically(),
-                modifier = Modifier.align(Alignment.TopCenter)
-            ) {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = playlist?.title ?: "",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = Color.White,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = { navController.navigateUp() }) {
-                            Icon(painterResource(R.drawable.arrow_back), null, tint = Color.White)
-                        }
-                    },
-                    actions = {
-                        IconButton(onClick = { isSearching = true }) {
-                            Icon(painterResource(R.drawable.search), "Search", tint = Color.White)
-                        }
-                        if (playlist != null) {
-                            IconButton(onClick = {
-                                menuState.show {
-                                    YouTubePlaylistMenu(
-                                        playlist = playlist,
-                                        songs = songs,
-                                        coroutineScope = coroutineScope,
-                                        onDismiss = menuState::dismiss,
-                                    )
-                                }
-                            }) {
-                                Icon(painterResource(R.drawable.more_vert), "More", tint = Color.White)
+                                Icon(
+                                    painter = painterResource(R.drawable.more_vert),
+                                    contentDescription = null,
+                                    tint = Color.White
+                                )
                             }
                         }
                     },
@@ -526,11 +497,10 @@ private fun OnlinePlaylistHeader(
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
 
     Column(modifier = modifier.fillMaxWidth()) {
-        // --- Immersive Full-Bleed Artwork Box ---
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(1f) // Perfect Square for full bleed
+                .aspectRatio(1f) // Perfect Square
         ) {
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
@@ -555,21 +525,19 @@ private fun OnlinePlaylistHeader(
                 modifier = Modifier.fillMaxSize()
             )
 
-            // Scrim: Smoothly fades the bottom half of the image directly into the dark color
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .fillMaxHeight(0.65f) // Extended fade height
+                    .fillMaxHeight(0.6f)
                     .align(Alignment.BottomCenter)
                     .background(
                         Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, mutedPaletteBg.copy(alpha = 0.5f), mutedPaletteBg),
+                            colors = listOf(Color.Transparent, mutedPaletteBg),
                             startY = 0f
                         )
                     )
             )
 
-            // --- Fix for 3rd Photo: Liquid Glass Buttons (Black Translucent) ---
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -579,11 +547,10 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Back Button (Dark Glass)
                 Surface(
                     onClick = { navController.navigateUp() },
                     shape = CircleShape,
-                    color = Color.Black.copy(alpha = 0.35f), // Rich dark translucent glass
+                    color = Color.Black.copy(alpha = 0.3f),
                     modifier = Modifier.size(48.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
@@ -591,12 +558,11 @@ private fun OnlinePlaylistHeader(
                     }
                 }
 
-                // Action Capsule (Like, Search, Menu) (Dark Glass)
                 Row(
                     modifier = Modifier
                         .height(48.dp)
-                        .background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(24.dp))
-                        .padding(horizontal = 4.dp),
+                        .background(Color.Black.copy(alpha = 0.3f), RoundedCornerShape(24.dp))
+                        .padding(horizontal = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     val isLiked = dbPlaylist?.playlist?.bookmarkedAt != null
@@ -664,7 +630,6 @@ private fun OnlinePlaylistHeader(
                 }
             }
 
-            // Title & Metadata (Inside image boundary at the bottom)
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -689,8 +654,9 @@ private fun OnlinePlaylistHeader(
                     color = Color.White
                 )
                 Spacer(modifier = Modifier.height(2.dp))
+                
                 Text(
-                    text = "Playlist",
+                    text = "Playlist • 2026",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White.copy(alpha = 0.7f),
                     textAlign = TextAlign.Center
@@ -698,20 +664,18 @@ private fun OnlinePlaylistHeader(
             }
         }
 
-        // --- Action Controls (Shuffle, Play, Download) below image ---
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp)
         ) {
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(24.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Shuffle Button (Dark Translucent)
                 Surface(
                     onClick = {
                         if (!isListenTogetherGuest && songs.isNotEmpty()) {
@@ -726,7 +690,7 @@ private fun OnlinePlaylistHeader(
                         }
                     },
                     shape = CircleShape,
-                    color = Color.White.copy(alpha = 0.12f),
+                    color = Color.White.copy(alpha = 0.15f),
                     modifier = Modifier.size(56.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
@@ -734,7 +698,6 @@ private fun OnlinePlaylistHeader(
                     }
                 }
 
-                // Play Button (White Pill Shape)
                 Surface(
                     onClick = {
                         if (!isListenTogetherGuest && songs.isNotEmpty()) {
@@ -752,7 +715,7 @@ private fun OnlinePlaylistHeader(
                     shape = RoundedCornerShape(50),
                     modifier = Modifier
                         .height(56.dp)
-                        .weight(1f)
+                        .weight(1f) 
                 ) {
                     Row(
                         horizontalArrangement = Arrangement.Center,
@@ -774,7 +737,6 @@ private fun OnlinePlaylistHeader(
                     }
                 }
 
-                // Download Button (Dark Translucent)
                 val context = LocalContext.current
                 Surface(
                     onClick = {
@@ -793,7 +755,7 @@ private fun OnlinePlaylistHeader(
                         }
                     },
                     shape = CircleShape,
-                    color = Color.White.copy(alpha = 0.12f),
+                    color = Color.White.copy(alpha = 0.15f),
                     modifier = Modifier.size(56.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
@@ -804,7 +766,6 @@ private fun OnlinePlaylistHeader(
 
             Spacer(Modifier.height(32.dp))
 
-            // Description and Track Count
             val description = playlist.description
             if (!description.isNullOrBlank()) {
                 ExpandableText(
@@ -822,7 +783,7 @@ private fun OnlinePlaylistHeader(
                 color = Color.White
             )
             
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(16.dp))
         }
     }
 }
