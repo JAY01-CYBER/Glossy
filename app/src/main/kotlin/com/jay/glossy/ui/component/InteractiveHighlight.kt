@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.util.fastCoerceIn
 import com.kyant.backdrop.RuntimeShader
@@ -26,11 +27,39 @@ import com.kyant.backdrop.isRuntimeShaderSupported
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
+// Restored inspectDragGestures for TabBar and BottomNavigationBar
+fun Modifier.inspectDragGestures(
+    onDragStart: (PointerInputChange) -> Unit,
+    onDragEnd: () -> Unit,
+    onDragCancel: () -> Unit,
+    onDrag: (PointerInputChange, Offset) -> Unit
+): Modifier = this.pointerInput(Unit) {
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+        onDragStart(down)
+        var isDown = true
+        while (isDown) {
+            val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+            val change = event.changes.firstOrNull()
+            if (change != null) {
+                if (change.pressed) {
+                    onDrag(change, change.position)
+                } else {
+                    isDown = false
+                    onDragEnd()
+                }
+            } else {
+                isDown = false
+                onDragCancel()
+            }
+        }
+    }
+}
+
 class InteractiveHighlight(
     val animationScope: CoroutineScope,
     val position: (size: Size, offset: Offset) -> Offset = { _, offset -> offset }
 ) {
-
     private val pressProgressAnimationSpec = spring<Float>(0.5f, 300f, 0.001f)
     private val positionAnimationSpec = spring(0.5f, 300f, Offset.VisibilityThreshold)
 
@@ -41,7 +70,6 @@ class InteractiveHighlight(
     val pressProgress: Float get() = pressProgressAnimation.value
     val offset: Offset get() = positionAnimation.value - startPosition
 
-    // The glowing AGSL shader magic for light tracking
     private val shader = if (isRuntimeShaderSupported()) {
         RuntimeShader(
             """
@@ -82,34 +110,28 @@ half4 main(float2 coord) {
         drawContent()
     }
 
-    // FIXED: Standard Compose Pointer Input replacing 'inspectDragGestures'
-    val gestureModifier: Modifier = Modifier.pointerInput(animationScope) {
-        awaitEachGesture {
-            val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+    val gestureModifier: Modifier = Modifier.inspectDragGestures(
+        onDragStart = { down ->
             startPosition = down.position
             animationScope.launch {
                 launch { pressProgressAnimation.animateTo(1f, pressProgressAnimationSpec) }
                 launch { positionAnimation.snapTo(startPosition) }
             }
-            var isDown = true
-            while (isDown) {
-                val event = awaitPointerEvent(pass = PointerEventPass.Initial)
-                val change = event.changes.firstOrNull()
-                if (change != null) {
-                    if (change.pressed) {
-                        animationScope.launch { positionAnimation.snapTo(change.position) }
-                    } else {
-                        isDown = false
-                    }
-                } else {
-                    isDown = false
-                }
-            }
-            // Triggered on Drag End / Drag Cancel
+        },
+        onDragEnd = {
             animationScope.launch {
                 launch { pressProgressAnimation.animateTo(0f, pressProgressAnimationSpec) }
                 launch { positionAnimation.animateTo(startPosition, positionAnimationSpec) }
             }
+        },
+        onDragCancel = {
+            animationScope.launch {
+                launch { pressProgressAnimation.animateTo(0f, pressProgressAnimationSpec) }
+                launch { positionAnimation.animateTo(startPosition, positionAnimationSpec) }
+            }
+        },
+        onDrag = { change, _ ->
+            animationScope.launch { positionAnimation.snapTo(change.position) }
         }
-    }
+    )
 }
