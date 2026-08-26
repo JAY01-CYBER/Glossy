@@ -122,6 +122,7 @@ import com.jay.glossy.ui.menu.YouTubePlaylistMenu
 import com.jay.glossy.ui.menu.YouTubeSelectionSongMenu
 import com.jay.glossy.ui.menu.YouTubeSongMenu
 import com.jay.glossy.ui.utils.resize
+import com.jay.glossy.utils.makeTimeString
 import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.viewmodels.OnlinePlaylistViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -204,7 +205,6 @@ fun OnlinePlaylistScreen(
 
     val currentPlaylist = playlist
 
-    // Immersive Dark Theme Logic
     val fallbackColor = Color(0xFF121212)
     val animatedExtractedColor by animateColorAsState(
         targetValue = if (dominantColor == Color.Transparent) fallbackColor else dominantColor,
@@ -213,14 +213,12 @@ fun OnlinePlaylistScreen(
     )
     val mutedPaletteBg = lerp(animatedExtractedColor, Color.Black, 0.6f)
     
-    // Calculate dynamic top padding to fix the "search song cut-off" issue
     val dynamicTopPadding = if (isSearching || inSelectMode) {
         WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp
     } else {
         0.dp
     }
 
-    // Wrap the entire screen in Dark Mode to force white text/icons
     MaterialTheme(colorScheme = darkColorScheme()) {
         Box(
             modifier = Modifier
@@ -304,7 +302,7 @@ fun OnlinePlaylistScreen(
                             isPlaying = isPlaying,
                             isSelected = inSelectMode && songItem.id in selection,
                             modifier = Modifier
-                                .padding(top = if (isSearching && index == 0) dynamicTopPadding else 0.dp) // Extra safety pad for first item
+                                .padding(top = if (isSearching && index == 0) dynamicTopPadding else 0.dp) 
                                 .combinedClickable(
                                     enabled = !hideExplicit || !songItem.explicit,
                                     onClick = {
@@ -390,9 +388,6 @@ fun OnlinePlaylistScreen(
                 }
             }
 
-            // --- Top App Bars ---
-            
-            // 1. Search and Selection TopAppBar
             if (inSelectMode || isSearching) {
                 TopAppBar(
                     title = {
@@ -466,7 +461,8 @@ fun OnlinePlaylistScreen(
                                 onClick = {
                                     menuState.show {
                                         YouTubeSelectionSongMenu(
-                                            songSelection = filteredSongs.filter { it.second.id in selection }.map { it.second },
+                                            songSelection = filteredSongs.filter { it.second.id in selection }
+                                                .map { it.second },
                                             onDismiss = menuState::dismiss,
                                             clearAction = onExitSelectionMode
                                         )
@@ -484,7 +480,6 @@ fun OnlinePlaylistScreen(
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = mutedPaletteBg)
                 )
             } else {
-                // Animated Top Bar when scrolled down (outside search)
                 val showScrolledTopBar by remember {
                     derivedStateOf { lazyListState.firstVisibleItemIndex > 0 }
                 }
@@ -564,12 +559,26 @@ private fun OnlinePlaylistHeader(
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
 
+    // Glassmorphism Brushes for the "Liquid Glass" effect
+    val glassBgBrush = Brush.linearGradient(
+        colors = listOf(
+            Color.White.copy(alpha = 0.2f),
+            Color.White.copy(alpha = 0.05f)
+        )
+    )
+    val glassBorderBrush = Brush.linearGradient(
+        colors = listOf(
+            Color.White.copy(alpha = 0.4f),
+            Color.Transparent,
+            Color.White.copy(alpha = 0.1f)
+        )
+    )
+
     Column(modifier = modifier.fillMaxWidth()) {
-        // --- 1. Immersive Full-Bleed Artwork Box ---
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(1f) // Perfect Square
+                .aspectRatio(1f) 
         ) {
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
@@ -594,7 +603,6 @@ private fun OnlinePlaylistHeader(
                 modifier = Modifier.fillMaxSize()
             )
 
-            // Scrim: Smoothly fades the bottom half of the image directly into the dark color
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -608,7 +616,6 @@ private fun OnlinePlaylistHeader(
                     )
             )
 
-            // Simp Music Style Floating Action Bar (Overlaid at Top)
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -618,24 +625,27 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Back Button
-                Surface(
-                    onClick = { navController.navigateUp() },
-                    shape = CircleShape,
-                    color = Color.White.copy(alpha = 0.15f), // Light translucent glass
-                    modifier = Modifier.size(48.dp)
+                // THE FIX: True Liquid Glass Back Button
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(glassBgBrush)
+                        .border(1.dp, glassBorderBrush, CircleShape)
+                        .clickable { navController.navigateUp() },
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(painterResource(R.drawable.arrow_back), null, tint = Color.White)
-                    }
+                    Icon(painterResource(R.drawable.arrow_back), null, tint = Color.White)
                 }
 
-                // Action Capsule (Like, Search, Menu)
+                // THE FIX: True Liquid Glass Action Capsule
                 Row(
                     modifier = Modifier
                         .height(48.dp)
-                        .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(24.dp))
-                        .padding(horizontal = 8.dp),
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(glassBgBrush)
+                        .border(1.dp, glassBorderBrush, RoundedCornerShape(24.dp))
+                        .padding(horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     val isLiked = dbPlaylist?.playlist?.bookmarkedAt != null
@@ -703,7 +713,6 @@ private fun OnlinePlaylistHeader(
                 }
             }
 
-            // Title & Metadata (Overlaid exactly at the bottom center of the image box)
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -738,7 +747,6 @@ private fun OnlinePlaylistHeader(
             }
         }
 
-        // --- 2. Action Controls (Shuffle, Play, Download) below image ---
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -751,27 +759,28 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Shuffle Button (Light Translucent)
-                Surface(
-                    onClick = {
-                        if (!isListenTogetherGuest && songs.isNotEmpty()) {
-                            playerConnection.playQueue(
-                                YouTubePlaylistQueue(
-                                    playlistId = playlist.id,
-                                    playlistTitle = playlist.title,
-                                    initialSongs = songs.shuffled(),
-                                    initialContinuation = continuation
+                // THE FIX: Liquid Glass Shuffle Button
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(CircleShape)
+                        .background(glassBgBrush)
+                        .border(1.dp, glassBorderBrush, CircleShape)
+                        .clickable {
+                            if (!isListenTogetherGuest && songs.isNotEmpty()) {
+                                playerConnection.playQueue(
+                                    YouTubePlaylistQueue(
+                                        playlistId = playlist.id,
+                                        playlistTitle = playlist.title,
+                                        initialSongs = songs.shuffled(),
+                                        initialContinuation = continuation
+                                    )
                                 )
-                            )
-                        }
-                    },
-                    shape = CircleShape,
-                    color = Color.White.copy(alpha = 0.15f),
-                    modifier = Modifier.size(56.dp)
+                            }
+                        },
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(painterResource(R.drawable.shuffle), null, tint = Color.White)
-                    }
+                    Icon(painterResource(R.drawable.shuffle), null, tint = Color.White)
                 }
 
                 // Play Button (White Pill Shape)
@@ -792,7 +801,7 @@ private fun OnlinePlaylistHeader(
                     shape = RoundedCornerShape(50),
                     modifier = Modifier
                         .height(56.dp)
-                        .weight(1f) // Takes middle space
+                        .weight(1f) 
                 ) {
                     Row(
                         horizontalArrangement = Arrangement.Center,
@@ -814,38 +823,37 @@ private fun OnlinePlaylistHeader(
                     }
                 }
 
-                // Download Button (Light Translucent)
+                // THE FIX: Liquid Glass Download Button
                 val context = LocalContext.current
-                Surface(
-                    onClick = {
-                        // Triggers offline caching for all songs in the playlist
-                        songs.forEach { song ->
-                            val downloadRequest = androidx.media3.exoplayer.offline.DownloadRequest
-                                .Builder(song.id, song.id.toUri())
-                                .setCustomCacheKey(song.id)
-                                .setData(song.title.toByteArray())
-                                .build()
-                            androidx.media3.exoplayer.offline.DownloadService.sendAddDownload(
-                                context,
-                                ExoDownloadService::class.java,
-                                downloadRequest,
-                                false
-                            )
-                        }
-                    },
-                    shape = CircleShape,
-                    color = Color.White.copy(alpha = 0.15f),
-                    modifier = Modifier.size(56.dp)
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(CircleShape)
+                        .background(glassBgBrush)
+                        .border(1.dp, glassBorderBrush, CircleShape)
+                        .clickable {
+                            songs.forEach { song ->
+                                val downloadRequest = androidx.media3.exoplayer.offline.DownloadRequest
+                                    .Builder(song.id, song.id.toUri())
+                                    .setCustomCacheKey(song.id)
+                                    .setData(song.title.toByteArray())
+                                    .build()
+                                androidx.media3.exoplayer.offline.DownloadService.sendAddDownload(
+                                    context,
+                                    ExoDownloadService::class.java,
+                                    downloadRequest,
+                                    false
+                                )
+                            }
+                        },
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(painterResource(R.drawable.download), null, tint = Color.White)
-                    }
+                    Icon(painterResource(R.drawable.download), null, tint = Color.White)
                 }
             }
 
             Spacer(Modifier.height(32.dp))
 
-            // Left Aligned Description and Tracks
             val description = playlist.description
             if (!description.isNullOrBlank()) {
                 ExpandableText(
