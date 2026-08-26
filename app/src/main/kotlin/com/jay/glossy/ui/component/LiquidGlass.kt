@@ -35,14 +35,16 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.tanh
 
-// Restored for LiquidGlassAppBottomNavigationBar & TabBar
+// Dummy layerBackdrop wrapper to satisfy any older calls
+fun Modifier.layerBackdrop(backdrop: Backdrop? = null): Modifier = this
+
 @Composable
 fun rememberGlassInteraction(): InteractiveHighlight {
     val animationScope = rememberCoroutineScope()
     return remember(animationScope) { InteractiveHighlight(animationScope) }
 }
 
-// EXACT MATCH FOR LiquidGlassAppBottomNavigationBar.kt:167
+// EXACT SIGNATURE FOR LiquidGlassAppBottomNavigationBar.kt
 fun Modifier.drawInteractiveGlass(
     isInteractive: Boolean,
     backdrop: Backdrop,
