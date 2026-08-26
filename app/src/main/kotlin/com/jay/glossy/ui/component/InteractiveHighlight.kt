@@ -1,6 +1,6 @@
 /**
  * Glossy Project (C) 2026
- * Interactive Physics - Restored Compatibility for TabBar
+ * Interactive Physics - Exact Signatures for TabBar & BottomBar
  */
 package com.jay.glossy.ui.component
 
@@ -28,7 +28,7 @@ import com.kyant.backdrop.isRuntimeShaderSupported
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
-// Restored for TabBar compatibility
+// EXACT MATCH FOR LiquidGlassTabBar.kt
 suspend fun PointerInputScope.detectPress(onPress: (Offset) -> Unit) {
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
@@ -43,13 +43,13 @@ suspend fun PointerInputScope.detectPress(onPress: (Offset) -> Unit) {
     }
 }
 
-// Restored for TabBar compatibility
-fun Modifier.inspectDragGestures(
+// EXACT MATCH FOR LiquidGlassTabBar.kt
+suspend fun PointerInputScope.inspectDragGestures(
     onDragStart: (PointerInputChange) -> Unit = {},
     onDragEnd: () -> Unit = {},
     onDragCancel: () -> Unit = {},
     onDrag: (PointerInputChange, Offset) -> Unit
-): Modifier = this.pointerInput(Unit) {
+) {
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
         onDragStart(down)
@@ -127,28 +127,30 @@ half4 main(float2 coord) {
         drawContent()
     }
 
-    val gestureModifier: Modifier = Modifier.inspectDragGestures(
-        onDragStart = { down ->
-            startPosition = down.position
-            animationScope.launch {
-                launch { pressProgressAnimation.animateTo(1f, pressProgressAnimationSpec) }
-                launch { positionAnimation.snapTo(startPosition) }
+    val gestureModifier: Modifier = Modifier.pointerInput(animationScope) {
+        inspectDragGestures(
+            onDragStart = { down ->
+                startPosition = down.position
+                animationScope.launch {
+                    launch { pressProgressAnimation.animateTo(1f, pressProgressAnimationSpec) }
+                    launch { positionAnimation.snapTo(startPosition) }
+                }
+            },
+            onDragEnd = {
+                animationScope.launch {
+                    launch { pressProgressAnimation.animateTo(0f, pressProgressAnimationSpec) }
+                    launch { positionAnimation.animateTo(startPosition, positionAnimationSpec) }
+                }
+            },
+            onDragCancel = {
+                animationScope.launch {
+                    launch { pressProgressAnimation.animateTo(0f, pressProgressAnimationSpec) }
+                    launch { positionAnimation.animateTo(startPosition, positionAnimationSpec) }
+                }
+            },
+            onDrag = { change, _ ->
+                animationScope.launch { positionAnimation.snapTo(change.position) }
             }
-        },
-        onDragEnd = {
-            animationScope.launch {
-                launch { pressProgressAnimation.animateTo(0f, pressProgressAnimationSpec) }
-                launch { positionAnimation.animateTo(startPosition, positionAnimationSpec) }
-            }
-        },
-        onDragCancel = {
-            animationScope.launch {
-                launch { pressProgressAnimation.animateTo(0f, pressProgressAnimationSpec) }
-                launch { positionAnimation.animateTo(startPosition, positionAnimationSpec) }
-            }
-        },
-        onDrag = { change, _ ->
-            animationScope.launch { positionAnimation.snapTo(change.position) }
-        }
-    )
+        )
+    }
 }
