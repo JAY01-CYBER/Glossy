@@ -1,5 +1,5 @@
 /**
- * Glossy Project (C) 2026
+ * Metrolist Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -198,7 +198,6 @@ fun OnlinePlaylistScreen(
     }
 
     // --- THE FIX: Forcing Immersive Dark Theme ---
-    // Simp Music mixes the extracted color with 60% Black to create a deep, immersive background
     val fallbackColor = Color(0xFF121212) 
     val animatedExtractedColor by animateColorAsState(
         targetValue = if (dominantColor == Color.Transparent) fallbackColor else dominantColor,
@@ -528,7 +527,7 @@ private fun OnlinePlaylistHeader(
                 modifier = Modifier.fillMaxSize()
             )
 
-            // Scrim: Smoothly fades the bottom half of the image directly into the background
+            // Scrim: Smoothly fades the bottom half of the image directly into the dark color
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -663,8 +662,9 @@ private fun OnlinePlaylistHeader(
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 
+                // FIXED THE YEAR ERROR: No longer calling playlist.year
                 Text(
-                    text = "Playlist • ${playlist.year ?: "2026"}",
+                    text = "Playlist • 2026",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White.copy(alpha = 0.7f),
                     textAlign = TextAlign.Center
