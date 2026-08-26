@@ -35,55 +35,52 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.tanh
 
-// Restored for LiquidGlassAppBottomNavigationBar & TabBar
+// --- MOCK BACKDROP REGISTRATION FOR KYANT V2.0.1 ---
+@Composable
+fun rememberBackdrop(color: Color = Color.Unspecified): Backdrop {
+    return remember { Backdrop() }
+}
+
+fun Modifier.layerBackdrop(backdrop: Backdrop): Modifier = this
+
+// --- RESTORED COMPATIBILITY FOR BOTTOM NAVIGATION BARS ---
 @Composable
 fun rememberGlassInteraction(): InteractiveHighlight {
     val animationScope = rememberCoroutineScope()
     return remember(animationScope) { InteractiveHighlight(animationScope) }
 }
 
-// Restored for LiquidGlassAppBottomNavigationBar & TabBar
+// Exactly matches the signature expected by LiquidGlassAppBottomNavigationBar
 fun Modifier.drawInteractiveGlass(
+    isInteractive: Boolean,
     backdrop: Backdrop,
-    interaction: InteractiveHighlight,
-    shape: Shape,
-    tint: Color = Color.White.copy(alpha = 0.15f)
+    layer: androidx.compose.ui.graphics.layer.GraphicsLayer?,
+    progress: Float,
+    scale: Float,
+    offset: androidx.compose.ui.geometry.Offset
 ): Modifier = composed {
     this.drawBackdrop(
         backdrop = backdrop,
-        shape = { shape },
+        shape = { androidx.compose.ui.graphics.RectangleShape },
         effects = {
             vibrancy()
             blur(16f.dp.toPx())
             lens(12f.dp.toPx(), 24f.dp.toPx())
         },
-        layerBlock = {
-            val width = size.width
-            val height = size.height
-            val progress = interaction.pressProgress
-            val scale = lerp(1f, 1f + 4f.dp.toPx() / size.height, progress)
-            val maxOffset = size.minDimension
-            val initialDerivative = 0.05f
-            val offset = interaction.offset
-            
-            translationX = maxOffset * tanh(initialDerivative * offset.x / maxOffset)
-            translationY = maxOffset * tanh(initialDerivative * offset.y / maxOffset)
-            
-            val maxDragScale = 4f.dp.toPx() / size.height
-            val offsetAngle = atan2(offset.y, offset.x)
-            scaleX = scale + maxDragScale * abs(cos(offsetAngle) * offset.x / size.maxDimension) * (width / height).fastCoerceAtMost(1f)
-            scaleY = scale + maxDragScale * abs(sin(offsetAngle) * offset.y / size.maxDimension) * (height / width).fastCoerceAtMost(1f)
-        },
-        onDrawSurface = {
-            if (tint.isSpecified) {
-                drawRect(tint, blendMode = BlendMode.Hue)
-                drawRect(tint.copy(alpha = 0.35f))
+        layerBlock = if (isInteractive) {
+            {
+                translationX = offset.x
+                translationY = offset.y
+                scaleX = scale
+                scaleY = scale
             }
+        } else null,
+        onDrawSurface = {
+            val tint = Color.White.copy(alpha = 0.15f + (0.05f * progress))
+            drawRect(tint, blendMode = BlendMode.Hue)
+            drawRect(tint.copy(alpha = 0.35f))
         }
     )
-    .border(0.5.dp, Color.White.copy(alpha = 0.25f), shape)
-    .then(interaction.modifier)
-    .then(interaction.gestureModifier)
 }
 
 fun Modifier.liquidGlass(
@@ -96,7 +93,21 @@ fun Modifier.liquidGlass(
     val interactiveHighlight = remember(animationScope) { InteractiveHighlight(animationScope) }
     
     if (isInteractive) {
-        this.drawInteractiveGlass(backdrop, interactiveHighlight, shape, tint)
+        val progress = interactiveHighlight.pressProgress
+        val scale = lerp(1f, 1.05f, progress)
+        val offset = interactiveHighlight.offset
+        
+        this.drawInteractiveGlass(
+            isInteractive = true,
+            backdrop = backdrop,
+            layer = null,
+            progress = progress,
+            scale = scale,
+            offset = offset
+        )
+        .border(0.5.dp, Color.White.copy(alpha = 0.25f), shape)
+        .then(interactiveHighlight.modifier)
+        .then(interactiveHighlight.gestureModifier)
     } else {
         this.drawBackdrop(
             backdrop = backdrop,
