@@ -5,6 +5,7 @@
 
 package com.jay.glossy.ui.screens.playlist
 
+// Standard Imports
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -98,6 +99,8 @@ import androidx.navigation.NavController
 import androidx.palette.graphics.Palette
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+
+// Project Imports
 import com.metrolist.innertube.models.PlaylistItem
 import com.metrolist.innertube.models.SongItem
 import com.jay.glossy.LocalDatabase
@@ -123,22 +126,18 @@ import com.jay.glossy.ui.utils.resize
 import com.jay.glossy.utils.makeTimeString
 import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.viewmodels.OnlinePlaylistViewModel
+
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-// --- MISSING IMPORTS ADDED HERE ---
+// FIXED: HAZE IMPORTS AND NATIVE HAZE EFFECTS
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
-
-import com.kyant.backdrop.rememberBackdrop
-import com.kyant.backdrop.layerBackdrop
-import com.jay.glossy.ui.component.liquidGlass
-import com.jay.glossy.ui.component.LiquidGlassIconButton
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -171,6 +170,8 @@ fun OnlinePlaylistScreen(
     var query by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
 
     var dominantColor by remember { mutableStateOf(Color.Transparent) }
+    
+    // Core Haze State that wraps the entire list and provides blur info
     val hazeState = rememberHazeState()
 
     val filteredSongs = remember(songs, query) {
@@ -237,7 +238,7 @@ fun OnlinePlaylistScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(mutedPaletteBg) 
-                .hazeSource(hazeState) 
+                .hazeSource(hazeState) // Register source for Haze blur
         ) {
             LazyColumn(
                 state = lazyListState,
@@ -304,7 +305,8 @@ fun OnlinePlaylistScreen(
                                 continuation = viewModel.continuation,
                                 mutedPaletteBg = mutedPaletteBg,
                                 onSearchClick = { isSearching = true },
-                                onDominantColorExtracted = { dominantColor = it }
+                                onDominantColorExtracted = { dominantColor = it },
+                                hazeState = hazeState // Passed down for artwork buttons
                             )
                         }
                     }
@@ -581,6 +583,7 @@ private fun OnlinePlaylistHeader(
     mutedPaletteBg: Color,
     onSearchClick: () -> Unit,
     onDominantColorExtracted: (Color) -> Unit,
+    hazeState: HazeState,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -592,15 +595,13 @@ private fun OnlinePlaylistHeader(
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
 
-    val artworkBackdrop = rememberBackdrop(Color.Black)
-
     Column(modifier = modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
         ) {
-            Box(modifier = Modifier.fillMaxSize().layerBackdrop(artworkBackdrop)) {
+            Box(modifier = Modifier.fillMaxSize()) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(playlist.thumbnail?.resize(1080, 1080))
@@ -678,6 +679,7 @@ private fun OnlinePlaylistHeader(
                 }
             }
 
+            // Haze Glass Overlays (Crash-proof)
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -687,16 +689,28 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                LiquidGlassIconButton(
-                    backdrop = artworkBackdrop,
-                    painter = painterResource(R.drawable.arrow_back),
-                    onClick = { navController.navigateUp() }
-                )
+                // Back Button
+                IconButton(
+                    onClick = { navController.navigateUp() },
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .hazeEffect(
+                            state = hazeState,
+                            style = HazeStyle(blurRadius = 24.dp, backgroundColor = Color.Black.copy(alpha = 0.35f))
+                        )
+                ) {
+                    Icon(painterResource(R.drawable.arrow_back), null, tint = Color.White)
+                }
 
                 Row(
                     modifier = Modifier
                         .height(48.dp)
-                        .liquidGlass(artworkBackdrop, RoundedCornerShape(24.dp))
+                        .clip(RoundedCornerShape(24.dp))
+                        .hazeEffect(
+                            state = hazeState,
+                            style = HazeStyle(blurRadius = 24.dp, backgroundColor = Color.Black.copy(alpha = 0.35f))
+                        )
                         .padding(horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
