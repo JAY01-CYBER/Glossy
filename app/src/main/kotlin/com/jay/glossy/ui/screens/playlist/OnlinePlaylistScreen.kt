@@ -128,6 +128,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+// PURE HAZE IMPORTS
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
@@ -166,6 +167,7 @@ fun OnlinePlaylistScreen(
 
     var dominantColor by remember { mutableStateOf(Color.Transparent) }
     
+    // Core Haze State for blur tracking
     val hazeState = remember { HazeState() }
 
     val filteredSongs = remember(songs, query) {
@@ -235,14 +237,8 @@ fun OnlinePlaylistScreen(
         ) {
             LazyColumn(
                 state = lazyListState,
-                // FIXED: Explicitly providing both backgroundColor and tint to resolve HazeStyle ambiguity
-                modifier = Modifier.haze(
-                    state = hazeState, 
-                    style = HazeStyle(
-                        backgroundColor = mutedPaletteBg,
-                        tint = HazeTint(mutedPaletteBg.copy(alpha = 0.55f))
-                    )
-                ), 
+                // FIXED 1: Only state passed to haze parent, no styles allowed here!
+                modifier = Modifier.haze(state = hazeState), 
                 contentPadding = LocalPlayerAwareWindowInsets.current
                     .only(WindowInsetsSides.Bottom)
                     .union(WindowInsets.ime).asPaddingValues().apply { 
@@ -496,12 +492,14 @@ fun OnlinePlaylistScreen(
                             }
                         }
                     },
-                    // FIXED: Explicit tint to avoid HazeStyle ambiguity
+                    // FIXED 2: Used shape and explicit list for tints to clear ambiguity
                     modifier = Modifier.hazeChild(
                         state = hazeState, 
+                        shape = androidx.compose.ui.graphics.RectangleShape,
                         style = HazeStyle(
                             backgroundColor = mutedPaletteBg,
-                            tint = HazeTint(mutedPaletteBg.copy(alpha = 0.55f))
+                            tints = listOf(HazeTint(mutedPaletteBg.copy(alpha = 0.55f))),
+                            blurRadius = 24.dp
                         )
                     ),
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -550,12 +548,14 @@ fun OnlinePlaylistScreen(
                                 }
                             }
                         },
-                        // FIXED: Explicit tint to avoid HazeStyle ambiguity
+                        // FIXED 2: Used shape and explicit list for tints to clear ambiguity
                         modifier = Modifier.hazeChild(
                             state = hazeState, 
+                            shape = androidx.compose.ui.graphics.RectangleShape,
                             style = HazeStyle(
                                 backgroundColor = mutedPaletteBg,
-                                tint = HazeTint(mutedPaletteBg.copy(alpha = 0.55f))
+                                tints = listOf(HazeTint(mutedPaletteBg.copy(alpha = 0.55f))),
+                                blurRadius = 24.dp
                             )
                         ),
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -605,14 +605,8 @@ private fun OnlinePlaylistHeader(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    // FIXED: Explicitly providing both backgroundColor and tint to resolve HazeStyle ambiguity
-                    .haze(
-                        state = artworkHazeState, 
-                        style = HazeStyle(
-                            backgroundColor = Color.Black.copy(alpha = 0.35f),
-                            tint = HazeTint(Color.Black.copy(alpha = 0.35f))
-                        )
-                    )
+                    // FIXED 1: Only state passed to haze parent
+                    .haze(state = artworkHazeState)
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
@@ -700,7 +694,7 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // FIXED: Adding explicit tint to HazeStyle
+                // FIXED 2: Used shape and explicit list for tints
                 IconButton(
                     onClick = { navController.navigateUp() },
                     modifier = Modifier
@@ -708,9 +702,11 @@ private fun OnlinePlaylistHeader(
                         .clip(CircleShape)
                         .hazeChild(
                             state = artworkHazeState, 
+                            shape = CircleShape,
                             style = HazeStyle(
                                 backgroundColor = Color.Black.copy(alpha = 0.35f),
-                                tint = HazeTint(Color.Black.copy(alpha = 0.35f))
+                                tints = listOf(HazeTint(Color.Black.copy(alpha = 0.35f))),
+                                blurRadius = 24.dp
                             )
                         )
                         .background(Color.Black.copy(alpha = 0.2f))
@@ -718,16 +714,18 @@ private fun OnlinePlaylistHeader(
                     Icon(painterResource(R.drawable.arrow_back), null, tint = Color.White)
                 }
 
-                // FIXED: Adding explicit tint to HazeStyle
+                // FIXED 2: Used shape and explicit list for tints
                 Row(
                     modifier = Modifier
                         .height(48.dp)
                         .clip(RoundedCornerShape(24.dp))
                         .hazeChild(
                             state = artworkHazeState, 
+                            shape = RoundedCornerShape(24.dp),
                             style = HazeStyle(
                                 backgroundColor = Color.Black.copy(alpha = 0.35f),
-                                tint = HazeTint(Color.Black.copy(alpha = 0.35f))
+                                tints = listOf(HazeTint(Color.Black.copy(alpha = 0.35f))),
+                                blurRadius = 24.dp
                             )
                         )
                         .background(Color.Black.copy(alpha = 0.2f))
