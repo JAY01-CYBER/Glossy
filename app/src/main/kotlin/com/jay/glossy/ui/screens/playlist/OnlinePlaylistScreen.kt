@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -14,7 +14,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -93,11 +92,10 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.util.fastAny
-import androidx.compose.ui.util.fastForEachReversed
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
+import androidx.palette.graphics.Palette
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.metrolist.innertube.models.PlaylistItem
@@ -122,11 +120,23 @@ import com.jay.glossy.ui.menu.YouTubePlaylistMenu
 import com.jay.glossy.ui.menu.YouTubeSelectionSongMenu
 import com.jay.glossy.ui.menu.YouTubeSongMenu
 import com.jay.glossy.ui.utils.resize
+import com.jay.glossy.utils.makeTimeString
 import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.viewmodels.OnlinePlaylistViewModel
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+
+// --- GLOSSY MAGIC IMPORTS ---
+import com.kyant.backdrop.rememberBackdrop
+import com.kyant.backdrop.layerBackdrop
+import com.jay.glossy.ui.component.liquidGlass
+import com.jay.glossy.ui.component.LiquidGlassIconButton
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -159,12 +169,13 @@ fun OnlinePlaylistScreen(
     var query by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
 
     var dominantColor by remember { mutableStateOf(Color.Transparent) }
+    val hazeState = rememberHazeState()
 
     val filteredSongs = remember(songs, query) {
         if (query.text.isEmpty()) songs.mapIndexed { i, s -> i to s }
         else songs.mapIndexed { i, s -> i to s }.filter {
             it.second.title.contains(query.text, true) ||
-                    it.second.artists.fastAny { a -> a.name.contains(query.text, true) }
+                    it.second.artists.any { a -> a.name.contains(query.text, true) }
         }
     }
 
@@ -204,7 +215,7 @@ fun OnlinePlaylistScreen(
 
     val currentPlaylist = playlist
 
-    // Solid Immersive Background Color (Mixed with Black for premium look)
+    // Background Gradient Muted Effect
     val fallbackColor = Color(0xFF121212)
     val animatedExtractedColor by animateColorAsState(
         targetValue = if (dominantColor == Color.Transparent) fallbackColor else dominantColor,
@@ -212,19 +223,30 @@ fun OnlinePlaylistScreen(
         label = "gradientColor"
     )
     val mutedPaletteBg = lerp(animatedExtractedColor, Color.Black, 0.65f)
+    
+    val dynamicTopPadding = if (isSearching || inSelectMode) {
+        WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp
+    } else {
+        0.dp
+    }
 
-    // Dark theme forces white text and proper contrast
     MaterialTheme(colorScheme = darkColorScheme()) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(mutedPaletteBg) // True Solid Background
+                .background(mutedPaletteBg) 
+                .hazeSource(hazeState) // Register source for Haze TopBar
         ) {
             LazyColumn(
                 state = lazyListState,
                 contentPadding = LocalPlayerAwareWindowInsets.current
                     .only(WindowInsetsSides.Bottom)
-                    .union(WindowInsets.ime).asPaddingValues(),
+                    .union(WindowInsets.ime).asPaddingValues().apply { 
+                        androidx.compose.foundation.layout.PaddingValues(
+                            top = dynamicTopPadding, 
+                            bottom = calculateBottomPadding()
+                        )
+                    },
             ) {
                 if (currentPlaylist == null || songs.isEmpty()) {
                     if (isLoading) {
@@ -261,7 +283,6 @@ fun OnlinePlaylistScreen(
                         }
                     }
                 } else {
-                    // Spacers to prevent cut-offs during search/select mode
                     if (isSearching || inSelectMode) {
                         item {
                             Spacer(
@@ -301,6 +322,7 @@ fun OnlinePlaylistScreen(
                             isPlaying = isPlaying,
                             isSelected = inSelectMode && songItem.id in selection,
                             modifier = Modifier
+                                .padding(top = if (isSearching && index == 0) dynamicTopPadding else 0.dp) 
                                 .combinedClickable(
                                     enabled = !hideExplicit || !songItem.explicit,
                                     onClick = {
@@ -386,7 +408,6 @@ fun OnlinePlaylistScreen(
                 }
             }
 
-            // TopAppBar for Search & Selection Mode (Solid Background)
             if (inSelectMode || isSearching) {
                 TopAppBar(
                     title = {
@@ -460,26 +481,26 @@ fun OnlinePlaylistScreen(
                                 onClick = {
                                     menuState.show {
                                         YouTubeSelectionSongMenu(
-                                            songSelection = filteredSongs.filter { it.second.id in selection }
-                                                .map { it.second },
+                                            songSelection = filteredSongs.filter { it.second.id in selection }.map { it.second },
                                             onDismiss = menuState::dismiss,
                                             clearAction = onExitSelectionMode
                                         )
                                     }
                                 }
                             ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.more_vert),
-                                    contentDescription = null,
-                                    tint = Color.White
-                                )
+                                Icon(painterResource(R.drawable.more_vert), null, tint = Color.White)
                             }
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = mutedPaletteBg)
+                    modifier = Modifier.hazeEffect(hazeState) {
+                        blurEnabled = true
+                        blurRadius = 24.dp
+                        backgroundColor = mutedPaletteBg
+                        tints = listOf(HazeTint(mutedPaletteBg.copy(alpha = 0.55f)))
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                 )
             } else {
-                // Animated TopBar when scrolling normally
                 val showScrolledTopBar by remember {
                     derivedStateOf { lazyListState.firstVisibleItemIndex > 0 }
                 }
@@ -523,8 +544,13 @@ fun OnlinePlaylistScreen(
                                 }
                             }
                         },
-                        // Slightly transparent to emulate a glass overlay over content
-                        colors = TopAppBarDefaults.topAppBarColors(containerColor = mutedPaletteBg.copy(alpha = 0.9f))
+                        modifier = Modifier.hazeEffect(hazeState) {
+                            blurEnabled = true
+                            blurRadius = 24.dp
+                            backgroundColor = mutedPaletteBg
+                            tints = listOf(HazeTint(mutedPaletteBg.copy(alpha = 0.55f)))
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                     )
                 }
             }
@@ -560,50 +586,97 @@ private fun OnlinePlaylistHeader(
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
 
+    // THE MAGIC: Core Backdrop setup for the entire Artwork area
+    val artworkBackdrop = rememberBackdrop(Color.Black)
+
     Column(modifier = modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(1f) // Perfect Square
+                .aspectRatio(1f) // Perfect Square Image
         ) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(playlist.thumbnail?.resize(1080, 1080))
-                    .build(),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                onSuccess = { state ->
-                    try {
-                        val coilImage = state.result.image
-                        val originalBitmap = (coilImage as? coil3.BitmapImage)?.bitmap
-                        if (originalBitmap != null) {
-                            val scaledBitmap = android.graphics.Bitmap.createScaledBitmap(originalBitmap, 1, 1, true)
-                            val color = Color(scaledBitmap.getPixel(0, 0))
-                            scaledBitmap.recycle()
-                            onDominantColorExtracted(color)
+            // SOURCE LAYER: Artwork Image + Shadow Scrim (Behind Glass)
+            Box(modifier = Modifier.fillMaxSize().layerBackdrop(artworkBackdrop)) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(playlist.thumbnail?.resize(1080, 1080))
+                        .build(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    onSuccess = { state ->
+                        try {
+                            val coilImage = state.result.image
+                            val originalBitmap = (coilImage as? coil3.BitmapImage)?.bitmap
+                            if (originalBitmap != null) {
+                                val scaledBitmap = android.graphics.Bitmap.createScaledBitmap(originalBitmap, 1, 1, true)
+                                Palette.from(scaledBitmap).generate { palette ->
+                                    palette?.dominantSwatch?.rgb?.let { colorInt ->
+                                        onDominantColorExtracted(Color(colorInt))
+                                    } ?: palette?.vibrantSwatch?.rgb?.let { colorInt ->
+                                        onDominantColorExtracted(Color(colorInt))
+                                    } ?: palette?.mutedSwatch?.rgb?.let { colorInt ->
+                                        onDominantColorExtracted(Color(colorInt))
+                                    }
+                                }
+                                scaledBitmap.recycle()
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
                         }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                },
-                modifier = Modifier.fillMaxSize()
-            )
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
 
-            // Scrim: Fades the bottom half of the image directly into the solid background
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight(0.5f)
-                    .align(Alignment.BottomCenter)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, mutedPaletteBg),
-                            startY = 0f
+                // Bottom Scrim to make text readable
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.35f)
+                        .align(Alignment.BottomCenter)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(Color.Transparent, mutedPaletteBg),
+                                startY = 0f
+                            )
                         )
+                )
+                
+                // Title & Metadata (Inside source layer so they sit under the buttons)
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp)
+                        .padding(bottom = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = playlist.title,
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.White,
+                        maxLines = 2,
+                        textAlign = TextAlign.Center
                     )
-            )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = playlist.author?.name ?: stringResource(R.string.app_name),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    
+                    Text(
+                        text = "Playlist • 2026",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
 
-            // Floating Top Navigation (Clean Black Translucent Glass)
+            // OVERLAY LAYER: True Liquid Glass Floating Navigation Bar (On top of Artwork)
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -613,24 +686,18 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Back Button 
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.3f))
-                        .clickable { navController.navigateUp() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(painterResource(R.drawable.arrow_back), null, tint = Color.White)
-                }
+                // Back Button (Real 3D Glass using our Component)
+                LiquidGlassIconButton(
+                    backdrop = artworkBackdrop,
+                    painter = painterResource(R.drawable.arrow_back),
+                    onClick = { navController.navigateUp() }
+                )
 
-                // Action Capsule (Like, Search, Menu)
+                // Action Capsule (Real 3D Glass)
                 Row(
                     modifier = Modifier
                         .height(48.dp)
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(Color.Black.copy(alpha = 0.3f))
+                        .liquidGlass(artworkBackdrop, RoundedCornerShape(24.dp))
                         .padding(horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -698,43 +765,9 @@ private fun OnlinePlaylistHeader(
                     }
                 }
             }
-
-            // Title & Metadata
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
-                    .padding(bottom = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = playlist.title,
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color.White,
-                    maxLines = 2,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = playlist.author?.name ?: stringResource(R.string.app_name),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                
-                Text(
-                    text = "Playlist • 2026",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.7f),
-                    textAlign = TextAlign.Center
-                )
-            }
         }
 
-        // --- Simp Music Action Buttons (Correctly Sized) ---
+        // --- Action Controls (Perfect Size, Flat Solid Background) ---
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -747,7 +780,7 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Shuffle Button (48.dp)
+                // Shuffle Button 
                 Box(
                     modifier = Modifier
                         .size(48.dp)
@@ -770,7 +803,7 @@ private fun OnlinePlaylistHeader(
                     Icon(painterResource(R.drawable.shuffle), null, tint = Color.White, modifier = Modifier.size(20.dp))
                 }
 
-                // Play Button (Compact Pill Width)
+                // Play Button 
                 Box(
                     modifier = Modifier
                         .height(48.dp)
@@ -813,7 +846,7 @@ private fun OnlinePlaylistHeader(
                     }
                 }
 
-                // Download Button (48.dp)
+                // Download Button
                 val context = LocalContext.current
                 Box(
                     modifier = Modifier
