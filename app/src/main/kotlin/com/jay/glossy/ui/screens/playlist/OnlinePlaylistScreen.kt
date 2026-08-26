@@ -538,31 +538,28 @@ private fun OnlinePlaylistHeader(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(1f) // Keeps the same boundary
+                .aspectRatio(1f)
                 .offset { IntOffset(0, headerOffset) }
         ) {
-            // Blurred Background Image
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
-                    // Trick: Request a tiny 120x120 image. Stretching it + blurring creates the perfect smooth blob.
                     .data(playlist.thumbnail?.resize(120, 120)) 
                     .build(),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxSize()
-                    .blur(100.dp) // Massive blur
-                    .alpha(0.85f) // High opacity to pop the colors
+                    .blur(100.dp) 
+                    .alpha(0.85f) 
             )
-            // Multi-stop Gradient Mask fading to the background color perfectly
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(
                         Brush.verticalGradient(
-                            0.0f to Color.Transparent, // Top is fully colored
-                            0.6f to MaterialTheme.colorScheme.background.copy(alpha = 0.3f), // Smooth middle fade
-                            1.0f to MaterialTheme.colorScheme.background // Bottom completely fades to background
+                            0.0f to Color.Transparent, 
+                            0.6f to MaterialTheme.colorScheme.background.copy(alpha = 0.3f), 
+                            1.0f to MaterialTheme.colorScheme.background 
                         )
                     )
             )
@@ -574,9 +571,8 @@ private fun OnlinePlaylistHeader(
                 .padding(bottom = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(Modifier.height(20.dp)) // Space for top app bar
+            Spacer(Modifier.height(20.dp)) 
 
-            // Main Artwork - Large and centered (High Quality)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -584,7 +580,7 @@ private fun OnlinePlaylistHeader(
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
-                        .data(playlist.thumbnail?.resize(1080, 1080)) // Original high quality
+                        .data(playlist.thumbnail?.resize(1080, 1080)) 
                         .build(),
                     contentDescription = null,
                     modifier = Modifier
@@ -597,7 +593,6 @@ private fun OnlinePlaylistHeader(
 
             Spacer(Modifier.height(32.dp))
 
-            // Title
             Text(
                 text = playlist.title,
                 style = MaterialTheme.typography.headlineMedium,
@@ -609,7 +604,6 @@ private fun OnlinePlaylistHeader(
 
             Spacer(Modifier.height(8.dp))
 
-            // Total Song and Time Row
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
@@ -650,7 +644,6 @@ private fun OnlinePlaylistHeader(
 
             Spacer(Modifier.height(12.dp))
 
-            // Action Buttons Row (Save, Play, Shuffle)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -658,7 +651,6 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Save Button
                 Surface(
                     onClick = {
                         coroutineScope.launch(Dispatchers.IO) {
@@ -717,7 +709,6 @@ private fun OnlinePlaylistHeader(
                     }
                 }
 
-                // Play Button
                 Box(
                     modifier = Modifier
                         .height(52.dp)
@@ -762,7 +753,6 @@ private fun OnlinePlaylistHeader(
                     }
                 }
 
-                // Shuffle Button
                 Surface(
                     onClick = {
                         if (songs.isNotEmpty()) {
@@ -786,7 +776,7 @@ private fun OnlinePlaylistHeader(
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.shuffle),
-                            contentDescription = stringResource(R.string.shuffle_content_desc),
+                            contentDescription = stringResource(R.string.shuffle),
                             modifier = Modifier.size(22.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -796,7 +786,6 @@ private fun OnlinePlaylistHeader(
 
             Spacer(Modifier.height(16.dp))
 
-            // Author Name
             playlist.author?.name?.let { authorName ->
                 Text(
                     text = authorName,
@@ -808,7 +797,6 @@ private fun OnlinePlaylistHeader(
                 )
             }
 
-            // Description
             val description = playlist.description
             if (!description.isNullOrBlank()) {
                 Spacer(Modifier.height(12.dp))
@@ -820,7 +808,7 @@ private fun OnlinePlaylistHeader(
                     ExpandableText(
                         text = description,
                         collapsedMaxLines = 3,
-                        textAlign = TextAlign.Center,
+                        // textAlign argument removed for Glossy compatibility
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
