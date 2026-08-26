@@ -36,6 +36,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -128,7 +129,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-// PURE HAZE IMPORTS
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
@@ -167,7 +167,6 @@ fun OnlinePlaylistScreen(
 
     var dominantColor by remember { mutableStateOf(Color.Transparent) }
     
-    // Core Haze State for blur tracking
     val hazeState = remember { HazeState() }
 
     val filteredSongs = remember(songs, query) {
@@ -237,7 +236,6 @@ fun OnlinePlaylistScreen(
         ) {
             LazyColumn(
                 state = lazyListState,
-                // FIXED 1: Only state passed to haze parent, no styles allowed here!
                 modifier = Modifier.haze(state = hazeState), 
                 contentPadding = LocalPlayerAwareWindowInsets.current
                     .only(WindowInsetsSides.Bottom)
@@ -492,13 +490,12 @@ fun OnlinePlaylistScreen(
                             }
                         }
                     },
-                    // FIXED 2: Used shape and explicit list for tints to clear ambiguity
                     modifier = Modifier.hazeChild(
                         state = hazeState, 
                         shape = androidx.compose.ui.graphics.RectangleShape,
                         style = HazeStyle(
-                            backgroundColor = mutedPaletteBg,
-                            tints = listOf(HazeTint(mutedPaletteBg.copy(alpha = 0.55f))),
+                            backgroundColor = Color.Transparent,
+                            tints = listOf(HazeTint(mutedPaletteBg.copy(alpha = 0.65f))),
                             blurRadius = 24.dp
                         )
                     ),
@@ -548,13 +545,12 @@ fun OnlinePlaylistScreen(
                                 }
                             }
                         },
-                        // FIXED 2: Used shape and explicit list for tints to clear ambiguity
                         modifier = Modifier.hazeChild(
                             state = hazeState, 
                             shape = androidx.compose.ui.graphics.RectangleShape,
                             style = HazeStyle(
-                                backgroundColor = mutedPaletteBg,
-                                tints = listOf(HazeTint(mutedPaletteBg.copy(alpha = 0.55f))),
+                                backgroundColor = Color.Transparent,
+                                tints = listOf(HazeTint(mutedPaletteBg.copy(alpha = 0.65f))),
                                 blurRadius = 24.dp
                             )
                         ),
@@ -605,7 +601,6 @@ private fun OnlinePlaylistHeader(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    // FIXED 1: Only state passed to haze parent
                     .haze(state = artworkHazeState)
             ) {
                 AsyncImage(
@@ -685,6 +680,7 @@ private fun OnlinePlaylistHeader(
                 }
             }
 
+            // PRO LIQUID GLASS OVERLAYS (Transparent BG + Blur + White Border)
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -694,7 +690,7 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // FIXED 2: Used shape and explicit list for tints
+                // Back Button (Real Glass effect)
                 IconButton(
                     onClick = { navController.navigateUp() },
                     modifier = Modifier
@@ -704,17 +700,21 @@ private fun OnlinePlaylistHeader(
                             state = artworkHazeState, 
                             shape = CircleShape,
                             style = HazeStyle(
-                                backgroundColor = Color.Black.copy(alpha = 0.35f),
-                                tints = listOf(HazeTint(Color.Black.copy(alpha = 0.35f))),
+                                backgroundColor = Color.Transparent,
+                                tints = listOf(HazeTint(Color.Black.copy(alpha = 0.25f))),
                                 blurRadius = 24.dp
                             )
                         )
-                        .background(Color.Black.copy(alpha = 0.2f))
+                        .border(
+                            width = 0.5.dp, 
+                            color = Color.White.copy(alpha = 0.3f), 
+                            shape = CircleShape
+                        )
                 ) {
                     Icon(painterResource(R.drawable.arrow_back), null, tint = Color.White)
                 }
 
-                // FIXED 2: Used shape and explicit list for tints
+                // Action Pill (Real Glass effect)
                 Row(
                     modifier = Modifier
                         .height(48.dp)
@@ -723,12 +723,16 @@ private fun OnlinePlaylistHeader(
                             state = artworkHazeState, 
                             shape = RoundedCornerShape(24.dp),
                             style = HazeStyle(
-                                backgroundColor = Color.Black.copy(alpha = 0.35f),
-                                tints = listOf(HazeTint(Color.Black.copy(alpha = 0.35f))),
+                                backgroundColor = Color.Transparent,
+                                tints = listOf(HazeTint(Color.Black.copy(alpha = 0.25f))),
                                 blurRadius = 24.dp
                             )
                         )
-                        .background(Color.Black.copy(alpha = 0.2f))
+                        .border(
+                            width = 0.5.dp, 
+                            color = Color.White.copy(alpha = 0.3f), 
+                            shape = RoundedCornerShape(24.dp)
+                        )
                         .padding(horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
