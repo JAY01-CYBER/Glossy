@@ -128,10 +128,17 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-// EXACT HAZE 1.1.1 IMPORTS
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.haze
-import dev.chrisbanes.haze.hazeChild
+// EXACT OLD HAZE IMPORTS (No Version Update Needed)
+import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
+
+// LIQUID GLASS & BACKDROP IMPORTS
+import com.kyant.backdrop.rememberBackdrop
+import com.kyant.backdrop.layerBackdrop
+import com.jay.glossy.ui.component.liquidGlass
+import com.jay.glossy.ui.component.LiquidGlassIconButton
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -165,8 +172,8 @@ fun OnlinePlaylistScreen(
 
     var dominantColor by remember { mutableStateOf(Color.Transparent) }
     
-    // Core Haze State for blur tracking
-    val hazeState = remember { HazeState() }
+    // OLD SYNTAX HAZE STATE
+    val hazeState = rememberHazeState(blurEnabled = true)
 
     val filteredSongs = remember(songs, query) {
         if (query.text.isEmpty()) songs.mapIndexed { i, s -> i to s }
@@ -232,13 +239,8 @@ fun OnlinePlaylistScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(mutedPaletteBg) 
-                // FLAT HAZE 1.1.1 SYNTAX
-                .haze(
-                    state = hazeState,
-                    backgroundColor = mutedPaletteBg,
-                    tint = mutedPaletteBg.copy(alpha = 0.55f),
-                    blurRadius = 24.dp
-                )
+                // EXACT OLD HAZE SYNTAX
+                .hazeSource(hazeState) 
         ) {
             LazyColumn(
                 state = lazyListState,
@@ -495,8 +497,13 @@ fun OnlinePlaylistScreen(
                             }
                         }
                     },
-                    // DIRECT CHILD CALL FOR 1.1.1
-                    modifier = Modifier.hazeChild(state = hazeState),
+                    // EXACT OLD HAZE SYNTAX
+                    modifier = Modifier.hazeEffect(hazeState) {
+                        blurEnabled = true
+                        blurRadius = 24.dp
+                        backgroundColor = mutedPaletteBg
+                        tints = listOf(HazeTint(mutedPaletteBg.copy(alpha = 0.55f)))
+                    },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                 )
             } else {
@@ -543,8 +550,13 @@ fun OnlinePlaylistScreen(
                                 }
                             }
                         },
-                        // DIRECT CHILD CALL FOR 1.1.1
-                        modifier = Modifier.hazeChild(state = hazeState),
+                        // EXACT OLD HAZE SYNTAX
+                        modifier = Modifier.hazeEffect(hazeState) {
+                            blurEnabled = true
+                            blurRadius = 24.dp
+                            backgroundColor = mutedPaletteBg
+                            tints = listOf(HazeTint(mutedPaletteBg.copy(alpha = 0.55f)))
+                        },
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                     )
                 }
@@ -581,7 +593,8 @@ private fun OnlinePlaylistHeader(
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
 
-    val artworkHazeState = remember { HazeState() }
+    // EXACT OLD BACKDROP SYNTAX
+    val artworkBackdrop = rememberBackdrop(Color.Black)
 
     Column(modifier = modifier.fillMaxWidth()) {
         Box(
@@ -589,17 +602,8 @@ private fun OnlinePlaylistHeader(
                 .fillMaxWidth()
                 .aspectRatio(1f)
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    // FLAT HAZE 1.1.1 SYNTAX
-                    .haze(
-                        state = artworkHazeState,
-                        backgroundColor = Color.Black.copy(alpha = 0.35f),
-                        tint = Color.Black.copy(alpha = 0.35f),
-                        blurRadius = 24.dp
-                    )
-            ) {
+            // EXACT OLD BACKDROP SYNTAX
+            Box(modifier = Modifier.fillMaxSize().layerBackdrop(artworkBackdrop)) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(playlist.thumbnail?.resize(1080, 1080))
@@ -686,23 +690,18 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // FLAT HAZE CHILD
-                IconButton(
-                    onClick = { navController.navigateUp() },
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .hazeChild(state = artworkHazeState, shape = CircleShape)
-                ) {
-                    Icon(painterResource(R.drawable.arrow_back), null, tint = Color.White)
-                }
+                // EXACT OLD LIQUID GLASS SYNTAX
+                LiquidGlassIconButton(
+                    backdrop = artworkBackdrop,
+                    painter = painterResource(R.drawable.arrow_back),
+                    onClick = { navController.navigateUp() }
+                )
 
-                // FLAT HAZE CHILD
+                // EXACT OLD LIQUID GLASS SYNTAX
                 Row(
                     modifier = Modifier
                         .height(48.dp)
-                        .clip(RoundedCornerShape(24.dp))
-                        .hazeChild(state = artworkHazeState, shape = RoundedCornerShape(24.dp))
+                        .liquidGlass(artworkBackdrop, RoundedCornerShape(24.dp))
                         .padding(horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
