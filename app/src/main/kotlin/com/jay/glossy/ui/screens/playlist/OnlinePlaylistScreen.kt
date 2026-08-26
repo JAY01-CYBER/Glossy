@@ -133,6 +133,7 @@ fun OnlinePlaylistScreen(
     val menuState = LocalMenuState.current
     val haptic = LocalHapticFeedback.current
     val playerConnection = LocalPlayerConnection.current ?: return
+    val database = LocalDatabase.current
     val coroutineScope = rememberCoroutineScope()
 
     val isPlaying by playerConnection.isEffectivelyPlaying.collectAsState()
@@ -153,7 +154,7 @@ fun OnlinePlaylistScreen(
     var isSearching by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
 
-    // Dynamic Color Extraction
+    // State for Dynamic Extracted Color
     var dominantColor by remember { mutableStateOf(Color.Transparent) }
 
     val filteredSongs = remember(songs, query) {
@@ -196,27 +197,69 @@ fun OnlinePlaylistScreen(
         BackHandler(onBack = onExitSelectionMode)
     }
 
-    // Background Gradient Logic (Fades to standard background color)
+    // Color Animation Logic
     val defaultBackground = MaterialTheme.colorScheme.background
-    val animatedExtractedColor by animateColorAsState(
+    val animatedBgColor by animateColorAsState(
         targetValue = if (dominantColor == Color.Transparent) defaultBackground else dominantColor,
         animationSpec = tween(durationMillis = 800),
-        label = "gradientColor"
+        label = "bgColor"
     )
-    // Create a muted version of the extracted color to match Simp Music's background feel
-    val mutedPaletteBg = lerp(animatedExtractedColor, defaultBackground, 0.7f)
+
+    // Database Like/Save Logic hoisted for the floating top bar
+    val onToggleLike = {
+        coroutineScope.launch(Dispatchers.IO) {
+            if (dbPlaylist != null) {
+                database.withTransaction {
+                    val currentPlaylist = dbPlaylist!!.playlist
+                    update(currentPlaylist, playlist!!)
+                    update(currentPlaylist.toggleLike())
+                }
+            } else {
+                database.withTransaction {
+                    val playlistEntity = PlaylistEntity(
+                        name = playlist!!.title,
+                        browseId = playlist!!.id,
+                        thumbnailUrl = playlist!!.thumbnail,
+                        isEditable = playlist!!.isEditable,
+                        remoteSongCount = playlist!!.songCountText?.let {
+                            Regex("""\d+""").find(it)?.value?.toIntOrNull()
+                        },
+                        playEndpointParams = playlist!!.playEndpoint?.params,
+                        shuffleEndpointParams = playlist!!.shuffleEndpoint?.params,
+                        radioEndpointParams = playlist!!.radioEndpoint?.params
+                    ).toggleLike()
+                    insert(playlistEntity)
+                    songs.map { it.toMediaMetadata() }
+                        .onEach { insert(it) }
+                        .mapIndexed { index, song ->
+                            PlaylistSongMap(
+                                songId = song.id,
+                                playlistId = playlistEntity.id,
+                                position = index,
+                                setVideoId = song.setVideoId
+                            )
+                        }
+                        .forEach { insert(it) }
+                }
+            }
+        }
+    }
 
     Box(
-        modifier = Modifier
+        Modifier
             .fillMaxSize()
-            .background(mutedPaletteBg)
+            // Gradient fades from dominant color to regular dark background
+            .background(
+                Brush.verticalGradient(
+                    0.0f to animatedBgColor,
+                    1.0f to MaterialTheme.colorScheme.background
+                )
+            )
     ) {
         LazyColumn(
             state = lazyListState,
-            // Removes top padding so the artwork hits the very top of the screen perfectly
-            contentPadding = LocalPlayerAwareWindowInsets.current
-                .only(WindowInsetsSides.Bottom)
-                .union(WindowInsets.ime).asPaddingValues(),
+            // Only bottom padding so the header image touches the top of the screen perfectly
+            contentPadding = LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Bottom).union(WindowInsets.ime).asPaddingValues(),
         ) {
             if (playlist == null || songs.isEmpty()) {
                 if (isLoading) {
@@ -258,12 +301,8 @@ fun OnlinePlaylistScreen(
                             OnlinePlaylistHeader(
                                 playlist = playlist,
                                 songs = songs,
-                                dbPlaylist = dbPlaylist,
-                                navController = navController,
-                                coroutineScope = coroutineScope,
+                                animatedBgColor = animatedBgColor,
                                 continuation = viewModel.continuation,
-                                mutedPaletteBg = mutedPaletteBg,
-                                onSearchClick = { isSearching = true },
                                 onDominantColorExtracted = { dominantColor = it }
                             )
                         }
@@ -351,8 +390,9 @@ fun OnlinePlaylistScreen(
             }
         }
 
-        // Overlay Solid TopAppBar specifically for Search and Selection Modes
+        // --- Custom Overlay Top Bar ---
         if (inSelectMode || isSearching) {
+            // Standard Solid TopAppBar when searching/selecting
             TopAppBar(
                 title = {
                     if (inSelectMode) {
@@ -364,12 +404,7 @@ fun OnlinePlaylistScreen(
                         TextField(
                             value = query,
                             onValueChange = { query = it },
-                            placeholder = {
-                                Text(
-                                    text = stringResource(R.string.search),
-                                    style = MaterialTheme.typography.titleLarge
-                                )
-                            },
+                            placeholder = { Text(stringResource(R.string.search), style = MaterialTheme.typography.titleLarge) },
                             singleLine = true,
                             textStyle = MaterialTheme.typography.titleLarge,
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
@@ -380,9 +415,7 @@ fun OnlinePlaylistScreen(
                                 unfocusedIndicatorColor = Color.Transparent,
                                 disabledIndicatorColor = Color.Transparent,
                             ),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .focusRequester(focusRequester)
+                            modifier = Modifier.fillMaxWidth().focusRequester(focusRequester)
                         )
                     }
                 },
@@ -397,10 +430,7 @@ fun OnlinePlaylistScreen(
                             }
                         }
                     ) {
-                        Icon(
-                            painter = painterResource(if (inSelectMode) R.drawable.close else R.drawable.arrow_back),
-                            contentDescription = null
-                        )
+                        Icon(painterResource(if (inSelectMode) R.drawable.close else R.drawable.arrow_back), null)
                     }
                 },
                 actions = {
@@ -421,23 +451,75 @@ fun OnlinePlaylistScreen(
                             onClick = {
                                 menuState.show {
                                     YouTubeSelectionSongMenu(
-                                        songSelection = filteredSongs.filter { it.second.id in selection }
-                                            .map { it.second },
+                                        songSelection = filteredSongs.filter { it.second.id in selection }.map { it.second },
                                         onDismiss = menuState::dismiss,
                                         clearAction = onExitSelectionMode
                                     )
                                 }
                             }
                         ) {
-                            Icon(
-                                painter = painterResource(R.drawable.more_vert),
-                                contentDescription = null
-                            )
+                            Icon(painterResource(R.drawable.more_vert), null)
                         }
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+                }
             )
+        } else {
+            // "Simp Music" Floating Top Bar over Image
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.statusBars.only(WindowInsetsSides.Top))
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Floating Back Button
+                Surface(
+                    shape = CircleShape,
+                    color = Color.Black.copy(alpha = 0.3f),
+                    onClick = { navController.navigateUp() },
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(painterResource(R.drawable.arrow_back), null, tint = Color.White)
+                    }
+                }
+
+                // Floating Action Capsule
+                if (playlist != null) {
+                    Row(
+                        modifier = Modifier
+                            .height(48.dp)
+                            .background(Color.Black.copy(alpha = 0.3f), RoundedCornerShape(50))
+                            .padding(horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val isLiked = dbPlaylist?.playlist?.bookmarkedAt != null
+                        IconButton(onClick = { onToggleLike() }) {
+                            Icon(
+                                painter = painterResource(if (isLiked) R.drawable.favorite else R.drawable.favorite_border),
+                                contentDescription = "Like",
+                                tint = if (isLiked) MaterialTheme.colorScheme.error else Color.White
+                            )
+                        }
+                        IconButton(onClick = { isSearching = true }) {
+                            Icon(painterResource(R.drawable.search), contentDescription = "Search", tint = Color.White)
+                        }
+                        IconButton(onClick = {
+                            menuState.show {
+                                YouTubePlaylistMenu(
+                                    playlist = playlist!!,
+                                    songs = songs,
+                                    coroutineScope = coroutineScope,
+                                    onDismiss = menuState::dismiss,
+                                )
+                            }
+                        }) {
+                            Icon(painterResource(R.drawable.more_vert), contentDescription = "More", tint = Color.White)
+                        }
+                    }
+                }
+            }
         }
 
         SnackbarHost(
@@ -452,30 +534,27 @@ fun OnlinePlaylistScreen(
 private fun OnlinePlaylistHeader(
     playlist: PlaylistItem,
     songs: List<SongItem>,
-    dbPlaylist: Playlist?,
-    navController: NavController,
-    coroutineScope: CoroutineScope,
+    animatedBgColor: Color,
     continuation: String?,
-    mutedPaletteBg: Color,
-    onSearchClick: () -> Unit,
     onDominantColorExtracted: (Color) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val database = LocalDatabase.current
-    val menuState = LocalMenuState.current
     val playerConnection = LocalPlayerConnection.current ?: return
     val isPlaying by playerConnection.isEffectivelyPlaying.collectAsState()
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
 
-    Column(modifier = modifier.fillMaxWidth()) {
-        // --- 1. Immersive Full-Bleed Artwork Box ---
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        // Full-Bleed Square Image
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(0.95f) // Matches the tall, nearly square look
+                .aspectRatio(1f) // Square Image
         ) {
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
@@ -488,6 +567,7 @@ private fun OnlinePlaylistHeader(
                         val coilImage = state.result.image
                         val originalBitmap = (coilImage as? coil3.BitmapImage)?.bitmap
                         if (originalBitmap != null) {
+                            // Extract color instantly
                             val scaledBitmap = android.graphics.Bitmap.createScaledBitmap(originalBitmap, 1, 1, true)
                             val color = Color(scaledBitmap.getPixel(0, 0))
                             scaledBitmap.recycle()
@@ -500,164 +580,63 @@ private fun OnlinePlaylistHeader(
                 modifier = Modifier.fillMaxSize()
             )
 
-            // Scrim: Smoothly fades image into the exact mutedPaletteBg
+            // Smooth Gradient Overlay at the bottom to blend into the list
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight(0.6f)
-                    .align(Alignment.BottomCenter)
+                    .fillMaxSize()
                     .background(
                         Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, mutedPaletteBg.copy(alpha = 0.5f), mutedPaletteBg),
-                            startY = 0f
+                            0.5f to Color.Transparent,
+                            1.0f to animatedBgColor // Blends perfectly with the background
                         )
                     )
             )
-
-            // Title & Metadata (Overlaid on bottom of image)
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp)
-                    .padding(bottom = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = playlist.title,
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color.White,
-                    maxLines = 2,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = playlist.author?.name ?: stringResource(R.string.app_name),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = "Playlist • ${playlist.year ?: "2026"}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.7f),
-                    textAlign = TextAlign.Center
-                )
-            }
-
-            // Simp Music Style Floating Action Bar (Overlaid at Top)
-            Row(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
-                    .windowInsetsPadding(WindowInsets.statusBars),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Back Button
-                Surface(
-                    onClick = { navController.navigateUp() },
-                    shape = CircleShape,
-                    color = Color.White.copy(alpha = 0.15f),
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(painterResource(R.drawable.arrow_back), null, tint = Color.White)
-                    }
-                }
-
-                Spacer(Modifier.weight(1f))
-
-                // Action Capsule (Like, Search, Menu)
-                Row(
-                    modifier = Modifier
-                        .height(48.dp)
-                        .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(24.dp))
-                        .padding(horizontal = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val isLiked = dbPlaylist?.playlist?.bookmarkedAt != null
-                    IconButton(onClick = {
-                        coroutineScope.launch(Dispatchers.IO) {
-                            if (dbPlaylist != null) {
-                                database.withTransaction {
-                                    val currentPlaylist = dbPlaylist.playlist
-                                    update(currentPlaylist, playlist)
-                                    update(currentPlaylist.toggleLike())
-                                }
-                            } else {
-                                database.withTransaction {
-                                    val playlistEntity = PlaylistEntity(
-                                        name = playlist.title,
-                                        browseId = playlist.id,
-                                        thumbnailUrl = playlist.thumbnail,
-                                        isEditable = playlist.isEditable,
-                                        remoteSongCount = playlist.songCountText?.let {
-                                            Regex("""\d+""").find(it)?.value?.toIntOrNull()
-                                        },
-                                        playEndpointParams = playlist.playEndpoint?.params,
-                                        shuffleEndpointParams = playlist.shuffleEndpoint?.params,
-                                        radioEndpointParams = playlist.radioEndpoint?.params
-                                    ).toggleLike()
-                                    insert(playlistEntity)
-                                    songs.map { it.toMediaMetadata() }
-                                        .onEach { insert(it) }
-                                        .mapIndexed { index, song ->
-                                            PlaylistSongMap(
-                                                songId = song.id,
-                                                playlistId = playlistEntity.id,
-                                                position = index,
-                                                setVideoId = song.setVideoId
-                                            )
-                                        }
-                                        .forEach { insert(it) }
-                                }
-                            }
-                        }
-                    }) {
-                        Icon(
-                            painter = painterResource(if (isLiked) R.drawable.favorite else R.drawable.favorite_border),
-                            contentDescription = "Like",
-                            tint = if (isLiked) MaterialTheme.colorScheme.error else Color.White
-                        )
-                    }
-
-                    IconButton(onClick = onSearchClick) {
-                        Icon(painterResource(R.drawable.search), "Search", tint = Color.White)
-                    }
-
-                    IconButton(onClick = {
-                        menuState.show {
-                            YouTubePlaylistMenu(
-                                playlist = playlist,
-                                songs = songs,
-                                coroutineScope = coroutineScope,
-                                onDismiss = menuState::dismiss,
-                            )
-                        }
-                    }) {
-                        Icon(painterResource(R.drawable.more_vert), "More", tint = Color.White)
-                    }
-                }
-            }
         }
 
-        // --- 2. Action Controls (Shuffle, Play, Download) ---
+        // Title & Metadata
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp)
+                .padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(Modifier.height(16.dp))
+            Text(
+                text = playlist.title,
+                style = MaterialTheme.typography.headlineLarge, // Large Title
+                fontWeight = FontWeight.ExtraBold,
+                textAlign = TextAlign.Center,
+                color = Color.White,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
 
+            Spacer(Modifier.height(8.dp))
+
+            Text(
+                text = playlist.author?.name ?: stringResource(R.string.app_name),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+
+            Spacer(Modifier.height(4.dp))
+
+            Text(
+                text = "Playlist • 2026",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(Modifier.height(24.dp))
+
+            // Simp Music Action Row: Shuffle, Play, Download
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Shuffle
+                // Shuffle Button (Dark Translucent)
                 Surface(
                     onClick = {
                         if (!isListenTogetherGuest && songs.isNotEmpty()) {
@@ -672,15 +651,15 @@ private fun OnlinePlaylistHeader(
                         }
                     },
                     shape = CircleShape,
-                    color = Color.White.copy(alpha = 0.12f),
+                    color = Color.White.copy(alpha = 0.15f),
                     modifier = Modifier.size(56.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(painterResource(R.drawable.shuffle), null, tint = Color.White, modifier = Modifier.size(22.dp))
+                        Icon(painterResource(R.drawable.shuffle), null, tint = Color.White)
                     }
                 }
 
-                // Play Button (Large White Pill)
+                // Play Button (White Pill Shape)
                 Surface(
                     onClick = {
                         if (!isListenTogetherGuest && songs.isNotEmpty()) {
@@ -698,22 +677,22 @@ private fun OnlinePlaylistHeader(
                     shape = RoundedCornerShape(50),
                     modifier = Modifier
                         .height(56.dp)
-                        .weight(1f)
+                        .weight(1f) // Takes middle space
                 ) {
                     Row(
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        val isThisPlaying = isPlaying && mediaMetadata?.album?.id == playlist.id
                         Icon(
-                            painter = painterResource(if (isThisPlaying) R.drawable.pause else R.drawable.play),
+                            painter = painterResource(
+                                if (isPlaying && mediaMetadata?.album?.id == playlist.id) R.drawable.pause else R.drawable.play
+                            ),
                             contentDescription = null,
-                            tint = Color.Black,
-                            modifier = Modifier.size(24.dp)
+                            tint = Color.Black
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            text = if (isThisPlaying) stringResource(R.string.pause) else stringResource(R.string.play),
+                            text = if (isPlaying && mediaMetadata?.album?.id == playlist.id) stringResource(R.string.pause) else stringResource(R.string.play),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = Color.Black
@@ -721,10 +700,10 @@ private fun OnlinePlaylistHeader(
                     }
                 }
 
-                // Download Button
-                val context = LocalContext.current
+                // Download Button (Dark Translucent)
                 Surface(
                     onClick = {
+                        // Triggers offline caching for all songs in the playlist
                         songs.forEach { song ->
                             val downloadRequest = androidx.media3.exoplayer.offline.DownloadRequest
                                 .Builder(song.id, song.id.toUri())
@@ -740,35 +719,39 @@ private fun OnlinePlaylistHeader(
                         }
                     },
                     shape = CircleShape,
-                    color = Color.White.copy(alpha = 0.12f),
+                    color = Color.White.copy(alpha = 0.15f),
                     modifier = Modifier.size(56.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(painterResource(R.drawable.download), null, tint = Color.White, modifier = Modifier.size(22.dp))
+                        Icon(painterResource(R.drawable.download), null, tint = Color.White)
                     }
                 }
             }
+        }
 
-            Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(16.dp))
 
-            // --- 3. Descriptions and Counts ---
+        // Left Aligned Description and Tracks
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+        ) {
             val description = playlist.description
             if (!description.isNullOrBlank()) {
-                ExpandableText(
+                Text(
                     text = description,
-                    collapsedMaxLines = 3,
-                    modifier = Modifier.fillMaxWidth()
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.8f)
                 )
                 Spacer(Modifier.height(24.dp))
             }
-
             Text(
                 text = "${songs.size} tracks",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = Color.White
             )
-            
             Spacer(Modifier.height(8.dp))
         }
     }
