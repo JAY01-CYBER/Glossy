@@ -101,7 +101,6 @@ import androidx.palette.graphics.Palette
 import coil3.asDrawable
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-import coil3.request.allowHardware
 
 import com.metrolist.innertube.models.PlaylistItem
 import com.metrolist.innertube.models.SongItem
@@ -132,9 +131,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-// TRUE LIQUID GLASS IMPORTS (Kyant v2.0.1 Updated)
-import com.kyant.backdrop.backdrops.layerBackdrop
-import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+// TRUE LIQUID GLASS IMPORTS
+import com.jay.glossy.ui.component.layerBackdrop
+import com.jay.glossy.ui.component.rememberBackdrop
 import com.jay.glossy.ui.component.liquidGlass
 import com.jay.glossy.ui.component.LiquidGlassIconButton
 
@@ -600,8 +599,7 @@ private fun OnlinePlaylistHeader(
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
 
-    // TRUE LIQUID GLASS BACKDROP (Kyant 2.0.1)
-    val artworkBackdrop = rememberLayerBackdrop()
+    val artworkBackdrop = rememberBackdrop(Color.Black)
 
     Column(modifier = modifier.fillMaxWidth()) {
         Box(
@@ -617,7 +615,6 @@ private fun OnlinePlaylistHeader(
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(playlist.thumbnail?.resize(1080, 1080))
-                        .allowHardware(false)
                         .build(),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
