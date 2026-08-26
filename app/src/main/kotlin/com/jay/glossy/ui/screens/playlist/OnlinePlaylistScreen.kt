@@ -128,17 +128,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-// EXACT OLD HAZE IMPORTS (No Version Update Needed)
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
-import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.rememberHazeState
-
-// LIQUID GLASS & BACKDROP IMPORTS
-import com.kyant.backdrop.rememberBackdrop
-import com.kyant.backdrop.layerBackdrop
-import com.jay.glossy.ui.component.liquidGlass
-import com.jay.glossy.ui.component.LiquidGlassIconButton
+// EXACT PURE HAZE IMPORTS
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.haze
+import dev.chrisbanes.haze.hazeChild
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -172,8 +165,8 @@ fun OnlinePlaylistScreen(
 
     var dominantColor by remember { mutableStateOf(Color.Transparent) }
     
-    // OLD SYNTAX HAZE STATE
-    val hazeState = rememberHazeState(blurEnabled = true)
+    // PURE HAZE STATE INIT
+    val hazeState = remember { HazeState() }
 
     val filteredSongs = remember(songs, query) {
         if (query.text.isEmpty()) songs.mapIndexed { i, s -> i to s }
@@ -239,8 +232,8 @@ fun OnlinePlaylistScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(mutedPaletteBg) 
-                // EXACT OLD HAZE SYNTAX
-                .hazeSource(hazeState) 
+                // PURE HAZE RENDERER (NO CUSTOM STYLES)
+                .haze(state = hazeState) 
         ) {
             LazyColumn(
                 state = lazyListState,
@@ -497,13 +490,8 @@ fun OnlinePlaylistScreen(
                             }
                         }
                     },
-                    // EXACT OLD HAZE SYNTAX
-                    modifier = Modifier.hazeEffect(hazeState) {
-                        blurEnabled = true
-                        blurRadius = 24.dp
-                        backgroundColor = mutedPaletteBg
-                        tints = listOf(HazeTint(mutedPaletteBg.copy(alpha = 0.55f)))
-                    },
+                    // PURE HAZE CHILD SYNTAX
+                    modifier = Modifier.hazeChild(state = hazeState),
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                 )
             } else {
@@ -550,13 +538,8 @@ fun OnlinePlaylistScreen(
                                 }
                             }
                         },
-                        // EXACT OLD HAZE SYNTAX
-                        modifier = Modifier.hazeEffect(hazeState) {
-                            blurEnabled = true
-                            blurRadius = 24.dp
-                            backgroundColor = mutedPaletteBg
-                            tints = listOf(HazeTint(mutedPaletteBg.copy(alpha = 0.55f)))
-                        },
+                        // PURE HAZE CHILD SYNTAX
+                        modifier = Modifier.hazeChild(state = hazeState),
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                     )
                 }
@@ -593,92 +576,91 @@ private fun OnlinePlaylistHeader(
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
 
-    // EXACT OLD BACKDROP SYNTAX
-    val artworkBackdrop = rememberBackdrop(Color.Black)
+    // PURE HAZE STATE INIT
+    val artworkHazeState = remember { HazeState() }
 
     Column(modifier = modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
+                // PURE HAZE RENDERER
+                .haze(state = artworkHazeState)
         ) {
-            // EXACT OLD BACKDROP SYNTAX
-            Box(modifier = Modifier.fillMaxSize().layerBackdrop(artworkBackdrop)) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(playlist.thumbnail?.resize(1080, 1080))
-                        .build(),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    onSuccess = { state ->
-                        try {
-                            val coilImage = state.result.image
-                            val originalBitmap = (coilImage as? coil3.BitmapImage)?.bitmap
-                            if (originalBitmap != null) {
-                                val scaledBitmap = android.graphics.Bitmap.createScaledBitmap(originalBitmap, 1, 1, true)
-                                Palette.from(scaledBitmap).generate { palette ->
-                                    palette?.dominantSwatch?.rgb?.let { colorInt ->
-                                        onDominantColorExtracted(Color(colorInt))
-                                    } ?: palette?.vibrantSwatch?.rgb?.let { colorInt ->
-                                        onDominantColorExtracted(Color(colorInt))
-                                    } ?: palette?.mutedSwatch?.rgb?.let { colorInt ->
-                                        onDominantColorExtracted(Color(colorInt))
-                                    }
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(playlist.thumbnail?.resize(1080, 1080))
+                    .build(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                onSuccess = { state ->
+                    try {
+                        val coilImage = state.result.image
+                        val originalBitmap = (coilImage as? coil3.BitmapImage)?.bitmap
+                        if (originalBitmap != null) {
+                            val scaledBitmap = android.graphics.Bitmap.createScaledBitmap(originalBitmap, 1, 1, true)
+                            Palette.from(scaledBitmap).generate { palette ->
+                                palette?.dominantSwatch?.rgb?.let { colorInt ->
+                                    onDominantColorExtracted(Color(colorInt))
+                                } ?: palette?.vibrantSwatch?.rgb?.let { colorInt ->
+                                    onDominantColorExtracted(Color(colorInt))
+                                } ?: palette?.mutedSwatch?.rgb?.let { colorInt ->
+                                    onDominantColorExtracted(Color(colorInt))
                                 }
-                                scaledBitmap.recycle()
                             }
-                        } catch (e: Exception) {
-                            e.printStackTrace()
+                            scaledBitmap.recycle()
                         }
-                    },
-                    modifier = Modifier.fillMaxSize()
-                )
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                },
+                modifier = Modifier.fillMaxSize()
+            )
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .fillMaxHeight(0.35f)
-                        .align(Alignment.BottomCenter)
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, mutedPaletteBg),
-                                startY = 0f
-                            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.35f)
+                    .align(Alignment.BottomCenter)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, mutedPaletteBg),
+                            startY = 0f
                         )
+                    )
+            )
+            
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = playlist.title,
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.White,
+                    maxLines = 2,
+                    textAlign = TextAlign.Center
                 )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = playlist.author?.name ?: stringResource(R.string.app_name),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Spacer(modifier = Modifier.height(2.dp))
                 
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp)
-                        .padding(bottom = 16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = playlist.title,
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color.White,
-                        maxLines = 2,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = playlist.author?.name ?: stringResource(R.string.app_name),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    
-                    Text(
-                        text = "Playlist • 2026",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.7f),
-                        textAlign = TextAlign.Center
-                    )
-                }
+                Text(
+                    text = "Playlist • 2026",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.7f),
+                    textAlign = TextAlign.Center
+                )
             }
 
             Row(
@@ -690,18 +672,25 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // EXACT OLD LIQUID GLASS SYNTAX
-                LiquidGlassIconButton(
-                    backdrop = artworkBackdrop,
-                    painter = painterResource(R.drawable.arrow_back),
-                    onClick = { navController.navigateUp() }
-                )
+                // PURE HAZE CHILD WITH STANDARD ICON BUTTON
+                IconButton(
+                    onClick = { navController.navigateUp() },
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .hazeChild(state = artworkHazeState, shape = CircleShape)
+                        .background(Color.Black.copy(alpha = 0.2f))
+                ) {
+                    Icon(painterResource(R.drawable.arrow_back), null, tint = Color.White)
+                }
 
-                // EXACT OLD LIQUID GLASS SYNTAX
+                // PURE HAZE CHILD FOR ROW
                 Row(
                     modifier = Modifier
                         .height(48.dp)
-                        .liquidGlass(artworkBackdrop, RoundedCornerShape(24.dp))
+                        .clip(RoundedCornerShape(24.dp))
+                        .hazeChild(state = artworkHazeState, shape = RoundedCornerShape(24.dp))
+                        .background(Color.Black.copy(alpha = 0.2f))
                         .padding(horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
