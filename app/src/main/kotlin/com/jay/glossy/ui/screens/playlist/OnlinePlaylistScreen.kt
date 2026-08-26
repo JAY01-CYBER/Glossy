@@ -130,6 +130,7 @@ import kotlinx.coroutines.launch
 
 // EXACT PURE HAZE IMPORTS
 import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.haze
 import dev.chrisbanes.haze.hazeChild
 
@@ -672,24 +673,24 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // PURE HAZE CHILD WITH STANDARD ICON BUTTON
+                // FIXED: Normal Button with Haze Child Effect + Empty Style
                 IconButton(
                     onClick = { navController.navigateUp() },
                     modifier = Modifier
                         .size(48.dp)
                         .clip(CircleShape)
-                        .hazeChild(state = artworkHazeState, shape = CircleShape)
+                        .hazeChild(state = artworkHazeState, shape = CircleShape, style = HazeStyle())
                         .background(Color.Black.copy(alpha = 0.2f))
                 ) {
                     Icon(painterResource(R.drawable.arrow_back), null, tint = Color.White)
                 }
 
-                // PURE HAZE CHILD FOR ROW
+                // FIXED: Normal Row with Haze Child Effect + Empty Style
                 Row(
                     modifier = Modifier
                         .height(48.dp)
                         .clip(RoundedCornerShape(24.dp))
-                        .hazeChild(state = artworkHazeState, shape = RoundedCornerShape(24.dp))
+                        .hazeChild(state = artworkHazeState, shape = RoundedCornerShape(24.dp), style = HazeStyle())
                         .background(Color.Black.copy(alpha = 0.2f))
                         .padding(horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
