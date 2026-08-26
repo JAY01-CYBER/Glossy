@@ -28,8 +28,8 @@ import com.kyant.backdrop.isRuntimeShaderSupported
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
-// EXACT MATCH FOR LiquidGlassTabBar.kt (Modifier Extension)
-fun Modifier.detectPress(onPress: (Offset) -> Unit): Modifier = this.pointerInput(Unit) {
+// EXACT MATCH FOR LiquidGlassTabBar.kt
+suspend fun PointerInputScope.detectPress(onPress: (Offset) -> Unit) {
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
         onPress(down.position)
@@ -43,7 +43,7 @@ fun Modifier.detectPress(onPress: (Offset) -> Unit): Modifier = this.pointerInpu
     }
 }
 
-// EXACT MATCH FOR LiquidGlassTabBar.kt (PointerInputScope Extension)
+// EXACT MATCH FOR LiquidGlassTabBar.kt
 suspend fun PointerInputScope.inspectDragGestures(
     onDragStart: (PointerInputChange) -> Unit = {},
     onDragEnd: () -> Unit = {},
@@ -71,16 +71,6 @@ suspend fun PointerInputScope.inspectDragGestures(
             }
         }
     }
-}
-
-// Modifier variant just in case
-fun Modifier.inspectDragGestures(
-    onDragStart: (PointerInputChange) -> Unit = {},
-    onDragEnd: () -> Unit = {},
-    onDragCancel: () -> Unit = {},
-    onDrag: (PointerInputChange, Offset) -> Unit
-): Modifier = this.pointerInput(Unit) {
-    inspectDragGestures(onDragStart, onDragEnd, onDragCancel, onDrag)
 }
 
 class InteractiveHighlight(
