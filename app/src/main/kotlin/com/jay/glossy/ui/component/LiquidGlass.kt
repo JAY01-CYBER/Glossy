@@ -35,33 +35,25 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.tanh
 
-// --- MOCK BACKDROP REGISTRATION FOR KYANT V2.0.1 ---
-@Composable
-fun rememberBackdrop(color: Color = Color.Unspecified): Backdrop {
-    return remember { Backdrop() }
-}
-
-fun Modifier.layerBackdrop(backdrop: Backdrop): Modifier = this
-
-// --- RESTORED COMPATIBILITY FOR BOTTOM NAVIGATION BARS ---
+// Restored for LiquidGlassAppBottomNavigationBar & TabBar
 @Composable
 fun rememberGlassInteraction(): InteractiveHighlight {
     val animationScope = rememberCoroutineScope()
     return remember(animationScope) { InteractiveHighlight(animationScope) }
 }
 
-// Exactly matches the signature expected by LiquidGlassAppBottomNavigationBar
+// EXACT MATCH FOR LiquidGlassAppBottomNavigationBar.kt:167
 fun Modifier.drawInteractiveGlass(
     isInteractive: Boolean,
     backdrop: Backdrop,
     layer: androidx.compose.ui.graphics.layer.GraphicsLayer?,
     progress: Float,
-    scale: Float,
-    offset: androidx.compose.ui.geometry.Offset
+    shape: Shape,
+    interaction: InteractiveHighlight
 ): Modifier = composed {
     this.drawBackdrop(
         backdrop = backdrop,
-        shape = { androidx.compose.ui.graphics.RectangleShape },
+        shape = { shape },
         effects = {
             vibrancy()
             blur(16f.dp.toPx())
@@ -69,10 +61,21 @@ fun Modifier.drawInteractiveGlass(
         },
         layerBlock = if (isInteractive) {
             {
-                translationX = offset.x
-                translationY = offset.y
-                scaleX = scale
-                scaleY = scale
+                val width = size.width
+                val height = size.height
+                val scale = lerp(1f, 1f + 4f.dp.toPx() / size.height, progress)
+                
+                val maxOffset = size.minDimension
+                val initialDerivative = 0.05f
+                val offset = interaction.offset
+                
+                translationX = maxOffset * tanh(initialDerivative * offset.x / maxOffset)
+                translationY = maxOffset * tanh(initialDerivative * offset.y / maxOffset)
+                
+                val maxDragScale = 4f.dp.toPx() / size.height
+                val offsetAngle = atan2(offset.y, offset.x)
+                scaleX = scale + maxDragScale * abs(cos(offsetAngle) * offset.x / size.maxDimension) * (width / height).fastCoerceAtMost(1f)
+                scaleY = scale + maxDragScale * abs(sin(offsetAngle) * offset.y / size.maxDimension) * (height / width).fastCoerceAtMost(1f)
             }
         } else null,
         onDrawSurface = {
@@ -81,6 +84,9 @@ fun Modifier.drawInteractiveGlass(
             drawRect(tint.copy(alpha = 0.35f))
         }
     )
+    .border(0.5.dp, Color.White.copy(alpha = 0.25f), shape)
+    .then(interaction.modifier)
+    .then(interaction.gestureModifier)
 }
 
 fun Modifier.liquidGlass(
@@ -94,20 +100,14 @@ fun Modifier.liquidGlass(
     
     if (isInteractive) {
         val progress = interactiveHighlight.pressProgress
-        val scale = lerp(1f, 1.05f, progress)
-        val offset = interactiveHighlight.offset
-        
         this.drawInteractiveGlass(
             isInteractive = true,
             backdrop = backdrop,
             layer = null,
             progress = progress,
-            scale = scale,
-            offset = offset
+            shape = shape,
+            interaction = interactiveHighlight
         )
-        .border(0.5.dp, Color.White.copy(alpha = 0.25f), shape)
-        .then(interactiveHighlight.modifier)
-        .then(interactiveHighlight.gestureModifier)
     } else {
         this.drawBackdrop(
             backdrop = backdrop,
