@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -147,9 +147,6 @@ fun OnlinePlaylistScreen(
     val isLoadingMore by viewModel.isLoadingMore.collectAsState()
     val error by viewModel.error.collectAsState()
 
-    // Note: Glossy doesn't have relatedItems API natively in this ViewModel, so it has been safely removed
-    // to match your build constraints.
-    
     val hideExplicit by rememberPreference(key = HideExplicitKey, defaultValue = false)
 
     val lazyListState = rememberLazyListState()
@@ -271,7 +268,6 @@ fun OnlinePlaylistScreen(
                             isActive = mediaMetadata?.id == songItem.id,
                             isPlaying = isPlaying,
                             isSelected = inSelectMode && songItem.id in selection,
-                            // listItemShape is removed to fix compilation error for Glossy
                             modifier = Modifier
                                 .combinedClickable(
                                     enabled = !hideExplicit || !songItem.explicit,
@@ -310,7 +306,6 @@ fun OnlinePlaylistScreen(
                                 } else {
                                     IconButton(onClick = {
                                         menuState.show {
-                                            // NavigationController argument removed for Glossy compatibility
                                             YouTubeSongMenu(songItem, menuState::dismiss)
                                         }
                                     }) {
@@ -539,37 +534,35 @@ private fun OnlinePlaylistHeader(
         modifier = modifier
             .fillMaxWidth()
     ) {
-        // The fix for the harsh cutoff line:
-        // A Box containing the blurred image, overlaid with a seamless gradient fade to the background color.
+        // VIVI BLUR TRICK: Ultra-smooth "gradient blob" effect using tiny resize + huge blur
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(1f) // Keeps the same square boundary as Vivi
+                .aspectRatio(1f) // Keeps the same boundary
                 .offset { IntOffset(0, headerOffset) }
         ) {
-            // Blurred Image
+            // Blurred Background Image
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
-                    .data(playlist.thumbnail?.resize(1080, 1080))
+                    // Trick: Request a tiny 120x120 image. Stretching it + blurring creates the perfect smooth blob.
+                    .data(playlist.thumbnail?.resize(120, 120)) 
                     .build(),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxSize()
-                    .blur(80.dp)
-                    .alpha(0.6f)
+                    .blur(100.dp) // Massive blur
+                    .alpha(0.85f) // High opacity to pop the colors
             )
-            // Gradient Mask fading to the bottom
+            // Multi-stop Gradient Mask fading to the background color perfectly
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(
                         Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                MaterialTheme.colorScheme.background
-                            ),
-                            startY = 0f
+                            0.0f to Color.Transparent, // Top is fully colored
+                            0.6f to MaterialTheme.colorScheme.background.copy(alpha = 0.3f), // Smooth middle fade
+                            1.0f to MaterialTheme.colorScheme.background // Bottom completely fades to background
                         )
                     )
             )
@@ -583,14 +576,15 @@ private fun OnlinePlaylistHeader(
         ) {
             Spacer(Modifier.height(20.dp)) // Space for top app bar
 
-            // Artwork - Large and centered
+            // Main Artwork - Large and centered (High Quality)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 48.dp)
             ) {
                 AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current).data(playlist.thumbnail)
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(playlist.thumbnail?.resize(1080, 1080)) // Original high quality
                         .build(),
                     contentDescription = null,
                     modifier = Modifier
@@ -615,7 +609,7 @@ private fun OnlinePlaylistHeader(
 
             Spacer(Modifier.height(8.dp))
 
-            // Total Song and Time Row (Plain Text, no badges)
+            // Total Song and Time Row
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
@@ -656,7 +650,7 @@ private fun OnlinePlaylistHeader(
 
             Spacer(Modifier.height(12.dp))
 
-            // Action Buttons Row (Save, Play, Shuffle) - Expressive Design
+            // Action Buttons Row (Save, Play, Shuffle)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -723,7 +717,7 @@ private fun OnlinePlaylistHeader(
                     }
                 }
 
-                // Play Button (Large Pill-Shaped Capsule)
+                // Play Button
                 Box(
                     modifier = Modifier
                         .height(52.dp)
@@ -792,7 +786,7 @@ private fun OnlinePlaylistHeader(
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.shuffle),
-                            contentDescription = stringResource(R.string.shuffle),
+                            contentDescription = stringResource(R.string.shuffle_content_desc),
                             modifier = Modifier.size(22.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -826,6 +820,7 @@ private fun OnlinePlaylistHeader(
                     ExpandableText(
                         text = description,
                         collapsedMaxLines = 3,
+                        textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
