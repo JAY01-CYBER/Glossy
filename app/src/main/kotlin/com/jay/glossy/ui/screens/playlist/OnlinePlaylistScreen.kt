@@ -96,9 +96,12 @@ import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.palette.graphics.Palette
+
+// COIL 3 IMPORTS FIXED
 import coil3.asDrawable
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import coil3.request.allowHardware
 
 import com.metrolist.innertube.models.PlaylistItem
 import com.metrolist.innertube.models.SongItem
@@ -129,9 +132,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-// TRUE LIQUID GLASS IMPORTS
-import com.kyant.backdrop.layerBackdrop
-import com.kyant.backdrop.rememberBackdrop
+// TRUE LIQUID GLASS IMPORTS (Kyant v2.0.1 Updated)
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.jay.glossy.ui.component.liquidGlass
 import com.jay.glossy.ui.component.LiquidGlassIconButton
 
@@ -597,7 +600,8 @@ private fun OnlinePlaylistHeader(
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
 
-    val artworkBackdrop = rememberBackdrop(Color.Black)
+    // TRUE LIQUID GLASS BACKDROP (Kyant 2.0.1)
+    val artworkBackdrop = rememberLayerBackdrop()
 
     Column(modifier = modifier.fillMaxWidth()) {
         Box(
@@ -619,7 +623,7 @@ private fun OnlinePlaylistHeader(
                     contentScale = ContentScale.Crop,
                     onSuccess = { state ->
                         try {
-                            val drawable = state.result.image.coil3::asDrawable.invoke(context.resources)
+                            val drawable = state.result.image.asDrawable(context.resources)
                             val bitmap = (drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
                                 ?: android.graphics.Bitmap.createBitmap(100, 100, android.graphics.Bitmap.Config.ARGB_8888).also { b ->
                                     val canvas = android.graphics.Canvas(b)
