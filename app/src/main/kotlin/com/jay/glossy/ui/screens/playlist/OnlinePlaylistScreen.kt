@@ -123,16 +123,18 @@ import com.jay.glossy.ui.utils.resize
 import com.jay.glossy.utils.makeTimeString
 import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.viewmodels.OnlinePlaylistViewModel
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
-import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-// --- GLOSSY MAGIC IMPORTS ---
+// --- MISSING IMPORTS ADDED HERE ---
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
+
 import com.kyant.backdrop.rememberBackdrop
 import com.kyant.backdrop.layerBackdrop
 import com.jay.glossy.ui.component.liquidGlass
@@ -193,7 +195,8 @@ fun OnlinePlaylistScreen(
     LaunchedEffect(isSearching) { if (isSearching) focusRequester.requestFocus() }
 
     LaunchedEffect(filteredSongs) {
-        selection.fastForEachReversed { songId ->
+        val currentSelection = selection.toList()
+        currentSelection.reversed().forEach { songId ->
             if (filteredSongs.find { it.second.id == songId } == null) {
                 selection.remove(songId)
             }
@@ -215,7 +218,6 @@ fun OnlinePlaylistScreen(
 
     val currentPlaylist = playlist
 
-    // Background Gradient Muted Effect
     val fallbackColor = Color(0xFF121212)
     val animatedExtractedColor by animateColorAsState(
         targetValue = if (dominantColor == Color.Transparent) fallbackColor else dominantColor,
@@ -235,7 +237,7 @@ fun OnlinePlaylistScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(mutedPaletteBg) 
-                .hazeSource(hazeState) // Register source for Haze TopBar
+                .hazeSource(hazeState) 
         ) {
             LazyColumn(
                 state = lazyListState,
@@ -492,12 +494,14 @@ fun OnlinePlaylistScreen(
                             }
                         }
                     },
-                    modifier = Modifier.hazeEffect(hazeState) {
-                        blurEnabled = true
-                        blurRadius = 24.dp
-                        backgroundColor = mutedPaletteBg
-                        tints = listOf(HazeTint(mutedPaletteBg.copy(alpha = 0.55f)))
-                    },
+                    modifier = Modifier.hazeEffect(
+                        state = hazeState,
+                        style = HazeStyle(
+                            blurRadius = 24.dp,
+                            backgroundColor = mutedPaletteBg,
+                            tint = HazeTint(mutedPaletteBg.copy(alpha = 0.55f))
+                        )
+                    ),
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                 )
             } else {
@@ -544,12 +548,14 @@ fun OnlinePlaylistScreen(
                                 }
                             }
                         },
-                        modifier = Modifier.hazeEffect(hazeState) {
-                            blurEnabled = true
-                            blurRadius = 24.dp
-                            backgroundColor = mutedPaletteBg
-                            tints = listOf(HazeTint(mutedPaletteBg.copy(alpha = 0.55f)))
-                        },
+                        modifier = Modifier.hazeEffect(
+                            state = hazeState,
+                            style = HazeStyle(
+                                blurRadius = 24.dp,
+                                backgroundColor = mutedPaletteBg,
+                                tint = HazeTint(mutedPaletteBg.copy(alpha = 0.55f))
+                            )
+                        ),
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                     )
                 }
@@ -586,16 +592,14 @@ private fun OnlinePlaylistHeader(
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
 
-    // THE MAGIC: Core Backdrop setup for the entire Artwork area
     val artworkBackdrop = rememberBackdrop(Color.Black)
 
     Column(modifier = modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(1f) // Perfect Square Image
+                .aspectRatio(1f)
         ) {
-            // SOURCE LAYER: Artwork Image + Shadow Scrim (Behind Glass)
             Box(modifier = Modifier.fillMaxSize().layerBackdrop(artworkBackdrop)) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
@@ -627,7 +631,6 @@ private fun OnlinePlaylistHeader(
                     modifier = Modifier.fillMaxSize()
                 )
 
-                // Bottom Scrim to make text readable
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -641,7 +644,6 @@ private fun OnlinePlaylistHeader(
                         )
                 )
                 
-                // Title & Metadata (Inside source layer so they sit under the buttons)
                 Column(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
@@ -676,7 +678,6 @@ private fun OnlinePlaylistHeader(
                 }
             }
 
-            // OVERLAY LAYER: True Liquid Glass Floating Navigation Bar (On top of Artwork)
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -686,14 +687,12 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Back Button (Real 3D Glass using our Component)
                 LiquidGlassIconButton(
                     backdrop = artworkBackdrop,
                     painter = painterResource(R.drawable.arrow_back),
                     onClick = { navController.navigateUp() }
                 )
 
-                // Action Capsule (Real 3D Glass)
                 Row(
                     modifier = Modifier
                         .height(48.dp)
@@ -767,7 +766,6 @@ private fun OnlinePlaylistHeader(
             }
         }
 
-        // --- Action Controls (Perfect Size, Flat Solid Background) ---
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -780,7 +778,6 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Shuffle Button 
                 Box(
                     modifier = Modifier
                         .size(48.dp)
@@ -803,7 +800,6 @@ private fun OnlinePlaylistHeader(
                     Icon(painterResource(R.drawable.shuffle), null, tint = Color.White, modifier = Modifier.size(20.dp))
                 }
 
-                // Play Button 
                 Box(
                     modifier = Modifier
                         .height(48.dp)
@@ -846,7 +842,6 @@ private fun OnlinePlaylistHeader(
                     }
                 }
 
-                // Download Button
                 val context = LocalContext.current
                 Box(
                     modifier = Modifier
