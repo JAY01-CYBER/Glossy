@@ -129,6 +129,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.haze
 import dev.chrisbanes.haze.hazeChild
 
@@ -164,7 +165,6 @@ fun OnlinePlaylistScreen(
 
     var dominantColor by remember { mutableStateOf(Color.Transparent) }
     
-    // Core Haze State for blur tracking
     val hazeState = remember { HazeState() }
 
     val filteredSongs = remember(songs, query) {
@@ -231,12 +231,11 @@ fun OnlinePlaylistScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(mutedPaletteBg) 
-                // CRASH FIX: Modifier.haze REMOVED from the parent Box
         ) {
             LazyColumn(
                 state = lazyListState,
-                // CRASH FIX: Modifier.haze ADDED to the LazyColumn (Content Sibling)
-                modifier = Modifier.haze(state = hazeState), 
+                // FIXED: Adding backgroundColor to parent haze
+                modifier = Modifier.haze(state = hazeState, backgroundColor = mutedPaletteBg), 
                 contentPadding = LocalPlayerAwareWindowInsets.current
                     .only(WindowInsetsSides.Bottom)
                     .union(WindowInsets.ime).asPaddingValues().apply { 
@@ -490,7 +489,8 @@ fun OnlinePlaylistScreen(
                             }
                         }
                     },
-                    modifier = Modifier.hazeChild(state = hazeState),
+                    // FIXED: Adding backgroundColor to HazeStyle
+                    modifier = Modifier.hazeChild(state = hazeState, style = HazeStyle(backgroundColor = mutedPaletteBg)),
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                 )
             } else {
@@ -537,7 +537,8 @@ fun OnlinePlaylistScreen(
                                 }
                             }
                         },
-                        modifier = Modifier.hazeChild(state = hazeState),
+                        // FIXED: Adding backgroundColor to HazeStyle
+                        modifier = Modifier.hazeChild(state = hazeState, style = HazeStyle(backgroundColor = mutedPaletteBg)),
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                     )
                 }
@@ -581,13 +582,12 @@ private fun OnlinePlaylistHeader(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
-                // CRASH FIX: Modifier.haze REMOVED from the parent Box
         ) {
-            // CRASH FIX: Modifier.haze ADDED to inner Box (Content Sibling)
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .haze(state = artworkHazeState)
+                    // FIXED: Adding backgroundColor to parent haze
+                    .haze(state = artworkHazeState, backgroundColor = Color.Black.copy(alpha = 0.35f))
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
@@ -666,7 +666,6 @@ private fun OnlinePlaylistHeader(
                 }
             }
 
-            // SIBLING OVERLAY: Buttons (HazeChild applied here)
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -676,22 +675,24 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // FIXED: Adding backgroundColor to HazeStyle
                 IconButton(
                     onClick = { navController.navigateUp() },
                     modifier = Modifier
                         .size(48.dp)
                         .clip(CircleShape)
-                        .hazeChild(state = artworkHazeState)
+                        .hazeChild(state = artworkHazeState, style = HazeStyle(backgroundColor = Color.Black.copy(alpha = 0.35f)))
                         .background(Color.Black.copy(alpha = 0.2f))
                 ) {
                     Icon(painterResource(R.drawable.arrow_back), null, tint = Color.White)
                 }
 
+                // FIXED: Adding backgroundColor to HazeStyle
                 Row(
                     modifier = Modifier
                         .height(48.dp)
                         .clip(RoundedCornerShape(24.dp))
-                        .hazeChild(state = artworkHazeState)
+                        .hazeChild(state = artworkHazeState, style = HazeStyle(backgroundColor = Color.Black.copy(alpha = 0.35f)))
                         .background(Color.Black.copy(alpha = 0.2f))
                         .padding(horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
