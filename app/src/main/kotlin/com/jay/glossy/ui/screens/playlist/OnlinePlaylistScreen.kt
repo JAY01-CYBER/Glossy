@@ -98,6 +98,7 @@ import androidx.navigation.NavController
 import androidx.palette.graphics.Palette
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+
 import com.metrolist.innertube.models.PlaylistItem
 import com.metrolist.innertube.models.SongItem
 import com.jay.glossy.LocalDatabase
@@ -127,13 +128,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-// FIXED: Correct Haze 1.1.1 Imports
+// EXACT HAZE 1.1.1 IMPORTS
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.haze
-import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.rememberHazeState
+import dev.chrisbanes.haze.hazeChild
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -167,8 +165,8 @@ fun OnlinePlaylistScreen(
 
     var dominantColor by remember { mutableStateOf(Color.Transparent) }
     
-    // Core Haze State for blur
-    val hazeState = rememberHazeState()
+    // Core Haze State for blur tracking
+    val hazeState = remember { HazeState() }
 
     val filteredSongs = remember(songs, query) {
         if (query.text.isEmpty()) songs.mapIndexed { i, s -> i to s }
@@ -234,7 +232,13 @@ fun OnlinePlaylistScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(mutedPaletteBg) 
-                .hazeSource(state = hazeState) // FIXED Source Call
+                // FLAT HAZE 1.1.1 SYNTAX
+                .haze(
+                    state = hazeState,
+                    backgroundColor = mutedPaletteBg,
+                    tint = mutedPaletteBg.copy(alpha = 0.55f),
+                    blurRadius = 24.dp
+                )
         ) {
             LazyColumn(
                 state = lazyListState,
@@ -301,8 +305,7 @@ fun OnlinePlaylistScreen(
                                 continuation = viewModel.continuation,
                                 mutedPaletteBg = mutedPaletteBg,
                                 onSearchClick = { isSearching = true },
-                                onDominantColorExtracted = { dominantColor = it },
-                                hazeState = hazeState
+                                onDominantColorExtracted = { dominantColor = it }
                             )
                         }
                     }
@@ -492,14 +495,8 @@ fun OnlinePlaylistScreen(
                             }
                         }
                     },
-                    modifier = Modifier.haze( // FIXED Modifier.haze with explicit tints list
-                        state = hazeState,
-                        style = HazeStyle(
-                            blurRadius = 24.dp,
-                            backgroundColor = mutedPaletteBg,
-                            tints = listOf(HazeTint(mutedPaletteBg.copy(alpha = 0.55f)))
-                        )
-                    ),
+                    // DIRECT CHILD CALL FOR 1.1.1
+                    modifier = Modifier.hazeChild(state = hazeState),
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                 )
             } else {
@@ -546,14 +543,8 @@ fun OnlinePlaylistScreen(
                                 }
                             }
                         },
-                        modifier = Modifier.haze( // FIXED Modifier.haze with explicit tints list
-                            state = hazeState,
-                            style = HazeStyle(
-                                blurRadius = 24.dp,
-                                backgroundColor = mutedPaletteBg,
-                                tints = listOf(HazeTint(mutedPaletteBg.copy(alpha = 0.55f)))
-                            )
-                        ),
+                        // DIRECT CHILD CALL FOR 1.1.1
+                        modifier = Modifier.hazeChild(state = hazeState),
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                     )
                 }
@@ -579,7 +570,6 @@ private fun OnlinePlaylistHeader(
     mutedPaletteBg: Color,
     onSearchClick: () -> Unit,
     onDominantColorExtracted: (Color) -> Unit,
-    hazeState: HazeState,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -591,13 +581,25 @@ private fun OnlinePlaylistHeader(
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
 
+    val artworkHazeState = remember { HazeState() }
+
     Column(modifier = modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
         ) {
-            Box(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    // FLAT HAZE 1.1.1 SYNTAX
+                    .haze(
+                        state = artworkHazeState,
+                        backgroundColor = Color.Black.copy(alpha = 0.35f),
+                        tint = Color.Black.copy(alpha = 0.35f),
+                        blurRadius = 24.dp
+                    )
+            ) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(playlist.thumbnail?.resize(1080, 1080))
@@ -684,37 +686,23 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // FIXED: Direct Haze modifier for back button
+                // FLAT HAZE CHILD
                 IconButton(
                     onClick = { navController.navigateUp() },
                     modifier = Modifier
                         .size(48.dp)
                         .clip(CircleShape)
-                        .haze(
-                            state = hazeState,
-                            style = HazeStyle(
-                                blurRadius = 24.dp, 
-                                backgroundColor = Color.Black.copy(alpha = 0.35f),
-                                tints = listOf(HazeTint(Color.Black.copy(alpha = 0.35f)))
-                            )
-                        )
+                        .hazeChild(state = artworkHazeState, shape = CircleShape)
                 ) {
                     Icon(painterResource(R.drawable.arrow_back), null, tint = Color.White)
                 }
 
-                // FIXED: Direct Haze modifier for actions pill
+                // FLAT HAZE CHILD
                 Row(
                     modifier = Modifier
                         .height(48.dp)
                         .clip(RoundedCornerShape(24.dp))
-                        .haze(
-                            state = hazeState,
-                            style = HazeStyle(
-                                blurRadius = 24.dp, 
-                                backgroundColor = Color.Black.copy(alpha = 0.35f),
-                                tints = listOf(HazeTint(Color.Black.copy(alpha = 0.35f)))
-                            )
-                        )
+                        .hazeChild(state = artworkHazeState, shape = RoundedCornerShape(24.dp))
                         .padding(horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
