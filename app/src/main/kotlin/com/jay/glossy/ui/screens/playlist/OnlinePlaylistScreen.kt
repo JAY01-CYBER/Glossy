@@ -97,7 +97,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.palette.graphics.Palette
 
-// COIL 3
 import coil3.asDrawable
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -131,7 +130,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-// TRUE LIQUID GLASS IMPORTS (Fixed to Local Wrapper)
+// FIXED LOCAL BACKDROP IMPORTS (Exact Match)
 import com.jay.glossy.ui.component.layerBackdrop
 import com.jay.glossy.ui.component.rememberBackdrop
 import com.jay.glossy.ui.component.liquidGlass
@@ -599,6 +598,7 @@ private fun OnlinePlaylistHeader(
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
 
+    // Exact Local Mocks
     val artworkBackdrop = rememberBackdrop()
 
     Column(modifier = modifier.fillMaxWidth()) {
