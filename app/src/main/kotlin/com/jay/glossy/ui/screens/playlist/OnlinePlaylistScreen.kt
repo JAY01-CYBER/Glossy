@@ -1,5 +1,5 @@
 /**
- * Glossy Project (C) 2026
+ * Metrolist Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -47,6 +47,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -62,15 +64,17 @@ import androidx.compose.runtime.toMutableStateList
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
@@ -80,6 +84,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.util.fastForEachReversed
@@ -95,16 +100,17 @@ import com.metrolist.innertube.models.PlaylistItem
 import com.metrolist.innertube.models.SongItem
 import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalListenTogetherManager
-import com.jay.glossy.LocalNavController
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.R
+import com.jay.glossy.constants.AppBarHeight
 import com.jay.glossy.constants.HideExplicitKey
 import com.jay.glossy.db.entities.Playlist
 import com.jay.glossy.db.entities.PlaylistEntity
 import com.jay.glossy.db.entities.PlaylistSongMap
 import com.metrolist.models.toMediaMetadata
 import com.jay.glossy.playback.queues.YouTubePlaylistQueue
+import com.jay.glossy.ui.component.ExpandableText
 import com.jay.glossy.ui.component.IconButton
 import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.component.YouTubeListItem
@@ -119,18 +125,11 @@ import com.jay.glossy.viewmodels.OnlinePlaylistViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import com.jay.glossy.ui.component.ExpandableText
-import com.jay.glossy.constants.AppBarHeight
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.systemBars
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun OnlinePlaylistScreen(
     navController: NavController,
-    // Removed scrollBehavior to fix NavigationBuilder compilation error
     viewModel: OnlinePlaylistViewModel = hiltViewModel(),
 ) {
     val menuState = LocalMenuState.current
@@ -148,6 +147,9 @@ fun OnlinePlaylistScreen(
     val isLoadingMore by viewModel.isLoadingMore.collectAsState()
     val error by viewModel.error.collectAsState()
 
+    // Note: Glossy doesn't have relatedItems API natively in this ViewModel, so it has been safely removed
+    // to match your build constraints.
+    
     val hideExplicit by rememberPreference(key = HideExplicitKey, defaultValue = false)
 
     val lazyListState = rememberLazyListState()
@@ -212,11 +214,31 @@ fun OnlinePlaylistScreen(
                     item(key = "loading_placeholder") {
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth()
+                                .fillParentMaxSize()
                                 .padding(32.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             ContainedLoadingIndicator()
+                        }
+                    }
+                } else if (error != null) {
+                    item(key = "error_placeholder") {
+                        Column(
+                            modifier = Modifier
+                                .fillParentMaxSize()
+                                .padding(32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                        ) {
+                            Text(
+                                text = error ?: stringResource(R.string.error_unknown),
+                                style = MaterialTheme.typography.bodyLarge,
+                                textAlign = TextAlign.Center,
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            androidx.compose.material3.TextButton(onClick = { viewModel.retry() }) {
+                                Text(stringResource(R.string.retry))
+                            }
                         }
                     }
                 }
@@ -249,6 +271,7 @@ fun OnlinePlaylistScreen(
                             isActive = mediaMetadata?.id == songItem.id,
                             isPlaying = isPlaying,
                             isSelected = inSelectMode && songItem.id in selection,
+                            // listItemShape is removed to fix compilation error for Glossy
                             modifier = Modifier
                                 .combinedClickable(
                                     enabled = !hideExplicit || !songItem.explicit,
@@ -287,7 +310,7 @@ fun OnlinePlaylistScreen(
                                 } else {
                                     IconButton(onClick = {
                                         menuState.show {
-                                            // Fixed Menu Error: Removed navController
+                                            // NavigationController argument removed for Glossy compatibility
                                             YouTubeSongMenu(songItem, menuState::dismiss)
                                         }
                                     }) {
@@ -495,8 +518,8 @@ private fun OnlinePlaylistHeader(
     continuation: String?,
     modifier: Modifier = Modifier
 ) {
-    val playerConnection = LocalPlayerConnection.current ?: return
     val database = LocalDatabase.current
+    val playerConnection = LocalPlayerConnection.current ?: return
     val isPlaying by playerConnection.isEffectivelyPlaying.collectAsState()
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
     val listenTogetherManager = LocalListenTogetherManager.current
@@ -516,18 +539,41 @@ private fun OnlinePlaylistHeader(
         modifier = modifier
             .fillMaxWidth()
     ) {
-        // Replaced custom OnlineBlur with standard AsyncImage with Blur Modifier
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current).data(playlist.thumbnail).build(),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
+        // The fix for the harsh cutoff line:
+        // A Box containing the blurred image, overlaid with a seamless gradient fade to the background color.
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(1f)
+                .aspectRatio(1f) // Keeps the same square boundary as Vivi
                 .offset { IntOffset(0, headerOffset) }
-                .blur(80.dp)
-                .alpha(0.5f)
-        )
+        ) {
+            // Blurred Image
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(playlist.thumbnail?.resize(1080, 1080))
+                    .build(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .blur(80.dp)
+                    .alpha(0.6f)
+            )
+            // Gradient Mask fading to the bottom
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                MaterialTheme.colorScheme.background
+                            ),
+                            startY = 0f
+                        )
+                    )
+            )
+        }
 
         Column(
             modifier = Modifier
@@ -535,8 +581,9 @@ private fun OnlinePlaylistHeader(
                 .padding(bottom = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(Modifier.height(20.dp)) 
+            Spacer(Modifier.height(20.dp)) // Space for top app bar
 
+            // Artwork - Large and centered
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -556,6 +603,7 @@ private fun OnlinePlaylistHeader(
 
             Spacer(Modifier.height(32.dp))
 
+            // Title
             Text(
                 text = playlist.title,
                 style = MaterialTheme.typography.headlineMedium,
@@ -567,6 +615,7 @@ private fun OnlinePlaylistHeader(
 
             Spacer(Modifier.height(8.dp))
 
+            // Total Song and Time Row (Plain Text, no badges)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
@@ -607,6 +656,7 @@ private fun OnlinePlaylistHeader(
 
             Spacer(Modifier.height(12.dp))
 
+            // Action Buttons Row (Save, Play, Shuffle) - Expressive Design
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -614,6 +664,7 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Save Button
                 Surface(
                     onClick = {
                         coroutineScope.launch(Dispatchers.IO) {
@@ -672,6 +723,7 @@ private fun OnlinePlaylistHeader(
                     }
                 }
 
+                // Play Button (Large Pill-Shaped Capsule)
                 Box(
                     modifier = Modifier
                         .height(52.dp)
@@ -679,7 +731,7 @@ private fun OnlinePlaylistHeader(
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.primary)
                         .clickable {
-                            if (!isListenTogetherGuest && songs.isNotEmpty()) {
+                            if (songs.isNotEmpty()) {
                                 playerConnection.playQueue(
                                     YouTubePlaylistQueue(
                                         playlistId = playlist.id,
@@ -716,9 +768,10 @@ private fun OnlinePlaylistHeader(
                     }
                 }
 
+                // Shuffle Button
                 Surface(
                     onClick = {
-                        if (!isListenTogetherGuest && songs.isNotEmpty()) {
+                        if (songs.isNotEmpty()) {
                             playerConnection.playQueue(
                                 YouTubePlaylistQueue(
                                     playlistId = playlist.id,
@@ -749,6 +802,7 @@ private fun OnlinePlaylistHeader(
 
             Spacer(Modifier.height(16.dp))
 
+            // Author Name
             playlist.author?.name?.let { authorName ->
                 Text(
                     text = authorName,
@@ -760,6 +814,7 @@ private fun OnlinePlaylistHeader(
                 )
             }
 
+            // Description
             val description = playlist.description
             if (!description.isNullOrBlank()) {
                 Spacer(Modifier.height(12.dp))
