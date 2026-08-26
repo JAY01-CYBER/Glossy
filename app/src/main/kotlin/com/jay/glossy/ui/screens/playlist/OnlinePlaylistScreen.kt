@@ -130,6 +130,7 @@ import kotlinx.coroutines.launch
 
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.haze
 import dev.chrisbanes.haze.hazeChild
 
@@ -234,8 +235,14 @@ fun OnlinePlaylistScreen(
         ) {
             LazyColumn(
                 state = lazyListState,
-                // FIXED: Adding backgroundColor to parent haze
-                modifier = Modifier.haze(state = hazeState, backgroundColor = mutedPaletteBg), 
+                // FIXED: Explicitly providing both backgroundColor and tint to resolve HazeStyle ambiguity
+                modifier = Modifier.haze(
+                    state = hazeState, 
+                    style = HazeStyle(
+                        backgroundColor = mutedPaletteBg,
+                        tint = HazeTint(mutedPaletteBg.copy(alpha = 0.55f))
+                    )
+                ), 
                 contentPadding = LocalPlayerAwareWindowInsets.current
                     .only(WindowInsetsSides.Bottom)
                     .union(WindowInsets.ime).asPaddingValues().apply { 
@@ -489,8 +496,14 @@ fun OnlinePlaylistScreen(
                             }
                         }
                     },
-                    // FIXED: Adding backgroundColor to HazeStyle
-                    modifier = Modifier.hazeChild(state = hazeState, style = HazeStyle(backgroundColor = mutedPaletteBg)),
+                    // FIXED: Explicit tint to avoid HazeStyle ambiguity
+                    modifier = Modifier.hazeChild(
+                        state = hazeState, 
+                        style = HazeStyle(
+                            backgroundColor = mutedPaletteBg,
+                            tint = HazeTint(mutedPaletteBg.copy(alpha = 0.55f))
+                        )
+                    ),
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                 )
             } else {
@@ -537,8 +550,14 @@ fun OnlinePlaylistScreen(
                                 }
                             }
                         },
-                        // FIXED: Adding backgroundColor to HazeStyle
-                        modifier = Modifier.hazeChild(state = hazeState, style = HazeStyle(backgroundColor = mutedPaletteBg)),
+                        // FIXED: Explicit tint to avoid HazeStyle ambiguity
+                        modifier = Modifier.hazeChild(
+                            state = hazeState, 
+                            style = HazeStyle(
+                                backgroundColor = mutedPaletteBg,
+                                tint = HazeTint(mutedPaletteBg.copy(alpha = 0.55f))
+                            )
+                        ),
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                     )
                 }
@@ -586,8 +605,14 @@ private fun OnlinePlaylistHeader(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    // FIXED: Adding backgroundColor to parent haze
-                    .haze(state = artworkHazeState, backgroundColor = Color.Black.copy(alpha = 0.35f))
+                    // FIXED: Explicitly providing both backgroundColor and tint to resolve HazeStyle ambiguity
+                    .haze(
+                        state = artworkHazeState, 
+                        style = HazeStyle(
+                            backgroundColor = Color.Black.copy(alpha = 0.35f),
+                            tint = HazeTint(Color.Black.copy(alpha = 0.35f))
+                        )
+                    )
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
@@ -675,24 +700,36 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // FIXED: Adding backgroundColor to HazeStyle
+                // FIXED: Adding explicit tint to HazeStyle
                 IconButton(
                     onClick = { navController.navigateUp() },
                     modifier = Modifier
                         .size(48.dp)
                         .clip(CircleShape)
-                        .hazeChild(state = artworkHazeState, style = HazeStyle(backgroundColor = Color.Black.copy(alpha = 0.35f)))
+                        .hazeChild(
+                            state = artworkHazeState, 
+                            style = HazeStyle(
+                                backgroundColor = Color.Black.copy(alpha = 0.35f),
+                                tint = HazeTint(Color.Black.copy(alpha = 0.35f))
+                            )
+                        )
                         .background(Color.Black.copy(alpha = 0.2f))
                 ) {
                     Icon(painterResource(R.drawable.arrow_back), null, tint = Color.White)
                 }
 
-                // FIXED: Adding backgroundColor to HazeStyle
+                // FIXED: Adding explicit tint to HazeStyle
                 Row(
                     modifier = Modifier
                         .height(48.dp)
                         .clip(RoundedCornerShape(24.dp))
-                        .hazeChild(state = artworkHazeState, style = HazeStyle(backgroundColor = Color.Black.copy(alpha = 0.35f)))
+                        .hazeChild(
+                            state = artworkHazeState, 
+                            style = HazeStyle(
+                                backgroundColor = Color.Black.copy(alpha = 0.35f),
+                                tint = HazeTint(Color.Black.copy(alpha = 0.35f))
+                            )
+                        )
                         .background(Color.Black.copy(alpha = 0.2f))
                         .padding(horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
