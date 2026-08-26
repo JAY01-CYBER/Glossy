@@ -5,7 +5,6 @@
 
 package com.jay.glossy.ui.screens.playlist
 
-// Standard Imports
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -99,8 +98,6 @@ import androidx.navigation.NavController
 import androidx.palette.graphics.Palette
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-
-// Project Imports
 import com.metrolist.innertube.models.PlaylistItem
 import com.metrolist.innertube.models.SongItem
 import com.jay.glossy.LocalDatabase
@@ -126,16 +123,15 @@ import com.jay.glossy.ui.utils.resize
 import com.jay.glossy.utils.makeTimeString
 import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.viewmodels.OnlinePlaylistViewModel
-
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-// FIXED: HAZE IMPORTS AND NATIVE HAZE EFFECTS
+// FIXED: Correct Haze 1.1.1 Imports
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.haze
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 
@@ -171,7 +167,7 @@ fun OnlinePlaylistScreen(
 
     var dominantColor by remember { mutableStateOf(Color.Transparent) }
     
-    // Core Haze State that wraps the entire list and provides blur info
+    // Core Haze State for blur
     val hazeState = rememberHazeState()
 
     val filteredSongs = remember(songs, query) {
@@ -238,7 +234,7 @@ fun OnlinePlaylistScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(mutedPaletteBg) 
-                .hazeSource(hazeState) // Register source for Haze blur
+                .hazeSource(state = hazeState) // FIXED Source Call
         ) {
             LazyColumn(
                 state = lazyListState,
@@ -306,7 +302,7 @@ fun OnlinePlaylistScreen(
                                 mutedPaletteBg = mutedPaletteBg,
                                 onSearchClick = { isSearching = true },
                                 onDominantColorExtracted = { dominantColor = it },
-                                hazeState = hazeState // Passed down for artwork buttons
+                                hazeState = hazeState
                             )
                         }
                     }
@@ -496,12 +492,12 @@ fun OnlinePlaylistScreen(
                             }
                         }
                     },
-                    modifier = Modifier.hazeEffect(
+                    modifier = Modifier.haze( // FIXED Modifier.haze with explicit tints list
                         state = hazeState,
                         style = HazeStyle(
                             blurRadius = 24.dp,
                             backgroundColor = mutedPaletteBg,
-                            tint = HazeTint(mutedPaletteBg.copy(alpha = 0.55f))
+                            tints = listOf(HazeTint(mutedPaletteBg.copy(alpha = 0.55f)))
                         )
                     ),
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -550,12 +546,12 @@ fun OnlinePlaylistScreen(
                                 }
                             }
                         },
-                        modifier = Modifier.hazeEffect(
+                        modifier = Modifier.haze( // FIXED Modifier.haze with explicit tints list
                             state = hazeState,
                             style = HazeStyle(
                                 blurRadius = 24.dp,
                                 backgroundColor = mutedPaletteBg,
-                                tint = HazeTint(mutedPaletteBg.copy(alpha = 0.55f))
+                                tints = listOf(HazeTint(mutedPaletteBg.copy(alpha = 0.55f)))
                             )
                         ),
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -679,7 +675,6 @@ private fun OnlinePlaylistHeader(
                 }
             }
 
-            // Haze Glass Overlays (Crash-proof)
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -689,27 +684,36 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Back Button
+                // FIXED: Direct Haze modifier for back button
                 IconButton(
                     onClick = { navController.navigateUp() },
                     modifier = Modifier
                         .size(48.dp)
                         .clip(CircleShape)
-                        .hazeEffect(
+                        .haze(
                             state = hazeState,
-                            style = HazeStyle(blurRadius = 24.dp, backgroundColor = Color.Black.copy(alpha = 0.35f))
+                            style = HazeStyle(
+                                blurRadius = 24.dp, 
+                                backgroundColor = Color.Black.copy(alpha = 0.35f),
+                                tints = listOf(HazeTint(Color.Black.copy(alpha = 0.35f)))
+                            )
                         )
                 ) {
                     Icon(painterResource(R.drawable.arrow_back), null, tint = Color.White)
                 }
 
+                // FIXED: Direct Haze modifier for actions pill
                 Row(
                     modifier = Modifier
                         .height(48.dp)
                         .clip(RoundedCornerShape(24.dp))
-                        .hazeEffect(
+                        .haze(
                             state = hazeState,
-                            style = HazeStyle(blurRadius = 24.dp, backgroundColor = Color.Black.copy(alpha = 0.35f))
+                            style = HazeStyle(
+                                blurRadius = 24.dp, 
+                                backgroundColor = Color.Black.copy(alpha = 0.35f),
+                                tints = listOf(HazeTint(Color.Black.copy(alpha = 0.35f)))
+                            )
                         )
                         .padding(horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
