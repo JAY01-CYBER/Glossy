@@ -97,6 +97,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.palette.graphics.Palette
 
+// COIL 3
 import coil3.asDrawable
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -130,8 +131,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-// OFFICIAL KYANT IMPORTS
-import com.kyant.backdrop.rememberBackdrop
+// TRUE LIQUID GLASS IMPORTS (Fixed for Kyant 2.0.1)
+import com.kyant.backdrop.layerBackdrop
+import com.kyant.backdrop.rememberLayerBackdrop
 import com.jay.glossy.ui.component.liquidGlass
 import com.jay.glossy.ui.component.LiquidGlassIconButton
 
@@ -597,7 +599,8 @@ private fun OnlinePlaylistHeader(
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
 
-    val artworkBackdrop = rememberBackdrop()
+    // PERFECT KYANT 2.0.1 COMPATIBILITY
+    val artworkBackdrop = rememberLayerBackdrop()
 
     Column(modifier = modifier.fillMaxWidth()) {
         Box(
@@ -606,18 +609,19 @@ private fun OnlinePlaylistHeader(
                 .aspectRatio(1f)
         ) {
             Box(
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .fillMaxSize()
+                    .layerBackdrop(artworkBackdrop) 
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(playlist.thumbnail?.resize(1080, 1080))
-                        .allowHardware(false)
                         .build(),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     onSuccess = { state ->
                         try {
-                            val drawable = state.result.image.coil3::asDrawable.invoke(context.resources)
+                            val drawable = state.result.image.asDrawable(context.resources)
                             val bitmap = (drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
                                 ?: android.graphics.Bitmap.createBitmap(100, 100, android.graphics.Bitmap.Config.ARGB_8888).also { b ->
                                     val canvas = android.graphics.Canvas(b)
@@ -684,6 +688,7 @@ private fun OnlinePlaylistHeader(
                 }
             }
 
+            // LIQUID GLASS BUTTONS 
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
