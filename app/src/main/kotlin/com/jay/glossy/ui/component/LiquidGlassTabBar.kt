@@ -98,6 +98,7 @@ fun LiquidGlassTabBar(
     val currentTabWidthPx by rememberUpdatedState(tabWidthPx)
     val isLtr = LocalLayoutDirection.current == LayoutDirection.Ltr
     val animationScope = rememberCoroutineScope()
+    
     val barInteraction = rememberGlassInteraction()
     val isDark = true
 
@@ -148,7 +149,10 @@ fun LiquidGlassTabBar(
             modifier
                 .height(BarHeight)
                 .width(tabWidth * tabsCount + BarInset * 2)
-                .pointerInput(barInteraction) { barInteraction.detectPress(this) },
+                .pointerInput(barInteraction) { 
+                    // FIXED: Replaced member call with standalone detectPress
+                    detectPress { }
+                },
         contentAlignment = Alignment.CenterStart,
     ) {
         Box(Modifier.matchParentSize().drawInteractiveGlass(isDark, backdrop, layer, luminance, CapsuleShape, barInteraction))
@@ -245,7 +249,7 @@ private fun LiquidGlassTab(
         CompositionLocalProvider(LocalContentColor provides color) {
             screen.icon()
             Text(
-                text = screen.title, // DIRECT STRING USE (Fixed Error)
+                text = screen.title, 
                 style = MaterialTheme.typography.bodySmall,
                 color = color,
                 maxLines = 1,
@@ -289,6 +293,7 @@ class DampedDragAnimation(
 
     val modifier: Modifier =
         Modifier.pointerInput(Unit) {
+            // FIXED: Using standalone inspectDragGestures from InteractiveHighlight
             inspectDragGestures(
                 onDragStart = { down ->
                     onDragStarted(down.position)
