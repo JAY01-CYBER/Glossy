@@ -1,6 +1,6 @@
 /**
  * Glossy Project (C) 2026
- * Interactive Physics - Based on Kyant0 Catalog
+ * Interactive Physics - Restored Compatibility for TabBar
  */
 package com.jay.glossy.ui.component
 
@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerInputChange
+import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.util.fastCoerceIn
 import com.kyant.backdrop.RuntimeShader
@@ -27,11 +28,26 @@ import com.kyant.backdrop.isRuntimeShaderSupported
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
-// Restored inspectDragGestures for TabBar and BottomNavigationBar
+// Restored for TabBar compatibility
+suspend fun PointerInputScope.detectPress(onPress: (Offset) -> Unit) {
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+        onPress(down.position)
+        var isDown = true
+        while (isDown) {
+            val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+            if (event.changes.all { !it.pressed }) {
+                isDown = false
+            }
+        }
+    }
+}
+
+// Restored for TabBar compatibility
 fun Modifier.inspectDragGestures(
-    onDragStart: (PointerInputChange) -> Unit,
-    onDragEnd: () -> Unit,
-    onDragCancel: () -> Unit,
+    onDragStart: (PointerInputChange) -> Unit = {},
+    onDragEnd: () -> Unit = {},
+    onDragCancel: () -> Unit = {},
     onDrag: (PointerInputChange, Offset) -> Unit
 ): Modifier = this.pointerInput(Unit) {
     awaitEachGesture {
@@ -43,7 +59,8 @@ fun Modifier.inspectDragGestures(
             val change = event.changes.firstOrNull()
             if (change != null) {
                 if (change.pressed) {
-                    onDrag(change, change.position)
+                    val dragAmount = change.position - change.previousPosition
+                    onDrag(change, dragAmount)
                 } else {
                     isDown = false
                     onDragEnd()
