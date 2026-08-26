@@ -128,7 +128,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-// EXACT PURE HAZE IMPORTS
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.haze
 import dev.chrisbanes.haze.hazeChild
@@ -165,7 +164,7 @@ fun OnlinePlaylistScreen(
 
     var dominantColor by remember { mutableStateOf(Color.Transparent) }
     
-    // PURE HAZE STATE INIT
+    // Core Haze State for blur tracking
     val hazeState = remember { HazeState() }
 
     val filteredSongs = remember(songs, query) {
@@ -232,10 +231,12 @@ fun OnlinePlaylistScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(mutedPaletteBg) 
-                .haze(state = hazeState) 
+                // CRASH FIX: Modifier.haze REMOVED from the parent Box
         ) {
             LazyColumn(
                 state = lazyListState,
+                // CRASH FIX: Modifier.haze ADDED to the LazyColumn (Content Sibling)
+                modifier = Modifier.haze(state = hazeState), 
                 contentPadding = LocalPlayerAwareWindowInsets.current
                     .only(WindowInsetsSides.Bottom)
                     .union(WindowInsets.ime).asPaddingValues().apply { 
@@ -573,7 +574,6 @@ private fun OnlinePlaylistHeader(
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
 
-    // PURE HAZE STATE INIT
     val artworkHazeState = remember { HazeState() }
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -581,85 +581,92 @@ private fun OnlinePlaylistHeader(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
-                // PURE HAZE RENDERER
-                .haze(state = artworkHazeState)
+                // CRASH FIX: Modifier.haze REMOVED from the parent Box
         ) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(playlist.thumbnail?.resize(1080, 1080))
-                    .build(),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                onSuccess = { state ->
-                    try {
-                        val coilImage = state.result.image
-                        val originalBitmap = (coilImage as? coil3.BitmapImage)?.bitmap
-                        if (originalBitmap != null) {
-                            val scaledBitmap = android.graphics.Bitmap.createScaledBitmap(originalBitmap, 1, 1, true)
-                            Palette.from(scaledBitmap).generate { palette ->
-                                palette?.dominantSwatch?.rgb?.let { colorInt ->
-                                    onDominantColorExtracted(Color(colorInt))
-                                } ?: palette?.vibrantSwatch?.rgb?.let { colorInt ->
-                                    onDominantColorExtracted(Color(colorInt))
-                                } ?: palette?.mutedSwatch?.rgb?.let { colorInt ->
-                                    onDominantColorExtracted(Color(colorInt))
-                                }
-                            }
-                            scaledBitmap.recycle()
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                },
-                modifier = Modifier.fillMaxSize()
-            )
-
+            // CRASH FIX: Modifier.haze ADDED to inner Box (Content Sibling)
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight(0.35f)
-                    .align(Alignment.BottomCenter)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, mutedPaletteBg),
-                            startY = 0f
-                        )
-                    )
-            )
-            
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
-                    .padding(bottom = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .fillMaxSize()
+                    .haze(state = artworkHazeState)
             ) {
-                Text(
-                    text = playlist.title,
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color.White,
-                    maxLines = 2,
-                    textAlign = TextAlign.Center
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(playlist.thumbnail?.resize(1080, 1080))
+                        .build(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    onSuccess = { state ->
+                        try {
+                            val coilImage = state.result.image
+                            val originalBitmap = (coilImage as? coil3.BitmapImage)?.bitmap
+                            if (originalBitmap != null) {
+                                val scaledBitmap = android.graphics.Bitmap.createScaledBitmap(originalBitmap, 1, 1, true)
+                                Palette.from(scaledBitmap).generate { palette ->
+                                    palette?.dominantSwatch?.rgb?.let { colorInt ->
+                                        onDominantColorExtracted(Color(colorInt))
+                                    } ?: palette?.vibrantSwatch?.rgb?.let { colorInt ->
+                                        onDominantColorExtracted(Color(colorInt))
+                                    } ?: palette?.mutedSwatch?.rgb?.let { colorInt ->
+                                        onDominantColorExtracted(Color(colorInt))
+                                    }
+                                }
+                                scaledBitmap.recycle()
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize()
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = playlist.author?.name ?: stringResource(R.string.app_name),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.35f)
+                        .align(Alignment.BottomCenter)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(Color.Transparent, mutedPaletteBg),
+                                startY = 0f
+                            )
+                        )
                 )
-                Spacer(modifier = Modifier.height(2.dp))
                 
-                Text(
-                    text = "Playlist • 2026",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.7f),
-                    textAlign = TextAlign.Center
-                )
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp)
+                        .padding(bottom = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = playlist.title,
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.White,
+                        maxLines = 2,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = playlist.author?.name ?: stringResource(R.string.app_name),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    
+                    Text(
+                        text = "Playlist • 2026",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
 
+            // SIBLING OVERLAY: Buttons (HazeChild applied here)
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -669,7 +676,6 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // FLAT HAZE CHILD (NO SHAPE ARGUMENT)
                 IconButton(
                     onClick = { navController.navigateUp() },
                     modifier = Modifier
@@ -681,7 +687,6 @@ private fun OnlinePlaylistHeader(
                     Icon(painterResource(R.drawable.arrow_back), null, tint = Color.White)
                 }
 
-                // FLAT HAZE CHILD FOR ROW (NO SHAPE ARGUMENT)
                 Row(
                     modifier = Modifier
                         .height(48.dp)
