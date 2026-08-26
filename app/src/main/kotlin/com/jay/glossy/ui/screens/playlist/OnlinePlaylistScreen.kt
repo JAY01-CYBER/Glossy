@@ -28,8 +28,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -194,11 +199,9 @@ fun OnlinePlaylistScreen(
         BackHandler(onBack = onExitSelectionMode)
     }
 
-    // THE FIX: Assigning the delegated property to a local immutable variable
-    // This allows the Kotlin compiler to smart-cast it safely down below.
     val currentPlaylist = playlist
 
-    // Color Animation Logic
+    // Immersive Dark Theme Logic
     val fallbackColor = Color(0xFF121212)
     val animatedExtractedColor by animateColorAsState(
         targetValue = if (dominantColor == Color.Transparent) fallbackColor else dominantColor,
@@ -206,8 +209,15 @@ fun OnlinePlaylistScreen(
         label = "gradientColor"
     )
     val mutedPaletteBg = lerp(animatedExtractedColor, Color.Black, 0.6f)
+    
+    // Calculate dynamic top padding to fix the "search song cut-off" issue (Screenshot 2)
+    val dynamicTopPadding = if (isSearching || inSelectMode) {
+        WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp
+    } else {
+        0.dp
+    }
 
-    // Wrap the entire screen in a Dark Color Scheme so list items and text are ALWAYS white/readable
+    // Wrap the entire screen in Dark Mode to force white text/icons
     MaterialTheme(colorScheme = darkColorScheme()) {
         Box(
             modifier = Modifier
@@ -216,9 +226,15 @@ fun OnlinePlaylistScreen(
         ) {
             LazyColumn(
                 state = lazyListState,
+                // Top padding pushes list down ONLY during search/select mode so songs don't cut off
                 contentPadding = LocalPlayerAwareWindowInsets.current
                     .only(WindowInsetsSides.Bottom)
-                    .union(WindowInsets.ime).asPaddingValues(),
+                    .union(WindowInsets.ime).asPaddingValues().apply { 
+                        androidx.compose.foundation.layout.PaddingValues(
+                            top = dynamicTopPadding, 
+                            bottom = calculateBottomPadding()
+                        )
+                    },
             ) {
                 if (currentPlaylist == null || songs.isEmpty()) {
                     if (isLoading) {
@@ -286,6 +302,7 @@ fun OnlinePlaylistScreen(
                             isPlaying = isPlaying,
                             isSelected = inSelectMode && songItem.id in selection,
                             modifier = Modifier
+                                .padding(top = if (isSearching && index == 0) dynamicTopPadding else 0.dp) // Extra safety pad for first item
                                 .combinedClickable(
                                     enabled = !hideExplicit || !songItem.explicit,
                                     onClick = {
@@ -371,7 +388,7 @@ fun OnlinePlaylistScreen(
                 }
             }
 
-            // Overlay Solid TopAppBar specifically for Search and Selection Modes
+            // --- Solid Top App Bar for Search/Selection (Fix for 3rd Photo) ---
             if (inSelectMode || isSearching) {
                 TopAppBar(
                     title = {
@@ -461,8 +478,57 @@ fun OnlinePlaylistScreen(
                             }
                         }
                     },
+                    // Solid background ensures items scrolling behind it are hidden completely
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = mutedPaletteBg)
                 )
+            } else {
+                // Animated Top Bar when scrolled down (outside search)
+                val showScrolledTopBar by remember {
+                    derivedStateOf { lazyListState.firstVisibleItemIndex > 0 }
+                }
+                AnimatedVisibility(
+                    visible = showScrolledTopBar,
+                    enter = fadeIn() + slideInVertically(),
+                    exit = fadeOut() + slideOutVertically(),
+                    modifier = Modifier.align(Alignment.TopCenter)
+                ) {
+                    TopAppBar(
+                        title = {
+                            Text(
+                                text = currentPlaylist?.title ?: "",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = Color.White,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = { navController.navigateUp() }) {
+                                Icon(painterResource(R.drawable.arrow_back), null, tint = Color.White)
+                            }
+                        },
+                        actions = {
+                            IconButton(onClick = { isSearching = true }) {
+                                Icon(painterResource(R.drawable.search), "Search", tint = Color.White)
+                            }
+                            if (currentPlaylist != null) {
+                                IconButton(onClick = {
+                                    menuState.show {
+                                        YouTubePlaylistMenu(
+                                            playlist = currentPlaylist,
+                                            songs = songs,
+                                            coroutineScope = coroutineScope,
+                                            onDismiss = menuState::dismiss,
+                                        )
+                                    }
+                                }) {
+                                    Icon(painterResource(R.drawable.more_vert), "More", tint = Color.White)
+                                }
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(containerColor = mutedPaletteBg)
+                    )
+                }
             }
 
             SnackbarHost(
@@ -497,10 +563,11 @@ private fun OnlinePlaylistHeader(
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
 
     Column(modifier = modifier.fillMaxWidth()) {
+        // --- 1. Immersive Full-Bleed Artwork Box ---
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(1f) // Perfect Square
+                .aspectRatio(1f) 
         ) {
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
@@ -525,6 +592,7 @@ private fun OnlinePlaylistHeader(
                 modifier = Modifier.fillMaxSize()
             )
 
+            // Scrim: Fades the bottom half of the image into the background
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -538,6 +606,7 @@ private fun OnlinePlaylistHeader(
                     )
             )
 
+            // --- THE FIX: Light Frosted Glass Buttons (Fix for 1st Photo) ---
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -547,10 +616,11 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Back Button (Light Glass)
                 Surface(
                     onClick = { navController.navigateUp() },
                     shape = CircleShape,
-                    color = Color.Black.copy(alpha = 0.3f),
+                    color = Color.White.copy(alpha = 0.15f), // Looks exactly like Simp Music's light frosted glass
                     modifier = Modifier.size(48.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
@@ -558,10 +628,11 @@ private fun OnlinePlaylistHeader(
                     }
                 }
 
+                // Action Capsule (Like, Search, Menu) (Light Glass)
                 Row(
                     modifier = Modifier
                         .height(48.dp)
-                        .background(Color.Black.copy(alpha = 0.3f), RoundedCornerShape(24.dp))
+                        .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(24.dp))
                         .padding(horizontal = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -630,6 +701,7 @@ private fun OnlinePlaylistHeader(
                 }
             }
 
+            // Title & Metadata (Overlaid exactly at the bottom center of the image box)
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -656,7 +728,7 @@ private fun OnlinePlaylistHeader(
                 Spacer(modifier = Modifier.height(2.dp))
                 
                 Text(
-                    text = "Playlist • 2026",
+                    text = "Playlist",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White.copy(alpha = 0.7f),
                     textAlign = TextAlign.Center
@@ -664,6 +736,7 @@ private fun OnlinePlaylistHeader(
             }
         }
 
+        // --- 2. Action Controls (Shuffle, Play, Download) below image ---
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -676,6 +749,7 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Shuffle Button (Light Translucent)
                 Surface(
                     onClick = {
                         if (!isListenTogetherGuest && songs.isNotEmpty()) {
@@ -698,6 +772,7 @@ private fun OnlinePlaylistHeader(
                     }
                 }
 
+                // Play Button (White Pill Shape)
                 Surface(
                     onClick = {
                         if (!isListenTogetherGuest && songs.isNotEmpty()) {
@@ -715,7 +790,7 @@ private fun OnlinePlaylistHeader(
                     shape = RoundedCornerShape(50),
                     modifier = Modifier
                         .height(56.dp)
-                        .weight(1f) 
+                        .weight(1f) // Takes middle space
                 ) {
                     Row(
                         horizontalArrangement = Arrangement.Center,
@@ -737,6 +812,7 @@ private fun OnlinePlaylistHeader(
                     }
                 }
 
+                // Download Button (Light Translucent)
                 val context = LocalContext.current
                 Surface(
                     onClick = {
@@ -766,6 +842,7 @@ private fun OnlinePlaylistHeader(
 
             Spacer(Modifier.height(32.dp))
 
+            // Left Aligned Description and Tracks
             val description = playlist.description
             if (!description.isNullOrBlank()) {
                 ExpandableText(
@@ -783,7 +860,7 @@ private fun OnlinePlaylistHeader(
                 color = Color.White
             )
             
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(8.dp))
         }
     }
 }
