@@ -411,9 +411,7 @@ dependencies {
 
     implementation("androidx.compose.material:material-icons-extended:1.7.8")
 
-    // --- LIBRARIES FOR SIMP MUSIC LIQUID GLASS & BLUR EFFECTS ---
-    implementation("io.github.kyant0:backdrop:1.0.6") // Corrected Maven Central package
+    implementation("io.github.kyant0:backdrop:2.0.1")
     implementation("dev.chrisbanes.haze:haze:1.1.1")
     implementation("dev.chrisbanes.haze:haze-materials:1.1.1")
-    // Note: KMPalette is removed as standard Palette is already included!
 }
