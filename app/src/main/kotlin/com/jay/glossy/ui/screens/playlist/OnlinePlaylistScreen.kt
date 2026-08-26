@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -37,6 +37,8 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -65,6 +67,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -210,7 +213,7 @@ fun OnlinePlaylistScreen(
     )
     val mutedPaletteBg = lerp(animatedExtractedColor, Color.Black, 0.6f)
     
-    // Calculate dynamic top padding to fix the "search song cut-off" issue (Screenshot 2)
+    // Calculate dynamic top padding to fix the "search song cut-off" issue
     val dynamicTopPadding = if (isSearching || inSelectMode) {
         WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp
     } else {
@@ -226,7 +229,6 @@ fun OnlinePlaylistScreen(
         ) {
             LazyColumn(
                 state = lazyListState,
-                // Top padding pushes list down ONLY during search/select mode so songs don't cut off
                 contentPadding = LocalPlayerAwareWindowInsets.current
                     .only(WindowInsetsSides.Bottom)
                     .union(WindowInsets.ime).asPaddingValues().apply { 
@@ -388,7 +390,9 @@ fun OnlinePlaylistScreen(
                 }
             }
 
-            // --- Solid Top App Bar for Search/Selection (Fix for 3rd Photo) ---
+            // --- Top App Bars ---
+            
+            // 1. Search and Selection TopAppBar
             if (inSelectMode || isSearching) {
                 TopAppBar(
                     title = {
@@ -462,8 +466,7 @@ fun OnlinePlaylistScreen(
                                 onClick = {
                                     menuState.show {
                                         YouTubeSelectionSongMenu(
-                                            songSelection = filteredSongs.filter { it.second.id in selection }
-                                                .map { it.second },
+                                            songSelection = filteredSongs.filter { it.second.id in selection }.map { it.second },
                                             onDismiss = menuState::dismiss,
                                             clearAction = onExitSelectionMode
                                         )
@@ -478,7 +481,6 @@ fun OnlinePlaylistScreen(
                             }
                         }
                     },
-                    // Solid background ensures items scrolling behind it are hidden completely
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = mutedPaletteBg)
                 )
             } else {
@@ -567,7 +569,7 @@ private fun OnlinePlaylistHeader(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(1f) 
+                .aspectRatio(1f) // Perfect Square
         ) {
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
@@ -592,7 +594,7 @@ private fun OnlinePlaylistHeader(
                 modifier = Modifier.fillMaxSize()
             )
 
-            // Scrim: Fades the bottom half of the image into the background
+            // Scrim: Smoothly fades the bottom half of the image directly into the dark color
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -606,7 +608,7 @@ private fun OnlinePlaylistHeader(
                     )
             )
 
-            // --- THE FIX: Light Frosted Glass Buttons (Fix for 1st Photo) ---
+            // Simp Music Style Floating Action Bar (Overlaid at Top)
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -616,11 +618,11 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Back Button (Light Glass)
+                // Back Button
                 Surface(
                     onClick = { navController.navigateUp() },
                     shape = CircleShape,
-                    color = Color.White.copy(alpha = 0.15f), // Looks exactly like Simp Music's light frosted glass
+                    color = Color.White.copy(alpha = 0.15f), // Light translucent glass
                     modifier = Modifier.size(48.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
@@ -628,7 +630,7 @@ private fun OnlinePlaylistHeader(
                     }
                 }
 
-                // Action Capsule (Like, Search, Menu) (Light Glass)
+                // Action Capsule (Like, Search, Menu)
                 Row(
                     modifier = Modifier
                         .height(48.dp)
@@ -816,6 +818,7 @@ private fun OnlinePlaylistHeader(
                 val context = LocalContext.current
                 Surface(
                     onClick = {
+                        // Triggers offline caching for all songs in the playlist
                         songs.forEach { song ->
                             val downloadRequest = androidx.media3.exoplayer.offline.DownloadRequest
                                 .Builder(song.id, song.id.toUri())
@@ -860,7 +863,7 @@ private fun OnlinePlaylistHeader(
                 color = Color.White
             )
             
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(16.dp))
         }
     }
 }
