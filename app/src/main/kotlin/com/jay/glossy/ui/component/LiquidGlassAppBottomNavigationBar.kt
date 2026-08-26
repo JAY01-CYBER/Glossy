@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
@@ -34,6 +35,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableLongState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -64,7 +66,6 @@ import com.maxrave.simpmusic.ui.navigation.destination.home.HomeDestination
 import com.maxrave.simpmusic.ui.navigation.destination.library.LibraryDestination
 import com.maxrave.simpmusic.ui.navigation.destination.library.MixForYouDestination
 import com.maxrave.simpmusic.ui.navigation.destination.search.SearchDestination
-import com.maxrave.simpmusic.ui.screen.MiniPlayer
 import com.maxrave.simpmusic.viewModel.SharedViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -74,6 +75,7 @@ import java.nio.IntBuffer
 import kotlin.reflect.KClass
 import kotlin.time.Duration.Companion.seconds
 import com.jay.glossy.R
+import com.jay.glossy.ui.player.MiniPlayer
 
 private const val TAG = "LiquidGlassAppBottomNavigationBar"
 
@@ -132,6 +134,8 @@ fun LiquidGlassAppBottomNavigationBar(
     showMixForYouTab: Boolean,
     onOpenNowPlaying: () -> Unit,
     reloadDestinationIfNeeded: (KClass<*>) -> Unit,
+    positionState: MutableLongState,
+    durationState: MutableLongState,
 ) {
     val layer = rememberGraphicsLayer()
     val toolbarInteraction = rememberGlassInteraction()
@@ -347,20 +351,19 @@ fun LiquidGlassAppBottomNavigationBar(
             }
         }
         
-        // MiniPlayer Will be attached here
+        // Custom Glossy MiniPlayer Appended Here with Liquid Glass Effect
         MiniPlayer(
+            positionState = positionState,
+            durationState = durationState,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp)
-                .height(56.dp)
-                .layoutId("miniPlayer"),
-            backdrop = backdrop,
-            sharedViewModel = viewModel, // Passed SharedViewModel down
-            onClick = { onOpenNowPlaying() },
-            onClose = {
-                viewModel.stopPlayer()
-                viewModel.isServiceRunning = false
-            },
+                .layoutId("miniPlayer")
+                .liquidGlass(
+                    backdrop = backdrop,
+                    shape = RoundedCornerShape(32.dp)
+                ),
+            onClick = { onOpenNowPlaying() }
         )
     }
 }
