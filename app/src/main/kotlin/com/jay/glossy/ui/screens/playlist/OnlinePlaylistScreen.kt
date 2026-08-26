@@ -205,13 +205,15 @@ fun OnlinePlaylistScreen(
 
     val currentPlaylist = playlist
 
+    // THE FIX: SOLID Immersive Dark Theme Background[span_4](start_span)[span_4](end_span)
     val fallbackColor = Color(0xFF121212)
     val animatedExtractedColor by animateColorAsState(
         targetValue = if (dominantColor == Color.Transparent) fallbackColor else dominantColor,
         animationSpec = tween(durationMillis = 800),
         label = "gradientColor"
     )
-    val mutedPaletteBg = lerp(animatedExtractedColor, Color.Black, 0.6f)
+    // Mixing the extracted color deeply with black to create a solid, immersive background
+    val mutedPaletteBg = lerp(animatedExtractedColor, Color.Black, 0.7f)
     
     val dynamicTopPadding = if (isSearching || inSelectMode) {
         WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp
@@ -219,11 +221,12 @@ fun OnlinePlaylistScreen(
         0.dp
     }
 
+    // Wrap the entire screen in Dark Color Scheme
     MaterialTheme(colorScheme = darkColorScheme()) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(mutedPaletteBg) 
+                .background(mutedPaletteBg) // Solid color background for the whole page[span_5](start_span)[span_5](end_span)
         ) {
             LazyColumn(
                 state = lazyListState,
@@ -388,6 +391,7 @@ fun OnlinePlaylistScreen(
                 }
             }
 
+            // Top App Bars
             if (inSelectMode || isSearching) {
                 TopAppBar(
                     title = {
@@ -559,26 +563,15 @@ private fun OnlinePlaylistHeader(
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
 
-    // Glassmorphism Brushes for the "Liquid Glass" effect
-    val glassBgBrush = Brush.linearGradient(
-        colors = listOf(
-            Color.White.copy(alpha = 0.2f),
-            Color.White.copy(alpha = 0.05f)
-        )
-    )
-    val glassBorderBrush = Brush.linearGradient(
-        colors = listOf(
-            Color.White.copy(alpha = 0.4f),
-            Color.Transparent,
-            Color.White.copy(alpha = 0.1f)
-        )
-    )
+    // THE FIX: Refined Liquid Glass Colors[span_6](start_span)[span_6](end_span)
+    val topGlassBg = Color(0x33000000) // 20% Black Background
+    val topGlassBorder = Color(0x26FFFFFF) // 15% White Border for reflection
 
     Column(modifier = modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(1f) 
+                .aspectRatio(1f) // Perfect Square
         ) {
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
@@ -603,10 +596,11 @@ private fun OnlinePlaylistHeader(
                 modifier = Modifier.fillMaxSize()
             )
 
+            // Scrim: Smoothly fades the bottom half of the image directly into the solid background
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .fillMaxHeight(0.6f)
+                    .fillMaxHeight(0.5f)
                     .align(Alignment.BottomCenter)
                     .background(
                         Brush.verticalGradient(
@@ -616,6 +610,7 @@ private fun OnlinePlaylistHeader(
                     )
             )
 
+            // --- Floating Liquid Glass Action Bar ---
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -625,26 +620,26 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // THE FIX: True Liquid Glass Back Button
+                // Back Button (Premium Glass)
                 Box(
                     modifier = Modifier
                         .size(48.dp)
                         .clip(CircleShape)
-                        .background(glassBgBrush)
-                        .border(1.dp, glassBorderBrush, CircleShape)
+                        .background(topGlassBg)
+                        .border(0.5.dp, topGlassBorder, CircleShape)
                         .clickable { navController.navigateUp() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(painterResource(R.drawable.arrow_back), null, tint = Color.White)
                 }
 
-                // THE FIX: True Liquid Glass Action Capsule
+                // Action Capsule (Premium Glass)
                 Row(
                     modifier = Modifier
                         .height(48.dp)
                         .clip(RoundedCornerShape(24.dp))
-                        .background(glassBgBrush)
-                        .border(1.dp, glassBorderBrush, RoundedCornerShape(24.dp))
+                        .background(topGlassBg)
+                        .border(0.5.dp, topGlassBorder, RoundedCornerShape(24.dp))
                         .padding(horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -713,6 +708,7 @@ private fun OnlinePlaylistHeader(
                 }
             }
 
+            // Title & Metadata
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -739,7 +735,7 @@ private fun OnlinePlaylistHeader(
                 Spacer(modifier = Modifier.height(2.dp))
                 
                 Text(
-                    text = "Playlist",
+                    text = "Playlist • 2026",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White.copy(alpha = 0.7f),
                     textAlign = TextAlign.Center
@@ -747,6 +743,7 @@ private fun OnlinePlaylistHeader(
             }
         }
 
+        // --- THE FIX: Action Controls Sizing (Matches Simp Music 48.dp) ---[span_7](start_span)[span_7](end_span)
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -756,16 +753,15 @@ private fun OnlinePlaylistHeader(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
+                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // THE FIX: Liquid Glass Shuffle Button
+                // Shuffle Button 
                 Box(
                     modifier = Modifier
-                        .size(56.dp)
+                        .size(48.dp) // Adjusted from 56 to 48[span_8](start_span)[span_8](end_span)
                         .clip(CircleShape)
-                        .background(glassBgBrush)
-                        .border(1.dp, glassBorderBrush, CircleShape)
+                        .background(Color.White.copy(alpha = 0.12f))
                         .clickable {
                             if (!isListenTogetherGuest && songs.isNotEmpty()) {
                                 playerConnection.playQueue(
@@ -780,28 +776,29 @@ private fun OnlinePlaylistHeader(
                         },
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(painterResource(R.drawable.shuffle), null, tint = Color.White)
+                    Icon(painterResource(R.drawable.shuffle), null, tint = Color.White, modifier = Modifier.size(20.dp))
                 }
 
-                // Play Button (White Pill Shape)
-                Surface(
-                    onClick = {
-                        if (!isListenTogetherGuest && songs.isNotEmpty()) {
-                            playerConnection.playQueue(
-                                YouTubePlaylistQueue(
-                                    playlistId = playlist.id,
-                                    playlistTitle = playlist.title,
-                                    initialSongs = songs,
-                                    initialContinuation = continuation
-                                )
-                            )
-                        }
-                    },
-                    color = Color.White,
-                    shape = RoundedCornerShape(50),
+                // Play Button
+                Box(
                     modifier = Modifier
-                        .height(56.dp)
+                        .height(48.dp) // Adjusted from 56 to 48[span_9](start_span)[span_9](end_span)
                         .weight(1f) 
+                        .clip(RoundedCornerShape(50))
+                        .background(Color.White)
+                        .clickable {
+                            if (!isListenTogetherGuest && songs.isNotEmpty()) {
+                                playerConnection.playQueue(
+                                    YouTubePlaylistQueue(
+                                        playlistId = playlist.id,
+                                        playlistTitle = playlist.title,
+                                        initialSongs = songs,
+                                        initialContinuation = continuation
+                                    )
+                                )
+                            }
+                        },
+                    contentAlignment = Alignment.Center
                 ) {
                     Row(
                         horizontalArrangement = Arrangement.Center,
@@ -811,26 +808,26 @@ private fun OnlinePlaylistHeader(
                         Icon(
                             painter = painterResource(if (isThisPlaying) R.drawable.pause else R.drawable.play),
                             contentDescription = null,
-                            tint = Color.Black
+                            tint = Color.Black,
+                            modifier = Modifier.size(20.dp)
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
                             text = if (isThisPlaying) stringResource(R.string.pause) else stringResource(R.string.play),
-                            style = MaterialTheme.typography.titleMedium,
+                            style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.Bold,
                             color = Color.Black
                         )
                     }
                 }
 
-                // THE FIX: Liquid Glass Download Button
+                // Download Button 
                 val context = LocalContext.current
                 Box(
                     modifier = Modifier
-                        .size(56.dp)
+                        .size(48.dp) // Adjusted from 56 to 48[span_10](start_span)[span_10](end_span)
                         .clip(CircleShape)
-                        .background(glassBgBrush)
-                        .border(1.dp, glassBorderBrush, CircleShape)
+                        .background(Color.White.copy(alpha = 0.12f))
                         .clickable {
                             songs.forEach { song ->
                                 val downloadRequest = androidx.media3.exoplayer.offline.DownloadRequest
@@ -848,7 +845,7 @@ private fun OnlinePlaylistHeader(
                         },
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(painterResource(R.drawable.download), null, tint = Color.White)
+                    Icon(painterResource(R.drawable.download), null, tint = Color.White, modifier = Modifier.size(20.dp))
                 }
             }
 
@@ -871,7 +868,7 @@ private fun OnlinePlaylistHeader(
                 color = Color.White
             )
             
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(8.dp))
         }
     }
 }
