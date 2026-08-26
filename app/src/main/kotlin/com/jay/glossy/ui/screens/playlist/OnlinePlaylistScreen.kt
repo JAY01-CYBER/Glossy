@@ -36,7 +36,6 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -97,6 +96,7 @@ import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.palette.graphics.Palette
+import coil3.asDrawable
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 
@@ -129,6 +129,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+// TRUE LIQUID GLASS IMPORTS
+import com.kyant.backdrop.layerBackdrop
+import com.kyant.backdrop.rememberBackdrop
+import com.jay.glossy.ui.component.liquidGlass
+import com.jay.glossy.ui.component.LiquidGlassIconButton
+
+// HAZE FOR LIST
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
@@ -494,7 +501,7 @@ fun OnlinePlaylistScreen(
                         state = hazeState, 
                         shape = androidx.compose.ui.graphics.RectangleShape,
                         style = HazeStyle(
-                            backgroundColor = Color.Transparent,
+                            backgroundColor = mutedPaletteBg.copy(alpha = 0.65f),
                             tints = listOf(HazeTint(mutedPaletteBg.copy(alpha = 0.65f))),
                             blurRadius = 24.dp
                         )
@@ -549,7 +556,7 @@ fun OnlinePlaylistScreen(
                             state = hazeState, 
                             shape = androidx.compose.ui.graphics.RectangleShape,
                             style = HazeStyle(
-                                backgroundColor = Color.Transparent,
+                                backgroundColor = mutedPaletteBg.copy(alpha = 0.65f),
                                 tints = listOf(HazeTint(mutedPaletteBg.copy(alpha = 0.65f))),
                                 blurRadius = 24.dp
                             )
@@ -590,7 +597,7 @@ private fun OnlinePlaylistHeader(
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
 
-    val artworkHazeState = remember { HazeState() }
+    val artworkBackdrop = rememberBackdrop(Color.Black)
 
     Column(modifier = modifier.fillMaxWidth()) {
         Box(
@@ -601,30 +608,29 @@ private fun OnlinePlaylistHeader(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .haze(state = artworkHazeState)
+                    .layerBackdrop(artworkBackdrop) // This registers the source for liquidGlass
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(playlist.thumbnail?.resize(1080, 1080))
+                        .allowHardware(false)
                         .build(),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     onSuccess = { state ->
                         try {
-                            val coilImage = state.result.image
-                            val originalBitmap = (coilImage as? coil3.BitmapImage)?.bitmap
-                            if (originalBitmap != null) {
-                                val scaledBitmap = android.graphics.Bitmap.createScaledBitmap(originalBitmap, 1, 1, true)
-                                Palette.from(scaledBitmap).generate { palette ->
-                                    palette?.dominantSwatch?.rgb?.let { colorInt ->
-                                        onDominantColorExtracted(Color(colorInt))
-                                    } ?: palette?.vibrantSwatch?.rgb?.let { colorInt ->
-                                        onDominantColorExtracted(Color(colorInt))
-                                    } ?: palette?.mutedSwatch?.rgb?.let { colorInt ->
-                                        onDominantColorExtracted(Color(colorInt))
-                                    }
+                            val drawable = state.result.image.coil3::asDrawable.invoke(context.resources)
+                            val bitmap = (drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
+                                ?: android.graphics.Bitmap.createBitmap(100, 100, android.graphics.Bitmap.Config.ARGB_8888).also { b ->
+                                    val canvas = android.graphics.Canvas(b)
+                                    drawable.setBounds(0, 0, canvas.width, canvas.height)
+                                    drawable.draw(canvas)
                                 }
-                                scaledBitmap.recycle()
+                            Palette.from(bitmap).generate { palette ->
+                                val swatch = palette?.darkMutedSwatch ?: palette?.mutedSwatch ?: palette?.dominantSwatch ?: palette?.darkVibrantSwatch
+                                swatch?.rgb?.let { colorInt ->
+                                    onDominantColorExtracted(Color(colorInt))
+                                }
                             }
                         } catch (e: Exception) {
                             e.printStackTrace()
@@ -636,7 +642,7 @@ private fun OnlinePlaylistHeader(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .fillMaxHeight(0.35f)
+                        .fillMaxHeight(0.45f) 
                         .align(Alignment.BottomCenter)
                         .background(
                             Brush.verticalGradient(
@@ -651,36 +657,36 @@ private fun OnlinePlaylistHeader(
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp)
-                        .padding(bottom = 16.dp),
+                        .padding(bottom = 24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
                         text = playlist.title,
                         style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.ExtraBold,
+                        fontWeight = FontWeight.Black, 
                         color = Color.White,
                         maxLines = 2,
                         textAlign = TextAlign.Center
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = playlist.author?.name ?: stringResource(R.string.app_name),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold, 
                         color = Color.White
                     )
-                    Spacer(modifier = Modifier.height(2.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     
                     Text(
                         text = "Playlist • 2026",
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.titleMedium,
                         color = Color.White.copy(alpha = 0.7f),
                         textAlign = TextAlign.Center
                     )
                 }
             }
 
-            // PRO LIQUID GLASS OVERLAYS (Transparent BG + Blur + White Border)
+            // LIQUID GLASS BUTTONS 
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -690,49 +696,16 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Back Button (Real Glass effect)
-                IconButton(
-                    onClick = { navController.navigateUp() },
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .hazeChild(
-                            state = artworkHazeState, 
-                            shape = CircleShape,
-                            style = HazeStyle(
-                                backgroundColor = Color.Transparent,
-                                tints = listOf(HazeTint(Color.Black.copy(alpha = 0.25f))),
-                                blurRadius = 24.dp
-                            )
-                        )
-                        .border(
-                            width = 0.5.dp, 
-                            color = Color.White.copy(alpha = 0.3f), 
-                            shape = CircleShape
-                        )
-                ) {
-                    Icon(painterResource(R.drawable.arrow_back), null, tint = Color.White)
-                }
+                LiquidGlassIconButton(
+                    backdrop = artworkBackdrop,
+                    painter = painterResource(R.drawable.arrow_back),
+                    onClick = { navController.navigateUp() }
+                )
 
-                // Action Pill (Real Glass effect)
                 Row(
                     modifier = Modifier
                         .height(48.dp)
-                        .clip(RoundedCornerShape(24.dp))
-                        .hazeChild(
-                            state = artworkHazeState, 
-                            shape = RoundedCornerShape(24.dp),
-                            style = HazeStyle(
-                                backgroundColor = Color.Transparent,
-                                tints = listOf(HazeTint(Color.Black.copy(alpha = 0.25f))),
-                                blurRadius = 24.dp
-                            )
-                        )
-                        .border(
-                            width = 0.5.dp, 
-                            color = Color.White.copy(alpha = 0.3f), 
-                            shape = RoundedCornerShape(24.dp)
-                        )
+                        .liquidGlass(artworkBackdrop, RoundedCornerShape(50))
                         .padding(horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
