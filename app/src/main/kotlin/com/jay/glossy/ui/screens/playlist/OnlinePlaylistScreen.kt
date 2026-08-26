@@ -31,6 +31,8 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -61,7 +63,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -162,16 +163,15 @@ fun OnlinePlaylistScreen(
         }
     }
 
-    var inSelectMode by rememberSaveable { mutableStateOf(false) }
-    val selection = rememberSaveable(
-        saver = listSaver<MutableList<String>, String>(
-            save = { it.toList() },
-            restore = { it.toMutableStateList() }
-        )
-    ) { mutableStateListOf() }
+    // THE FIX: Directly using remember instead of rememberSaveable + listSaver
+    var inSelectMode by remember { mutableStateOf(false) }
+    val selection = remember { mutableStateListOf<String>() }
+    var selectionAnchorSongId by remember { mutableStateOf<String?>(null) }
+
     val onExitSelectionMode = {
         inSelectMode = false
         selection.clear()
+        selectionAnchorSongId = null
     }
 
     val focusRequester = remember { FocusRequester() }
@@ -182,6 +182,10 @@ fun OnlinePlaylistScreen(
             if (filteredSongs.find { it.second.id == songId } == null) {
                 selection.remove(songId)
             }
+        }
+
+        if (selectionAnchorSongId != null && filteredSongs.none { it.second.id == selectionAnchorSongId }) {
+            selectionAnchorSongId = filteredSongs.firstOrNull { it.second.id in selection }?.second?.id
         }
     }
 
@@ -194,7 +198,7 @@ fun OnlinePlaylistScreen(
         BackHandler(onBack = onExitSelectionMode)
     }
 
-    // THE FIX: Color Animation Logic
+    // Color Animation Logic
     // We force the background to blend with BLACK so the white text ALWAYS pops, even in light mode.
     val fallbackColor = Color(0xFF1E1E1E) // Dark Gray fallback
     val animatedExtractedColor by animateColorAsState(
@@ -317,6 +321,25 @@ fun OnlinePlaylistScreen(
                                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                             inSelectMode = true
                                             onCheckedChange(true)
+                                            selectionAnchorSongId = songItem.id
+                                        } else {
+                                            val anchorIndex =
+                                                selectionAnchorSongId?.let { anchorSongId ->
+                                                    filteredSongs.indexOfFirst { it.second.id == anchorSongId }
+                                                } ?: -1
+
+                                            if (anchorIndex == -1) {
+                                                onCheckedChange(true)
+                                                selectionAnchorSongId = songItem.id
+                                            } else {
+                                                val range = if (anchorIndex <= index) anchorIndex..index else index..anchorIndex
+                                                for (rangeIndex in range) {
+                                                    val rangeSongId = filteredSongs[rangeIndex].second.id
+                                                    if (rangeSongId !in selection) {
+                                                        selection.add(rangeSongId)
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 )
@@ -646,7 +669,6 @@ private fun OnlinePlaylistHeader(
             )
             Spacer(modifier = Modifier.height(2.dp))
             
-            // Replaced 'year' with standard fallback
             Text(
                 text = "Playlist • 2026",
                 style = MaterialTheme.typography.bodyMedium,
