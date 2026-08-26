@@ -131,9 +131,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-// TRUE LIQUID GLASS IMPORTS (Fixed for Kyant 2.0.1)
-import com.kyant.backdrop.layerBackdrop
-import com.kyant.backdrop.rememberLayerBackdrop
+// TRUE LIQUID GLASS IMPORTS (Fixed to Local Wrapper)
+import com.jay.glossy.ui.component.layerBackdrop
+import com.jay.glossy.ui.component.rememberBackdrop
 import com.jay.glossy.ui.component.liquidGlass
 import com.jay.glossy.ui.component.LiquidGlassIconButton
 
@@ -599,8 +599,7 @@ private fun OnlinePlaylistHeader(
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
 
-    // PERFECT KYANT 2.0.1 COMPATIBILITY
-    val artworkBackdrop = rememberLayerBackdrop()
+    val artworkBackdrop = rememberBackdrop()
 
     Column(modifier = modifier.fillMaxWidth()) {
         Box(
@@ -688,7 +687,6 @@ private fun OnlinePlaylistHeader(
                 }
             }
 
-            // LIQUID GLASS BUTTONS 
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
