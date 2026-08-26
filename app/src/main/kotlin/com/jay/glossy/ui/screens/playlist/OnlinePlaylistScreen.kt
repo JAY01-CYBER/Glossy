@@ -130,7 +130,6 @@ import kotlinx.coroutines.launch
 
 // EXACT PURE HAZE IMPORTS
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.haze
 import dev.chrisbanes.haze.hazeChild
 
@@ -233,7 +232,6 @@ fun OnlinePlaylistScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(mutedPaletteBg) 
-                // PURE HAZE RENDERER (NO CUSTOM STYLES)
                 .haze(state = hazeState) 
         ) {
             LazyColumn(
@@ -491,7 +489,6 @@ fun OnlinePlaylistScreen(
                             }
                         }
                     },
-                    // PURE HAZE CHILD SYNTAX
                     modifier = Modifier.hazeChild(state = hazeState),
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                 )
@@ -539,7 +536,6 @@ fun OnlinePlaylistScreen(
                                 }
                             }
                         },
-                        // PURE HAZE CHILD SYNTAX
                         modifier = Modifier.hazeChild(state = hazeState),
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                     )
@@ -673,24 +669,24 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // FIXED: Normal Button with Haze Child Effect + Empty Style
+                // FLAT HAZE CHILD (NO SHAPE ARGUMENT)
                 IconButton(
                     onClick = { navController.navigateUp() },
                     modifier = Modifier
                         .size(48.dp)
                         .clip(CircleShape)
-                        .hazeChild(state = artworkHazeState, shape = CircleShape, style = HazeStyle())
+                        .hazeChild(state = artworkHazeState)
                         .background(Color.Black.copy(alpha = 0.2f))
                 ) {
                     Icon(painterResource(R.drawable.arrow_back), null, tint = Color.White)
                 }
 
-                // FIXED: Normal Row with Haze Child Effect + Empty Style
+                // FLAT HAZE CHILD FOR ROW (NO SHAPE ARGUMENT)
                 Row(
                     modifier = Modifier
                         .height(48.dp)
                         .clip(RoundedCornerShape(24.dp))
-                        .hazeChild(state = artworkHazeState, shape = RoundedCornerShape(24.dp), style = HazeStyle())
+                        .hazeChild(state = artworkHazeState)
                         .background(Color.Black.copy(alpha = 0.2f))
                         .padding(horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
