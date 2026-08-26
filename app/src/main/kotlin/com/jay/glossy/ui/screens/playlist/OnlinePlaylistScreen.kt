@@ -1,5 +1,5 @@
 /**
- * Glossy Project (C) 2026
+ * Metrolist Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -37,7 +37,6 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -59,6 +58,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -122,7 +122,6 @@ import com.jay.glossy.ui.menu.YouTubePlaylistMenu
 import com.jay.glossy.ui.menu.YouTubeSelectionSongMenu
 import com.jay.glossy.ui.menu.YouTubeSongMenu
 import com.jay.glossy.ui.utils.resize
-import com.jay.glossy.utils.makeTimeString
 import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.viewmodels.OnlinePlaylistViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -205,39 +204,27 @@ fun OnlinePlaylistScreen(
 
     val currentPlaylist = playlist
 
-    // THE FIX: SOLID Immersive Dark Theme Background[span_4](start_span)[span_4](end_span)
+    // Solid Immersive Background Color (Mixed with Black for premium look)
     val fallbackColor = Color(0xFF121212)
     val animatedExtractedColor by animateColorAsState(
         targetValue = if (dominantColor == Color.Transparent) fallbackColor else dominantColor,
         animationSpec = tween(durationMillis = 800),
         label = "gradientColor"
     )
-    // Mixing the extracted color deeply with black to create a solid, immersive background
-    val mutedPaletteBg = lerp(animatedExtractedColor, Color.Black, 0.7f)
-    
-    val dynamicTopPadding = if (isSearching || inSelectMode) {
-        WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp
-    } else {
-        0.dp
-    }
+    val mutedPaletteBg = lerp(animatedExtractedColor, Color.Black, 0.65f)
 
-    // Wrap the entire screen in Dark Color Scheme
+    // Dark theme forces white text and proper contrast
     MaterialTheme(colorScheme = darkColorScheme()) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(mutedPaletteBg) // Solid color background for the whole page[span_5](start_span)[span_5](end_span)
+                .background(mutedPaletteBg) // True Solid Background
         ) {
             LazyColumn(
                 state = lazyListState,
                 contentPadding = LocalPlayerAwareWindowInsets.current
                     .only(WindowInsetsSides.Bottom)
-                    .union(WindowInsets.ime).asPaddingValues().apply { 
-                        androidx.compose.foundation.layout.PaddingValues(
-                            top = dynamicTopPadding, 
-                            bottom = calculateBottomPadding()
-                        )
-                    },
+                    .union(WindowInsets.ime).asPaddingValues(),
             ) {
                 if (currentPlaylist == null || songs.isEmpty()) {
                     if (isLoading) {
@@ -274,7 +261,16 @@ fun OnlinePlaylistScreen(
                         }
                     }
                 } else {
-                    if (!isSearching) {
+                    // Spacers to prevent cut-offs during search/select mode
+                    if (isSearching || inSelectMode) {
+                        item {
+                            Spacer(
+                                modifier = Modifier.height(
+                                    WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp
+                                )
+                            )
+                        }
+                    } else {
                         item(key = "playlist_header") {
                             OnlinePlaylistHeader(
                                 playlist = currentPlaylist,
@@ -305,7 +301,6 @@ fun OnlinePlaylistScreen(
                             isPlaying = isPlaying,
                             isSelected = inSelectMode && songItem.id in selection,
                             modifier = Modifier
-                                .padding(top = if (isSearching && index == 0) dynamicTopPadding else 0.dp) 
                                 .combinedClickable(
                                     enabled = !hideExplicit || !songItem.explicit,
                                     onClick = {
@@ -391,7 +386,7 @@ fun OnlinePlaylistScreen(
                 }
             }
 
-            // Top App Bars
+            // TopAppBar for Search & Selection Mode (Solid Background)
             if (inSelectMode || isSearching) {
                 TopAppBar(
                     title = {
@@ -484,6 +479,7 @@ fun OnlinePlaylistScreen(
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = mutedPaletteBg)
                 )
             } else {
+                // Animated TopBar when scrolling normally
                 val showScrolledTopBar by remember {
                     derivedStateOf { lazyListState.firstVisibleItemIndex > 0 }
                 }
@@ -527,7 +523,8 @@ fun OnlinePlaylistScreen(
                                 }
                             }
                         },
-                        colors = TopAppBarDefaults.topAppBarColors(containerColor = mutedPaletteBg)
+                        // Slightly transparent to emulate a glass overlay over content
+                        colors = TopAppBarDefaults.topAppBarColors(containerColor = mutedPaletteBg.copy(alpha = 0.9f))
                     )
                 }
             }
@@ -563,10 +560,6 @@ private fun OnlinePlaylistHeader(
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
 
-    // THE FIX: Refined Liquid Glass Colors[span_6](start_span)[span_6](end_span)
-    val topGlassBg = Color(0x33000000) // 20% Black Background
-    val topGlassBorder = Color(0x26FFFFFF) // 15% White Border for reflection
-
     Column(modifier = modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
@@ -596,7 +589,7 @@ private fun OnlinePlaylistHeader(
                 modifier = Modifier.fillMaxSize()
             )
 
-            // Scrim: Smoothly fades the bottom half of the image directly into the solid background
+            // Scrim: Fades the bottom half of the image directly into the solid background
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -610,7 +603,7 @@ private fun OnlinePlaylistHeader(
                     )
             )
 
-            // --- Floating Liquid Glass Action Bar ---
+            // Floating Top Navigation (Clean Black Translucent Glass)
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -620,26 +613,24 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Back Button (Premium Glass)
+                // Back Button 
                 Box(
                     modifier = Modifier
                         .size(48.dp)
                         .clip(CircleShape)
-                        .background(topGlassBg)
-                        .border(0.5.dp, topGlassBorder, CircleShape)
+                        .background(Color.Black.copy(alpha = 0.3f))
                         .clickable { navController.navigateUp() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(painterResource(R.drawable.arrow_back), null, tint = Color.White)
                 }
 
-                // Action Capsule (Premium Glass)
+                // Action Capsule (Like, Search, Menu)
                 Row(
                     modifier = Modifier
                         .height(48.dp)
                         .clip(RoundedCornerShape(24.dp))
-                        .background(topGlassBg)
-                        .border(0.5.dp, topGlassBorder, RoundedCornerShape(24.dp))
+                        .background(Color.Black.copy(alpha = 0.3f))
                         .padding(horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -743,7 +734,7 @@ private fun OnlinePlaylistHeader(
             }
         }
 
-        // --- THE FIX: Action Controls Sizing (Matches Simp Music 48.dp) ---[span_7](start_span)[span_7](end_span)
+        // --- Simp Music Action Buttons (Correctly Sized) ---
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -753,13 +744,13 @@ private fun OnlinePlaylistHeader(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+                horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Shuffle Button 
+                // Shuffle Button (48.dp)
                 Box(
                     modifier = Modifier
-                        .size(48.dp) // Adjusted from 56 to 48[span_8](start_span)[span_8](end_span)
+                        .size(48.dp)
                         .clip(CircleShape)
                         .background(Color.White.copy(alpha = 0.12f))
                         .clickable {
@@ -779,11 +770,11 @@ private fun OnlinePlaylistHeader(
                     Icon(painterResource(R.drawable.shuffle), null, tint = Color.White, modifier = Modifier.size(20.dp))
                 }
 
-                // Play Button
+                // Play Button (Compact Pill Width)
                 Box(
                     modifier = Modifier
-                        .height(48.dp) // Adjusted from 56 to 48[span_9](start_span)[span_9](end_span)
-                        .weight(1f) 
+                        .height(48.dp)
+                        .widthIn(min = 120.dp) 
                         .clip(RoundedCornerShape(50))
                         .background(Color.White)
                         .clickable {
@@ -797,7 +788,8 @@ private fun OnlinePlaylistHeader(
                                     )
                                 )
                             }
-                        },
+                        }
+                        .padding(horizontal = 24.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Row(
@@ -821,11 +813,11 @@ private fun OnlinePlaylistHeader(
                     }
                 }
 
-                // Download Button 
+                // Download Button (48.dp)
                 val context = LocalContext.current
                 Box(
                     modifier = Modifier
-                        .size(48.dp) // Adjusted from 56 to 48[span_10](start_span)[span_10](end_span)
+                        .size(48.dp)
                         .clip(CircleShape)
                         .background(Color.White.copy(alpha = 0.12f))
                         .clickable {
