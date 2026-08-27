@@ -1,6 +1,6 @@
 /**
  * Glossy Project (C) 2026
- * Pure iOS / Apple Music Frosted Glass Edition
+ * Liquid Glass Physics officially matching Simp Music configuration
  */
 package com.jay.glossy.ui.component
 
@@ -15,10 +15,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.rememberGraphicsLayer
@@ -35,6 +36,7 @@ import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.math.sign
 import kotlin.math.tanh
 
 @Composable
@@ -65,85 +67,94 @@ fun Modifier.drawInteractiveGlass(
     isDark: Boolean,
     backdrop: Backdrop,
     layer: GraphicsLayer?,
-    luminance: Float,
+    luminanceAnimation: Float,
     shape: Shape,
-    interaction: InteractiveHighlight
+    interaction: InteractiveHighlight?
 ): Modifier = composed {
     this.drawBackdrop(
         backdrop = backdrop,
         shape = { shape },
         effects = {
-            // iOS FROSTED GLASS SECRET: High Vibrancy + Massive Blur, NO watery lens distortion!
+            val l = (luminanceAnimation * 2f - 1f).let { sign(it) * it * it }
+            val press = interaction?.pressProgress ?: 0f
+            
+            // EXACT SIMP MUSIC FORMULA
             vibrancy()
-            blur(40f.dp.toPx()) // 40dp gives that thick, premium Apple glass look
+            colorControls(brightness = 0.05f, contrast = 1f, saturation = 1.5f)
+            
+            val blurRadius = if (l > 0f) {
+                androidx.compose.ui.util.lerp(8f.dp.toPx(), 16f.dp.toPx(), l)
+            } else {
+                androidx.compose.ui.util.lerp(8f.dp.toPx(), 2f.dp.toPx(), -l)
+            }
+            blur(blurRadius + 2f.dp.toPx() * press)
+            
+            lens(size.minDimension / 4f + 2f.dp.toPx() * press, size.minDimension / 2f, false)
         },
         layerBlock = {
-            val width = size.width
-            val height = size.height
-            val progress = interaction.pressProgress
-            val scale = androidx.compose.ui.util.lerp(1f, 1f + 4f.dp.toPx() / size.height, progress)
-            
-            val maxOffset = size.minDimension
-            val initialDerivative = 0.05f
-            val offset = interaction.offset
-            
-            translationX = maxOffset * tanh(initialDerivative * offset.x / maxOffset)
-            translationY = maxOffset * tanh(initialDerivative * offset.y / maxOffset)
-            
-            val maxDragScale = 4f.dp.toPx() / size.height
-            val offsetAngle = atan2(offset.y, offset.x)
-            scaleX = scale + maxDragScale * abs(cos(offsetAngle) * offset.x / size.maxDimension) * (width / height).fastCoerceAtMost(1f)
-            scaleY = scale + maxDragScale * abs(sin(offsetAngle) * offset.y / size.maxDimension) * (height / width).fastCoerceAtMost(1f)
+            if (interaction != null) {
+                val width = size.width
+                val height = size.height
+                val progress = interaction.pressProgress
+                val scale = androidx.compose.ui.util.lerp(1f, 1.12f, progress) // 1.12 press scale
+                
+                val maxOffset = size.minDimension
+                val initialDerivative = 0.05f
+                val offset = interaction.offset
+                
+                translationX = maxOffset * tanh(initialDerivative * offset.x / maxOffset)
+                translationY = maxOffset * tanh(initialDerivative * offset.y / maxOffset)
+                
+                val maxDragScale = 4f.dp.toPx() / size.height
+                val offsetAngle = atan2(offset.y, offset.x)
+                scaleX = scale + maxDragScale * abs(cos(offsetAngle) * offset.x / size.maxDimension) * (width / height).fastCoerceAtMost(1f)
+                scaleY = scale + maxDragScale * abs(sin(offsetAngle) * offset.y / size.maxDimension) * (height / width).fastCoerceAtMost(1f)
+            }
         },
         onDrawSurface = {
-            // EXACT iOS COLOR TINT (Light grayish-white overlay with low opacity)
-            val iosFrostColor = Color(0xFFEBEBF5).copy(alpha = 0.15f)
-            drawRect(iosFrostColor)
+            // Darken more as the background brightens so the glass never washes out
+            val darken = androidx.compose.ui.util.lerp(0.12f, 0.5f, ((luminanceAnimation - 0.3f) / 0.5f).coerceIn(0f, 1f))
+            val baseColor = if (isDark) Color.Black else Color.White
+            drawRect(baseColor.copy(alpha = darken))
             
-            // Soft highlight on press
-            val glow = Color.White.copy(alpha = 0.05f + (0.10f * interaction.pressProgress))
-            drawRect(glow, blendMode = BlendMode.Plus)
+            val press = interaction?.pressProgress ?: 0f
+            if (press > 0f) {
+                // Simp Music Radial Glow Effect
+                drawRect(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.18f * press),
+                            Color.Transparent
+                        ),
+                        center = Offset(size.width / 2f, size.height / 2f),
+                        radius = size.minDimension * 1.2f
+                    ),
+                    blendMode = BlendMode.Plus
+                )
+            }
         }
     )
-    .border(0.5.dp, Color.White.copy(alpha = 0.20f), shape) // Very thin crisp border
-    .then(interaction.modifier)
-    .then(interaction.gestureModifier)
+    .border(0.5.dp, Color.White.copy(alpha = 0.20f), shape)
+    .then(interaction?.modifier ?: Modifier)
+    .then(interaction?.gestureModifier ?: Modifier)
 }
 
 fun Modifier.liquidGlass(
     backdrop: Backdrop,
     shape: Shape,
-    tint: Color = Color(0xFFEBEBF5).copy(alpha = 0.15f), // Default iOS Tint
     isInteractive: Boolean = true
 ): Modifier = composed {
     val animationScope = rememberCoroutineScope()
     val interactiveHighlight = remember(animationScope) { InteractiveHighlight(animationScope) }
     
-    if (isInteractive) {
-        this.drawInteractiveGlass(
-            isDark = true,
-            backdrop = backdrop,
-            layer = null,
-            luminance = 0.5f,
-            shape = shape,
-            interaction = interactiveHighlight
-        )
-    } else {
-        this.drawBackdrop(
-            backdrop = backdrop,
-            shape = { shape },
-            effects = {
-                vibrancy()
-                blur(40f.dp.toPx()) // Heavy blur for static items too
-            },
-            onDrawSurface = {
-                if (tint.isSpecified) {
-                    drawRect(tint)
-                    drawRect(Color.White.copy(alpha = 0.05f), blendMode = BlendMode.Plus)
-                }
-            }
-        ).border(0.5.dp, Color.White.copy(alpha = 0.20f), shape)
-    }
+    this.drawInteractiveGlass(
+        isDark = true, // Force dark mode aesthetic for music players
+        backdrop = backdrop,
+        layer = null,
+        luminanceAnimation = 0.5f, // Neutral static luminance
+        shape = shape,
+        interaction = if (isInteractive) interactiveHighlight else null
+    )
 }
 
 @Composable
