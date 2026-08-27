@@ -1231,6 +1231,10 @@ fun MediaMetadataListItem(
     )
 }
 
+// ------------------------------------------------------------------------
+// EXACT SIMP MUSIC FULL WIDTH ITEM DESIGN
+// ------------------------------------------------------------------------
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun YouTubeListItem(
@@ -1242,9 +1246,20 @@ fun YouTubeListItem(
     isPlaying: Boolean = false,
     isSwipeable: Boolean = true,
     trailingContent: @Composable RowScope.() -> Unit = {},
-    thumbnailShape: Shape = if (item is ArtistItem) CircleShape else RoundedCornerShape(12.dp),
+    thumbnailShape: Shape = if (item is ArtistItem) CircleShape else RoundedCornerShape(4.dp), // SIMP MUSIC 4dp corner
     badges: @Composable RowScope.() -> Unit = {
-        if (item.explicit) Icon.Explicit()
+        if (item.explicit) {
+            Text(
+                text = "E",
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.Black,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(Color.LightGray)
+                    .padding(horizontal = 4.dp, vertical = 1.dp)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+        }
         if (item is SongItem) {
             val download by LocalDownloadUtil.current.getDownload(item.id).collectAsStateWithLifecycle(null)
             Icon.Download(download?.state)
@@ -1263,43 +1278,89 @@ fun YouTubeListItem(
 
     val isLiked = (item is SongItem && song?.song?.liked == true) || (item is AlbumItem && album?.album?.bookmarkedAt != null)
 
+    val contentColor = Color.White
+    val subtitleColor = Color(0xC4FFFFFF) // Simp Music Exact subtitle tint
+
     val content: @Composable () -> Unit = {
-        ListItem(
-            title = item.title,
-            leadingContent = if (isLiked) {
-                {
+        Box(
+            modifier = modifier
+                .fillMaxWidth()
+                .background(if (isSelected) Color.White.copy(alpha = 0.1f) else Color.Transparent)
+        ) {
+            Row(
+                modifier = Modifier
+                    .padding(vertical = 6.dp, horizontal = 15.dp) // EXACT SIMP MUSIC PADDING
+                    .fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Thumbnail (48dp exact size like Simp Music)
+                Box(
+                    modifier = Modifier.size(48.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    ItemThumbnail(
+                        thumbnailUrl = item.thumbnail,
+                        albumIndex = albumIndex,
+                        isSelected = isSelected,
+                        isActive = isActive,
+                        isPlaying = isPlaying,
+                        shape = thumbnailShape,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+                // Titles Column
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 12.dp, end = 10.dp) // Spacing between thumbnail and text
+                ) {
+                    Text(
+                        text = item.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        maxLines = 1,
+                        color = contentColor,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        badges() // Adds explicit badge or download states
+                        val subtitleText = when (item) {
+                            is SongItem -> joinByBullet(item.artists.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name }, makeTimeString(item.duration?.times(1000L)))
+                            is AlbumItem -> joinByBullet(item.artists?.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name }, item.year?.toString())
+                            is ArtistItem -> "Artist"
+                            is PlaylistItem -> joinByBullet(item.author?.name, item.songCountText)
+                            is PodcastItem -> joinByBullet(item.author?.name, item.episodeCountText)
+                            is EpisodeItem -> joinByBullet(item.author?.name, makeTimeString(item.duration?.times(1000L)))
+                        }
+                        
+                        if (subtitleText != null) {
+                            Text(
+                                text = subtitleText,
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 1,
+                                color = subtitleColor,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+
+                // Heart Icon if liked 
+                if (isLiked) {
                     Icon(
                         painter = painterResource(R.drawable.favorite),
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                        modifier = Modifier.size(14.dp)
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(16.dp).padding(end = 4.dp)
                     )
                 }
-            } else null,
-            subtitle = when (item) {
-                is SongItem -> joinByBullet(item.artists.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name }, makeTimeString(item.duration?.times(1000L)))
-                is AlbumItem -> joinByBullet(item.artists?.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name }, item.year?.toString())
-                is ArtistItem -> null
-                is PlaylistItem -> joinByBullet(item.author?.name, item.songCountText)
-                is PodcastItem -> joinByBullet(item.author?.name, item.episodeCountText)
-                is EpisodeItem -> joinByBullet(item.author?.name, makeTimeString(item.duration?.times(1000L)))
-            },
-            badges = badges,
-            thumbnailContent = {
-                ItemThumbnail(
-                    thumbnailUrl = item.thumbnail,
-                    albumIndex = albumIndex,
-                    isSelected = isSelected,
-                    isActive = isActive,
-                    isPlaying = isPlaying,
-                    shape = thumbnailShape,
-                    modifier = Modifier.size(56.dp)
-                )
-            },
-            trailingContent = trailingContent,
-            modifier = modifier,
-            isActive = isActive
-        )
+
+                // More Options Menu (3 dots)
+                trailingContent()
+            }
+        }
     }
 
     if (item is SongItem && isSwipeable && swipeEnabled) {
@@ -1613,7 +1674,6 @@ fun ItemThumbnail(
             }
         }
 
-        // Apply Apple Music Visualizer on Top of the Thumbnail if Active
         if (isActive) {
             Box(
                 contentAlignment = Alignment.Center,
@@ -1992,7 +2052,6 @@ fun SwipeToSongBox(
     }
 }
 
-// Helper to animate reset of swipe offset
 private fun reset(offset: MutableState<Float>, scope: CoroutineScope) {
     scope.launch {
         animate(
@@ -2003,7 +2062,6 @@ private fun reset(offset: MutableState<Float>, scope: CoroutineScope) {
     }
 }
 
-// Data holder for swipe visuals
 data class Quadruple<A, B, C, D>(
     val first: A,
     val second: B,
@@ -2070,12 +2128,10 @@ object Icon {
     }
 }
 
-// NEW CUSTOM APPLE MUSIC STYLE VISUALIZER
 @Composable
 fun AppleMusicVisualizer(modifier: Modifier = Modifier, color: Color = Color.White) {
     val infiniteTransition = rememberInfiniteTransition(label = "visualizer")
     
-    // Alag alag timing aur heights se wave jaisa smooth feel aayega
     val anim1 by infiniteTransition.animateFloat(
         initialValue = 0.3f, targetValue = 1.0f,
         animationSpec = infiniteRepeatable(tween(400, easing = LinearEasing), RepeatMode.Reverse),
@@ -2099,7 +2155,7 @@ fun AppleMusicVisualizer(modifier: Modifier = Modifier, color: Color = Color.Whi
 
     Row(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(3.dp), // Dando ke beech ki jagah
+        horizontalArrangement = Arrangement.spacedBy(3.dp), 
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(modifier = Modifier.width(4.dp).fillMaxHeight(anim1).clip(RoundedCornerShape(50)).background(color))
