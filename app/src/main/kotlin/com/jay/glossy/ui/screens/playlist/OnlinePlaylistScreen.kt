@@ -236,7 +236,6 @@ fun OnlinePlaylistScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                // FIX: Removed the dark gradient. The whole background is now the solid color.
                 .background(animatedExtractedColor) 
         ) {
             LazyColumn(
@@ -611,7 +610,6 @@ private fun OnlinePlaylistHeader(
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(playlist.thumbnail?.resize(1080, 1080))
-                        .allowHardware(false) 
                         .build(),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
