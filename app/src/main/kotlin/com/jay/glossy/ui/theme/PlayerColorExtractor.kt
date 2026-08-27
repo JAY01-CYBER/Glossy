@@ -9,7 +9,7 @@ import com.jay.glossy.R
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.palette.graphics.Palette
+import com.kmpalette.palette.graphics.Palette
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
