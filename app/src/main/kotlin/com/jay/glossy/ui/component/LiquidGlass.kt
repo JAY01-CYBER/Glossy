@@ -25,25 +25,27 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastCoerceAtMost
 import androidx.compose.ui.util.lerp
-import com.kyant.backdrop.Backdrop
-import com.kyant.backdrop.drawBackdrop
-import com.kyant.backdrop.effects.blur
-import com.kyant.backdrop.effects.lens
-import com.kyant.backdrop.effects.vibrancy
+
+// WILDCARD IMPORTS: Let the compiler find the correct paths in Kyant v2.0.1
+import com.kyant.backdrop.*
+import com.kyant.backdrop.effects.*
+
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.tanh
 
-// EXACT WRAPPERS TO MATCH SIMP MUSIC PLAYLIST SCREEN
+// Wrappers for OnlinePlaylistScreen
 @Composable
 fun rememberBackdrop(color: Color = Color.Unspecified): Backdrop {
-    return com.kyant.backdrop.rememberBackdrop()
+    // Calling without explicit package to allow Wildcard matching
+    return rememberBackdrop() 
 }
 
 fun Modifier.layerBackdrop(backdrop: Backdrop): Modifier {
-    return this.then(com.kyant.backdrop.layerBackdrop(backdrop))
+    // Calling without explicit package to allow Wildcard matching
+    return this.then(layerBackdrop(backdrop))
 }
 
 @Composable
@@ -52,7 +54,7 @@ fun rememberGlassInteraction(): InteractiveHighlight {
     return remember(animationScope) { InteractiveHighlight(animationScope) }
 }
 
-// EXACT MATCH FOR LiquidGlassTabBar.kt (Line 144)
+// EXACT MATCH FOR LiquidGlassTabBar.kt
 fun Modifier.drawInteractiveGlass(
     isDark: Boolean,
     backdrop: Backdrop,
