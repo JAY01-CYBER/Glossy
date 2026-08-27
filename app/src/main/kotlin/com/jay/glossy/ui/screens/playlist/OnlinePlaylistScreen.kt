@@ -38,6 +38,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -85,6 +86,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
@@ -133,6 +135,12 @@ import com.jay.glossy.ui.component.rememberBackdrop
 import com.jay.glossy.ui.component.liquidGlass
 import com.jay.glossy.ui.component.LiquidGlassIconButton
 
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.haze
+import dev.chrisbanes.haze.hazeChild
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun OnlinePlaylistScreen(
@@ -164,6 +172,8 @@ fun OnlinePlaylistScreen(
     var query by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
 
     var dominantColor by remember { mutableStateOf(Color.Transparent) }
+    
+    val hazeState = remember { HazeState() }
 
     val filteredSongs = remember(songs, query) {
         if (query.text.isEmpty()) songs.mapIndexed { i, s -> i to s }
@@ -217,8 +227,7 @@ fun OnlinePlaylistScreen(
         label = "gradientColor"
     )
     
-    // UI FIX: Perfectly mixed vibrant solid color (Not too dark, not too bright)
-    val solidBgColor = androidx.compose.ui.graphics.lerp(animatedExtractedColor, Color.Black, 0.45f)
+    val solidBgColor = androidx.compose.ui.graphics.lerp(animatedExtractedColor, Color.Black, 0.35f)
     
     val dynamicTopPadding = if (isSearching || inSelectMode) {
         WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp
@@ -230,10 +239,16 @@ fun OnlinePlaylistScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(solidBgColor) // PERFECT SOLID BACKGROUND
+                // FIX: Removed POSITIVE_INFINITY to make the gradient background work perfectly!
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(solidBgColor, Color(0xFF0A0A0A))
+                    )
+                ) 
         ) {
             LazyColumn(
                 state = lazyListState,
+                modifier = Modifier.haze(state = hazeState),
                 contentPadding = LocalPlayerAwareWindowInsets.current
                     .only(WindowInsetsSides.Bottom)
                     .union(WindowInsets.ime).asPaddingValues().apply { 
@@ -487,7 +502,15 @@ fun OnlinePlaylistScreen(
                             }
                         }
                     },
-                    modifier = Modifier.background(solidBgColor.copy(alpha = 0.90f)),
+                    modifier = Modifier.hazeChild(
+                        state = hazeState, 
+                        shape = androidx.compose.ui.graphics.RectangleShape,
+                        style = HazeStyle(
+                            backgroundColor = solidBgColor.copy(alpha = 0.55f),
+                            tints = listOf(HazeTint(solidBgColor.copy(alpha = 0.55f))),
+                            blurRadius = 24.dp
+                        )
+                    ),
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                 )
             } else {
@@ -534,7 +557,15 @@ fun OnlinePlaylistScreen(
                                 }
                             }
                         },
-                        modifier = Modifier.background(solidBgColor.copy(alpha = 0.90f)),
+                        modifier = Modifier.hazeChild(
+                            state = hazeState, 
+                            shape = androidx.compose.ui.graphics.RectangleShape,
+                            style = HazeStyle(
+                                backgroundColor = solidBgColor.copy(alpha = 0.55f),
+                                tints = listOf(HazeTint(solidBgColor.copy(alpha = 0.55f))),
+                                blurRadius = 24.dp
+                            )
+                        ),
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                     )
                 }
@@ -577,9 +608,8 @@ private fun OnlinePlaylistHeader(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(1f) // Keeps artwork size consistent
+                .aspectRatio(1f) 
         ) {
-            // LAYER BACKDROP ATTACHED TO THE ARTWORK ONLY
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -597,8 +627,8 @@ private fun OnlinePlaylistHeader(
                                 val bitmap = state.result.image.toBitmap()
                                 val palette = Palette.from(bitmap).generate()
                                 
-                                // UI FIX: Extracting the absolute most vibrant solid color directly
-                                val swatch = palette.mutedSwatch ?: palette.dominantSwatch ?: palette.vibrantSwatch
+                                // FIX: Extracting the MOST vibrant colors reliably
+                                val swatch = palette.vibrantSwatch ?: palette.darkVibrantSwatch ?: palette.dominantSwatch ?: palette.mutedSwatch
                                 val colorInt = swatch?.rgb ?: android.graphics.Color.DKGRAY
                                 
                                 onDominantColorExtracted(Color(colorInt))
@@ -611,11 +641,10 @@ private fun OnlinePlaylistHeader(
                     modifier = Modifier.fillMaxSize()
                 )
 
-                // UI FIX: Smooth Gradient Scrim matching Simp Music exactly
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .fillMaxHeight(0.65f) // Fades bottom 65% of the image
+                        .fillMaxHeight(0.65f) 
                         .align(Alignment.BottomCenter)
                         .background(
                             Brush.verticalGradient(
@@ -627,18 +656,17 @@ private fun OnlinePlaylistHeader(
                         )
                 )
                 
-                // UI FIX: Title sizing and placement matched with Simp Music
                 Column(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .padding(horizontal = 24.dp)
-                        .padding(bottom = 8.dp), // Pushed all the way down to blend with gradient
+                        .padding(horizontal = 20.dp) 
+                        .padding(bottom = 16.dp), 
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
                         text = playlist.title,
-                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold), // Big & Bold
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), 
                         color = Color.White,
                         maxLines = 2,
                         textAlign = TextAlign.Center
@@ -646,21 +674,21 @@ private fun OnlinePlaylistHeader(
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = playlist.author?.name ?: stringResource(R.string.app_name),
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = Color.White.copy(alpha = 0.9f)
+                        style = MaterialTheme.typography.titleSmall, 
+                        color = Color.White,
+                        textAlign = TextAlign.Center
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(2.dp))
                     
                     Text(
                         text = "Playlist • 2026",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = Color.White.copy(alpha = 0.7f),
+                        style = MaterialTheme.typography.bodyMedium, 
+                        color = Color(0xC4FFFFFF), 
                         textAlign = TextAlign.Center
                     )
                 }
             }
 
-            // UI FIX: Restored TRUE LiquidGlass for the "Chamak"
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -673,14 +701,14 @@ private fun OnlinePlaylistHeader(
                 LiquidGlassIconButton(
                     backdrop = artworkBackdrop,
                     painter = painterResource(R.drawable.arrow_back),
-                    modifier = Modifier.size(48.dp), // FIXED BUTTON SIZE
+                    modifier = Modifier.size(48.dp), 
                     onClick = { navController.navigateUp() }
                 )
 
                 Row(
                     modifier = Modifier
-                        .height(48.dp) // Same height as back button
-                        .liquidGlass(artworkBackdrop, RoundedCornerShape(24.dp)) // SIMP MUSIC SHAPE
+                        .height(48.dp)
+                        .liquidGlass(artworkBackdrop, RoundedCornerShape(24.dp))
                         .padding(horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -762,23 +790,28 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // FIX: Added REAL LiquidGlass to Shuffle Button
                 Box(
                     modifier = Modifier
                         .size(48.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.12f))
-                        .clickable {
-                            if (!isListenTogetherGuest && songs.isNotEmpty()) {
-                                playerConnection.playQueue(
-                                    YouTubePlaylistQueue(
-                                        playlistId = playlist.id,
-                                        playlistTitle = playlist.title,
-                                        initialSongs = songs.shuffled(),
-                                        initialContinuation = continuation
+                        .liquidGlass(artworkBackdrop, CircleShape)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            role = Role.Button,
+                            onClick = {
+                                if (!isListenTogetherGuest && songs.isNotEmpty()) {
+                                    playerConnection.playQueue(
+                                        YouTubePlaylistQueue(
+                                            playlistId = playlist.id,
+                                            playlistTitle = playlist.title,
+                                            initialSongs = songs.shuffled(),
+                                            initialContinuation = continuation
+                                        )
                                     )
-                                )
+                                }
                             }
-                        },
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(painterResource(R.drawable.shuffle), null, tint = Color.White, modifier = Modifier.size(20.dp))
@@ -827,26 +860,31 @@ private fun OnlinePlaylistHeader(
                 }
 
                 val context = LocalContext.current
+                // FIX: Added REAL LiquidGlass to Download Button
                 Box(
                     modifier = Modifier
                         .size(48.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.12f))
-                        .clickable {
-                            songs.forEach { song ->
-                                val downloadRequest = androidx.media3.exoplayer.offline.DownloadRequest
-                                    .Builder(song.id, song.id.toUri())
-                                    .setCustomCacheKey(song.id)
-                                    .setData(song.title.toByteArray())
-                                    .build()
-                                androidx.media3.exoplayer.offline.DownloadService.sendAddDownload(
-                                    context,
-                                    ExoDownloadService::class.java,
-                                    downloadRequest,
-                                    false
-                                )
+                        .liquidGlass(artworkBackdrop, CircleShape)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            role = Role.Button,
+                            onClick = {
+                                songs.forEach { song ->
+                                    val downloadRequest = androidx.media3.exoplayer.offline.DownloadRequest
+                                        .Builder(song.id, song.id.toUri())
+                                        .setCustomCacheKey(song.id)
+                                        .setData(song.title.toByteArray())
+                                        .build()
+                                    androidx.media3.exoplayer.offline.DownloadService.sendAddDownload(
+                                        context,
+                                        ExoDownloadService::class.java,
+                                        downloadRequest,
+                                        false
+                                    )
+                                }
                             }
-                        },
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(painterResource(R.drawable.download), null, tint = Color.White, modifier = Modifier.size(20.dp))
