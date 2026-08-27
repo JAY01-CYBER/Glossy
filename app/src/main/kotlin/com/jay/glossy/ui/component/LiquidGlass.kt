@@ -25,9 +25,14 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastCoerceAtMost
 
-// WILDCARD IMPORTS
-import com.kyant.backdrop.*
-import com.kyant.backdrop.effects.*
+// EXACT KYANT KMP IMPORTS 
+import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
+import com.kyant.backdrop.backdrops.LayerBackdrop
+import com.kyant.backdrop.backdrops.layerBackdrop as kyantLayerBackdrop
 
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -35,16 +40,20 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.tanh
 
-// CRASH-FREE SAFE WRAPPERS
+// --- CRASH-FREE SAFE WRAPPERS ---
 @Composable
 fun rememberBackdrop(color: Color = Color.Unspecified): Backdrop {
-    // Explicit call to Kyant's backdrop to prevent infinite recursive loop crash
-    return com.kyant.backdrop.rememberBackdrop()
+    // Screenshot wali 'LayerBackdrop' class ko direct instantiate kar rahe hain!
+    return remember { LayerBackdrop() }
 }
 
 fun Modifier.layerBackdrop(backdrop: Backdrop): Modifier {
-    // Explicit call to Kyant's backdrop modifier
-    return this.then(com.kyant.backdrop.layerBackdrop(backdrop))
+    // Modifiers ko explicitly Kyant ke LayerBackdrop par cast karke apply karna
+    return if (backdrop is LayerBackdrop) {
+        this.then(Modifier.kyantLayerBackdrop(backdrop))
+    } else {
+        this
+    }
 }
 
 @Composable
