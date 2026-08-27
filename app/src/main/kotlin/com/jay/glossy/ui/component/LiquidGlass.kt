@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.isSpecified
+import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -35,8 +36,15 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.tanh
 
-// Dummy layerBackdrop wrapper to satisfy any older calls
-fun Modifier.layerBackdrop(backdrop: Backdrop? = null): Modifier = this
+// EXACT WRAPPERS TO MATCH SIMP MUSIC PLAYLIST SCREEN
+@Composable
+fun rememberBackdrop(color: Color = Color.Unspecified): Backdrop {
+    return com.kyant.backdrop.rememberBackdrop()
+}
+
+fun Modifier.layerBackdrop(backdrop: Backdrop): Modifier {
+    return this.then(com.kyant.backdrop.layerBackdrop(backdrop))
+}
 
 @Composable
 fun rememberGlassInteraction(): InteractiveHighlight {
@@ -44,12 +52,12 @@ fun rememberGlassInteraction(): InteractiveHighlight {
     return remember(animationScope) { InteractiveHighlight(animationScope) }
 }
 
-// EXACT SIGNATURE FOR LiquidGlassAppBottomNavigationBar.kt
+// EXACT MATCH FOR LiquidGlassTabBar.kt (Line 144)
 fun Modifier.drawInteractiveGlass(
-    isInteractive: Boolean,
+    isDark: Boolean,
     backdrop: Backdrop,
-    layer: androidx.compose.ui.graphics.layer.GraphicsLayer?,
-    progress: Float,
+    layer: GraphicsLayer?,
+    luminance: Float,
     shape: Shape,
     interaction: InteractiveHighlight
 ): Modifier = composed {
@@ -61,27 +69,26 @@ fun Modifier.drawInteractiveGlass(
             blur(16f.dp.toPx())
             lens(12f.dp.toPx(), 24f.dp.toPx())
         },
-        layerBlock = if (isInteractive) {
-            {
-                val width = size.width
-                val height = size.height
-                val scale = lerp(1f, 1f + 4f.dp.toPx() / size.height, progress)
-                
-                val maxOffset = size.minDimension
-                val initialDerivative = 0.05f
-                val offset = interaction.offset
-                
-                translationX = maxOffset * tanh(initialDerivative * offset.x / maxOffset)
-                translationY = maxOffset * tanh(initialDerivative * offset.y / maxOffset)
-                
-                val maxDragScale = 4f.dp.toPx() / size.height
-                val offsetAngle = atan2(offset.y, offset.x)
-                scaleX = scale + maxDragScale * abs(cos(offsetAngle) * offset.x / size.maxDimension) * (width / height).fastCoerceAtMost(1f)
-                scaleY = scale + maxDragScale * abs(sin(offsetAngle) * offset.y / size.maxDimension) * (height / width).fastCoerceAtMost(1f)
-            }
-        } else null,
+        layerBlock = {
+            val width = size.width
+            val height = size.height
+            val progress = interaction.pressProgress
+            val scale = lerp(1f, 1f + 4f.dp.toPx() / size.height, progress)
+            
+            val maxOffset = size.minDimension
+            val initialDerivative = 0.05f
+            val offset = interaction.offset
+            
+            translationX = maxOffset * tanh(initialDerivative * offset.x / maxOffset)
+            translationY = maxOffset * tanh(initialDerivative * offset.y / maxOffset)
+            
+            val maxDragScale = 4f.dp.toPx() / size.height
+            val offsetAngle = atan2(offset.y, offset.x)
+            scaleX = scale + maxDragScale * abs(cos(offsetAngle) * offset.x / size.maxDimension) * (width / height).fastCoerceAtMost(1f)
+            scaleY = scale + maxDragScale * abs(sin(offsetAngle) * offset.y / size.maxDimension) * (height / width).fastCoerceAtMost(1f)
+        },
         onDrawSurface = {
-            val tint = Color.White.copy(alpha = 0.15f + (0.05f * progress))
+            val tint = Color.White.copy(alpha = 0.15f + (0.05f * interaction.pressProgress))
             drawRect(tint, blendMode = BlendMode.Hue)
             drawRect(tint.copy(alpha = 0.35f))
         }
@@ -101,12 +108,11 @@ fun Modifier.liquidGlass(
     val interactiveHighlight = remember(animationScope) { InteractiveHighlight(animationScope) }
     
     if (isInteractive) {
-        val progress = interactiveHighlight.pressProgress
         this.drawInteractiveGlass(
-            isInteractive = true,
+            isDark = true,
             backdrop = backdrop,
             layer = null,
-            progress = progress,
+            luminance = 0.5f,
             shape = shape,
             interaction = interactiveHighlight
         )
