@@ -73,9 +73,15 @@ fun Modifier.drawInteractiveGlass(
         backdrop = backdrop,
         shape = { shape },
         effects = {
-            vibrancy()
-            blur(16f.dp.toPx()) // Exact blur radius
-            lens(12f.dp.toPx(), 24f.dp.toPx()) // Refraction effect
+            // PREMIUM EFFECTS APPLIED
+            vibrancy() // Boosts the saturation of the background colors
+            blur(24f.dp.toPx()) // Heavy frosted glass blur
+            lens(
+                refractionHeight = 16f.dp.toPx(),
+                refractionAmount = 32f.dp.toPx(),
+                depthEffect = true, // Enables 3D Depth
+                chromaticAberration = true // Enables Prism/RGB reflection on edges
+            )
         },
         layerBlock = {
             val width = size.width
@@ -96,12 +102,16 @@ fun Modifier.drawInteractiveGlass(
             scaleY = scale + maxDragScale * abs(sin(offsetAngle) * offset.y / size.maxDimension) * (height / width).fastCoerceAtMost(1f)
         },
         onDrawSurface = {
-            // FIX: Very low opacity, mostly reliant on 'BlendMode.Plus' for the glass shine
-            val glow = Color.White.copy(alpha = 0.15f + (0.10f * interaction.pressProgress))
-            drawRect(glow, blendMode = BlendMode.Plus)
+            val progress = interaction.pressProgress
+            
+            // Frosted Solid Base
+            drawRect(Color.White.copy(alpha = 0.15f + (0.10f * progress)))
+            
+            // Glossy Shine (Light reflection)
+            drawRect(Color.White.copy(alpha = 0.10f + (0.05f * progress)), blendMode = BlendMode.Plus)
         }
     )
-    .border(0.5.dp, Color.White.copy(alpha = 0.25f), shape) // Subtle border, not aggressive
+    .border(0.5.dp, Color.White.copy(alpha = 0.35f), shape)
     .then(interaction.modifier)
     .then(interaction.gestureModifier)
 }
@@ -109,7 +119,7 @@ fun Modifier.drawInteractiveGlass(
 fun Modifier.liquidGlass(
     backdrop: Backdrop,
     shape: Shape,
-    tint: Color = Color.White.copy(alpha = 0.15f), //  FIX: Crystal clear default tint
+    tint: Color = Color.White.copy(alpha = 0.15f), 
     isInteractive: Boolean = true
 ): Modifier = composed {
     val animationScope = rememberCoroutineScope()
@@ -129,17 +139,23 @@ fun Modifier.liquidGlass(
             backdrop = backdrop,
             shape = { shape },
             effects = {
-                vibrancy()
-                blur(16f.dp.toPx())
-                lens(12f.dp.toPx(), 24f.dp.toPx())
+                // PREMIUM EFFECTS APPLIED
+                vibrancy() // Boosts the saturation of the background colors
+                blur(24f.dp.toPx()) // Heavy frosted glass blur
+                lens(
+                    refractionHeight = 16f.dp.toPx(),
+                    refractionAmount = 32f.dp.toPx(),
+                    depthEffect = true, // Enables 3D Depth
+                    chromaticAberration = true // Enables Prism/RGB reflection on edges
+                )
             },
             onDrawSurface = {
                 if (tint.isSpecified) {
-                    // Adds light without covering the image
-                    drawRect(tint, blendMode = BlendMode.Plus)
+                    drawRect(tint)
+                    drawRect(tint.copy(alpha = 0.10f), blendMode = BlendMode.Plus)
                 }
             }
-        ).border(0.5.dp, Color.White.copy(alpha = 0.25f), shape) // Subtle border
+        ).border(0.5.dp, Color.White.copy(alpha = 0.35f), shape)
     }
 }
 
