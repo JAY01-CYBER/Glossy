@@ -96,13 +96,12 @@ fun Modifier.drawInteractiveGlass(
             scaleY = scale + maxDragScale * abs(sin(offsetAngle) * offset.y / size.maxDimension) * (height / width).fastCoerceAtMost(1f)
         },
         onDrawSurface = {
-            // FIX: Made the glass highly transparent and glowy 
             val glow = Color.White.copy(alpha = 0.05f + (0.05f * interaction.pressProgress))
             drawRect(glow, blendMode = BlendMode.Plus)
-            drawRect(Color.White.copy(alpha = 0.10f)) // Reduced from 0.35f to 0.10f
+            drawRect(Color.White.copy(alpha = 0.30f)) // Increased opacity for better visibility
         }
     )
-    .border(0.5.dp, Color.White.copy(alpha = 0.25f), shape)
+    .border(0.5.dp, Color.White.copy(alpha = 0.40f), shape) // Made border slightly more visible
     .then(interaction.modifier)
     .then(interaction.gestureModifier)
 }
@@ -110,7 +109,7 @@ fun Modifier.drawInteractiveGlass(
 fun Modifier.liquidGlass(
     backdrop: Backdrop,
     shape: Shape,
-    tint: Color = Color.White.copy(alpha = 0.10f), 
+    tint: Color = Color.White.copy(alpha = 0.30f), // Increased default tint opacity 
     isInteractive: Boolean = true
 ): Modifier = composed {
     val animationScope = rememberCoroutineScope()
@@ -140,7 +139,7 @@ fun Modifier.liquidGlass(
                     drawRect(tint)
                 }
             }
-        ).border(0.5.dp, Color.White.copy(alpha = 0.25f), shape)
+        ).border(0.5.dp, Color.White.copy(alpha = 0.40f), shape) // Made border slightly more visible
     }
 }
 
