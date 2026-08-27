@@ -97,9 +97,10 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.palette.graphics.Palette
 
-import coil3.asDrawable
+// COIL 3 - SAFE BITMAP EXTRACTION
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import coil3.toBitmap
 
 import com.metrolist.innertube.models.PlaylistItem
 import com.metrolist.innertube.models.SongItem
@@ -130,18 +131,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-// EXACT LOCAL IMPORTS (Resolves layerBackdrop & rememberBackdrop errors)
+// EXACT LOCAL IMPORTS
 import com.jay.glossy.ui.component.layerBackdrop
 import com.jay.glossy.ui.component.rememberBackdrop
 import com.jay.glossy.ui.component.liquidGlass
 import com.jay.glossy.ui.component.LiquidGlassIconButton
-
-// HAZE FOR LIST
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.haze
-import dev.chrisbanes.haze.hazeChild
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -174,8 +168,6 @@ fun OnlinePlaylistScreen(
     var query by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
 
     var dominantColor by remember { mutableStateOf(Color.Transparent) }
-    
-    val hazeState = remember { HazeState() }
 
     val filteredSongs = remember(songs, query) {
         if (query.text.isEmpty()) songs.mapIndexed { i, s -> i to s }
@@ -244,7 +236,7 @@ fun OnlinePlaylistScreen(
         ) {
             LazyColumn(
                 state = lazyListState,
-                modifier = Modifier.haze(state = hazeState), 
+                // CRASH FIX: Removed Modifier.haze() to prevent RenderThread conflict
                 contentPadding = LocalPlayerAwareWindowInsets.current
                     .only(WindowInsetsSides.Bottom)
                     .union(WindowInsets.ime).asPaddingValues().apply { 
@@ -498,15 +490,7 @@ fun OnlinePlaylistScreen(
                             }
                         }
                     },
-                    modifier = Modifier.hazeChild(
-                        state = hazeState, 
-                        shape = androidx.compose.ui.graphics.RectangleShape,
-                        style = HazeStyle(
-                            backgroundColor = mutedPaletteBg.copy(alpha = 0.65f),
-                            tints = listOf(HazeTint(mutedPaletteBg.copy(alpha = 0.65f))),
-                            blurRadius = 24.dp
-                        )
-                    ),
+                    modifier = Modifier.background(mutedPaletteBg.copy(alpha = 0.90f)), // CRASH FIX: Safe Solid Translucent Background
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                 )
             } else {
@@ -553,15 +537,7 @@ fun OnlinePlaylistScreen(
                                 }
                             }
                         },
-                        modifier = Modifier.hazeChild(
-                            state = hazeState, 
-                            shape = androidx.compose.ui.graphics.RectangleShape,
-                            style = HazeStyle(
-                                backgroundColor = mutedPaletteBg.copy(alpha = 0.65f),
-                                tints = listOf(HazeTint(mutedPaletteBg.copy(alpha = 0.65f))),
-                                blurRadius = 24.dp
-                            )
-                        ),
+                        modifier = Modifier.background(mutedPaletteBg.copy(alpha = 0.90f)), // CRASH FIX: Safe Solid Translucent Background
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                     )
                 }
@@ -598,7 +574,6 @@ private fun OnlinePlaylistHeader(
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
 
-    // PERFECT IMPORT NOW
     val artworkBackdrop = rememberBackdrop()
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -615,26 +590,24 @@ private fun OnlinePlaylistHeader(
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(playlist.thumbnail?.resize(1080, 1080))
+                        .allowHardware(false)
                         .build(),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     onSuccess = { state ->
-                        try {
-                            val drawable = state.result.image.asDrawable(context.resources)
-                            val bitmap = (drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
-                                ?: android.graphics.Bitmap.createBitmap(100, 100, android.graphics.Bitmap.Config.ARGB_8888).also { b ->
-                                    val canvas = android.graphics.Canvas(b)
-                                    drawable.setBounds(0, 0, canvas.width, canvas.height)
-                                    drawable.draw(canvas)
+                        // CRASH FIX: Properly extract bitmap using Coil 3 built-in extension in a background thread
+                        coroutineScope.launch(Dispatchers.Default) {
+                            try {
+                                val bitmap = state.result.image.toBitmap()
+                                Palette.from(bitmap).generate { palette ->
+                                    val swatch = palette?.darkMutedSwatch ?: palette?.mutedSwatch ?: palette?.dominantSwatch ?: palette?.darkVibrantSwatch
+                                    swatch?.rgb?.let { colorInt ->
+                                        onDominantColorExtracted(Color(colorInt))
+                                    }
                                 }
-                            Palette.from(bitmap).generate { palette ->
-                                val swatch = palette?.darkMutedSwatch ?: palette?.mutedSwatch ?: palette?.dominantSwatch ?: palette?.darkVibrantSwatch
-                                swatch?.rgb?.let { colorInt ->
-                                    onDominantColorExtracted(Color(colorInt))
-                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
                             }
-                        } catch (e: Exception) {
-                            e.printStackTrace()
                         }
                     },
                     modifier = Modifier.fillMaxSize()
