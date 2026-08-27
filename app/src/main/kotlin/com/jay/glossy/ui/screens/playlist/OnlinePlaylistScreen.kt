@@ -220,8 +220,8 @@ fun OnlinePlaylistScreen(
         label = "gradientColor"
     )
     
-    // EXPLICIT COLOR LERP: Fixed float mismatch error
-    val mutedPaletteBg = androidx.compose.ui.graphics.lerp(animatedExtractedColor, Color.Black, 0.45f)
+    // UI FIX: Direct Solid Color! Removed the black lerp mix to keep it vibrant.
+    val solidBgColor = animatedExtractedColor
     
     val dynamicTopPadding = if (isSearching || inSelectMode) {
         WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp
@@ -233,7 +233,7 @@ fun OnlinePlaylistScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(mutedPaletteBg) 
+                .background(solidBgColor) // USING SOLID COLOR HERE
         ) {
             LazyColumn(
                 state = lazyListState,
@@ -298,7 +298,7 @@ fun OnlinePlaylistScreen(
                                 navController = navController,
                                 coroutineScope = coroutineScope,
                                 continuation = viewModel.continuation,
-                                mutedPaletteBg = mutedPaletteBg,
+                                solidBgColor = solidBgColor, // PASSING SOLID COLOR
                                 onSearchClick = { isSearching = true },
                                 onDominantColorExtracted = { dominantColor = it }
                             )
@@ -490,7 +490,7 @@ fun OnlinePlaylistScreen(
                             }
                         }
                     },
-                    modifier = Modifier.background(mutedPaletteBg.copy(alpha = 0.90f)),
+                    modifier = Modifier.background(solidBgColor.copy(alpha = 0.90f)),
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                 )
             } else {
@@ -537,7 +537,7 @@ fun OnlinePlaylistScreen(
                                 }
                             }
                         },
-                        modifier = Modifier.background(mutedPaletteBg.copy(alpha = 0.90f)),
+                        modifier = Modifier.background(solidBgColor.copy(alpha = 0.90f)),
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                     )
                 }
@@ -560,7 +560,7 @@ private fun OnlinePlaylistHeader(
     navController: NavController,
     coroutineScope: CoroutineScope,
     continuation: String?,
-    mutedPaletteBg: Color,
+    solidBgColor: Color,
     onSearchClick: () -> Unit,
     onDominantColorExtracted: (Color) -> Unit,
     modifier: Modifier = Modifier
@@ -622,7 +622,7 @@ private fun OnlinePlaylistHeader(
                         .align(Alignment.BottomCenter)
                         .background(
                             Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, mutedPaletteBg),
+                                colors = listOf(Color.Transparent, solidBgColor), // USING SOLID COLOR
                                 startY = 0f
                             )
                         )
@@ -671,9 +671,11 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // UI FIX: Size properly matched with the right side pill (48.dp)
                 LiquidGlassIconButton(
                     backdrop = artworkBackdrop,
                     painter = painterResource(R.drawable.arrow_back),
+                    modifier = Modifier.size(48.dp), 
                     onClick = { navController.navigateUp() }
                 )
 
