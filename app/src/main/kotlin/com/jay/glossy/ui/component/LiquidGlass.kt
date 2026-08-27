@@ -38,6 +38,7 @@ import kotlin.math.sin
 import kotlin.math.tanh
 
 @Composable
+@Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE")
 fun rememberBackdrop(color: Color = Color.Unspecified): Backdrop {
     val graphicsLayer = rememberGraphicsLayer()
     return remember(graphicsLayer) { 
@@ -45,6 +46,7 @@ fun rememberBackdrop(color: Color = Color.Unspecified): Backdrop {
     }
 }
 
+@Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE")
 fun Modifier.layerBackdrop(backdrop: Backdrop): Modifier {
     return if (backdrop is LayerBackdrop) {
         this.then(Modifier.kyantLayerBackdrop(backdrop))
