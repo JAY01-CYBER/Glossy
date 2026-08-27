@@ -21,15 +21,15 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.graphics.rememberGraphicsLayer // NAYA IMPORT 
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastCoerceAtMost
 
-// WILDCARD IMPORTS
+// EXACT IMPORTS FROM KYANT REPO
 import com.kyant.backdrop.*
 import com.kyant.backdrop.effects.*
 import com.kyant.backdrop.backdrops.LayerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop as kyantLayerBackdrop
 
 import kotlin.math.abs
@@ -38,19 +38,17 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.tanh
 
-// CRASH-FREE SAFE WRAPPERS
+// --- CRASH-FREE SAFE WRAPPERS ---
 @Composable
 fun rememberBackdrop(color: Color = Color.Unspecified): Backdrop {
-    val graphicsLayer = rememberGraphicsLayer()
-    // ERROR FIXED: LayerBackdrop (class constructor) ko parameters pass kiye!
-    return remember(graphicsLayer) { 
-        LayerBackdrop(graphicsLayer = graphicsLayer, onDraw = {}) 
-    }
+    // Calling the exact @Composable function from line 25 of your screenshot
+    // It automatically handles rememberGraphicsLayer() internally!
+    return rememberLayerBackdrop()
 }
 
 fun Modifier.layerBackdrop(backdrop: Backdrop): Modifier {
     return if (backdrop is LayerBackdrop) {
-        // ERROR FIXED: Modifier ko ab sirf 'backdrop' object ja raha hai!
+        // Safe modifier application
         this.then(Modifier.kyantLayerBackdrop(backdrop))
     } else {
         this
