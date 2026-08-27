@@ -123,13 +123,13 @@ import com.jay.glossy.ui.menu.YouTubePlaylistMenu
 import com.jay.glossy.ui.menu.YouTubeSelectionSongMenu
 import com.jay.glossy.ui.menu.YouTubeSongMenu
 import com.jay.glossy.ui.utils.resize
+import com.jay.glossy.utils.makeTimeString
 import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.viewmodels.OnlinePlaylistViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-// REAL LIQUID GLASS IMPORTS
 import com.jay.glossy.ui.component.layerBackdrop
 import com.jay.glossy.ui.component.rememberBackdrop
 import com.jay.glossy.ui.component.liquidGlass
@@ -172,7 +172,6 @@ fun OnlinePlaylistScreen(
     var query by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
 
     var dominantColor by remember { mutableStateOf(Color.Transparent) }
-    
     val hazeState = remember { HazeState() }
 
     val filteredSongs = remember(songs, query) {
@@ -227,7 +226,10 @@ fun OnlinePlaylistScreen(
         label = "gradientColor"
     )
     
+    // Top gradient color
     val solidBgColor = androidx.compose.ui.graphics.lerp(animatedExtractedColor, Color.Black, 0.35f)
+    // FIX: Dark tinted color for the rest of the list background (No pure black!)
+    val listBgColor = androidx.compose.ui.graphics.lerp(animatedExtractedColor, Color.Black, 0.85f)
     
     val dynamicTopPadding = if (isSearching || inSelectMode) {
         WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp
@@ -239,10 +241,9 @@ fun OnlinePlaylistScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                // FIX: Removed POSITIVE_INFINITY to make the gradient background work perfectly!
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(solidBgColor, Color(0xFF0A0A0A))
+                        colors = listOf(solidBgColor, listBgColor) // Gradient fills the whole screen beautifully
                     )
                 ) 
         ) {
@@ -627,7 +628,6 @@ private fun OnlinePlaylistHeader(
                                 val bitmap = state.result.image.toBitmap()
                                 val palette = Palette.from(bitmap).generate()
                                 
-                                // FIX: Extracting the MOST vibrant colors reliably
                                 val swatch = palette.vibrantSwatch ?: palette.darkVibrantSwatch ?: palette.dominantSwatch ?: palette.mutedSwatch
                                 val colorInt = swatch?.rgb ?: android.graphics.Color.DKGRAY
                                 
@@ -661,7 +661,7 @@ private fun OnlinePlaylistHeader(
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp) 
-                        .padding(bottom = 16.dp), 
+                        .padding(bottom = 2.dp), // FIX: Reduced padding to move title further down
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
@@ -672,11 +672,21 @@ private fun OnlinePlaylistHeader(
                         textAlign = TextAlign.Center
                     )
                     Spacer(modifier = Modifier.height(4.dp))
+                    
+                    // FIX: Made Author Clickable to Navigate to Artist Page
                     Text(
                         text = playlist.author?.name ?: stringResource(R.string.app_name),
                         style = MaterialTheme.typography.titleSmall, 
                         color = Color.White,
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable(enabled = playlist.author?.id != null) {
+                                playlist.author?.id?.let { authorId ->
+                                    navController.navigate("artist/$authorId")
+                                }
+                            }
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     
@@ -790,7 +800,6 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // FIX: Added REAL LiquidGlass to Shuffle Button
                 Box(
                     modifier = Modifier
                         .size(48.dp)
@@ -860,7 +869,6 @@ private fun OnlinePlaylistHeader(
                 }
 
                 val context = LocalContext.current
-                // FIX: Added REAL LiquidGlass to Download Button
                 Box(
                     modifier = Modifier
                         .size(48.dp)
