@@ -1,6 +1,6 @@
 /**
  * Glossy Project (C) 2026
- * Liquid Glass Physics officially based on Kyant's Catalog Demo
+ * Pure iOS / Apple Music Frosted Glass Edition
  */
 package com.jay.glossy.ui.component
 
@@ -73,15 +73,9 @@ fun Modifier.drawInteractiveGlass(
         backdrop = backdrop,
         shape = { shape },
         effects = {
-            // PREMIUM EFFECTS APPLIED
-            vibrancy() // Boosts the saturation of the background colors
-            blur(24f.dp.toPx()) // Heavy frosted glass blur
-            lens(
-                refractionHeight = 16f.dp.toPx(),
-                refractionAmount = 32f.dp.toPx(),
-                depthEffect = true, // Enables 3D Depth
-                chromaticAberration = true // Enables Prism/RGB reflection on edges
-            )
+            // iOS FROSTED GLASS SECRET: High Vibrancy + Massive Blur, NO watery lens distortion!
+            vibrancy()
+            blur(40f.dp.toPx()) // 40dp gives that thick, premium Apple glass look
         },
         layerBlock = {
             val width = size.width
@@ -102,16 +96,16 @@ fun Modifier.drawInteractiveGlass(
             scaleY = scale + maxDragScale * abs(sin(offsetAngle) * offset.y / size.maxDimension) * (height / width).fastCoerceAtMost(1f)
         },
         onDrawSurface = {
-            val progress = interaction.pressProgress
+            // EXACT iOS COLOR TINT (Light grayish-white overlay with low opacity)
+            val iosFrostColor = Color(0xFFEBEBF5).copy(alpha = 0.15f)
+            drawRect(iosFrostColor)
             
-            // Frosted Solid Base
-            drawRect(Color.White.copy(alpha = 0.15f + (0.10f * progress)))
-            
-            // Glossy Shine (Light reflection)
-            drawRect(Color.White.copy(alpha = 0.10f + (0.05f * progress)), blendMode = BlendMode.Plus)
+            // Soft highlight on press
+            val glow = Color.White.copy(alpha = 0.05f + (0.10f * interaction.pressProgress))
+            drawRect(glow, blendMode = BlendMode.Plus)
         }
     )
-    .border(0.5.dp, Color.White.copy(alpha = 0.35f), shape)
+    .border(0.5.dp, Color.White.copy(alpha = 0.20f), shape) // Very thin crisp border
     .then(interaction.modifier)
     .then(interaction.gestureModifier)
 }
@@ -119,7 +113,7 @@ fun Modifier.drawInteractiveGlass(
 fun Modifier.liquidGlass(
     backdrop: Backdrop,
     shape: Shape,
-    tint: Color = Color.White.copy(alpha = 0.15f), 
+    tint: Color = Color(0xFFEBEBF5).copy(alpha = 0.15f), // Default iOS Tint
     isInteractive: Boolean = true
 ): Modifier = composed {
     val animationScope = rememberCoroutineScope()
@@ -139,23 +133,16 @@ fun Modifier.liquidGlass(
             backdrop = backdrop,
             shape = { shape },
             effects = {
-                // PREMIUM EFFECTS APPLIED
-                vibrancy() // Boosts the saturation of the background colors
-                blur(24f.dp.toPx()) // Heavy frosted glass blur
-                lens(
-                    refractionHeight = 16f.dp.toPx(),
-                    refractionAmount = 32f.dp.toPx(),
-                    depthEffect = true, // Enables 3D Depth
-                    chromaticAberration = true // Enables Prism/RGB reflection on edges
-                )
+                vibrancy()
+                blur(40f.dp.toPx()) // Heavy blur for static items too
             },
             onDrawSurface = {
                 if (tint.isSpecified) {
                     drawRect(tint)
-                    drawRect(tint.copy(alpha = 0.10f), blendMode = BlendMode.Plus)
+                    drawRect(Color.White.copy(alpha = 0.05f), blendMode = BlendMode.Plus)
                 }
             }
-        ).border(0.5.dp, Color.White.copy(alpha = 0.35f), shape)
+        ).border(0.5.dp, Color.White.copy(alpha = 0.20f), shape)
     }
 }
 
