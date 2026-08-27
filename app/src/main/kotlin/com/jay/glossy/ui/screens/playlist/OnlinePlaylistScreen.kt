@@ -219,7 +219,6 @@ fun OnlinePlaylistScreen(
 
     val currentPlaylist = playlist
 
-    // Use a default background color while the image loads, then animate directly to the solid extracted color
     val animatedExtractedColor by animateColorAsState(
         targetValue = if (dominantColor == Color.Transparent) Color(0xFF121212) else dominantColor,
         animationSpec = tween(durationMillis = 1000),
@@ -236,7 +235,7 @@ fun OnlinePlaylistScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(animatedExtractedColor) 
+                .background(animatedExtractedColor) // Entire screen background
         ) {
             LazyColumn(
                 state = lazyListState,
@@ -619,10 +618,25 @@ private fun OnlinePlaylistHeader(
                                 val bitmap = state.result.image.toBitmap()
                                 val palette = Palette.from(bitmap).generate()
                                 
-                                val swatch = palette.vibrantSwatch ?: palette.darkVibrantSwatch ?: palette.dominantSwatch ?: palette.mutedSwatch
+                                // Prioritize vibrant colors over dark ones
+                                val swatch = palette.vibrantSwatch 
+                                    ?: palette.lightVibrantSwatch 
+                                    ?: palette.mutedSwatch
+                                    ?: palette.dominantSwatch
+                                
                                 val colorInt = swatch?.rgb ?: android.graphics.Color.DKGRAY
                                 
-                                onDominantColorExtracted(Color(colorInt))
+                                // FIX: Convert to HSL to ensure the color is never pure dark/black
+                                val hsl = FloatArray(3)
+                                androidx.core.graphics.ColorUtils.colorToHSL(colorInt, hsl)
+                                
+                                // Clamp Lightness so it's visible (not black) but still readable
+                                hsl[2] = hsl[2].coerceIn(0.25f, 0.40f) 
+                                // Boost Saturation so the background looks colorful and solid
+                                hsl[1] = hsl[1].coerceAtLeast(0.50f)
+                                
+                                val vibrantColor = Color(androidx.core.graphics.ColorUtils.HSLToColor(hsl))
+                                onDominantColorExtracted(vibrantColor)
                                 
                             } catch (e: Exception) {
                                 e.printStackTrace()
