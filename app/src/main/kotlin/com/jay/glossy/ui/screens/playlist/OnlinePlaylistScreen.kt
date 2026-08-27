@@ -36,8 +36,10 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -73,11 +75,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
@@ -86,6 +91,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
@@ -117,7 +123,6 @@ import com.metrolist.models.toMediaMetadata
 import com.jay.glossy.playback.ExoDownloadService
 import com.jay.glossy.playback.queues.YouTubePlaylistQueue
 import com.jay.glossy.ui.component.ExpandableText
-import com.jay.glossy.ui.component.IconButton
 import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.component.YouTubeListItem
 import com.jay.glossy.ui.menu.YouTubePlaylistMenu
@@ -130,15 +135,65 @@ import com.jay.glossy.viewmodels.OnlinePlaylistViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlin.math.abs
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.tanh
 
-// EXACT LOCAL IMPORTS
-import com.jay.glossy.ui.component.layerBackdrop
-import com.jay.glossy.ui.component.rememberBackdrop
-import com.jay.glossy.ui.component.liquidGlass
-import com.jay.glossy.ui.component.LiquidGlassIconButton
-
-// PLAYER COLOR EXTRACTOR IMPORT
+// COMPONENT IMPORTS
+import com.jay.glossy.ui.component.InteractiveHighlight
 import com.jay.glossy.ui.theme.PlayerColorExtractor
+
+// NATIVE SQUISHY GLASS MODIFIER (CRASH FREE)
+fun Modifier.squishyGlass(
+    shape: Shape,
+    isInteractive: Boolean = true
+): Modifier = composed {
+    val animationScope = rememberCoroutineScope()
+    val interaction = remember { InteractiveHighlight(animationScope) }
+    
+    this.graphicsLayer {
+        if (isInteractive) {
+            val progress = interaction.pressProgress
+            val scale = lerp(1f, 1.08f, progress)
+            scaleX = scale
+            scaleY = scale
+            
+            val maxOffset = size.minDimension
+            val initialDerivative = 0.05f
+            val offset = interaction.offset
+            translationX = maxOffset * tanh(initialDerivative * offset.x / maxOffset)
+            translationY = maxOffset * tanh(initialDerivative * offset.y / maxOffset)
+        }
+    }
+    .background(Color.White.copy(alpha = 0.15f), shape)
+    .border(0.5.dp, Color.White.copy(alpha = 0.25f), shape)
+    .then(if (isInteractive) interaction.modifier else Modifier)
+    .then(if (isInteractive) interaction.gestureModifier else Modifier)
+}
+
+@Composable
+fun SquishyIconButton(
+    painter: androidx.compose.ui.graphics.painter.Painter,
+    modifier: Modifier = Modifier,
+    shape: Shape = CircleShape,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .squishyGlass(shape, isInteractive = true)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null, 
+                role = Role.Button,
+                onClick = onClick
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(painter, contentDescription = null, tint = Color.White)
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -224,7 +279,6 @@ fun OnlinePlaylistScreen(
         label = "gradientColor"
     )
     
-    // MIXING LESS BLACK (0.45f) SO THE EXTRACTED PLAYER COLOR LOOKS MORE VIBRANT
     val mutedPaletteBg = lerp(animatedExtractedColor, Color.Black, 0.45f)
     
     val dynamicTopPadding = if (isSearching || inSelectMode) {
@@ -379,7 +433,7 @@ fun OnlinePlaylistScreen(
                                         onCheckedChange = onCheckedChange
                                     )
                                 } else {
-                                    IconButton(onClick = {
+                                    androidx.compose.material3.IconButton(onClick = {
                                         menuState.show {
                                             YouTubeSongMenu(songItem, menuState::dismiss)
                                         }
@@ -448,7 +502,7 @@ fun OnlinePlaylistScreen(
                         }
                     },
                     navigationIcon = {
-                        IconButton(
+                        androidx.compose.material3.IconButton(
                             onClick = {
                                 if (isSearching) {
                                     isSearching = false
@@ -478,7 +532,7 @@ fun OnlinePlaylistScreen(
                                     }
                                 }
                             )
-                            IconButton(
+                            androidx.compose.material3.IconButton(
                                 enabled = selection.isNotEmpty(),
                                 onClick = {
                                     menuState.show {
@@ -518,16 +572,16 @@ fun OnlinePlaylistScreen(
                             )
                         },
                         navigationIcon = {
-                            IconButton(onClick = { navController.navigateUp() }) {
+                            androidx.compose.material3.IconButton(onClick = { navController.navigateUp() }) {
                                 Icon(painterResource(R.drawable.arrow_back), null, tint = Color.White)
                             }
                         },
                         actions = {
-                            IconButton(onClick = { isSearching = true }) {
+                            androidx.compose.material3.IconButton(onClick = { isSearching = true }) {
                                 Icon(painterResource(R.drawable.search), "Search", tint = Color.White)
                             }
                             if (currentPlaylist != null) {
-                                IconButton(onClick = {
+                                androidx.compose.material3.IconButton(onClick = {
                                     menuState.show {
                                         YouTubePlaylistMenu(
                                             playlist = currentPlaylist,
@@ -578,8 +632,6 @@ private fun OnlinePlaylistHeader(
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
 
-    val artworkBackdrop = rememberBackdrop()
-
     Column(modifier = modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
@@ -587,9 +639,7 @@ private fun OnlinePlaylistHeader(
                 .aspectRatio(1f)
         ) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .layerBackdrop(artworkBackdrop) 
+                modifier = Modifier.fillMaxSize()
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
@@ -601,18 +651,14 @@ private fun OnlinePlaylistHeader(
                         coroutineScope.launch(Dispatchers.Default) {
                             try {
                                 val bitmap = state.result.image.toBitmap()
-                                // Synchronous palette generation in background thread
                                 val palette = Palette.from(bitmap).generate()
                                 
-                                // USING YOUR PLAYER'S ADVANCED EXTRACTION LOGIC!
                                 val gradientColors = PlayerColorExtractor.extractGradientColors(
                                     palette = palette, 
                                     fallbackColor = android.graphics.Color.DKGRAY
                                 )
                                 
-                                // Taking the perfectly enhanced vibrant primary color
                                 val vibrantSolidColor = gradientColors.first()
-                                
                                 onDominantColorExtracted(vibrantSolidColor)
                                 
                             } catch (e: Exception) {
@@ -679,8 +725,8 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                LiquidGlassIconButton(
-                    backdrop = artworkBackdrop,
+                // USING CRASH-FREE NATIVE SQUISHY BUTTON
+                SquishyIconButton(
                     painter = painterResource(R.drawable.arrow_back),
                     onClick = { navController.navigateUp() }
                 )
@@ -688,12 +734,12 @@ private fun OnlinePlaylistHeader(
                 Row(
                     modifier = Modifier
                         .height(48.dp)
-                        .liquidGlass(artworkBackdrop, RoundedCornerShape(50))
+                        .squishyGlass(RoundedCornerShape(50))
                         .padding(horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     val isLiked = dbPlaylist?.playlist?.bookmarkedAt != null
-                    IconButton(onClick = {
+                    androidx.compose.material3.IconButton(onClick = {
                         coroutineScope.launch(Dispatchers.IO) {
                             if (dbPlaylist != null) {
                                 database.withTransaction {
@@ -738,11 +784,11 @@ private fun OnlinePlaylistHeader(
                         )
                     }
 
-                    IconButton(onClick = onSearchClick) {
+                    androidx.compose.material3.IconButton(onClick = onSearchClick) {
                         Icon(painterResource(R.drawable.search), "Search", tint = Color.White)
                     }
 
-                    IconButton(onClick = {
+                    androidx.compose.material3.IconButton(onClick = {
                         menuState.show {
                             YouTubePlaylistMenu(
                                 playlist = playlist,
