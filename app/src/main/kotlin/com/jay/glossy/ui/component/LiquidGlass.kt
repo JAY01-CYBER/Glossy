@@ -21,15 +21,14 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastCoerceAtMost
 
-// EXACT IMPORTS FROM KYANT REPO
 import com.kyant.backdrop.*
 import com.kyant.backdrop.effects.*
 import com.kyant.backdrop.backdrops.LayerBackdrop
-import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop as kyantLayerBackdrop
 
 import kotlin.math.abs
@@ -38,17 +37,16 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.tanh
 
-// --- CRASH-FREE SAFE WRAPPERS ---
 @Composable
 fun rememberBackdrop(color: Color = Color.Unspecified): Backdrop {
-    // Calling the exact @Composable function from line 25 of your screenshot
-    // It automatically handles rememberGraphicsLayer() internally!
-    return rememberLayerBackdrop()
+    val graphicsLayer = rememberGraphicsLayer()
+    return remember(graphicsLayer) { 
+        LayerBackdrop(graphicsLayer = graphicsLayer, onDraw = {}) 
+    }
 }
 
 fun Modifier.layerBackdrop(backdrop: Backdrop): Modifier {
     return if (backdrop is LayerBackdrop) {
-        // Safe modifier application
         this.then(Modifier.kyantLayerBackdrop(backdrop))
     } else {
         this
@@ -61,7 +59,6 @@ fun rememberGlassInteraction(): InteractiveHighlight {
     return remember(animationScope) { InteractiveHighlight(animationScope) }
 }
 
-// EXACT MATCH FOR LiquidGlassTabBar.kt
 fun Modifier.drawInteractiveGlass(
     isDark: Boolean,
     backdrop: Backdrop,
@@ -82,8 +79,6 @@ fun Modifier.drawInteractiveGlass(
             val width = size.width
             val height = size.height
             val progress = interaction.pressProgress
-            
-            // EXPLICIT FLOAT LERP
             val scale = androidx.compose.ui.util.lerp(1f, 1f + 4f.dp.toPx() / size.height, progress)
             
             val maxOffset = size.minDimension
@@ -99,9 +94,10 @@ fun Modifier.drawInteractiveGlass(
             scaleY = scale + maxDragScale * abs(sin(offsetAngle) * offset.y / size.maxDimension) * (height / width).fastCoerceAtMost(1f)
         },
         onDrawSurface = {
-            val tint = Color.White.copy(alpha = 0.15f + (0.05f * interaction.pressProgress))
-            drawRect(tint, blendMode = BlendMode.Hue)
-            drawRect(tint.copy(alpha = 0.35f))
+            // FIX: Made the glass highly transparent and glowy 
+            val glow = Color.White.copy(alpha = 0.05f + (0.05f * interaction.pressProgress))
+            drawRect(glow, blendMode = BlendMode.Plus)
+            drawRect(Color.White.copy(alpha = 0.10f)) // Reduced from 0.35f to 0.10f
         }
     )
     .border(0.5.dp, Color.White.copy(alpha = 0.25f), shape)
@@ -109,11 +105,10 @@ fun Modifier.drawInteractiveGlass(
     .then(interaction.gestureModifier)
 }
 
-// RESTORED FOR APP BOTTOM NAVIGATION BAR
 fun Modifier.liquidGlass(
     backdrop: Backdrop,
     shape: Shape,
-    tint: Color = Color.White.copy(alpha = 0.15f), 
+    tint: Color = Color.White.copy(alpha = 0.10f), 
     isInteractive: Boolean = true
 ): Modifier = composed {
     val animationScope = rememberCoroutineScope()
@@ -139,15 +134,14 @@ fun Modifier.liquidGlass(
             },
             onDrawSurface = {
                 if (tint.isSpecified) {
-                    drawRect(tint, blendMode = BlendMode.Hue)
-                    drawRect(tint.copy(alpha = 0.35f))
+                    drawRect(tint, blendMode = BlendMode.Plus)
+                    drawRect(tint)
                 }
             }
         ).border(0.5.dp, Color.White.copy(alpha = 0.25f), shape)
     }
 }
 
-// RESTORED FOR PLAYLIST SCREEN
 @Composable
 fun LiquidGlassIconButton(
     backdrop: Backdrop,
