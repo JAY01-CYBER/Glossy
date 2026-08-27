@@ -36,10 +36,8 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -75,15 +73,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -91,7 +85,6 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
@@ -135,65 +128,13 @@ import com.jay.glossy.viewmodels.OnlinePlaylistViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlin.math.abs
-import kotlin.math.atan2
-import kotlin.math.cos
-import kotlin.math.sin
-import kotlin.math.tanh
 
 // COMPONENT IMPORTS
-import com.jay.glossy.ui.component.InteractiveHighlight
+import com.jay.glossy.ui.component.layerBackdrop
+import com.jay.glossy.ui.component.rememberBackdrop
+import com.jay.glossy.ui.component.liquidGlass
+import com.jay.glossy.ui.component.LiquidGlassIconButton
 import com.jay.glossy.ui.theme.PlayerColorExtractor
-
-// NATIVE SQUISHY GLASS MODIFIER (CRASH FREE)
-fun Modifier.squishyGlass(
-    shape: Shape,
-    isInteractive: Boolean = true
-): Modifier = composed {
-    val animationScope = rememberCoroutineScope()
-    val interaction = remember { InteractiveHighlight(animationScope) }
-    
-    this.graphicsLayer {
-        if (isInteractive) {
-            val progress = interaction.pressProgress
-            val scale = lerp(1f, 1.08f, progress)
-            scaleX = scale
-            scaleY = scale
-            
-            val maxOffset = size.minDimension
-            val initialDerivative = 0.05f
-            val offset = interaction.offset
-            translationX = maxOffset * tanh(initialDerivative * offset.x / maxOffset)
-            translationY = maxOffset * tanh(initialDerivative * offset.y / maxOffset)
-        }
-    }
-    .background(Color.White.copy(alpha = 0.15f), shape)
-    .border(0.5.dp, Color.White.copy(alpha = 0.25f), shape)
-    .then(if (isInteractive) interaction.modifier else Modifier)
-    .then(if (isInteractive) interaction.gestureModifier else Modifier)
-}
-
-@Composable
-fun SquishyIconButton(
-    painter: androidx.compose.ui.graphics.painter.Painter,
-    modifier: Modifier = Modifier,
-    shape: Shape = CircleShape,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = modifier
-            .squishyGlass(shape, isInteractive = true)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null, 
-                role = Role.Button,
-                onClick = onClick
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(painter, contentDescription = null, tint = Color.White)
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -279,7 +220,8 @@ fun OnlinePlaylistScreen(
         label = "gradientColor"
     )
     
-    val mutedPaletteBg = lerp(animatedExtractedColor, Color.Black, 0.45f)
+    // EXPLICIT COLOR LERP: Fixed float mismatch error
+    val mutedPaletteBg = androidx.compose.ui.graphics.lerp(animatedExtractedColor, Color.Black, 0.45f)
     
     val dynamicTopPadding = if (isSearching || inSelectMode) {
         WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp
@@ -632,6 +574,8 @@ private fun OnlinePlaylistHeader(
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
 
+    val artworkBackdrop = rememberBackdrop()
+
     Column(modifier = modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
@@ -639,7 +583,9 @@ private fun OnlinePlaylistHeader(
                 .aspectRatio(1f)
         ) {
             Box(
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .fillMaxSize()
+                    .layerBackdrop(artworkBackdrop) 
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
@@ -725,8 +671,8 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // USING CRASH-FREE NATIVE SQUISHY BUTTON
-                SquishyIconButton(
+                LiquidGlassIconButton(
+                    backdrop = artworkBackdrop,
                     painter = painterResource(R.drawable.arrow_back),
                     onClick = { navController.navigateUp() }
                 )
@@ -734,7 +680,7 @@ private fun OnlinePlaylistHeader(
                 Row(
                     modifier = Modifier
                         .height(48.dp)
-                        .squishyGlass(RoundedCornerShape(50))
+                        .liquidGlass(artworkBackdrop, RoundedCornerShape(50))
                         .padding(horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
