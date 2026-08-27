@@ -28,7 +28,22 @@ import com.kyant.backdrop.isRuntimeShaderSupported
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
-// EXACT MATCH FOR LiquidGlassTabBar.kt (Line 292)
+// EXACT MATCH FOR LiquidGlassTabBar.kt (Line 154: detectPress { })
+suspend fun PointerInputScope.detectPress(onPress: (Offset) -> Unit) {
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+        onPress(down.position)
+        var isDown = true
+        while (isDown) {
+            val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+            if (event.changes.all { !it.pressed }) {
+                isDown = false
+            }
+        }
+    }
+}
+
+// EXACT MATCH FOR LiquidGlassTabBar.kt (Line 292: inspectDragGestures)
 suspend fun PointerInputScope.inspectDragGestures(
     onDragStart: (PointerInputChange) -> Unit = {},
     onDragEnd: () -> Unit = {},
@@ -71,29 +86,6 @@ class InteractiveHighlight(
     private var startPosition = Offset.Zero
     val pressProgress: Float get() = pressProgressAnimation.value
     val offset: Offset get() = positionAnimation.value - startPosition
-
-    // EXACT MATCH FOR LiquidGlassTabBar.kt (Line 154: barInteraction.detectPress(this))
-    suspend fun detectPress(scope: PointerInputScope) {
-        scope.awaitEachGesture {
-            val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-            startPosition = down.position
-            animationScope.launch {
-                launch { pressProgressAnimation.animateTo(1f, pressProgressAnimationSpec) }
-                launch { positionAnimation.snapTo(startPosition) }
-            }
-            var isDown = true
-            while (isDown) {
-                val event = awaitPointerEvent(pass = PointerEventPass.Initial)
-                if (event.changes.all { !it.pressed }) {
-                    isDown = false
-                }
-            }
-            animationScope.launch {
-                launch { pressProgressAnimation.animateTo(0f, pressProgressAnimationSpec) }
-                launch { positionAnimation.animateTo(startPosition, positionAnimationSpec) }
-            }
-        }
-    }
 
     private val shader = if (isRuntimeShaderSupported()) {
         RuntimeShader(
