@@ -130,7 +130,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-// FIXED LOCAL BACKDROP IMPORTS (Exact Match)
+// EXACT LOCAL IMPORTS (Resolves layerBackdrop & rememberBackdrop errors)
 import com.jay.glossy.ui.component.layerBackdrop
 import com.jay.glossy.ui.component.rememberBackdrop
 import com.jay.glossy.ui.component.liquidGlass
@@ -598,7 +598,7 @@ private fun OnlinePlaylistHeader(
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
 
-    // Exact Local Mocks
+    // PERFECT IMPORT NOW
     val artworkBackdrop = rememberBackdrop()
 
     Column(modifier = modifier.fillMaxWidth()) {
