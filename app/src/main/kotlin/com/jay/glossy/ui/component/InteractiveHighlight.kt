@@ -72,7 +72,7 @@ class InteractiveHighlight(
     val pressProgress: Float get() = pressProgressAnimation.value
     val offset: Offset get() = positionAnimation.value - startPosition
 
-    // EXACT MATCH FOR LiquidGlassTabBar.kt (Line 151: barInteraction.detectPress(this))
+    // EXACT MATCH FOR LiquidGlassTabBar.kt (Line 154: barInteraction.detectPress(this))
     suspend fun detectPress(scope: PointerInputScope) {
         scope.awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
