@@ -1245,6 +1245,7 @@ fun YouTubeListItem(
     isActive: Boolean = false,
     isPlaying: Boolean = false,
     isSwipeable: Boolean = true,
+    showDivider: Boolean = true,
     trailingContent: @Composable RowScope.() -> Unit = {},
     thumbnailShape: Shape = if (item is ArtistItem) CircleShape else RoundedCornerShape(4.dp), // SIMP MUSIC 4dp corner
     badges: @Composable RowScope.() -> Unit = {
@@ -1252,10 +1253,10 @@ fun YouTubeListItem(
             Text(
                 text = "E",
                 style = MaterialTheme.typography.labelSmall,
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.surface, // LIGHT THEME FIX: Uses dynamic surface color
                 modifier = Modifier
                     .clip(RoundedCornerShape(2.dp))
-                    .background(Color.LightGray)
+                    .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
                     .padding(horizontal = 4.dp, vertical = 1.dp)
             )
             Spacer(modifier = Modifier.width(4.dp))
@@ -1278,87 +1279,100 @@ fun YouTubeListItem(
 
     val isLiked = (item is SongItem && song?.song?.liked == true) || (item is AlbumItem && album?.album?.bookmarkedAt != null)
 
-    val contentColor = Color.White
-    val subtitleColor = Color(0xC4FFFFFF) // Simp Music Exact subtitle tint
+    // LIGHT THEME FIX: Uses MaterialTheme dynamic colors instead of hardcoded white
+    val contentColor = MaterialTheme.colorScheme.onBackground
+    val subtitleColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f) 
 
     val content: @Composable () -> Unit = {
-        Box(
-            modifier = modifier
-                .fillMaxWidth()
-                .background(if (isSelected) Color.White.copy(alpha = 0.1f) else Color.Transparent)
-        ) {
-            Row(
+        Column(modifier = modifier.fillMaxWidth()) {
+            Box(
                 modifier = Modifier
-                    .padding(vertical = 6.dp, horizontal = 15.dp) // EXACT SIMP MUSIC PADDING
-                    .fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                    .fillMaxWidth()
+                    // LIGHT THEME FIX: Uses onBackground alpha for selection highlight
+                    .background(if (isSelected) MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f) else Color.Transparent)
             ) {
-                // Thumbnail (48dp exact size like Simp Music)
-                Box(
-                    modifier = Modifier.size(48.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    ItemThumbnail(
-                        thumbnailUrl = item.thumbnail,
-                        albumIndex = albumIndex,
-                        isSelected = isSelected,
-                        isActive = isActive,
-                        isPlaying = isPlaying,
-                        shape = thumbnailShape,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-
-                // Titles Column
-                Column(
+                Row(
                     modifier = Modifier
-                        .weight(1f)
-                        .padding(start = 12.dp, end = 10.dp) // Spacing between thumbnail and text
+                        .padding(vertical = 6.dp, horizontal = 15.dp) // EXACT SIMP MUSIC PADDING
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = item.title,
-                        style = MaterialTheme.typography.titleSmall,
-                        maxLines = 1,
-                        color = contentColor,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        badges() // Adds explicit badge or download states
-                        val subtitleText = when (item) {
-                            is SongItem -> joinByBullet(item.artists.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name }, makeTimeString(item.duration?.times(1000L)))
-                            is AlbumItem -> joinByBullet(item.artists?.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name }, item.year?.toString())
-                            is ArtistItem -> "Artist"
-                            is PlaylistItem -> joinByBullet(item.author?.name, item.songCountText)
-                            is PodcastItem -> joinByBullet(item.author?.name, item.episodeCountText)
-                            is EpisodeItem -> joinByBullet(item.author?.name, makeTimeString(item.duration?.times(1000L)))
-                        }
+                    // Thumbnail (48dp exact size like Simp Music)
+                    Box(
+                        modifier = Modifier.size(48.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        ItemThumbnail(
+                            thumbnailUrl = item.thumbnail,
+                            albumIndex = albumIndex,
+                            isSelected = isSelected,
+                            isActive = isActive,
+                            isPlaying = isPlaying,
+                            shape = thumbnailShape,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+
+                    // Titles Column
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(start = 12.dp, end = 10.dp) // Spacing between thumbnail and text
+                    ) {
+                        Text(
+                            text = item.title,
+                            style = MaterialTheme.typography.titleSmall,
+                            maxLines = 1,
+                            color = contentColor,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
                         
-                        if (subtitleText != null) {
-                            Text(
-                                text = subtitleText,
-                                style = MaterialTheme.typography.bodySmall,
-                                maxLines = 1,
-                                color = subtitleColor,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            badges() // Adds explicit badge or download states
+                            val subtitleText = when (item) {
+                                is SongItem -> joinByBullet(item.artists.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name }, makeTimeString(item.duration?.times(1000L)))
+                                is AlbumItem -> joinByBullet(item.artists?.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name }, item.year?.toString())
+                                is ArtistItem -> "Artist"
+                                is PlaylistItem -> joinByBullet(item.author?.name, item.songCountText)
+                                is PodcastItem -> joinByBullet(item.author?.name, item.episodeCountText)
+                                is EpisodeItem -> joinByBullet(item.author?.name, makeTimeString(item.duration?.times(1000L)))
+                            }
+                            
+                            if (subtitleText != null) {
+                                Text(
+                                    text = subtitleText,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    maxLines = 1,
+                                    color = subtitleColor,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
                     }
-                }
 
-                // Heart Icon if liked 
-                if (isLiked) {
-                    Icon(
-                        painter = painterResource(R.drawable.favorite),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(16.dp).padding(end = 4.dp)
-                    )
-                }
+                    // Heart Icon if liked 
+                    if (isLiked) {
+                        Icon(
+                            painter = painterResource(R.drawable.favorite),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(16.dp).padding(end = 4.dp)
+                        )
+                    }
 
-                // More Options Menu (3 dots)
-                trailingContent()
+                    // More Options Menu (3 dots)
+                    trailingContent()
+                }
+            }
+            
+            // DIVIDER LINE (Supports Light and Dark Mode)
+            if (showDivider) {
+                androidx.compose.material3.HorizontalDivider(
+                    modifier = Modifier.padding(start = 75.dp, end = 16.dp), 
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.12f)
+                )
             }
         }
     }
