@@ -96,7 +96,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
-import androidx.palette.graphics.Palette
+import com.kmpalette.palette.graphics.Palette
 
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
