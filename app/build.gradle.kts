@@ -348,7 +348,7 @@ dependencies {
 
     implementation(libs.material3)
     // Removed old libs.palette, added KMPalette
-    implementation("com.kmpalette:kmpalette-core:4.0.0-beta03")
+    implementation(libs.kmpalette.core)
     implementation(libs.materialKolor)
 
     implementation(libs.appcompat)
