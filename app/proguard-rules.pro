@@ -218,3 +218,7 @@
 
 # Haze Rules
 -dontwarn dev.chrisbanes.haze.**
+
+## KMPalette Rules
+-keep class com.kmpalette.** { *; }
+-dontwarn com.kmpalette.**
