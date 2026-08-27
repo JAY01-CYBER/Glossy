@@ -28,27 +28,7 @@ import com.kyant.backdrop.isRuntimeShaderSupported
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
-// EXACT MATCH FOR LiquidGlassTabBar.kt (Scope version)
-suspend fun PointerInputScope.detectPress(onPress: (Offset) -> Unit) {
-    awaitEachGesture {
-        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-        onPress(down.position)
-        var isDown = true
-        while (isDown) {
-            val event = awaitPointerEvent(pass = PointerEventPass.Initial)
-            if (event.changes.all { !it.pressed }) {
-                isDown = false
-            }
-        }
-    }
-}
-
-// EXACT MATCH FOR LiquidGlassTabBar.kt (Modifier version)
-fun Modifier.detectPress(onPress: (Offset) -> Unit): Modifier = this.pointerInput(Unit) {
-    detectPress(onPress)
-}
-
-// EXACT MATCH FOR LiquidGlassTabBar.kt (Scope version)
+// EXACT MATCH FOR LiquidGlassTabBar.kt (Line 292)
 suspend fun PointerInputScope.inspectDragGestures(
     onDragStart: (PointerInputChange) -> Unit = {},
     onDragEnd: () -> Unit = {},
@@ -78,16 +58,6 @@ suspend fun PointerInputScope.inspectDragGestures(
     }
 }
 
-// EXACT MATCH FOR LiquidGlassTabBar.kt (Modifier version)
-fun Modifier.inspectDragGestures(
-    onDragStart: (PointerInputChange) -> Unit = {},
-    onDragEnd: () -> Unit = {},
-    onDragCancel: () -> Unit = {},
-    onDrag: (PointerInputChange, Offset) -> Unit
-): Modifier = this.pointerInput(Unit) {
-    inspectDragGestures(onDragStart, onDragEnd, onDragCancel, onDrag)
-}
-
 class InteractiveHighlight(
     val animationScope: CoroutineScope,
     val position: (size: Size, offset: Offset) -> Offset = { _, offset -> offset }
@@ -101,6 +71,29 @@ class InteractiveHighlight(
     private var startPosition = Offset.Zero
     val pressProgress: Float get() = pressProgressAnimation.value
     val offset: Offset get() = positionAnimation.value - startPosition
+
+    // EXACT MATCH FOR LiquidGlassTabBar.kt (Line 151: barInteraction.detectPress(this))
+    suspend fun detectPress(scope: PointerInputScope) {
+        scope.awaitEachGesture {
+            val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            startPosition = down.position
+            animationScope.launch {
+                launch { pressProgressAnimation.animateTo(1f, pressProgressAnimationSpec) }
+                launch { positionAnimation.snapTo(startPosition) }
+            }
+            var isDown = true
+            while (isDown) {
+                val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                if (event.changes.all { !it.pressed }) {
+                    isDown = false
+                }
+            }
+            animationScope.launch {
+                launch { pressProgressAnimation.animateTo(0f, pressProgressAnimationSpec) }
+                launch { positionAnimation.animateTo(startPosition, positionAnimationSpec) }
+            }
+        }
+    }
 
     private val shader = if (isRuntimeShaderSupported()) {
         RuntimeShader(
