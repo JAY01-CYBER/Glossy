@@ -51,14 +51,13 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastCoerceIn
 import androidx.compose.ui.util.lerp
-import com.kyant.backdrop.drawBackdrop
-import com.kyant.backdrop.effects.blur
-import com.kyant.backdrop.effects.colorControls
-import com.kyant.backdrop.effects.lens
-import com.kyant.backdrop.effects.vibrancy
-import com.kyant.backdrop.highlight.Highlight
-import com.kyant.backdrop.shadow.InnerShadow
-import com.kyant.backdrop.shadow.Shadow
+
+// WILDCARD IMPORTS
+import com.kyant.backdrop.*
+import com.kyant.backdrop.effects.*
+import com.kyant.backdrop.highlight.*
+import com.kyant.backdrop.shadow.*
+
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.drop
@@ -79,8 +78,8 @@ private val BarInset = 6.dp
 fun LiquidGlassTabBar(
     tabs: List<BottomNavScreen>,
     selectedTab: Int,
-    backdrop: com.kyant.backdrop.Backdrop,
-    layer: GraphicsLayer,
+    backdrop: Backdrop, // Fixed: Using standard Backdrop class
+    layer: GraphicsLayer?,
     luminance: Float,
     modifier: Modifier = Modifier,
     availableWidth: Dp = Dp.Unspecified,
@@ -150,7 +149,7 @@ fun LiquidGlassTabBar(
                 .height(BarHeight)
                 .width(tabWidth * tabsCount + BarInset * 2)
                 .pointerInput(barInteraction) { 
-                    // FIXED: Replaced member call with standalone detectPress
+                    // FIXED: This now correctly references the PointerInputScope extension
                     detectPress { }
                 },
         contentAlignment = Alignment.CenterStart,
