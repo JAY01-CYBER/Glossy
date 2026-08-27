@@ -219,17 +219,12 @@ fun OnlinePlaylistScreen(
 
     val currentPlaylist = playlist
 
-    val fallbackColor = Color(0xFF121212)
+    // Use a default background color while the image loads, then animate directly to the solid extracted color
     val animatedExtractedColor by animateColorAsState(
-        targetValue = if (dominantColor == Color.Transparent) fallbackColor else dominantColor,
-        animationSpec = tween(durationMillis = 800),
-        label = "gradientColor"
+        targetValue = if (dominantColor == Color.Transparent) Color(0xFF121212) else dominantColor,
+        animationSpec = tween(durationMillis = 1000),
+        label = "solidColor"
     )
-    
-    // Top gradient color
-    val solidBgColor = androidx.compose.ui.graphics.lerp(animatedExtractedColor, Color.Black, 0.35f)
-    // FIX: Dark tinted color for the rest of the list background (No pure black!)
-    val listBgColor = androidx.compose.ui.graphics.lerp(animatedExtractedColor, Color.Black, 0.85f)
     
     val dynamicTopPadding = if (isSearching || inSelectMode) {
         WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp
@@ -241,11 +236,8 @@ fun OnlinePlaylistScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(solidBgColor, listBgColor) // Gradient fills the whole screen beautifully
-                    )
-                ) 
+                // FIX: Removed the dark gradient. The whole background is now the solid color.
+                .background(animatedExtractedColor) 
         ) {
             LazyColumn(
                 state = lazyListState,
@@ -311,7 +303,7 @@ fun OnlinePlaylistScreen(
                                 navController = navController,
                                 coroutineScope = coroutineScope,
                                 continuation = viewModel.continuation,
-                                solidBgColor = solidBgColor,
+                                solidBgColor = animatedExtractedColor,
                                 onSearchClick = { isSearching = true },
                                 onDominantColorExtracted = { dominantColor = it }
                             )
@@ -507,8 +499,8 @@ fun OnlinePlaylistScreen(
                         state = hazeState, 
                         shape = androidx.compose.ui.graphics.RectangleShape,
                         style = HazeStyle(
-                            backgroundColor = solidBgColor.copy(alpha = 0.55f),
-                            tints = listOf(HazeTint(solidBgColor.copy(alpha = 0.55f))),
+                            backgroundColor = animatedExtractedColor.copy(alpha = 0.55f),
+                            tints = listOf(HazeTint(animatedExtractedColor.copy(alpha = 0.55f))),
                             blurRadius = 24.dp
                         )
                     ),
@@ -562,8 +554,8 @@ fun OnlinePlaylistScreen(
                             state = hazeState, 
                             shape = androidx.compose.ui.graphics.RectangleShape,
                             style = HazeStyle(
-                                backgroundColor = solidBgColor.copy(alpha = 0.55f),
-                                tints = listOf(HazeTint(solidBgColor.copy(alpha = 0.55f))),
+                                backgroundColor = animatedExtractedColor.copy(alpha = 0.55f),
+                                tints = listOf(HazeTint(animatedExtractedColor.copy(alpha = 0.55f))),
                                 blurRadius = 24.dp
                             )
                         ),
@@ -619,6 +611,7 @@ private fun OnlinePlaylistHeader(
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(playlist.thumbnail?.resize(1080, 1080))
+                        .allowHardware(false) 
                         .build(),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
@@ -661,7 +654,7 @@ private fun OnlinePlaylistHeader(
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp) 
-                        .padding(bottom = 2.dp), // FIX: Reduced padding to move title further down
+                        .padding(bottom = 2.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
@@ -673,7 +666,6 @@ private fun OnlinePlaylistHeader(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     
-                    // FIX: Made Author Clickable to Navigate to Artist Page
                     Text(
                         text = playlist.author?.name ?: stringResource(R.string.app_name),
                         style = MaterialTheme.typography.titleSmall, 
