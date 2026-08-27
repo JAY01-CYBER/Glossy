@@ -74,8 +74,8 @@ fun Modifier.drawInteractiveGlass(
         shape = { shape },
         effects = {
             vibrancy()
-            blur(16f.dp.toPx())
-            lens(12f.dp.toPx(), 24f.dp.toPx())
+            blur(16f.dp.toPx()) // Exact blur radius
+            lens(12f.dp.toPx(), 24f.dp.toPx()) // Refraction effect
         },
         layerBlock = {
             val width = size.width
@@ -96,13 +96,12 @@ fun Modifier.drawInteractiveGlass(
             scaleY = scale + maxDragScale * abs(sin(offsetAngle) * offset.y / size.maxDimension) * (height / width).fastCoerceAtMost(1f)
         },
         onDrawSurface = {
-            val glow = Color.White.copy(alpha = 0.05f + (0.05f * interaction.pressProgress))
+            // FIX: Very low opacity, mostly reliant on 'BlendMode.Plus' for the glass shine
+            val glow = Color.White.copy(alpha = 0.15f + (0.10f * interaction.pressProgress))
             drawRect(glow, blendMode = BlendMode.Plus)
-            // INCREASED OPACITY: Reduced transparency for a much more solid glass look
-            drawRect(Color.White.copy(alpha = 0.50f)) 
         }
     )
-    .border(0.5.dp, Color.White.copy(alpha = 0.60f), shape)
+    .border(0.5.dp, Color.White.copy(alpha = 0.25f), shape) // Subtle border, not aggressive
     .then(interaction.modifier)
     .then(interaction.gestureModifier)
 }
@@ -110,7 +109,7 @@ fun Modifier.drawInteractiveGlass(
 fun Modifier.liquidGlass(
     backdrop: Backdrop,
     shape: Shape,
-    tint: Color = Color.White.copy(alpha = 0.50f), // Much more solid default tint 
+    tint: Color = Color.White.copy(alpha = 0.15f), //  FIX: Crystal clear default tint
     isInteractive: Boolean = true
 ): Modifier = composed {
     val animationScope = rememberCoroutineScope()
@@ -136,11 +135,11 @@ fun Modifier.liquidGlass(
             },
             onDrawSurface = {
                 if (tint.isSpecified) {
+                    // Adds light without covering the image
                     drawRect(tint, blendMode = BlendMode.Plus)
-                    drawRect(tint)
                 }
             }
-        ).border(0.5.dp, Color.White.copy(alpha = 0.60f), shape)
+        ).border(0.5.dp, Color.White.copy(alpha = 0.25f), shape) // Subtle border
     }
 }
 
