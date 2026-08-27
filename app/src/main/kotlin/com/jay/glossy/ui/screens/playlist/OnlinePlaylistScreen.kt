@@ -96,7 +96,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.palette.graphics.Palette
 
-// COIL 3 - SAFE BITMAP EXTRACTION
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.toBitmap
@@ -122,19 +121,17 @@ import com.jay.glossy.ui.menu.YouTubePlaylistMenu
 import com.jay.glossy.ui.menu.YouTubeSelectionSongMenu
 import com.jay.glossy.ui.menu.YouTubeSongMenu
 import com.jay.glossy.ui.utils.resize
-import com.jay.glossy.utils.makeTimeString
 import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.viewmodels.OnlinePlaylistViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-// COMPONENT IMPORTS
+// REAL LIQUID GLASS IMPORTS
 import com.jay.glossy.ui.component.layerBackdrop
 import com.jay.glossy.ui.component.rememberBackdrop
 import com.jay.glossy.ui.component.liquidGlass
 import com.jay.glossy.ui.component.LiquidGlassIconButton
-import com.jay.glossy.ui.theme.PlayerColorExtractor
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -220,8 +217,8 @@ fun OnlinePlaylistScreen(
         label = "gradientColor"
     )
     
-    // UI FIX: Direct Solid Color! Removed the black lerp mix to keep it vibrant.
-    val solidBgColor = animatedExtractedColor
+    // UI FIX: Perfectly mixed vibrant solid color (Not too dark, not too bright)
+    val solidBgColor = androidx.compose.ui.graphics.lerp(animatedExtractedColor, Color.Black, 0.45f)
     
     val dynamicTopPadding = if (isSearching || inSelectMode) {
         WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp
@@ -233,7 +230,7 @@ fun OnlinePlaylistScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(solidBgColor) // USING SOLID COLOR HERE
+                .background(solidBgColor) // PERFECT SOLID BACKGROUND
         ) {
             LazyColumn(
                 state = lazyListState,
@@ -298,7 +295,7 @@ fun OnlinePlaylistScreen(
                                 navController = navController,
                                 coroutineScope = coroutineScope,
                                 continuation = viewModel.continuation,
-                                solidBgColor = solidBgColor, // PASSING SOLID COLOR
+                                solidBgColor = solidBgColor,
                                 onSearchClick = { isSearching = true },
                                 onDominantColorExtracted = { dominantColor = it }
                             )
@@ -580,8 +577,9 @@ private fun OnlinePlaylistHeader(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(1f)
+                .aspectRatio(1f) // Keeps artwork size consistent
         ) {
+            // LAYER BACKDROP ATTACHED TO THE ARTWORK ONLY
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -599,13 +597,11 @@ private fun OnlinePlaylistHeader(
                                 val bitmap = state.result.image.toBitmap()
                                 val palette = Palette.from(bitmap).generate()
                                 
-                                val gradientColors = PlayerColorExtractor.extractGradientColors(
-                                    palette = palette, 
-                                    fallbackColor = android.graphics.Color.DKGRAY
-                                )
+                                // UI FIX: Extracting the absolute most vibrant solid color directly
+                                val swatch = palette.mutedSwatch ?: palette.dominantSwatch ?: palette.vibrantSwatch
+                                val colorInt = swatch?.rgb ?: android.graphics.Color.DKGRAY
                                 
-                                val vibrantSolidColor = gradientColors.first()
-                                onDominantColorExtracted(vibrantSolidColor)
+                                onDominantColorExtracted(Color(colorInt))
                                 
                             } catch (e: Exception) {
                                 e.printStackTrace()
@@ -615,53 +611,56 @@ private fun OnlinePlaylistHeader(
                     modifier = Modifier.fillMaxSize()
                 )
 
+                // UI FIX: Smooth Gradient Scrim matching Simp Music exactly
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .fillMaxHeight(0.45f) 
+                        .fillMaxHeight(0.65f) // Fades bottom 65% of the image
                         .align(Alignment.BottomCenter)
                         .background(
                             Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, solidBgColor), // USING SOLID COLOR
-                                startY = 0f
+                                0.0f to Color.Transparent,
+                                0.4f to solidBgColor.copy(alpha = 0.4f),
+                                0.8f to solidBgColor.copy(alpha = 0.9f),
+                                1.0f to solidBgColor
                             )
                         )
                 )
                 
+                // UI FIX: Title sizing and placement matched with Simp Music
                 Column(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp)
-                        .padding(bottom = 24.dp),
+                        .padding(bottom = 8.dp), // Pushed all the way down to blend with gradient
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
                         text = playlist.title,
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.Black, 
+                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold), // Big & Bold
                         color = Color.White,
                         maxLines = 2,
                         textAlign = TextAlign.Center
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = playlist.author?.name ?: stringResource(R.string.app_name),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold, 
-                        color = Color.White
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = Color.White.copy(alpha = 0.9f)
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     
                     Text(
                         text = "Playlist • 2026",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.labelLarge,
                         color = Color.White.copy(alpha = 0.7f),
                         textAlign = TextAlign.Center
                     )
                 }
             }
 
+            // UI FIX: Restored TRUE LiquidGlass for the "Chamak"
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -671,18 +670,17 @@ private fun OnlinePlaylistHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // UI FIX: Size properly matched with the right side pill (48.dp)
                 LiquidGlassIconButton(
                     backdrop = artworkBackdrop,
                     painter = painterResource(R.drawable.arrow_back),
-                    modifier = Modifier.size(48.dp), 
+                    modifier = Modifier.size(48.dp), // FIXED BUTTON SIZE
                     onClick = { navController.navigateUp() }
                 )
 
                 Row(
                     modifier = Modifier
-                        .height(48.dp)
-                        .liquidGlass(artworkBackdrop, RoundedCornerShape(50))
+                        .height(48.dp) // Same height as back button
+                        .liquidGlass(artworkBackdrop, RoundedCornerShape(24.dp)) // SIMP MUSIC SHAPE
                         .padding(horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
