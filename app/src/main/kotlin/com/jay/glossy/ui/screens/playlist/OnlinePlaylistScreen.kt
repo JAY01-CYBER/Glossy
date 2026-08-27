@@ -137,6 +137,9 @@ import com.jay.glossy.ui.component.rememberBackdrop
 import com.jay.glossy.ui.component.liquidGlass
 import com.jay.glossy.ui.component.LiquidGlassIconButton
 
+// PLAYER COLOR EXTRACTOR IMPORT
+import com.jay.glossy.ui.theme.PlayerColorExtractor
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun OnlinePlaylistScreen(
@@ -220,7 +223,9 @@ fun OnlinePlaylistScreen(
         animationSpec = tween(durationMillis = 800),
         label = "gradientColor"
     )
-    val mutedPaletteBg = lerp(animatedExtractedColor, Color.Black, 0.65f)
+    
+    // MIXING LESS BLACK (0.45f) SO THE EXTRACTED PLAYER COLOR LOOKS MORE VIBRANT
+    val mutedPaletteBg = lerp(animatedExtractedColor, Color.Black, 0.45f)
     
     val dynamicTopPadding = if (isSearching || inSelectMode) {
         WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp
@@ -236,7 +241,6 @@ fun OnlinePlaylistScreen(
         ) {
             LazyColumn(
                 state = lazyListState,
-                // CRASH FIX: Removed Modifier.haze() to prevent RenderThread conflict
                 contentPadding = LocalPlayerAwareWindowInsets.current
                     .only(WindowInsetsSides.Bottom)
                     .union(WindowInsets.ime).asPaddingValues().apply { 
@@ -490,7 +494,7 @@ fun OnlinePlaylistScreen(
                             }
                         }
                     },
-                    modifier = Modifier.background(mutedPaletteBg.copy(alpha = 0.90f)), // CRASH FIX: Safe Solid Translucent Background
+                    modifier = Modifier.background(mutedPaletteBg.copy(alpha = 0.90f)),
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                 )
             } else {
@@ -537,7 +541,7 @@ fun OnlinePlaylistScreen(
                                 }
                             }
                         },
-                        modifier = Modifier.background(mutedPaletteBg.copy(alpha = 0.90f)), // CRASH FIX: Safe Solid Translucent Background
+                        modifier = Modifier.background(mutedPaletteBg.copy(alpha = 0.90f)),
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                     )
                 }
@@ -590,21 +594,27 @@ private fun OnlinePlaylistHeader(
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(playlist.thumbnail?.resize(1080, 1080))
-                        .allowHardware(false)
                         .build(),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     onSuccess = { state ->
-                        // CRASH FIX: Properly extract bitmap using Coil 3 built-in extension in a background thread
                         coroutineScope.launch(Dispatchers.Default) {
                             try {
                                 val bitmap = state.result.image.toBitmap()
-                                Palette.from(bitmap).generate { palette ->
-                                    val swatch = palette?.darkMutedSwatch ?: palette?.mutedSwatch ?: palette?.dominantSwatch ?: palette?.darkVibrantSwatch
-                                    swatch?.rgb?.let { colorInt ->
-                                        onDominantColorExtracted(Color(colorInt))
-                                    }
-                                }
+                                // Synchronous palette generation in background thread
+                                val palette = Palette.from(bitmap).generate()
+                                
+                                // USING YOUR PLAYER'S ADVANCED EXTRACTION LOGIC!
+                                val gradientColors = PlayerColorExtractor.extractGradientColors(
+                                    palette = palette, 
+                                    fallbackColor = android.graphics.Color.DKGRAY
+                                )
+                                
+                                // Taking the perfectly enhanced vibrant primary color
+                                val vibrantSolidColor = gradientColors.first()
+                                
+                                onDominantColorExtracted(vibrantSolidColor)
+                                
                             } catch (e: Exception) {
                                 e.printStackTrace()
                             }
