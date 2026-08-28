@@ -106,7 +106,6 @@ import com.kmpalette.palette.graphics.Palette
 
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-import coil3.request.crossfade
 import coil3.toBitmap
 
 import com.metrolist.innertube.models.PlaylistItem
@@ -680,8 +679,6 @@ private fun OnlinePlaylistHeader(
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(playlist.thumbnail?.resize(1080, 1080))
-                        .allowHardware(false) // <-- CRITICAL: Prevents Palette crash on Online Images!
-                        .crossfade(true)
                         .build(),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
