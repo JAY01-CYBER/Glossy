@@ -79,6 +79,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -96,6 +97,9 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
+
+// KMPalette Imports (Simp Music style)
+import com.kmpalette.rememberPaletteState
 import com.kmpalette.palette.graphics.Palette
 
 import coil3.compose.AsyncImage
@@ -123,6 +127,7 @@ import com.jay.glossy.ui.menu.YouTubePlaylistMenu
 import com.jay.glossy.ui.menu.YouTubeSelectionSongMenu
 import com.jay.glossy.ui.menu.YouTubeSongMenu
 import com.jay.glossy.ui.utils.resize
+import com.jay.glossy.ui.utils.toImmersiveBackground
 import com.jay.glossy.utils.makeTimeString
 import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.viewmodels.OnlinePlaylistViewModel
@@ -171,7 +176,7 @@ fun OnlinePlaylistScreen(
     var isSearching by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
 
-    var dominantColor by remember { mutableStateOf(Color.Transparent) }
+    var dominantColor by remember { mutableStateOf(Color.Black) }
     val hazeState = remember { HazeState() }
 
     val filteredSongs = remember(songs, query) {
@@ -220,7 +225,7 @@ fun OnlinePlaylistScreen(
     val currentPlaylist = playlist
 
     val animatedExtractedColor by animateColorAsState(
-        targetValue = if (dominantColor == Color.Transparent) Color(0xFF121212) else dominantColor,
+        targetValue = dominantColor,
         animationSpec = tween(durationMillis = 1000),
         label = "solidColor"
     )
@@ -235,7 +240,7 @@ fun OnlinePlaylistScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(animatedExtractedColor) // Entire screen background
+                .background(animatedExtractedColor)
         ) {
             LazyColumn(
                 state = lazyListState,
@@ -595,6 +600,26 @@ private fun OnlinePlaylistHeader(
 
     val artworkBackdrop = rememberBackdrop()
 
+    // KMPalette 3.1.0 Implementation (Simp Music style)
+    val paletteState = rememberPaletteState()
+    var imageBitmap by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
+    var paletteGeneratedFor by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(imageBitmap) {
+        val bm = imageBitmap
+        if (bm != null && playlist.thumbnail != null && paletteGeneratedFor != playlist.thumbnail) {
+            paletteState.generate(bm)
+            paletteGeneratedFor = playlist.thumbnail
+        }
+    }
+
+    LaunchedEffect(paletteState.palette) {
+        val palette = paletteState.palette
+        if (palette != null) {
+            onDominantColorExtracted(palette.toImmersiveBackground())
+        }
+    }
+
     Column(modifier = modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
@@ -613,35 +638,8 @@ private fun OnlinePlaylistHeader(
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     onSuccess = { state ->
-                        coroutineScope.launch(Dispatchers.Default) {
-                            try {
-                                val bitmap = state.result.image.toBitmap()
-                                val palette = Palette.from(bitmap).generate()
-                                
-                                // Prioritize vibrant colors over dark ones
-                                val swatch = palette.vibrantSwatch 
-                                    ?: palette.lightVibrantSwatch 
-                                    ?: palette.mutedSwatch
-                                    ?: palette.dominantSwatch
-                                
-                                val colorInt = swatch?.rgb ?: android.graphics.Color.DKGRAY
-                                
-                                // FIX: Convert to HSL to ensure the color is never pure dark/black
-                                val hsl = FloatArray(3)
-                                androidx.core.graphics.ColorUtils.colorToHSL(colorInt, hsl)
-                                
-                                // Clamp Lightness so it's visible (not black) but still readable
-                                hsl[2] = hsl[2].coerceIn(0.25f, 0.40f) 
-                                // Boost Saturation so the background looks colorful and solid
-                                hsl[1] = hsl[1].coerceAtLeast(0.50f)
-                                
-                                val vibrantColor = Color(androidx.core.graphics.ColorUtils.HSLToColor(hsl))
-                                onDominantColorExtracted(vibrantColor)
-                                
-                            } catch (e: Exception) {
-                                e.printStackTrace()
-                            }
-                        }
+                        // Convert to Compose ImageBitmap for KMPalette
+                        imageBitmap = state.result.image.toBitmap().asImageBitmap()
                     },
                     modifier = Modifier.fillMaxSize()
                 )
