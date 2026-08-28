@@ -111,7 +111,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.kmpalette.palette.graphics.Palette
+import androidx.palette.graphics.Palette
 import coil3.ImageLoader
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
