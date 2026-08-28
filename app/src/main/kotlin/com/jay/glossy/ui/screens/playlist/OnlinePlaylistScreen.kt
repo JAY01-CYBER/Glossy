@@ -100,12 +100,13 @@ import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 
-// KMPalette Imports (Simp Music style)
+// KMPalette Imports 
 import com.kmpalette.rememberPaletteState
 import com.kmpalette.palette.graphics.Palette
 
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import coil3.request.crossfade
 import coil3.toBitmap
 
 import com.metrolist.innertube.models.PlaylistItem
@@ -257,7 +258,7 @@ fun OnlinePlaylistScreen(
                     },
             ) {
                 if (currentPlaylist == null) {
-                    // अगर प्लेलिस्ट का डेटा भी नहीं आया है, तो फुल स्क्रीन लोडिंग दिखाओ
+                    // Full screen loading IF header hasn't loaded yet
                     if (isLoading) {
                         item(key = "full_loading") {
                             Box(
@@ -292,9 +293,9 @@ fun OnlinePlaylistScreen(
                         }
                     }
                 } else {
-                    // 1. हेडर हमेशा सबसे पहले रेंडर होगा (भले ही गाने लोड न हुए हों)
+                    // 1. Header loads immediately
                     if (isSearching || inSelectMode) {
-                        item {
+                        item(key = "search_spacer") {
                             Spacer(
                                 modifier = Modifier.height(
                                     WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp
@@ -319,14 +320,109 @@ fun OnlinePlaylistScreen(
                         }
                     }
 
-                    // 2. जब गाने लोड हो रहे हों, तो हेडर के नीचे लोडिंग इंडिकेटर दिखाओ
+                    // 2. Songs block is ALWAYS active so animateItem() sees the insert and slides them up!
+                    itemsIndexed(
+                        items = filteredSongs,
+                        key = { index, item -> item.second.id + "item_$index" }
+                    ) { index, (_, songItem) ->
+                        Column(modifier = Modifier.animateItem()) {
+                            val onCheckedChange: (Boolean) -> Unit = {
+                                if (it) {
+                                    selection.add(songItem.id)
+                                } else {
+                                    selection.remove(songItem.id)
+                                }
+                            }
+
+                            YouTubeListItem(
+                                item = songItem,
+                                isActive = mediaMetadata?.id == songItem.id,
+                                isPlaying = isPlaying,
+                                isSelected = inSelectMode && songItem.id in selection,
+                                modifier = Modifier
+                                    .padding(top = if (isSearching && index == 0) dynamicTopPadding else 0.dp) 
+                                    .combinedClickable(
+                                        enabled = !hideExplicit || !songItem.explicit,
+                                        onClick = {
+                                            if (inSelectMode) {
+                                                onCheckedChange(songItem.id !in selection)
+                                            } else if (songItem.id == mediaMetadata?.id) {
+                                                playerConnection.togglePlayPause()
+                                            } else {
+                                                playerConnection.playQueue(
+                                                    YouTubePlaylistQueue(
+                                                        playlistId = currentPlaylist.id,
+                                                        playlistTitle = currentPlaylist.title,
+                                                        initialSongs = filteredSongs.map { it.second },
+                                                        initialContinuation = viewModel.continuation,
+                                                        startIndex = index
+                                                    )
+                                                )
+                                            }
+                                        },
+                                        onLongClick = {
+                                            if (!inSelectMode) {
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                inSelectMode = true
+                                                onCheckedChange(true)
+                                                selectionAnchorSongId = songItem.id
+                                            } else {
+                                                val anchorIndex =
+                                                    selectionAnchorSongId?.let { anchorSongId ->
+                                                        filteredSongs.indexOfFirst { it.second.id == anchorSongId }
+                                                    } ?: -1
+
+                                                if (anchorIndex == -1) {
+                                                    onCheckedChange(true)
+                                                    selectionAnchorSongId = songItem.id
+                                                } else {
+                                                    val range = if (anchorIndex <= index) anchorIndex..index else index..anchorIndex
+                                                    for (rangeIndex in range) {
+                                                        val rangeSongId = filteredSongs[rangeIndex].second.id
+                                                        if (rangeSongId !in selection) {
+                                                            selection.add(rangeSongId)
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    ),
+                                trailingContent = {
+                                    if (inSelectMode) {
+                                        Checkbox(
+                                            checked = songItem.id in selection,
+                                            onCheckedChange = onCheckedChange
+                                        )
+                                    } else {
+                                        androidx.compose.material3.IconButton(onClick = {
+                                            menuState.show {
+                                                YouTubeSongMenu(songItem, menuState::dismiss)
+                                            }
+                                        }) {
+                                            Icon(painterResource(R.drawable.more_vert), null, tint = Color.White)
+                                        }
+                                    }
+                                }
+                            )
+                            
+                            if (index < filteredSongs.size - 1) {
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(start = 72.dp, end = 16.dp),
+                                    thickness = 0.5.dp,
+                                    color = Color.White.copy(alpha = 0.12f)
+                                )
+                            }
+                        }
+                    }
+
+                    // 3. Track Loading / Error states below the songs list
                     if (isLoading && songs.isEmpty()) {
                         item(key = "tracks_loading") {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(32.dp)
-                                    .animateItem(), // यह animateItem लोडिंग हटने पर स्लाइड-अप इफेक्ट ट्रिगर करेगा
+                                    .animateItem(), 
                                 contentAlignment = Alignment.Center
                             ) {
                                 ContainedLoadingIndicator()
@@ -341,119 +437,24 @@ fun OnlinePlaylistScreen(
                                 Text(text = error ?: stringResource(R.string.error_unknown), color = Color.White)
                             }
                         }
-                    } else {
-                        // 3. गाने आने के बाद, वे लोडिंग इंडिकेटर की जगह लेते हुए स्लाइड-अप होंगे
-                        itemsIndexed(
-                            items = filteredSongs,
-                            key = { index, item -> item.second.id + "item_$index" }
-                        ) { index, (_, songItem) ->
-                            Column(modifier = Modifier.animateItem()) {
-                                val onCheckedChange: (Boolean) -> Unit = {
-                                    if (it) {
-                                        selection.add(songItem.id)
-                                    } else {
-                                        selection.remove(songItem.id)
-                                    }
-                                }
+                    }
 
-                                YouTubeListItem(
-                                    item = songItem,
-                                    isActive = mediaMetadata?.id == songItem.id,
-                                    isPlaying = isPlaying,
-                                    isSelected = inSelectMode && songItem.id in selection,
-                                    modifier = Modifier
-                                        .padding(top = if (isSearching && index == 0) dynamicTopPadding else 0.dp) 
-                                        .combinedClickable(
-                                            enabled = !hideExplicit || !songItem.explicit,
-                                            onClick = {
-                                                if (inSelectMode) {
-                                                    onCheckedChange(songItem.id !in selection)
-                                                } else if (songItem.id == mediaMetadata?.id) {
-                                                    playerConnection.togglePlayPause()
-                                                } else {
-                                                    playerConnection.playQueue(
-                                                        YouTubePlaylistQueue(
-                                                            playlistId = currentPlaylist.id,
-                                                            playlistTitle = currentPlaylist.title,
-                                                            initialSongs = filteredSongs.map { it.second },
-                                                            initialContinuation = viewModel.continuation,
-                                                            startIndex = index
-                                                        )
-                                                    )
-                                                }
-                                            },
-                                            onLongClick = {
-                                                if (!inSelectMode) {
-                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    inSelectMode = true
-                                                    onCheckedChange(true)
-                                                    selectionAnchorSongId = songItem.id
-                                                } else {
-                                                    val anchorIndex =
-                                                        selectionAnchorSongId?.let { anchorSongId ->
-                                                            filteredSongs.indexOfFirst { it.second.id == anchorSongId }
-                                                        } ?: -1
-
-                                                    if (anchorIndex == -1) {
-                                                        onCheckedChange(true)
-                                                        selectionAnchorSongId = songItem.id
-                                                    } else {
-                                                        val range = if (anchorIndex <= index) anchorIndex..index else index..anchorIndex
-                                                        for (rangeIndex in range) {
-                                                            val rangeSongId = filteredSongs[rangeIndex].second.id
-                                                            if (rangeSongId !in selection) {
-                                                                selection.add(rangeSongId)
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        ),
-                                    trailingContent = {
-                                        if (inSelectMode) {
-                                            Checkbox(
-                                                checked = songItem.id in selection,
-                                                onCheckedChange = onCheckedChange
-                                            )
-                                        } else {
-                                            androidx.compose.material3.IconButton(onClick = {
-                                                menuState.show {
-                                                    YouTubeSongMenu(songItem, menuState::dismiss)
-                                                }
-                                            }) {
-                                                Icon(painterResource(R.drawable.more_vert), null, tint = Color.White)
-                                            }
-                                        }
-                                    }
-                                )
-                                
-                                if (index < filteredSongs.size - 1) {
-                                    HorizontalDivider(
-                                        modifier = Modifier.padding(start = 72.dp, end = 16.dp),
-                                        thickness = 0.5.dp,
-                                        color = Color.White.copy(alpha = 0.12f)
-                                    )
-                                }
+                    if (isLoadingMore) {
+                        item(key = "loading_more") {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp)
+                                    .animateItem(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                ContainedLoadingIndicator()
                             }
                         }
+                    }
 
-                        if (isLoadingMore) {
-                            item(key = "loading_more") {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp)
-                                        .animateItem(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    ContainedLoadingIndicator()
-                                }
-                            }
-                        }
-
-                        item(key = "bottom_spacer") {
-                            Spacer(Modifier.height(50.dp))
-                        }
+                    item(key = "bottom_spacer") {
+                        Spacer(Modifier.height(50.dp))
                     }
                 }
             }
@@ -679,6 +680,8 @@ private fun OnlinePlaylistHeader(
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(playlist.thumbnail?.resize(1080, 1080))
+                        .allowHardware(false) // <-- CRITICAL: Prevents Palette crash on Online Images!
+                        .crossfade(true)
                         .build(),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
