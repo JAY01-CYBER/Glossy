@@ -123,22 +123,17 @@ android {
 
     flavorDimensions += listOf("variant")
     productFlavors {
-        // FOSS - Updater, but no gcast
         create("foss") {
             dimension = "variant"
             isDefault = true
             buildConfigField("Boolean", "CAST_AVAILABLE", "false")
             buildConfigField("Boolean", "UPDATER_AVAILABLE", "true")
         }
-
-        // GMS - Updater and gcast
         create("gms") {
             dimension = "variant"
             buildConfigField("Boolean", "CAST_AVAILABLE", "true")
             buildConfigField("Boolean", "UPDATER_AVAILABLE", "true")
         }
-
-        // IzzyOnDroid - no gcast, no updater - the ONLY F-droid compliant build
         create("izzy") {
             dimension = "variant"
             buildConfigField("Boolean", "CAST_AVAILABLE", "false")
@@ -347,8 +342,10 @@ dependencies {
     implementation(libs.lifecycle.process)
 
     implementation(libs.material3)
-    // Removed old libs.palette, added KMPalette
+    
+    implementation(libs.palette)
     implementation(libs.kmpalette.core)
+    
     implementation(libs.materialKolor)
 
     implementation(libs.appcompat)
