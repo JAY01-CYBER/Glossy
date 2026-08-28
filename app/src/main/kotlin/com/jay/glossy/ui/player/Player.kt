@@ -145,7 +145,7 @@ import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.Player.STATE_ENDED
 import androidx.navigation.NavController
-import com.kmpalette.palette.graphics.Palette
+import androidx.palette.graphics.Palette
 import com.jay.glossy.LocalNavController
 import coil3.compose.AsyncImage
 import coil3.imageLoader
