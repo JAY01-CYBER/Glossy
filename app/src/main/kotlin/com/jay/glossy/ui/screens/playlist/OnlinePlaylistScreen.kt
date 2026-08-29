@@ -134,6 +134,7 @@ import com.jay.glossy.ui.utils.resize
 import com.jay.glossy.ui.utils.toImmersiveBackground
 import com.jay.glossy.utils.makeTimeString
 import com.jay.glossy.utils.rememberPreference
+import com.jay.glossy.ui.utils.backToMain
 import com.jay.glossy.viewmodels.OnlinePlaylistViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
