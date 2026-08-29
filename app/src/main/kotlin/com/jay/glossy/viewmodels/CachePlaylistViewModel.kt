@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -84,11 +84,16 @@ class CachePlaylistViewModel
                         }
                     }
 
-                    _cachedSongs.value =
-                        stillValid
-                            .sortedByDescending { it.song.dateDownload }
-                            .filterExplicit(hideExplicit)
-                            .filterVideoSongs(hideVideoSongs)
+                    val newSongs = stillValid
+                        .sortedByDescending { it.song.dateDownload }
+                        .filterExplicit(hideExplicit)
+                        .filterVideoSongs(hideVideoSongs)
+
+                    // Simp Music delay trick for initial slide-up animation
+                    if (_cachedSongs.value.isEmpty() && newSongs.isNotEmpty()) {
+                        delay(50)
+                    }
+                    _cachedSongs.value = newSongs
 
                     delay(1000)
                 }
