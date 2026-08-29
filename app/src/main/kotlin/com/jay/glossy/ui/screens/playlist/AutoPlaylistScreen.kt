@@ -122,6 +122,10 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.toBitmap
 import com.metrolist.innertube.YouTube
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.graphics.asImageBitmap
 
 import com.kmpalette.palette.graphics.Palette
 import com.kmpalette.rememberPaletteState
