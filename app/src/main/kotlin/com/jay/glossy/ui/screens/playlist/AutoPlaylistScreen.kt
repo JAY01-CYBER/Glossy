@@ -203,14 +203,14 @@ fun AutoPlaylistScreen(
         }
 
     val hazeState = remember { HazeState() }
-    var dominantColor by remember { mutableStateOf(Color.Black) }
+    var dominantColor by remember { mutableStateOf(MaterialTheme.colorScheme.surface) }
     val animatedExtractedColor by animateColorAsState(
         targetValue = dominantColor,
         animationSpec = tween(durationMillis = 1000),
         label = "solidColor"
     )
 
-    // 🔥 FIX: Added Missing snackbarHostState variable
+    //  FIX: Added Missing snackbarHostState variable
     val snackbarHostState = remember { SnackbarHostState() }
 
     val songs by viewModel.likedSongs.collectAsStateWithLifecycle(null)
