@@ -25,6 +25,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -295,7 +296,7 @@ fun ClickableArtistText(
 }
 
 // ------------------------------------------------------------------------
-// PREMIUM LIST ITEM DESIGN (Ultra Compact Spacing, Thin Dividers)
+// PREMIUM LIST ITEM DESIGN (Online Playlist Style)
 // ------------------------------------------------------------------------
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
@@ -310,105 +311,86 @@ inline fun ListItem(
     isSelected: Boolean? = false,
     isActive: Boolean = false,
     isAvailable: Boolean = true,
+    showDivider: Boolean = true,
 ) {
-    val dividerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+    val contentColor = MaterialTheme.colorScheme.onBackground
     
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier
-            .fillMaxWidth()
-            .background(
-                color = if (isSelected == true) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f) 
-                        else Color.Transparent, 
-                shape = if (isSelected == true) RoundedCornerShape(8.dp) else RoundedCornerShape(0.dp)
-            )
-            .drawBehind {
-                if (!isActive && isSelected != true) {
-                    val strokeWidth = 0.5.dp.toPx() 
-                    val y = size.height - strokeWidth / 2
-                    val startX = 86.dp.toPx()
-                    
-                    drawLine(
-                        color = dividerColor,
-                        start = Offset(startX, y),
-                        end = Offset(size.width, y),
-                        strokeWidth = strokeWidth
-                    )
-                }
-            }
-            // EXTREMELY TIGHT PADDING (2.dp upar aur niche) APPLE MUSIC JAISE!
-            .padding(start = 2.dp, end = 16.dp, top = 2.dp, bottom = 2.dp)
-    ) {
-        // Zero-Width Leading Content (Star)
-        if (leadingContent != null) {
-            Box(
-                modifier = Modifier.width(0.dp) 
+    Column(modifier = modifier.fillMaxWidth()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(if (isSelected == true) MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f) else Color.Transparent)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .padding(vertical = 6.dp, horizontal = 15.dp)
+                    .fillMaxWidth()
             ) {
+                if (leadingContent != null) {
+                    Box(
+                        modifier = Modifier.padding(end = 12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        leadingContent()
+                    }
+                }
+
                 Box(
-                    modifier = Modifier
-                        .offset(x = (-16).dp) 
-                        .width(16.dp),
+                    modifier = Modifier.size(48.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    leadingContent()
+                    thumbnailContent()
+                    
+                    if (!isAvailable) {
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(4.dp))
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.offline),
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp).align(Alignment.Center)
+                            )
+                        }
+                    }
                 }
-            }
-        }
-
-        // Thumbnail Area
-        Box(
-            modifier = Modifier.padding(end = 14.dp), 
-            contentAlignment = Alignment.Center
-        ) {
-            thumbnailContent()
-            
-            if (!isAvailable) {
-                Box(
+                
+                Column(
                     modifier = Modifier
-                        .matchParentSize()
-                        .background(
-                            Color.Black.copy(alpha = 0.35f),
-                            RoundedCornerShape(12.dp)
-                        )
+                        .weight(1f)
+                        .padding(start = 12.dp, end = 10.dp),
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    Icon(
-                        painter = painterResource(R.drawable.offline),
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier
-                            .size(24.dp)
-                            .align(Alignment.Center)
-                            .graphicsLayer { alpha = 1f }
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = if (isActive) MaterialTheme.colorScheme.primary else contentColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
+
+                    if (subtitle != null) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            subtitle()
+                        }
+                    }
                 }
+
+                trailingContent()
             }
         }
         
-        // Texts Area
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium
-                ),
-                color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+        if (showDivider) {
+            androidx.compose.material3.HorizontalDivider(
+                modifier = Modifier.padding(start = 75.dp, end = 16.dp), 
+                thickness = 0.5.dp,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.12f)
             )
-
-            if (subtitle != null) {
-                Spacer(modifier = Modifier.height(2.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    subtitle()
-                }
-            }
         }
-
-        trailingContent()
     }
 }
 
@@ -424,6 +406,7 @@ fun ListItem(
     leadingContent: (@Composable () -> Unit)? = null,
     isSelected: Boolean? = false,
     isActive: Boolean = false,
+    showDivider: Boolean = true,
 ) = ListItem(
     title = title,
     leadingContent = leadingContent,
@@ -432,8 +415,8 @@ fun ListItem(
         if (subtitle != null) {
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -443,7 +426,8 @@ fun ListItem(
     trailingContent = trailingContent,
     modifier = modifier,
     isSelected = isSelected,
-    isActive = isActive
+    isActive = isActive,
+    showDivider = showDivider
 )
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
@@ -458,6 +442,7 @@ fun ListItem(
     leadingContent: (@Composable () -> Unit)? = null,
     isSelected: Boolean? = false,
     isActive: Boolean = false,
+    showDivider: Boolean = true,
 ) = ListItem(
     title = title,
     leadingContent = leadingContent,
@@ -467,8 +452,8 @@ fun ListItem(
         if (!subtitle.isNullOrEmpty()) {
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -478,7 +463,8 @@ fun ListItem(
     trailingContent = trailingContent,
     modifier = modifier,
     isSelected = isSelected,
-    isActive = isActive
+    isActive = isActive,
+    showDivider = showDivider
 )
 
 // ------------------------------------------------------------------------
@@ -593,7 +579,7 @@ fun SongListItem(
     showInLibraryIcon: Boolean = false,
     showDownloadIcon: Boolean = true,
     subtitleOverride: String? = null,
-    thumbnailShape: Shape = RoundedCornerShape(12.dp),
+    thumbnailShape: Shape = RoundedCornerShape(4.dp),
     badges: @Composable RowScope.() -> Unit = {
         if (song.song.explicit) {
             Icon.Explicit()
@@ -618,16 +604,6 @@ fun SongListItem(
     val content: @Composable () -> Unit = {
          ListItem(
              title = song.song.title,
-             leadingContent = if (showLikedIcon && song.song.liked) {
-                 {
-                     Icon(
-                         painter = painterResource(R.drawable.favorite),
-                         contentDescription = null,
-                         tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                         modifier = Modifier.size(14.dp)
-                     )
-                 }
-             } else null,
              subtitle = {
                   badges()
                   if (subtitleOverride == null) {
@@ -636,16 +612,16 @@ fun SongListItem(
                               song.orderedArtists.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name },
                               makeTimeString(song.song.duration * 1000L)
                           ),
-                          style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
-                          color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                          style = MaterialTheme.typography.bodySmall,
+                          color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                           maxLines = 1,
                           overflow = TextOverflow.Ellipsis,
                       )
                   } else {
                      Text(
                          text = subtitleOverride,
-                         style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
-                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                         style = MaterialTheme.typography.bodySmall,
+                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                          maxLines = 1,
                          overflow = TextOverflow.Ellipsis,
                      )
@@ -659,10 +635,20 @@ fun SongListItem(
                      isActive = isActive,
                      isPlaying = isPlaying,
                      shape = thumbnailShape,
-                     modifier = Modifier.size(56.dp)
+                     modifier = Modifier.fillMaxSize()
                  )
              },
-             trailingContent = trailingContent,
+             trailingContent = {
+                 if (showLikedIcon && song.song.liked) {
+                     Icon(
+                         painter = painterResource(R.drawable.favorite),
+                         contentDescription = null,
+                         tint = MaterialTheme.colorScheme.error,
+                         modifier = Modifier.size(16.dp).padding(end = 4.dp)
+                     )
+                 }
+                 trailingContent()
+             },
              modifier = modifier,
              isSelected = isSelected,
              isActive = isActive
@@ -752,18 +738,7 @@ fun SongGridItem(
 fun ArtistListItem(
     artist: Artist,
     modifier: Modifier = Modifier,
-    badges: @Composable RowScope.() -> Unit = {
-        if (artist.artist.bookmarkedAt != null) {
-            Icon(
-                painter = painterResource(R.drawable.favorite),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.error,
-                modifier = Modifier
-                    .size(16.dp)
-                    .padding(end = 4.dp),
-            )
-        }
-    },
+    badges: @Composable RowScope.() -> Unit = {},
     trailingContent: @Composable RowScope.() -> Unit = {},
 ) = ListItem(
     title = artist.artist.name,
@@ -779,11 +754,23 @@ fun ArtistListItem(
                 .build(),
             contentDescription = null,
             modifier = Modifier
-                .size(56.dp)
+                .fillMaxSize()
                 .clip(CircleShape),
         )
     },
-    trailingContent = trailingContent,
+    trailingContent = {
+        if (artist.artist.bookmarkedAt != null) {
+            Icon(
+                painter = painterResource(R.drawable.favorite),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier
+                    .size(16.dp)
+                    .padding(end = 4.dp),
+            )
+        }
+        trailingContent()
+    },
     modifier = modifier,
 )
 
@@ -853,14 +840,6 @@ fun AlbumListItem(
             )
         }
 
-        if (showLikedIcon && album.album.bookmarkedAt != null) {
-            Icon(
-                painter = painterResource(R.drawable.favorite),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                modifier = Modifier.size(16.dp).padding(end = 4.dp)
-            )
-        }
         if (album.album.explicit) {
             Icon.Explicit()
         }
@@ -879,8 +858,8 @@ fun AlbumListItem(
                 pluralStringResource(R.plurals.n_song, album.album.songCount, album.album.songCount),
                 album.album.year?.toString()
             ),
-            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -890,11 +869,21 @@ fun AlbumListItem(
             thumbnailUrl = album.album.thumbnailUrl,
             isActive = isActive,
             isPlaying = isPlaying,
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.size(56.dp)
+            shape = RoundedCornerShape(4.dp),
+            modifier = Modifier.fillMaxSize()
         )
     },
-    trailingContent = trailingContent,
+    trailingContent = {
+        if (showLikedIcon && album.album.bookmarkedAt != null) {
+            Icon(
+                painter = painterResource(R.drawable.favorite),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(16.dp).padding(end = 4.dp)
+            )
+        }
+        trailingContent()
+    },
     modifier = modifier
 )
 
@@ -1050,7 +1039,7 @@ fun PlaylistListItem(
     thumbnailContent = {
         PlaylistThumbnail(
             thumbnails = playlist.thumbnails,
-            size = 56.dp,
+            size = 48.dp,
             placeHolder = {
                 val painter = when (playlist.playlist.name) {
                     stringResource(R.string.liked) -> R.drawable.favorite_border
@@ -1063,10 +1052,10 @@ fun PlaylistListItem(
                     painter = painterResource(painter),
                     contentDescription = null,
                     tint = LocalContentColor.current.copy(alpha = 0.8f),
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             },
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(4.dp)
         )
     },
     trailingContent = trailingContent,
@@ -1206,10 +1195,8 @@ fun MediaMetadataListItem(
                         }
                     }
                 },
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                    fontSize = 14.sp
-                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -1221,8 +1208,8 @@ fun MediaMetadataListItem(
                 isSelected = isSelected,
                 isActive = isActive,
                 isPlaying = isPlaying,
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.size(56.dp)
+                shape = RoundedCornerShape(4.dp),
+                modifier = Modifier.fillMaxSize()
             )
         },
         trailingContent = trailingContent,
@@ -1247,13 +1234,13 @@ fun YouTubeListItem(
     isSwipeable: Boolean = true,
     showDivider: Boolean = true,
     trailingContent: @Composable RowScope.() -> Unit = {},
-    thumbnailShape: Shape = if (item is ArtistItem) CircleShape else RoundedCornerShape(4.dp), // SIMP MUSIC 4dp corner
+    thumbnailShape: Shape = if (item is ArtistItem) CircleShape else RoundedCornerShape(4.dp),
     badges: @Composable RowScope.() -> Unit = {
         if (item.explicit) {
             Text(
                 text = "E",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.surface, // LIGHT THEME FIX: Uses dynamic surface color
+                color = MaterialTheme.colorScheme.surface,
                 modifier = Modifier
                     .clip(RoundedCornerShape(2.dp))
                     .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
@@ -1279,7 +1266,6 @@ fun YouTubeListItem(
 
     val isLiked = (item is SongItem && song?.song?.liked == true) || (item is AlbumItem && album?.album?.bookmarkedAt != null)
 
-    // LIGHT THEME FIX: Uses MaterialTheme dynamic colors instead of hardcoded white
     val contentColor = MaterialTheme.colorScheme.onBackground
     val subtitleColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f) 
 
@@ -1288,16 +1274,14 @@ fun YouTubeListItem(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    // LIGHT THEME FIX: Uses onBackground alpha for selection highlight
                     .background(if (isSelected) MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f) else Color.Transparent)
             ) {
                 Row(
                     modifier = Modifier
-                        .padding(vertical = 6.dp, horizontal = 15.dp) // EXACT SIMP MUSIC PADDING
+                        .padding(vertical = 6.dp, horizontal = 15.dp) 
                         .fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Thumbnail (48dp exact size like Simp Music)
                     Box(
                         modifier = Modifier.size(48.dp),
                         contentAlignment = Alignment.Center
@@ -1313,11 +1297,10 @@ fun YouTubeListItem(
                         )
                     }
 
-                    // Titles Column
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .padding(start = 12.dp, end = 10.dp) // Spacing between thumbnail and text
+                            .padding(start = 12.dp, end = 10.dp) 
                     ) {
                         Text(
                             text = item.title,
@@ -1329,7 +1312,7 @@ fun YouTubeListItem(
                         Spacer(modifier = Modifier.height(2.dp))
                         
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            badges() // Adds explicit badge or download states
+                            badges()
                             val subtitleText = when (item) {
                                 is SongItem -> joinByBullet(item.artists.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name }, makeTimeString(item.duration?.times(1000L)))
                                 is AlbumItem -> joinByBullet(item.artists?.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name }, item.year?.toString())
@@ -1351,7 +1334,6 @@ fun YouTubeListItem(
                         }
                     }
 
-                    // Heart Icon if liked 
                     if (isLiked) {
                         Icon(
                             painter = painterResource(R.drawable.favorite),
@@ -1361,12 +1343,10 @@ fun YouTubeListItem(
                         )
                     }
 
-                    // More Options Menu (3 dots)
                     trailingContent()
                 }
             }
             
-            // DIVIDER LINE (Supports Light and Dark Mode)
             if (showDivider) {
                 androidx.compose.material3.HorizontalDivider(
                     modifier = Modifier.padding(start = 75.dp, end = 16.dp), 
@@ -2060,7 +2040,7 @@ fun SwipeToSongBox(
             modifier = Modifier
                 .offset { IntOffset(offset.floatValue.roundToInt(), 0) }
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface),
+                .background(Color.Transparent),
             content = content
         )
     }
