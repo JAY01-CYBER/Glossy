@@ -47,6 +47,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -93,15 +95,18 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -189,10 +194,7 @@ import kotlinx.coroutines.withContext
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import java.time.LocalDateTime
-import androidx.compose.ui.semantics.Role
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.ui.graphics.asImageBitmap
+
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
@@ -534,7 +536,10 @@ fun LocalPlaylistScreen(
             LazyColumn(
                 state = lazyListState,
                 modifier = Modifier.haze(state = hazeState),
-                contentPadding = LocalPlayerAwareWindowInsets.current.union(WindowInsets.ime).asPaddingValues(),
+                // FIX: Added .only(WindowInsetsSides.Bottom) so it doesn't push the artwork down!
+                contentPadding = LocalPlayerAwareWindowInsets.current
+                    .only(WindowInsetsSides.Bottom)
+                    .union(WindowInsets.ime).asPaddingValues(),
             ) {
                 if (isSearching || inSelectMode) {
                     item(key = "search_spacer", contentType = "header") {
@@ -925,6 +930,7 @@ fun LocalPlaylistScreen(
                                 )
                             }
                         } else if (!isSearching) {
+                            // Only search button remains in TopAppBar
                             com.jay.glossy.ui.component.IconButton(
                                 onClick = { isSearching = true },
                                 onLongClick = {}
@@ -1363,7 +1369,7 @@ fun LocalPlaylistHeader(
                                     ListQueue(
                                         title = playlist.playlist.name,
                                         items = songs.shuffled().map { it.song.toMediaItem() },
-                                    ),
+                                    )
                                 )
                             }
                         ),
@@ -1384,7 +1390,7 @@ fun LocalPlaylistHeader(
                                 ListQueue(
                                     title = playlist.playlist.name,
                                     items = songs.map { it.song.toMediaItem() },
-                                ),
+                                )
                             )
                         }
                         .padding(horizontal = 24.dp),
@@ -1454,7 +1460,10 @@ fun LocalPlaylistHeader(
                                                 Download.STATE_DOWNLOADING -> {
                                                     songs.forEach { song ->
                                                         DownloadService.sendRemoveDownload(
-                                                            context, ExoDownloadService::class.java, song.song.id, false,
+                                                            context,
+                                                            ExoDownloadService::class.java,
+                                                            song.song.id,
+                                                            false,
                                                         )
                                                     }
                                                 }
@@ -1464,17 +1473,24 @@ fun LocalPlaylistHeader(
                                                             DownloadRequest
                                                                 .Builder(song.song.id, song.song.id.toUri())
                                                                 .setCustomCacheKey(song.song.id)
-                                                                .setData(song.song.song.title.toByteArray())
-                                                                .build()
+                                                                .setData(
+                                                                    song.song.song.title
+                                                                        .toByteArray(),
+                                                                ).build()
                                                         DownloadService.sendAddDownload(
-                                                            context, ExoDownloadService::class.java, downloadRequest, false,
+                                                            context,
+                                                            ExoDownloadService::class.java,
+                                                            downloadRequest,
+                                                            false,
                                                         )
                                                     }
                                                 }
                                             }
                                         },
                                         onQueue = {
-                                            playerConnection.addToQueue(items = songs.map { it.song.toMediaItem() })
+                                            playerConnection.addToQueue(
+                                                items = songs.map { it.song.toMediaItem() },
+                                            )
                                         },
                                         onDismiss = { menuState.dismiss() },
                                     )
