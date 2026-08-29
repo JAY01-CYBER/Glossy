@@ -183,7 +183,7 @@ fun OnlinePlaylistScreen(
     var isSearching by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
 
-    var dominantColor by remember { mutableStateOf(Color.Black) }
+    var dominantColor by remember { mutableStateOf(MaterialTheme.colorScheme.surface) }
 
     val filteredSongs = remember(songs, query) {
         if (query.text.isEmpty()) songs.mapIndexed { i, s -> i to s }
