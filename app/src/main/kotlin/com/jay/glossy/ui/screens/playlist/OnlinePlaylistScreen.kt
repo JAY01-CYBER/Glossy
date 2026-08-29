@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -35,6 +36,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -244,214 +246,219 @@ fun OnlinePlaylistScreen(
                 .fillMaxSize()
                 .background(animatedExtractedColor)
         ) {
-            LazyColumn(
-                state = lazyListState,
-                modifier = Modifier.haze(state = hazeState),
-                contentPadding = LocalPlayerAwareWindowInsets.current
-                    .only(WindowInsetsSides.Bottom)
-                    .union(WindowInsets.ime).asPaddingValues().apply { 
-                        androidx.compose.foundation.layout.PaddingValues(
-                            top = dynamicTopPadding, 
-                            bottom = calculateBottomPadding()
+            // 🔥 SIMP MUSIC STYLE: Decoupled Screen Transition (Header & Songs slide up together smoothly)
+            AnimatedContent(
+                targetState = currentPlaylist == null && isLoading,
+                transitionSpec = {
+                    (fadeIn(animationSpec = tween(400)) + slideInVertically(
+                        initialOffsetY = { it / 6 },
+                        animationSpec = tween(400)
+                    )) togetherWith (fadeOut(animationSpec = tween(200)))
+                },
+                label = "PlaylistScreenTransition"
+            ) { isScreenLoading ->
+                if (isScreenLoading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        ContainedLoadingIndicator()
+                    }
+                } else if (currentPlaylist == null && error != null) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Text(
+                            text = error ?: stringResource(R.string.error_unknown),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = Color.White,
+                            textAlign = TextAlign.Center,
                         )
-                    },
-            ) {
-                if (currentPlaylist == null) {
-                    if (isLoading) {
-                        item(key = "full_loading") {
-                            Box(
-                                modifier = Modifier
-                                    .fillParentMaxSize()
-                                    .padding(32.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                ContainedLoadingIndicator()
-                            }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        androidx.compose.material3.TextButton(onClick = { viewModel.retry() }) {
+                            Text(stringResource(R.string.retry), color = Color.White)
                         }
-                    } else if (error != null) {
-                        item(key = "full_error") {
-                            Column(
-                                modifier = Modifier
-                                    .fillParentMaxSize()
-                                    .padding(32.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center,
-                            ) {
-                                Text(
-                                    text = error ?: stringResource(R.string.error_unknown),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = Color.White,
-                                    textAlign = TextAlign.Center,
+                    }
+                } else if (currentPlaylist != null) {
+                    LazyColumn(
+                        state = lazyListState,
+                        modifier = Modifier.haze(state = hazeState),
+                        contentPadding = LocalPlayerAwareWindowInsets.current
+                            .only(WindowInsetsSides.Bottom)
+                            .union(WindowInsets.ime).asPaddingValues().apply { 
+                                androidx.compose.foundation.layout.PaddingValues(
+                                    top = dynamicTopPadding, 
+                                    bottom = calculateBottomPadding()
                                 )
-                                Spacer(modifier = Modifier.height(16.dp))
-                                androidx.compose.material3.TextButton(onClick = { viewModel.retry() }) {
-                                    Text(stringResource(R.string.retry), color = Color.White)
+                            },
+                    ) {
+                        if (isSearching || inSelectMode) {
+                            item(key = "search_spacer", contentType = "header") {
+                                Spacer(
+                                    modifier = Modifier.height(
+                                        WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp
+                                    )
+                                )
+                            }
+                        } else {
+                            item(key = "playlist_header", contentType = "header") {
+                                Box(modifier = Modifier.animateItem()) {
+                                    OnlinePlaylistHeader(
+                                        playlist = currentPlaylist,
+                                        songs = songs,
+                                        dbPlaylist = dbPlaylist,
+                                        navController = navController,
+                                        coroutineScope = coroutineScope,
+                                        continuation = viewModel.continuation,
+                                        solidBgColor = animatedExtractedColor,
+                                        onSearchClick = { isSearching = true },
+                                        onDominantColorExtracted = { dominantColor = it }
+                                    )
                                 }
                             }
                         }
-                    }
-                } else {
-                    // Header renders instantly
-                    if (isSearching || inSelectMode) {
-                        item(key = "search_spacer", contentType = "header") {
-                            Spacer(
-                                modifier = Modifier.height(
-                                    WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp
-                                )
-                            )
-                        }
-                    } else {
-                        item(key = "playlist_header", contentType = "header") {
-                            Box(modifier = Modifier.animateItem()) {
-                                OnlinePlaylistHeader(
-                                    playlist = currentPlaylist,
-                                    songs = songs,
-                                    dbPlaylist = dbPlaylist,
-                                    navController = navController,
-                                    coroutineScope = coroutineScope,
-                                    continuation = viewModel.continuation,
-                                    solidBgColor = animatedExtractedColor,
-                                    onSearchClick = { isSearching = true },
-                                    onDominantColorExtracted = { dominantColor = it }
-                                )
-                            }
-                        }
-                    }
 
-                    // Songs animate naturally using ViewModel delay + Compose animateItem()
-                    itemsIndexed(
-                        items = filteredSongs,
-                        key = { index, item -> item.second.id + "item_$index" }
-                    ) { index, (_, songItem) ->
-                        Column(modifier = Modifier.animateItem()) {
-                            val onCheckedChange: (Boolean) -> Unit = {
-                                if (it) {
-                                    selection.add(songItem.id)
-                                } else {
-                                    selection.remove(songItem.id)
+                        // Songs list with native Item Slide & Insert animation
+                        itemsIndexed(
+                            items = filteredSongs,
+                            key = { index, item -> item.second.id + "item_$index" }
+                        ) { index, (_, songItem) ->
+                            Column(modifier = Modifier.animateItem()) {
+                                val onCheckedChange: (Boolean) -> Unit = {
+                                    if (it) {
+                                        selection.add(songItem.id)
+                                    } else {
+                                        selection.remove(songItem.id)
+                                    }
                                 }
-                            }
 
-                            YouTubeListItem(
-                                item = songItem,
-                                isActive = mediaMetadata?.id == songItem.id,
-                                isPlaying = isPlaying,
-                                isSelected = inSelectMode && songItem.id in selection,
-                                modifier = Modifier
-                                    .padding(top = if (isSearching && index == 0) dynamicTopPadding else 0.dp) 
-                                    .combinedClickable(
-                                        enabled = !hideExplicit || !songItem.explicit,
-                                        onClick = {
-                                            if (inSelectMode) {
-                                                onCheckedChange(songItem.id !in selection)
-                                            } else if (songItem.id == mediaMetadata?.id) {
-                                                playerConnection.togglePlayPause()
-                                            } else {
-                                                playerConnection.playQueue(
-                                                    YouTubePlaylistQueue(
-                                                        playlistId = currentPlaylist.id,
-                                                        playlistTitle = currentPlaylist.title,
-                                                        initialSongs = filteredSongs.map { it.second },
-                                                        initialContinuation = viewModel.continuation,
-                                                        startIndex = index
+                                YouTubeListItem(
+                                    item = songItem,
+                                    isActive = mediaMetadata?.id == songItem.id,
+                                    isPlaying = isPlaying,
+                                    isSelected = inSelectMode && songItem.id in selection,
+                                    modifier = Modifier
+                                        .padding(top = if (isSearching && index == 0) dynamicTopPadding else 0.dp) 
+                                        .combinedClickable(
+                                            enabled = !hideExplicit || !songItem.explicit,
+                                            onClick = {
+                                                if (inSelectMode) {
+                                                    onCheckedChange(songItem.id !in selection)
+                                                } else if (songItem.id == mediaMetadata?.id) {
+                                                    playerConnection.togglePlayPause()
+                                                } else {
+                                                    playerConnection.playQueue(
+                                                        YouTubePlaylistQueue(
+                                                            playlistId = currentPlaylist.id,
+                                                            playlistTitle = currentPlaylist.title,
+                                                            initialSongs = filteredSongs.map { it.second },
+                                                            initialContinuation = viewModel.continuation,
+                                                            startIndex = index
+                                                        )
                                                     )
-                                                )
-                                            }
-                                        },
-                                        onLongClick = {
-                                            if (!inSelectMode) {
-                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                inSelectMode = true
-                                                onCheckedChange(true)
-                                                selectionAnchorSongId = songItem.id
-                                            } else {
-                                                val anchorIndex =
-                                                    selectionAnchorSongId?.let { anchorSongId ->
-                                                        filteredSongs.indexOfFirst { it.second.id == anchorSongId }
-                                                    } ?: -1
-
-                                                if (anchorIndex == -1) {
+                                                }
+                                            },
+                                            onLongClick = {
+                                                if (!inSelectMode) {
+                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                    inSelectMode = true
                                                     onCheckedChange(true)
                                                     selectionAnchorSongId = songItem.id
                                                 } else {
-                                                    val range = if (anchorIndex <= index) anchorIndex..index else index..anchorIndex
-                                                    for (rangeIndex in range) {
-                                                        val rangeSongId = filteredSongs[rangeIndex].second.id
-                                                        if (rangeSongId !in selection) {
-                                                            selection.add(rangeSongId)
+                                                    val anchorIndex =
+                                                        selectionAnchorSongId?.let { anchorSongId ->
+                                                            filteredSongs.indexOfFirst { it.second.id == anchorSongId }
+                                                        } ?: -1
+
+                                                    if (anchorIndex == -1) {
+                                                        onCheckedChange(true)
+                                                        selectionAnchorSongId = songItem.id
+                                                    } else {
+                                                        val range = if (anchorIndex <= index) anchorIndex..index else index..anchorIndex
+                                                        for (rangeIndex in range) {
+                                                            val rangeSongId = filteredSongs[rangeIndex].second.id
+                                                            if (rangeSongId !in selection) {
+                                                                selection.add(rangeSongId)
+                                                            }
                                                         }
                                                     }
                                                 }
                                             }
-                                        }
-                                    ),
-                                trailingContent = {
-                                    if (inSelectMode) {
-                                        Checkbox(
-                                            checked = songItem.id in selection,
-                                            onCheckedChange = onCheckedChange
-                                        )
-                                    } else {
-                                        androidx.compose.material3.IconButton(onClick = {
-                                            menuState.show {
-                                                YouTubeSongMenu(songItem, menuState::dismiss)
+                                        ),
+                                    trailingContent = {
+                                        if (inSelectMode) {
+                                            Checkbox(
+                                                checked = songItem.id in selection,
+                                                onCheckedChange = onCheckedChange
+                                            )
+                                        } else {
+                                            androidx.compose.material3.IconButton(onClick = {
+                                                menuState.show {
+                                                    YouTubeSongMenu(songItem, menuState::dismiss)
+                                                }
+                                            }) {
+                                                Icon(painterResource(R.drawable.more_vert), null, tint = Color.White)
                                             }
-                                        }) {
-                                            Icon(painterResource(R.drawable.more_vert), null, tint = Color.White)
                                         }
                                     }
-                                }
-                            )
-                            
-                            if (index < filteredSongs.size - 1) {
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(start = 72.dp, end = 16.dp),
-                                    thickness = 0.5.dp,
-                                    color = Color.White.copy(alpha = 0.12f)
                                 )
+                                
+                                if (index < filteredSongs.size - 1) {
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(start = 72.dp, end = 16.dp),
+                                        thickness = 0.5.dp,
+                                        color = Color.White.copy(alpha = 0.12f)
+                                    )
+                                }
                             }
                         }
-                    }
 
-                    if (isLoading && songs.isEmpty()) {
-                        item(key = "tracks_loading") {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(32.dp)
-                                    .animateItem(), 
-                                contentAlignment = Alignment.Center
-                            ) {
-                                ContainedLoadingIndicator()
+                        if (isLoading && songs.isEmpty()) {
+                            item(key = "tracks_loading") {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(32.dp)
+                                        .animateItem(), 
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    ContainedLoadingIndicator()
+                                }
+                            }
+                        } else if (error != null && songs.isEmpty()) {
+                            item(key = "tracks_error") {
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().padding(32.dp).animateItem(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(text = error ?: stringResource(R.string.error_unknown), color = Color.White)
+                                }
                             }
                         }
-                    } else if (error != null && songs.isEmpty()) {
-                        item(key = "tracks_error") {
-                            Box(
-                                modifier = Modifier.fillMaxWidth().padding(32.dp).animateItem(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(text = error ?: stringResource(R.string.error_unknown), color = Color.White)
-                            }
-                        }
-                    }
 
-                    if (isLoadingMore) {
-                        item(key = "loading_more") {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp)
-                                    .animateItem(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                ContainedLoadingIndicator()
+                        if (isLoadingMore) {
+                            item(key = "loading_more") {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp)
+                                        .animateItem(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    ContainedLoadingIndicator()
+                                }
                             }
                         }
-                    }
 
-                    item(key = "bottom_spacer") {
-                        Spacer(Modifier.height(50.dp))
+                        item(key = "bottom_spacer") {
+                            Spacer(Modifier.height(50.dp))
+                        }
                     }
                 }
             }
