@@ -217,7 +217,7 @@ fun LocalPlaylistScreen(
     val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
 
     val hazeState = remember { HazeState() }
-    var dominantColor by remember { mutableStateOf(Color.Black) }
+    var dominantColor by remember { mutableStateOf(MaterialTheme.colorScheme.surface) }
     val animatedExtractedColor by animateColorAsState(
         targetValue = dominantColor,
         animationSpec = tween(durationMillis = 1000),
