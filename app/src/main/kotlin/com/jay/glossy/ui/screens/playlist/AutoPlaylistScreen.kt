@@ -43,6 +43,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -59,6 +61,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -205,6 +209,9 @@ fun AutoPlaylistScreen(
         animationSpec = tween(durationMillis = 1000),
         label = "solidColor"
     )
+
+    // 🔥 FIX: Added Missing snackbarHostState variable
+    val snackbarHostState = remember { SnackbarHostState() }
 
     val songs by viewModel.likedSongs.collectAsStateWithLifecycle(null)
     val mutableSongs = remember { mutableStateListOf<Song>() }
@@ -503,7 +510,6 @@ fun AutoPlaylistScreen(
     val canRefresh = playlistType == PlaylistType.LIKE || playlistType == PlaylistType.UPLOADED
     val topPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp
 
-    // 🔥 FIX: डार्क मोड का रैपर लगा दिया जिससे टेक्स्ट अपने आप सफ़ेद हो जाएगा!
     MaterialTheme(colorScheme = darkColorScheme()) {
         Box(
             modifier = Modifier
@@ -1025,6 +1031,7 @@ private fun AutoPlaylistHeader(
                 horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Shuffle Button (Liquid Glass)
                 Box(
                     modifier = Modifier
                         .size(48.dp)
@@ -1047,6 +1054,7 @@ private fun AutoPlaylistHeader(
                     Icon(painterResource(R.drawable.shuffle), null, tint = Color.White, modifier = Modifier.size(20.dp))
                 }
 
+                // Play Button (White Pill)
                 Box(
                     modifier = Modifier
                         .height(48.dp)
@@ -1084,6 +1092,7 @@ private fun AutoPlaylistHeader(
                     }
                 }
 
+                // Menu Button (Liquid Glass)
                 Box(
                     modifier = Modifier
                         .size(48.dp)
