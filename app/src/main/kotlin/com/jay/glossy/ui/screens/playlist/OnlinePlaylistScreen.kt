@@ -285,8 +285,6 @@ fun OnlinePlaylistScreen(
                         }
                     }
                 } else {
-                    // FIX: Search करते वक़्त Header छिप जाएगा और उसकी जगह Spacer आ जायेगा
-                    // लेकिन जब सर्च नहीं हो रहा, तो Spacer नहीं होगा और फोटो Edge-to-Edge आएगी!
                     if (isSearching || inSelectMode) {
                         item(key = "search_spacer", contentType = "header") {
                             Spacer(modifier = Modifier.height(topPadding))
@@ -459,7 +457,6 @@ fun OnlinePlaylistScreen(
                 modifier = Modifier.align(Alignment.TopCenter)
             ) {
                 TopAppBar(
-                    // FIX: Top Bar Color - अब डार्क सरफेस की जगह तुम्हारा कलरफुल ग्रेडिएंट ब्लर होगा
                     modifier = Modifier.hazeChild(
                         state = hazeState, 
                         shape = androidx.compose.ui.graphics.RectangleShape,
@@ -655,7 +652,7 @@ private fun OnlinePlaylistHeader(
             .padding(top = 8.dp, bottom = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Surface(
+        androidx.compose.material3.Surface(
             modifier = Modifier
                 .size(240.dp)
                 .shadow(
@@ -763,7 +760,7 @@ private fun OnlinePlaylistHeader(
             horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Surface(
+            androidx.compose.material3.Surface(
                 onClick = {
                     if (dbPlaylist != null) {
                         database.transaction {
@@ -817,7 +814,7 @@ private fun OnlinePlaylistHeader(
                 }
             }
 
-            Surface(
+            androidx.compose.material3.Surface(
                 onClick = {
                     if (!isListenTogetherGuest && songs.isNotEmpty()) {
                         playerConnection.playQueue(
@@ -844,7 +841,7 @@ private fun OnlinePlaylistHeader(
                 }
             }
 
-            Surface(
+            androidx.compose.material3.Surface(
                 onClick = {
                     menuState.show {
                         YouTubePlaylistMenu(
