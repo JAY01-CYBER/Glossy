@@ -1,6 +1,6 @@
 /**
  * Glossy Project (C) 2026
- * Licensed under GPL-3.0 | See contributors
+ * Licensed under GPL-3.0 | See git history for contributors
  */
 
 package com.jay.glossy.ui.screens.playlist
@@ -48,6 +48,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -87,9 +88,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -390,7 +393,7 @@ fun AutoPlaylistScreen(
     val canRefresh = playlistType == PlaylistType.LIKE || playlistType == PlaylistType.UPLOADED
     val topPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp
 
-    // FIX: 100% App Theme Background, No extra dark wrapper
+    //  MAIN BACKGROUND (App Theme Background, NO dark scheme override here)
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -424,6 +427,8 @@ fun AutoPlaylistScreen(
                                     likeLength = likeLength,
                                     downloadState = downloadState,
                                     onShowRemoveDownloadDialog = { showRemoveDownloadDialog = true },
+                                    navController = navController,
+                                    menuState = menuState,
                                 )
                             }
                         }
@@ -583,9 +588,9 @@ fun AutoPlaylistScreen(
                 actions = {
                     if (inSelectMode) {
                         Checkbox(
-                            checked = selection.size == filteredSongs.size && selection.isNotEmpty(),
+                            checked = selection.size == songs.size && selection.isNotEmpty(),
                             onCheckedChange = {
-                                if (selection.size == filteredSongs.size) selection.clear() else { selection.clear(); selection.addAll(filteredSongs.map { it.id }) }
+                                if (selection.size == songs.size) selection.clear() else { selection.clear(); selection.addAll(songs.map { it.id }) }
                             },
                         )
                         com.jay.glossy.ui.component.IconButton(
@@ -618,7 +623,7 @@ fun AutoPlaylistScreen(
     }
 }
 
-// PURE MATERIAL 3 HEADER (No dark overrides, full shadow buttons)
+//  EXACT MATERIAL 3 HEADER DESIGN 
 @Composable
 fun AutoPlaylistHeader(
     name: String,
@@ -631,63 +636,136 @@ fun AutoPlaylistHeader(
     val playerConnection = LocalPlayerConnection.current ?: return
     val context = LocalContext.current
     val menuState = LocalMenuState.current
-    
+    val configuration = LocalConfiguration.current
+    val screenHeight = configuration.screenHeightDp.dp
+    val thumbUrl = songs.firstOrNull()?.song?.thumbnailUrl
+
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(bottom = 24.dp),
+        modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Spacer(Modifier.height(WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 56.dp))
-
-        // Center Square Image (M3 Style with shadows)
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(songs.firstOrNull()?.song?.thumbnailUrl)
-                .build(),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
+        // 🔥 EDGE-TO-EDGE ARTWORK BOX
+        Box(
             modifier = Modifier
-                .size(240.dp)
-                .shadow(elevation = 12.dp, shape = RoundedCornerShape(16.dp))
-                .clip(RoundedCornerShape(16.dp))
-        )
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        Text(
-            text = name,
-            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold), 
-            color = MaterialTheme.colorScheme.onBackground,
-            maxLines = 2,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 24.dp)
-        )
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        Text(
-            text = stringResource(R.string.app_name),
-            style = MaterialTheme.typography.titleMedium, 
-            color = MaterialTheme.colorScheme.onBackground,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.clip(RoundedCornerShape(8.dp)).padding(horizontal = 8.dp, vertical = 4.dp)
-        )
-        
-        Spacer(modifier = Modifier.height(4.dp))
-        
-        Text(
-            text = "Playlist • 2026",
-            style = MaterialTheme.typography.bodyMedium, 
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f), 
-            textAlign = TextAlign.Center
-        )
+                .fillMaxWidth()
+                .height(screenHeight / 2)
+        ) {
+            // Full Background Image
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current).data(thumbUrl).build(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
 
-        Spacer(Modifier.height(24.dp)) 
+            // Soft Gradient overlay to transition into pure background color seamlessly
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(screenHeight * 0.4f)
+                    .align(Alignment.BottomCenter)
+                    .background(
+                        Brush.verticalGradient(
+                            0.0f to Color.Transparent,
+                            0.5f to MaterialTheme.colorScheme.background.copy(alpha = 0.6f),
+                            1.0f to MaterialTheme.colorScheme.background
+                        )
+                    )
+            )
 
-        // PURE MATERIAL 3 BUTTONS ROW (With strong shadows and M3 Colors)
+            // Title & Subtitle overlaid on the bottom of the image
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = name,
+                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold), 
+                    color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 2,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Text(
+                    text = stringResource(R.string.app_name),
+                    style = MaterialTheme.typography.titleMedium, 
+                    color = MaterialTheme.colorScheme.onBackground,
+                    textAlign = TextAlign.Center,
+                )
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                Text(
+                    text = "Playlist • 2026",
+                    style = MaterialTheme.typography.bodyMedium, 
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f), 
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            //  TOP ROW BUTTONS (Solid M3, with shadows)
+            val navController = LocalNavController.current
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.statusBars.only(WindowInsetsSides.Top))
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Back Button
+                Surface(
+                    onClick = { navController.navigateUp() },
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    shadowElevation = 6.dp,
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(painterResource(R.drawable.arrow_back), contentDescription = null)
+                    }
+                }
+
+                // Action Row (Heart, Search, More)
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    shadowElevation = 6.dp,
+                    modifier = Modifier.height(48.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Heart Icon (Since this is 'Liked Music', it can be a static heart or interactive)
+                        com.jay.glossy.ui.component.IconButton(onClick = {}, onLongClick = {}) {
+                            Icon(painterResource(R.drawable.favorite), null)
+                        }
+                        com.jay.glossy.ui.component.IconButton(onClick = {}, onLongClick = {}) {
+                            Icon(painterResource(R.drawable.search), null)
+                        }
+                        com.jay.glossy.ui.component.IconButton(onClick = { /* Open Menu */ }, onLongClick = {}) {
+                            Icon(painterResource(R.drawable.more_vert), null)
+                        }
+                    }
+                }
+            }
+        }
+
+        //  BOTTOM ACTION ROW (Play & Shuffle buttons placed below artwork with exact sizes)
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(top = 16.dp, bottom = 24.dp), // Spacing from artwork to tracklist
             horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -699,11 +777,10 @@ fun AutoPlaylistHeader(
                 color = MaterialTheme.colorScheme.surfaceVariant,
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 shadowElevation = 6.dp,
-                tonalElevation = 6.dp,
-                modifier = Modifier.size(56.dp)
+                modifier = Modifier.size(48.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(painterResource(R.drawable.shuffle), null, modifier = Modifier.size(24.dp))
+                    Icon(painterResource(R.drawable.shuffle), null, modifier = Modifier.size(20.dp))
                 }
             }
 
@@ -711,12 +788,11 @@ fun AutoPlaylistHeader(
                 onClick = {
                     playerConnection.playQueue(ListQueue(title = name, items = songs.map { it.toMediaItem() }))
                 },
-                shape = CircleShape, // Pill
+                shape = RoundedCornerShape(50), // Exact Pill Shape
                 color = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 shadowElevation = 6.dp,
-                tonalElevation = 6.dp,
-                modifier = Modifier.height(56.dp).weight(1f)
+                modifier = Modifier.height(48.dp).weight(1f)
             ) {
                 Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                     Icon(painterResource(R.drawable.play), null, modifier = Modifier.size(24.dp))
@@ -751,16 +827,13 @@ fun AutoPlaylistHeader(
                 color = MaterialTheme.colorScheme.surfaceVariant,
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 shadowElevation = 6.dp,
-                tonalElevation = 6.dp,
-                modifier = Modifier.size(56.dp)
+                modifier = Modifier.size(48.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(painterResource(R.drawable.more_vert), null, modifier = Modifier.size(24.dp))
+                    Icon(painterResource(R.drawable.download), null, modifier = Modifier.size(20.dp))
                 }
             }
         }
-
-        Spacer(Modifier.height(24.dp)) 
 
         val durationText = if (likeLength > 0) makeTimeString(likeLength * 1000L) else ""
         val trackCountText = pluralStringResource(R.plurals.n_song, songs.size, songs.size)
@@ -769,7 +842,9 @@ fun AutoPlaylistHeader(
             text = if (durationText.isNotEmpty()) "$trackCountText • $durationText" else trackCountText,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+            textAlign = TextAlign.Start
         )
     }
 }
