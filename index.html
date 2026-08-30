@@ -46,7 +46,7 @@
             box-shadow: 0 25px 50px -12px rgba(147, 51, 234, 0.4);
             aspect-ratio: 9/19.5;
             width: 100%;
-            max-w-xs;
+            max-width: 320px;
             background: #0f0f13;
         }
         .phone-mockup::before {
@@ -59,6 +59,27 @@
             border-bottom-left-radius: 16px;
             border-bottom-right-radius: 16px;
             z-index: 10;
+        }
+
+        /* 🔥 Auto-Sliding Animation for Screenshots */
+        .screenshot-slider {
+            display: flex;
+            width: 400%; /* We are using 4 screenshots */
+            height: 100%;
+            animation: slide 16s infinite cubic-bezier(0.87, 0, 0.13, 1);
+        }
+        .screenshot-slider img {
+            width: 25%; /* 100% / 4 images */
+            height: 100%;
+            object-fit: cover;
+        }
+
+        @keyframes slide {
+            0%, 20% { transform: translateX(0); }
+            25%, 45% { transform: translateX(-25%); }
+            50%, 70% { transform: translateX(-50%); }
+            75%, 95% { transform: translateX(-75%); }
+            100% { transform: translateX(0); }
         }
     </style>
 </head>
@@ -114,11 +135,18 @@
                 </div>
             </div>
 
-            <!-- Right Side: Phone Mockup -->
+            <!-- Right Side: Phone Mockup with Auto-Slider -->
             <div class="flex-1 flex justify-center w-full max-w-sm mx-auto perspective-[1000px]">
                 <div class="phone-mockup transform rotate-y-[-10deg] rotate-x-[5deg] hover:rotate-y-0 hover:rotate-x-0 transition-transform duration-500">
-                    <!-- 🔥 स्क्रीनशॉट की इमेज (यहाँ screenshot.png डालना होगा) -->
-                    <img src="screenshot.png" alt="App Screenshot" class="w-full h-full object-cover">
+                    
+                    <!-- 🔥 Animated Slider using RAW GitHub URLs from your 'main' branch -->
+                    <div class="screenshot-slider">
+                        <img src="https://raw.githubusercontent.com/JAY01-CYBER/Glossy/main/fastlane/metadata/android/en-US/images/screenshots/screenshot_1.png" alt="Screenshot 1">
+                        <img src="https://raw.githubusercontent.com/JAY01-CYBER/Glossy/main/fastlane/metadata/android/en-US/images/screenshots/screenshot_2.png" alt="Screenshot 2">
+                        <img src="https://raw.githubusercontent.com/JAY01-CYBER/Glossy/main/fastlane/metadata/android/en-US/images/screenshots/screenshot_3.png" alt="Screenshot 3">
+                        <img src="https://raw.githubusercontent.com/JAY01-CYBER/Glossy/main/fastlane/metadata/android/en-US/images/screenshots/screenshot_4.png" alt="Screenshot 4">
+                    </div>
+
                 </div>
             </div>
 
@@ -197,7 +225,7 @@
                 if (apkAsset) {
                     // Update Button Link to direct APK download
                     document.getElementById('download-btn').href = apkAsset.browser_download_url;
-                    // Update Text to show the live version tag (e.g., Latest: v1.2.0)
+                    // Update Text to show the live version tag
                     document.getElementById('version-text').textContent = "Latest Stable: " + data.tag_name;
                 } else {
                     document.getElementById('version-text').textContent = "Latest Release: " + data.tag_name;
