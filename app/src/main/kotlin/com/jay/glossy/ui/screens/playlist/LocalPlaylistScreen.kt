@@ -24,6 +24,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -348,10 +349,9 @@ fun LocalPlaylistScreen(
         }
     }
 
-    val showTopBarTitle by remember { derivedStateOf { lazyListState.firstVisibleItemIndex > 0 || isSearching || inSelectMode } }
+    val showScrolledTopBar by remember { derivedStateOf { lazyListState.firstVisibleItemIndex > 0 || isSearching || inSelectMode } }
     val topPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp
 
-    // 🔥 FIX: 100% App Theme Background, No extra dark wrapper
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -544,86 +544,81 @@ fun LocalPlaylistScreen(
             headerItems = headerItems,
         )
 
-        AnimatedVisibility(
-            visible = showTopBarTitle,
-            enter = fadeIn() + slideInVertically(),
-            exit = fadeOut() + slideOutVertically(),
-            modifier = Modifier.align(Alignment.TopCenter)
-        ) {
-            TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = if (showScrolledTopBar) MaterialTheme.colorScheme.surfaceContainer else Color.Transparent,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground,
-                    actionIconContentColor = MaterialTheme.colorScheme.onBackground
-                ),
-                title = {
-                    if (inSelectMode) {
-                        Text(pluralStringResource(R.plurals.n_selected, selection.size, selection.size))
-                    } else if (isSearching) {
-                        TextField(
-                            value = query,
-                            onValueChange = { query = it },
-                            placeholder = { Text(stringResource(R.string.search), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)) },
-                            singleLine = true,
-                            textStyle = MaterialTheme.typography.titleLarge.copy(color = MaterialTheme.colorScheme.onBackground),
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                            colors = TextFieldDefaults.colors(
-                                focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent,
-                                focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, disabledIndicatorColor = Color.Transparent,
-                            ),
-                            modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
-                        )
-                    } else {
+        TopAppBar(
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = if (showScrolledTopBar) MaterialTheme.colorScheme.surfaceContainer else Color.Transparent,
+                titleContentColor = MaterialTheme.colorScheme.onBackground,
+                navigationIconContentColor = MaterialTheme.colorScheme.onBackground,
+                actionIconContentColor = MaterialTheme.colorScheme.onBackground
+            ),
+            title = {
+                if (inSelectMode) {
+                    Text(pluralStringResource(R.plurals.n_selected, selection.size, selection.size))
+                } else if (isSearching) {
+                    TextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        placeholder = { Text(stringResource(R.string.search), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)) },
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.titleLarge.copy(color = MaterialTheme.colorScheme.onBackground),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, disabledIndicatorColor = Color.Transparent,
+                        ),
+                        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
+                    )
+                } else {
+                    AnimatedVisibility(visible = showScrolledTopBar, enter = fadeIn(), exit = fadeOut()) {
                         Text(playlist?.playlist?.name.orEmpty())
                     }
-                },
-                navigationIcon = {
-                    if (inSelectMode) {
-                        com.jay.glossy.ui.component.IconButton(onClick = onExitSelectionMode, onLongClick = {}) {
-                            Icon(painterResource(R.drawable.close), null)
-                        }
-                    } else {
-                        com.jay.glossy.ui.component.IconButton(
-                            onClick = {
-                                if (isSearching) { isSearching = false; query = TextFieldValue() } else navController.navigateUp()
-                            },
-                            onLongClick = { if (!isSearching) navController.backToMain() },
-                        ) {
-                            Icon(painterResource(R.drawable.arrow_back), null)
-                        }
+                }
+            },
+            navigationIcon = {
+                if (inSelectMode) {
+                    com.jay.glossy.ui.component.IconButton(onClick = onExitSelectionMode, onLongClick = {}) {
+                        Icon(painterResource(R.drawable.close), null)
                     }
-                },
-                actions = {
-                    if (inSelectMode) {
-                        Checkbox(
-                            checked = selection.size == songs.size && selection.isNotEmpty(),
-                            onCheckedChange = {
-                                if (selection.size == songs.size) selection.clear() else { selection.clear(); selection.addAll(songs.map { it.map.id }) }
-                            },
-                        )
-                        com.jay.glossy.ui.component.IconButton(
-                            enabled = selection.isNotEmpty(),
-                            onClick = {
-                                menuState.show {
-                                    SelectionSongMenu(
-                                        songSelection = selection.mapNotNull { mapId -> songs.find { it.map.id == mapId }?.song },
-                                        songPosition = selection.mapNotNull { mapId -> songs.find { it.map.id == mapId }?.map },
-                                        onDismiss = menuState::dismiss,
-                                        clearAction = onExitSelectionMode,
-                                    )
-                                }
-                            },
-                            onLongClick = {}
-                        ) { Icon(painterResource(R.drawable.more_vert), null) }
-                    } else if (!isSearching) {
-                        com.jay.glossy.ui.component.IconButton(onClick = { isSearching = true }, onLongClick = {}) {
-                            Icon(painterResource(R.drawable.search), null)
-                        }
+                } else {
+                    com.jay.glossy.ui.component.IconButton(
+                        onClick = {
+                            if (isSearching) { isSearching = false; query = TextFieldValue() } else navController.navigateUp()
+                        },
+                        onLongClick = { if (!isSearching) navController.backToMain() },
+                    ) {
+                        Icon(painterResource(R.drawable.arrow_back), null)
                     }
-                },
-            )
-        }
+                }
+            },
+            actions = {
+                if (inSelectMode) {
+                    Checkbox(
+                        checked = selection.size == songs.size && selection.isNotEmpty(),
+                        onCheckedChange = {
+                            if (selection.size == songs.size) selection.clear() else { selection.clear(); selection.addAll(songs.map { it.map.id }) }
+                        },
+                    )
+                    com.jay.glossy.ui.component.IconButton(
+                        enabled = selection.isNotEmpty(),
+                        onClick = {
+                            menuState.show {
+                                SelectionSongMenu(
+                                    songSelection = selection.mapNotNull { mapId -> songs.find { it.map.id == mapId }?.song },
+                                    songPosition = selection.mapNotNull { mapId -> songs.find { it.map.id == mapId }?.map },
+                                    onDismiss = menuState::dismiss,
+                                    clearAction = onExitSelectionMode,
+                                )
+                            }
+                        },
+                        onLongClick = {}
+                    ) { Icon(painterResource(R.drawable.more_vert), null) }
+                } else if (!isSearching) {
+                    com.jay.glossy.ui.component.IconButton(onClick = { isSearching = true }, onLongClick = {}) {
+                        Icon(painterResource(R.drawable.search), null)
+                    }
+                }
+            },
+        )
 
         SnackbarHost(
             hostState = snackbarHostState,
@@ -632,7 +627,7 @@ fun LocalPlaylistScreen(
     }
 }
 
-// 🔥 PURE MATERIAL 3 HEADER (No dark overrides, full shadow buttons)
+// PURE MATERIAL 3 HEADER (M3 Style Buttons with Shadow, Square Image)
 @Composable
 fun LocalPlaylistHeader(
     playlist: Playlist,
@@ -926,7 +921,7 @@ fun LocalPlaylistHeader(
                 onClick = {
                     playerConnection.playQueue(ListQueue(title = playlist.playlist.name, items = songs.map { it.song.toMediaItem() }))
                 },
-                shape = CircleShape, // Pill
+                shape = RoundedCornerShape(16.dp), // Pill
                 color = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 shadowElevation = 6.dp,
