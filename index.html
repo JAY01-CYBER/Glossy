@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glossy | Premium Android Music Player</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        
+        /* Premium Liquid Glass Effect */
+        .glass-panel {
+            background: rgba(20, 20, 25, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
+        
+        .text-gradient {
+            background: linear-gradient(135deg, #d8b4fe 0%, #c084fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        /* Background glowing orbs */
+        .glow-orb-1 {
+            position: absolute; top: -10%; left: -10%; width: 500px; height: 500px;
+            background: radial-gradient(circle, rgba(147,51,234,0.3) 0%, rgba(0,0,0,0) 70%);
+            z-index: -1;
+        }
+        .glow-orb-2 {
+            position: absolute; bottom: -20%; right: -10%; width: 600px; height: 600px;
+            background: radial-gradient(circle, rgba(192,132,252,0.2) 0%, rgba(0,0,0,0) 70%);
+            z-index: -1;
+        }
+    </style>
+</head>
+<body class="bg-[#0f0f13] text-gray-200 min-h-screen relative overflow-x-hidden selection:bg-purple-500 selection:text-white">
+    
+    <div class="glow-orb-1 pointer-events-none"></div>
+    <div class="glow-orb-2 pointer-events-none"></div>
+
+    <main class="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center justify-center min-h-screen text-center relative z-10">
+        
+        <!-- App Icon / Logo Area -->
+        <div class="w-24 h-24 mb-8 rounded-3xl glass-panel flex items-center justify-center transform hover:scale-105 transition-transform duration-300">
+            <i class="fas fa-music text-4xl text-purple-400"></i>
+        </div>
+
+        <!-- Headlines -->
+        <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 text-white">
+            Meet <span class="text-gradient">Glossy</span>
+        </h1>
+        <p class="text-lg md:text-xl text-gray-400 max-w-2xl mb-12 leading-relaxed">
+            A beautiful, open-source Android music player built with Kotlin, Jetpack Compose, and Material 3 Expressive Design. Experience your music like never before.
+        </p>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-col sm:flex-row gap-4 mb-20">
+            <!-- Download APK Button -->
+            <a href="https://github.com/JAY01-CYBER/Glossy/releases/latest" 
+               class="px-8 py-4 rounded-full bg-purple-600 hover:bg-purple-500 text-white font-semibold transition-all duration-300 shadow-[0_0_20px_rgba(147,51,234,0.4)] flex items-center justify-center gap-3">
+                <i class="fa-brands fa-android text-xl"></i>
+                Download Latest APK
+            </a>
+            
+            <!-- View Source Button -->
+            <a href="https://github.com/JAY01-CYBER/Glossy" 
+               class="px-8 py-4 rounded-full glass-panel hover:bg-white/10 text-white font-semibold transition-all duration-300 flex items-center justify-center gap-3">
+                <i class="fa-brands fa-github text-xl"></i>
+                View Source Code
+            </a>
+        </div>
+
+        <!-- Features Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full text-left">
+            
+            <!-- Feature 1 -->
+            <div class="glass-panel p-8 rounded-3xl hover:border-purple-500/50 transition-colors duration-300">
+                <div class="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center mb-6">
+                    <i class="fa-solid fa-palette text-purple-400 text-xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-3">Material 3 Expressive</h3>
+                <p class="text-gray-400 text-sm">Crafted with pure Material 3 guidelines featuring dynamic colors, squircle shapes, and premium shadows.</p>
+            </div>
+
+            <!-- Feature 2 -->
+            <div class="glass-panel p-8 rounded-3xl hover:border-purple-500/50 transition-colors duration-300">
+                <div class="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center mb-6">
+                    <i class="fa-solid fa-bolt text-purple-400 text-xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-3">Jetpack Compose</h3>
+                <p class="text-gray-400 text-sm">Built entirely using modern Android development tools. Fast, fluid animations and zero lag.</p>
+            </div>
+
+            <!-- Feature 3 -->
+            <div class="glass-panel p-8 rounded-3xl hover:border-purple-500/50 transition-colors duration-300">
+                <div class="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center mb-6">
+                    <i class="fa-solid fa-code-branch text-purple-400 text-xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-3">100% Open Source</h3>
+                <p class="text-gray-400 text-sm">No ads, no tracking. Community-driven and built by passionate developers for Android lovers.</p>
+            </div>
+
+        </div>
+
+    </main>
+
+    <footer class="text-center py-8 text-gray-500 text-sm border-t border-white/5 relative z-10">
+        <p>Designed and developed with ❤️ by <a href="https://github.com/JAY01-CYBER" class="text-purple-400 hover:underline">Jay Chaudhary</a></p>
+    </footer>
+
+</body>
+</html>
