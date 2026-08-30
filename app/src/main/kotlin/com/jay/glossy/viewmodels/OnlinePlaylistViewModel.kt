@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -104,6 +104,7 @@ class OnlinePlaylistViewModel @Inject constructor(
                             shuffleEndpoint = null,
                             radioEndpoint = null,
                         )
+                        kotlinx.coroutines.delay(50) // Simp Music delay trick for slide-up animation
                         playlistSongs.value = applySongFilters(episodes)
                         _isLoading.value = false
                     }.onFailure { throwable ->
@@ -130,6 +131,7 @@ class OnlinePlaylistViewModel @Inject constructor(
                         shuffleEndpoint = null,
                         radioEndpoint = null,
                     )
+                    kotlinx.coroutines.delay(50) // Simp Music delay trick for slide-up animation
                     playlistSongs.value = applySongFilters(episodes)
                     _isLoading.value = false
                 } else {
@@ -149,6 +151,7 @@ class OnlinePlaylistViewModel @Inject constructor(
         YouTube.playlist(playlistId)
             .onSuccess { playlistPage ->
                 playlist.value = playlistPage.playlist
+                kotlinx.coroutines.delay(50) // Simp Music delay trick for slide-up animation
                 playlistSongs.value = applySongFilters(playlistPage.songs)
                 continuation = playlistPage.songsContinuation
                 _isLoading.value = false
@@ -196,6 +199,7 @@ class OnlinePlaylistViewModel @Inject constructor(
             )
             val filtered = applySongFilters(songItems)
             timber.log.Timber.d("[SE_LOCAL] After filter: ${filtered.size} episodes, setting playlistSongs")
+            kotlinx.coroutines.delay(50) // Simp Music delay trick for slide-up animation
             playlistSongs.value = filtered
             _isLoading.value = false
             timber.log.Timber.d("[SE_LOCAL] Done, isLoading=false")

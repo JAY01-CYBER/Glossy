@@ -13,6 +13,11 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    
+    <!-- Bluetooth Permissions Added for Audio Device Switcher -->
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
     <!-- Microphone feature for music recognition (not required) -->
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
@@ -27,6 +32,7 @@
         </intent>
         <package android:name="com.google.android.projection.gearhead" />
     </queries>
+    
     <application
         android:name=".App"
         android:allowBackup="true"

@@ -13,6 +13,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Arrangement
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -72,6 +74,7 @@ import androidx.media3.common.Player
 import coil3.compose.AsyncImage
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.jay.glossy.LocalListenTogetherManager
 import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.constants.CropAlbumArtKey
@@ -79,6 +82,8 @@ import com.jay.glossy.constants.HidePlayerThumbnailKey
 import com.jay.glossy.constants.PlayerBackgroundStyle
 import com.jay.glossy.constants.PlayerBackgroundStyleKey
 import com.jay.glossy.constants.PlayerHorizontalPadding
+import com.jay.glossy.constants.PlayerStyle
+import com.jay.glossy.constants.PlayerStyleKey
 import com.jay.glossy.constants.SeekExtraSeconds
 import com.jay.glossy.constants.SwipeThumbnailKey
 import com.jay.glossy.constants.ThumbnailCornerRadius
@@ -112,7 +117,6 @@ data class MediaItemsData(
 /**
  * Calculate thumbnail dimensions once based on container size.
  * This function is marked as @Stable to indicate it produces stable results.
- * In landscape mode, uses the smaller dimension (height) to ensure square thumbnail fits.
  */
 @Stable
 private fun calculateThumbnailDimensions(
@@ -122,7 +126,6 @@ private fun calculateThumbnailDimensions(
     cornerRadius: Dp = ThumbnailCornerRadius,
     isLandscape: Boolean = false
 ): ThumbnailDimensions {
-    // In landscape, use height as the constraining dimension for a square thumbnail
     val effectiveSize = if (isLandscape) {
         minOf(containerWidth, containerHeight) - (horizontalPadding * 2)
     } else {
@@ -217,14 +220,18 @@ fun Thumbnail(
     val canSkipNext by playerConnection.canSkipNext.collectAsStateWithLifecycle()
 
     // Preferences - computed once
-    // Disable swipe for Listen Together guests
     val swipeThumbnailPref by rememberPreference(SwipeThumbnailKey, true)
     val swipeThumbnail = swipeThumbnailPref && !isListenTogetherGuest
     val hidePlayerThumbnail by rememberPreference(HidePlayerThumbnailKey, false)
     val cropAlbumArt by rememberPreference(CropAlbumArtKey, false)
+    
     val playerBackground by rememberEnumPreference(
         key = PlayerBackgroundStyleKey,
         defaultValue = PlayerBackgroundStyle.DEFAULT
+    )
+    val (playerStyle) = rememberEnumPreference(
+        key = PlayerStyleKey,
+        defaultValue = PlayerStyle.MODERN
     )
     
     // Pre-calculate text color based on background style
@@ -300,7 +307,6 @@ fun Thumbnail(
     Box(
         modifier = modifier
             .graphicsLayer {
-                // Use hardware layer for entire Thumbnail to ensure smooth 120Hz animations
                 compositingStrategy = CompositingStrategy.Offscreen
             }
     ) {
@@ -337,23 +343,31 @@ fun Thumbnail(
             ) {
                 // Now Playing header - hide in landscape mode
                 if (!isLandscape) {
+                    
+                    // Spacer ADDED ABOVE header for VIVI_NEW to push text down like Modern style
+                    if (playerStyle.name == "VIVI_NEW") {
+                        Spacer(modifier = Modifier.height(28.dp))
+                    }
+                    
                     ThumbnailHeader(
-                        queueTitle = queueTitle,
-                        albumTitle = mediaMetadata?.album?.title,
-                        textColor = textBackgroundColor
+                        queueTitle = queueTitle, 
+                        albumTitle = mediaMetadata?.album?.title, 
+                        textColor = textBackgroundColor,
+                        playerStyleName = playerStyle.name
                     )
+                    
+                    // Spacer REMOVED from below header so Album art spacing matches Modern style
                 }
                 
                 // Thumbnail content
                 BoxWithConstraints(
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = if (isLandscape) Alignment.Center else if (playerStyle.name == "VIVI_NEW") Alignment.TopCenter else Alignment.Center,
                     modifier = if (isLandscape) {
                         Modifier.weight(1f, false)
                     } else {
                         Modifier.fillMaxSize()
                     }
                 ) {
-                    // Calculate dimensions once per size change, considering landscape mode
                     val dimensions = remember(maxWidth, maxHeight, isLandscape) {
                         calculateThumbnailDimensions(
                             containerWidth = maxWidth,
@@ -362,7 +376,6 @@ fun Thumbnail(
                         )
                     }
 
-                    // Remember the onSeek callback to prevent recomposition
                     val onSeekCallback = remember {
                         { direction: String, showEffect: Boolean ->
                             seekDirection = direction
@@ -370,43 +383,134 @@ fun Thumbnail(
                         }
                     }
                     
-                    // Derive scroll enabled state to prevent unnecessary recomposition
                     val isScrollEnabled by remember(swipeThumbnail) {
                         derivedStateOf { swipeThumbnail && isPlayerExpanded() }
                     }
                     
-                    LazyHorizontalGrid(
-                        state = thumbnailLazyGridState,
-                        rows = GridCells.Fixed(1),
-                        flingBehavior = rememberSnapFlingBehavior(thumbnailSnapLayoutInfoProvider),
-                        userScrollEnabled = isScrollEnabled,
-                        modifier = if (isLandscape) {
-                            Modifier.size(dimensions.thumbnailSize + (PlayerHorizontalPadding * 2))
-                        } else {
-                            Modifier.fillMaxSize()
-                        }
-                    ) {
-                        items(
-                            items = mediaItems,
-                            key = { item -> 
-                                item.mediaId.ifEmpty { "unknown_${item.hashCode()}" }
+                    // VIVI_NEW OVERRIDE
+                    if (playerStyle.name == "VIVI_NEW" && !isLandscape) {
+                        val currentMedia = mediaItems.getOrNull(currentMediaIndex)
+                        val incrementalSeekSkipEnabled by rememberPreference(SeekExtraSeconds, defaultValue = false)
+                        var skipMultiplier by remember { mutableIntStateOf(1) }
+                        var lastTapTime by remember { mutableLongStateOf(0L) }
+
+                        // WRAPPER BOX forces Perfect centering of the square, perfectly replicating Modern style
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center 
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = PlayerHorizontalPadding)
+                                    .aspectRatio(1f) // Perfect square aspect ratio
+                                    .pointerInput(swipeThumbnail) {
+                                        if (!swipeThumbnail) return@pointerInput
+                                        var totalDrag = 0f
+                                        detectHorizontalDragGestures(
+                                            onDragStart = { totalDrag = 0f },
+                                            onDragEnd = {
+                                                if (totalDrag < -50f && canSkipNext) {
+                                                    playerConnection.player.seekToNext()
+                                                } else if (totalDrag > 50f && canSkipPrevious) {
+                                                    playerConnection.player.seekToPreviousMediaItem()
+                                                }
+                                            },
+                                            onHorizontalDrag = { change, dragAmount ->
+                                                totalDrag += dragAmount
+                                            }
+                                        )
+                                    }
+                                    .pointerInput(Unit) {
+                                        detectTapGestures(
+                                            onDoubleTap = { offset ->
+                                                if (isListenTogetherGuest) return@detectTapGestures
+                                                val currentPosition = playerConnection.player.currentPosition
+                                                val songDuration = playerConnection.player.duration
+                                                val now = System.currentTimeMillis()
+                                                if (incrementalSeekSkipEnabled && now - lastTapTime < 1000) skipMultiplier++ else skipMultiplier = 1
+                                                lastTapTime = now
+                                                val skipAmount = 5000 * skipMultiplier
+                                                val isLeftSide = (layoutDirection == LayoutDirection.Ltr && offset.x < size.width / 2) ||
+                                                        (layoutDirection == LayoutDirection.Rtl && offset.x > size.width / 2)
+
+                                                if (isLeftSide) {
+                                                    playerConnection.player.seekTo((currentPosition - skipAmount).coerceAtLeast(0))
+                                                    onSeekCallback(context.getString(R.string.seek_backward_dynamic, skipAmount / 1000), true)
+                                                } else {
+                                                    playerConnection.player.seekTo((currentPosition + skipAmount).coerceAtMost(songDuration))
+                                                    onSeekCallback(context.getString(R.string.seek_forward_dynamic, skipAmount / 1000), true)
+                                                }
+                                            }
+                                        )
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(RoundedCornerShape(dimensions.cornerRadius))
+                                ) {
+                                    if (hidePlayerThumbnail) {
+                                        HiddenThumbnailPlaceholder(
+                                            textBackgroundColor = textBackgroundColor,
+                                            playerStyleName = playerStyle.name
+                                        )
+                                    } else {
+                                        val artworkUriToUse = if (currentMedia?.mediaId == mediaMetadata?.id && !mediaMetadata?.thumbnailUrl.isNullOrBlank()) {
+                                            mediaMetadata?.thumbnailUrl
+                                        } else {
+                                            currentMedia?.mediaMetadata?.artworkUri?.toString()
+                                        }
+                                        ThumbnailImage(
+                                            artworkUri = artworkUriToUse,
+                                            cropArtwork = cropAlbumArt,
+                                            playerStyleName = playerStyle.name
+                                        )
+                                    }
+                                    
+                                    CastButton(
+                                        modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
+                                        tintColor = textBackgroundColor
+                                    )
+                                }
                             }
-                        ) { item ->
-                            ThumbnailItem(
-                                item = item,
-                                dimensions = dimensions,
-                                hidePlayerThumbnail = hidePlayerThumbnail,
-                                cropAlbumArt = cropAlbumArt,
-                                textBackgroundColor = textBackgroundColor,
-                                layoutDirection = layoutDirection,
-                                onSeek = onSeekCallback,
-                                playerConnection = playerConnection,
-                                context = context,
-                                isLandscape = isLandscape,
-                                isListenTogetherGuest = isListenTogetherGuest,
-                                currentMediaId = mediaMetadata?.id,
-                                currentMediaThumbnail = mediaMetadata?.thumbnailUrl
-                            )
+                        }
+                    } else {
+                        LazyHorizontalGrid(
+                            state = thumbnailLazyGridState,
+                            rows = GridCells.Fixed(1),
+                            flingBehavior = rememberSnapFlingBehavior(thumbnailSnapLayoutInfoProvider),
+                            userScrollEnabled = isScrollEnabled,
+                            modifier = if (isLandscape) {
+                                Modifier.size(dimensions.thumbnailSize + (PlayerHorizontalPadding * 2))
+                            } else {
+                                Modifier.fillMaxSize()
+                            }
+                        ) {
+                            items(
+                                items = mediaItems,
+                                key = { item -> 
+                                    item.mediaId.ifEmpty { "unknown_${item.hashCode()}" }
+                                }
+                            ) { item ->
+                                ThumbnailItem(
+                                    item = item,
+                                    dimensions = dimensions,
+                                    hidePlayerThumbnail = hidePlayerThumbnail,
+                                    cropAlbumArt = cropAlbumArt,
+                                    textBackgroundColor = textBackgroundColor,
+                                    layoutDirection = layoutDirection,
+                                    onSeek = onSeekCallback,
+                                    playerConnection = playerConnection,
+                                    context = context,
+                                    isLandscape = isLandscape,
+                                    isListenTogetherGuest = isListenTogetherGuest,
+                                    currentMediaId = mediaMetadata?.id,
+                                    currentMediaThumbnail = mediaMetadata?.thumbnailUrl,
+                                    playerStyleName = playerStyle.name
+                                )
+                            }
                         }
                     }
                 }
@@ -440,6 +544,7 @@ private fun ThumbnailHeader(
     queueTitle: String?,
     albumTitle: String?,
     textColor: Color,
+    playerStyleName: String,
     modifier: Modifier = Modifier
 ) {
     val listenTogetherManager = LocalListenTogetherManager.current
@@ -470,8 +575,10 @@ private fun ThumbnailHeader(
                     color = textColor
                 )
             }
+            
+            // Subtitle - Hide only for VIVI_NEW
             val playingFrom = queueTitle ?: albumTitle
-            if (!playingFrom.isNullOrBlank()) {
+            if (playerStyleName != "VIVI_NEW" && !playingFrom.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = playingFrom,
@@ -486,7 +593,7 @@ private fun ThumbnailHeader(
 }
 
 /**
- * Individual thumbnail item in the carousel.
+ * Individual thumbnail item in the carousel for standard styles.
  */
 @Composable
 private fun ThumbnailItem(
@@ -503,6 +610,7 @@ private fun ThumbnailItem(
     isListenTogetherGuest: Boolean = false,
     currentMediaId: String? = null,
     currentMediaThumbnail: String? = null,
+    playerStyleName: String,
     modifier: Modifier = Modifier,
 ) {
     val incrementalSeekSkipEnabled by rememberPreference(SeekExtraSeconds, defaultValue = false)
@@ -522,7 +630,6 @@ private fun ThumbnailItem(
             )
             .padding(horizontal = PlayerHorizontalPadding)
             .graphicsLayer {
-                // Render entire thumbnail item on separate hardware layer for smooth animations
                 compositingStrategy = CompositingStrategy.Offscreen
             }
             .pointerInput(Unit) {
@@ -564,7 +671,10 @@ private fun ThumbnailItem(
                 .clip(RoundedCornerShape(dimensions.cornerRadius))
         ) {
             if (hidePlayerThumbnail) {
-                HiddenThumbnailPlaceholder(textBackgroundColor = textBackgroundColor)
+                HiddenThumbnailPlaceholder(
+                    textBackgroundColor = textBackgroundColor,
+                    playerStyleName = playerStyleName
+                )
             } else {
                 val artworkUriToUse = if (item.mediaId == currentMediaId && !currentMediaThumbnail.isNullOrBlank()) {
                     currentMediaThumbnail
@@ -574,7 +684,8 @@ private fun ThumbnailItem(
 
                 ThumbnailImage(
                     artworkUri = artworkUriToUse,
-                    cropArtwork = cropAlbumArt
+                    cropArtwork = cropAlbumArt,
+                    playerStyleName = playerStyleName
                 )
             }
             
@@ -595,12 +706,16 @@ private fun ThumbnailItem(
 @Composable
 private fun HiddenThumbnailPlaceholder(
     textBackgroundColor: Color,
+    playerStyleName: String,
     modifier: Modifier = Modifier
 ) {
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surfaceVariant),
+            .then(
+                if (playerStyleName == "VIVI_NEW") Modifier 
+                else Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
+            ),
         contentAlignment = Alignment.Center
     ) {
         Icon(
@@ -618,6 +733,7 @@ private fun HiddenThumbnailPlaceholder(
 private fun ThumbnailImage(
     artworkUri: String?,
     cropArtwork: Boolean,
+    playerStyleName: String,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -627,7 +743,11 @@ private fun ThumbnailImage(
                 // Use offscreen compositing for hardware acceleration during animations
                 compositingStrategy = CompositingStrategy.Offscreen
             }
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .then(
+                // Remove surfaceVariant color (grey) for VIVI_NEW to avoid ugly borders
+                if (playerStyleName == "VIVI_NEW") Modifier 
+                else Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
+            )
     ) {
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
@@ -635,9 +755,10 @@ private fun ThumbnailImage(
                 .memoryCachePolicy(CachePolicy.ENABLED)
                 .diskCachePolicy(CachePolicy.ENABLED)
                 .networkCachePolicy(CachePolicy.ENABLED)
+                .crossfade(true)
                 .build(),
             contentDescription = null,
-            contentScale = if (cropArtwork) ContentScale.Crop else ContentScale.Fit,
+            contentScale = if (cropArtwork || playerStyleName == "VIVI_NEW") ContentScale.Crop else ContentScale.Fit,
             modifier = Modifier.fillMaxSize()
         )
     }

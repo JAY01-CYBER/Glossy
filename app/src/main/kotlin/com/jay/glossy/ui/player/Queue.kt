@@ -8,6 +8,14 @@ package com.jay.glossy.ui.player
 import com.jay.glossy.R
 
 import android.annotation.SuppressLint
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.media.AudioManager
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
@@ -19,13 +27,18 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,6 +53,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -82,6 +96,7 @@ import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.produceState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -143,6 +158,10 @@ import com.jay.glossy.ui.utils.ShowMediaInfo
 import com.jay.glossy.utils.makeTimeString
 import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.utils.safeDataStoreEdit
+import com.jay.glossy.utils.rememberEnumPreference
+import com.jay.glossy.jayaudioutils.AudioDeviceBottomSheet
+import com.jay.glossy.jayaudioutils.isBluetoothHeadphoneConnected
+import com.jay.glossy.jayaudioutils.isWiredHeadphoneConnected
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -179,6 +198,53 @@ fun Queue(
     val menuState = LocalMenuState.current
     val sleepTimerDefaultSetTemplate = stringResource(R.string.sleep_timer_default_set)
     val bottomSheetPageState = LocalBottomSheetPageState.current
+    var showAudioDeviceBottomSheet by remember { mutableStateOf(false) }
+
+    val isHeadsetConnected by produceState(initialValue = isBluetoothHeadphoneConnected(context) || isWiredHeadphoneConnected(context)) {
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                value = isBluetoothHeadphoneConnected(context) || isWiredHeadphoneConnected(context)
+            }
+        }
+
+        val callback = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            object : android.media.AudioDeviceCallback() {
+                override fun onAudioDevicesAdded(addedDevices: Array<out android.media.AudioDeviceInfo>?) {
+                    value = isBluetoothHeadphoneConnected(context) || isWiredHeadphoneConnected(context)
+                }
+                override fun onAudioDevicesRemoved(removedDevices: Array<out android.media.AudioDeviceInfo>?) {
+                    value = isBluetoothHeadphoneConnected(context) || isWiredHeadphoneConnected(context)
+                }
+            }
+        } else null
+
+        val filter = IntentFilter().apply {
+            addAction(AudioManager.ACTION_HEADSET_PLUG)
+            addAction("android.bluetooth.adapter.action.STATE_CHANGED")
+            addAction("android.bluetooth.device.action.ACL_CONNECTED")
+            addAction("android.bluetooth.device.action.ACL_DISCONNECTED")
+            addAction("android.media.AUDIO_BECOMING_NOISY")
+        }
+        
+        context.registerReceiver(receiver, filter)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && callback != null) {
+            audioManager.registerAudioDeviceCallback(callback, Handler(Looper.getMainLooper()))
+        }
+
+        awaitDispose {
+            context.unregisterReceiver(receiver)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && callback != null) {
+                audioManager.unregisterAudioDeviceCallback(callback)
+            }
+        }
+    }
+
+    val (playerStyle) = rememberEnumPreference(
+        com.jay.glossy.constants.PlayerStyleKey, 
+        defaultValue = com.jay.glossy.constants.PlayerStyle.MODERN
+    )
 
     // Listen Together state
     val listenTogetherManager = LocalListenTogetherManager.current
@@ -277,7 +343,139 @@ fun Queue(
             Box(Modifier.fillMaxSize().background(Color.Unspecified))
         },
         collapsedContent = {
-            if (useNewPlayerDesign) {
+            if (playerStyle.name == "VIVI_NEW") {
+                // EXACT VIVI NEW Bottom Bar Layout
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 32.dp, vertical = 12.dp)
+                        .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal))
+                ) {
+                    val iconTint = TextBackgroundColor
+                    val circleBorder = TextBackgroundColor.copy(alpha = 0.35f)
+                    val circleBg = Color.Transparent
+                    
+                    // Queue Button (Left)
+                    val queueInteractionSource = remember { MutableInteractionSource() }
+                    val isQueuePressed by queueInteractionSource.collectIsPressedAsState()
+                    val queueScale by animateFloatAsState(if (isQueuePressed) 0.7f else 1f, spring(0.6f, 500f), label = "queueScale")
+                    
+                    androidx.compose.material3.IconButton(
+                        onClick = { state.expandSoft() },
+                        interactionSource = queueInteractionSource,
+                        modifier = Modifier.size(48.dp).graphicsLayer(scaleX = queueScale, scaleY = queueScale)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.queue_music), 
+                            contentDescription = "Queue", 
+                            tint = iconTint, 
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    
+                    // Middle Group (Devices & Timer Circles)
+                    Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                        // Devices Button (Circle Box)
+                        val devicesInteractionSource = remember { MutableInteractionSource() }
+                        val isDevicesPressed by devicesInteractionSource.collectIsPressedAsState()
+                        val devicesScale by animateFloatAsState(if (isDevicesPressed) 0.7f else 1f, spring(0.6f, 500f), label = "devicesScale")
+                        
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .graphicsLayer(scaleX = devicesScale, scaleY = devicesScale)
+                                .clip(CircleShape)
+                                .border(1.dp, circleBorder, CircleShape)
+                                .background(circleBg)
+                                .clickable(
+                                    interactionSource = devicesInteractionSource,
+                                    indication = LocalIndication.current
+                                ) {
+                                    showAudioDeviceBottomSheet = true
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                painter = painterResource(
+                                    if (isHeadsetConnected) R.drawable.headset_applemusic else R.drawable.speaker_apple
+                                ), 
+                                contentDescription = "Audio Devices", 
+                                tint = iconTint, 
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        
+                        // Sleep Timer Button (Circle to Pill Box)
+                        val sleepInteractionSource = remember { MutableInteractionSource() }
+                        val isSleepPressed by sleepInteractionSource.collectIsPressedAsState()
+                        val sleepScale by animateFloatAsState(if (isSleepPressed) 0.7f else 1f, spring(0.6f, 500f), label = "sleepScale")
+                        
+                        Box(
+                            modifier = Modifier
+                                .height(44.dp)
+                                .widthIn(min = 44.dp)
+                                .animateContentSize()
+                                .graphicsLayer(scaleX = sleepScale, scaleY = sleepScale)
+                                .clip(CircleShape)
+                                .border(1.dp, if (sleepTimerEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else circleBorder, CircleShape)
+                                .background(if (sleepTimerEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else circleBg)
+                                .clickable(
+                                    interactionSource = sleepInteractionSource,
+                                    indication = LocalIndication.current
+                                ) {
+                                    if (sleepTimerEnabled) playerConnection.service.sleepTimer?.clear()
+                                    else showSleepTimerDialog = true
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
+                                modifier = Modifier.padding(horizontal = if (sleepTimerEnabled) 12.dp else 0.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.bedtime), 
+                                    contentDescription = "Sleep Timer", 
+                                    tint = if (sleepTimerEnabled) MaterialTheme.colorScheme.primary else iconTint, 
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                // Yahan aayega live countdown timer pill shape mein
+                                if (sleepTimerEnabled) {
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = makeTimeString(sleepTimerTimeLeft),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        modifier = Modifier.basicMarquee()
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Lyrics Button (Right)
+                    val lyricsInteractionSource = remember { MutableInteractionSource() }
+                    val isLyricsPressed by lyricsInteractionSource.collectIsPressedAsState()
+                    val lyricsScale by animateFloatAsState(if (isLyricsPressed) 0.7f else 1f, spring(0.6f, 500f), label = "lyricsScale")
+                    
+                    androidx.compose.material3.IconButton(
+                        onClick = onToggleLyrics,
+                        interactionSource = lyricsInteractionSource,
+                        modifier = Modifier.size(48.dp).graphicsLayer(scaleX = lyricsScale, scaleY = lyricsScale)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.lyrics), 
+                            contentDescription = "Lyrics", 
+                            tint = if(showInlineLyrics) MaterialTheme.colorScheme.primary else iconTint, 
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            } else if (useNewPlayerDesign) {
                 // New design
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -542,6 +740,10 @@ fun Queue(
                     }
                 }
             }
+            
+            if (showAudioDeviceBottomSheet) {
+                AudioDeviceBottomSheet(onDismiss = { showAudioDeviceBottomSheet = false })
+            }
 
             if (showSleepTimerDialog) {
                 ActionPromptDialog(
@@ -576,11 +778,12 @@ fun Queue(
                     content = {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = pluralStringResource(
-                                    R.plurals.minute,
-                                    sleepTimerValue.roundToInt(),
-                                    sleepTimerValue.roundToInt(),
-                                ),
+                                text =
+                                    pluralStringResource(
+                                        R.plurals.minute,
+                                        sleepTimerValue.roundToInt(),
+                                        sleepTimerValue.roundToInt(),
+                                    ),
                                 style = MaterialTheme.typography.bodyLarge,
                             )
 

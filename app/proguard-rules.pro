@@ -211,3 +211,14 @@
 -keepclasseswithmembers class com.metrolist.shazamkit.models.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
+
+# Kyant Backdrop (Liquid Glass) Rules
+-keep class com.kyant.backdrop.** { *; }
+-dontwarn com.kyant.backdrop.**
+
+# Haze Rules
+-dontwarn dev.chrisbanes.haze.**
+
+## KMPalette Rules
+-keep class com.kmpalette.** { *; }
+-dontwarn com.kmpalette.**

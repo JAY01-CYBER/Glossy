@@ -123,22 +123,17 @@ android {
 
     flavorDimensions += listOf("variant")
     productFlavors {
-        // FOSS - Updater, but no gcast
         create("foss") {
             dimension = "variant"
             isDefault = true
             buildConfigField("Boolean", "CAST_AVAILABLE", "false")
             buildConfigField("Boolean", "UPDATER_AVAILABLE", "true")
         }
-
-        // GMS - Updater and gcast
         create("gms") {
             dimension = "variant"
             buildConfigField("Boolean", "CAST_AVAILABLE", "true")
             buildConfigField("Boolean", "UPDATER_AVAILABLE", "true")
         }
-
-        // IzzyOnDroid - no gcast, no updater - the ONLY F-droid compliant build
         create("izzy") {
             dimension = "variant"
             buildConfigField("Boolean", "CAST_AVAILABLE", "false")
@@ -321,12 +316,6 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
     }
 }
 
-// Android provides org.json as a platform API (/apex/com.android.art/javalib/core-libart.jar).
-// The standalone org.json:json artefact bundles an older Apache Harmony copy of JSONArray that
-// contains an internal `myArrayList` field absent from the platform class.  Without obfuscation
-// R8 inlines against this internal field; at runtime the platform class is resolved instead,
-// producing a NoSuchFieldError.  Excluding the artefact globally ensures only the platform
-// class is ever referenced.
 configurations.configureEach {
     exclude(group = "org.json", module = "json")
 }
@@ -353,7 +342,10 @@ dependencies {
     implementation(libs.lifecycle.process)
 
     implementation(libs.material3)
+    
     implementation(libs.palette)
+    implementation(libs.kmpalette.core)
+    
     implementation(libs.materialKolor)
 
     implementation(libs.appcompat)
@@ -414,4 +406,10 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.ktor.client.mock)
+
+    implementation("androidx.compose.material:material-icons-extended:1.7.8")
+
+    implementation("io.github.kyant0:backdrop:2.0.1")
+    implementation("dev.chrisbanes.haze:haze:1.1.1")
+    implementation("dev.chrisbanes.haze:haze-materials:1.1.1")
 }

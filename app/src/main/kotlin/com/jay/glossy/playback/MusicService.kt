@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -256,9 +256,9 @@ import timber.log.Timber
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 import java.time.LocalDateTime
+import java.util.Collections
 import javax.inject.Inject
 import kotlin.random.Random
-import java.util.Collections
 
 private const val INSTANT_SILENCE_SKIP_STEP_MS = 15_000L
 private const val INSTANT_SILENCE_SKIP_SETTLE_MS = 350L
@@ -379,6 +379,38 @@ class MusicService :
         if (!::player.isInitialized || isCrossfading) return
         player.volume = calculateEffectiveVolume()
     }
+
+    // ========== GLOSSY AUDIO ROUTING LOGIC ==========
+    var preferredDeviceId: Int? = null
+        private set
+
+    fun setPreferredAudioDevice(deviceId: Int?) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            
+            if (deviceId == null || deviceId == -1) {
+                if (::player.isInitialized) {
+                    player.setPreferredAudioDevice(null)
+                    secondaryPlayer?.setPreferredAudioDevice(null)
+                    fadingPlayer?.setPreferredAudioDevice(null)
+                }
+                preferredDeviceId = null
+                return
+            }
+
+            val devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+            val deviceInfo = devices.find { it.id == deviceId }
+
+            if (deviceInfo != null) {
+                if (::player.isInitialized) {
+                    player.setPreferredAudioDevice(deviceInfo)
+                    secondaryPlayer?.setPreferredAudioDevice(deviceInfo)
+                    fadingPlayer?.setPreferredAudioDevice(deviceInfo)
+                }
+                preferredDeviceId = deviceId
+            }
+        }
+    }
+    // ==============================================
 
     var sleepTimer: SleepTimer? = null
 
@@ -1350,6 +1382,15 @@ class MusicService :
 
         playerNormalizationProcessors[player] = normalizationProcessor
         playerSilenceProcessors[player] = silenceProcessor
+
+        // FIX: Ensure new ExoPlayer instances inherit the selected routing!
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && preferredDeviceId != null) {
+            val localAudioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            val devices = localAudioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+            devices.find { it.id == preferredDeviceId }?.let {
+                player.setPreferredAudioDevice(it)
+            }
+        }
 
         if (prefs != null) {
             val offload = prefs[AudioOffload] ?: false
@@ -4194,6 +4235,11 @@ class MusicService :
         }
 
         when (intent?.action) {
+            "SET_AUDIO_DEVICE" -> {
+                val deviceId = intent.getIntExtra("device_id", -1)
+                setPreferredAudioDevice(if (deviceId == -1) null else deviceId)
+            }
+
             ACTION_ALARM_TRIGGER -> {
                 handleAlarmTrigger(intent)
             }
