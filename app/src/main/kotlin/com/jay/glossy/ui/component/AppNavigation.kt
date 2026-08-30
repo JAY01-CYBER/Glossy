@@ -10,6 +10,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -313,12 +314,23 @@ private fun MaterialLiquidTabBar(
     onItemClick: (Screens, Boolean) -> Unit
 ) {
     val tabsCount = tabs.size
-    val tabWidth = if (slimNav) 64.dp else 76.dp
+    
+    // Dynamic Size aur Layout (Labels ke hisaab se bada ya chhota hoga)
+    val tabWidth = if (slimNav) 64.dp else 92.dp
+    val barHeight = if (slimNav) 56.dp else 68.dp
+    val blobHeight = if (slimNav) 48.dp else 56.dp
+    
     val tabWidthPx = with(LocalDensity.current) { tabWidth.toPx() }
     val totalWidth = tabWidth * tabsCount 
     
     val animationScope = rememberCoroutineScope()
     val draggedFlag = remember { booleanArrayOf(false) }
+    
+    // Callbacks ko states me rakha taki purani value pe na atke
+    val currentOnItemClick by rememberUpdatedState(onItemClick)
+    val currentRouteState by rememberUpdatedState(currentRoute)
+    val currentTabs by rememberUpdatedState(tabs)
+    val currentNavItems by rememberUpdatedState(navigationItems)
     
     val dampedDrag = remember(animationScope, tabsCount) {
         DampedDragAnimation(
@@ -327,12 +339,17 @@ private fun MaterialLiquidTabBar(
             valueRange = 0f..(tabsCount - 1).toFloat(),
             visibilityThreshold = 0.001f,
             initialScale = 1f,
-            pressedScale = 1.2f, 
+            pressedScale = 1.15f, 
             onDragStarted = { draggedFlag[0] = false },
             onDragStopped = {
                 if (draggedFlag[0]) {
                     val target = targetValue.roundToInt().coerceIn(0, tabsCount - 1)
                     animateToValue(target.toFloat())
+                    
+                
+                    val screen = currentTabs[target]
+                    val isSelected = isRouteSelected(currentRouteState, screen.route, currentNavItems)
+                    currentOnItemClick(screen, isSelected)
                 }
             },
             onDrag = { _, dragAmount ->
@@ -348,13 +365,15 @@ private fun MaterialLiquidTabBar(
 
     Box(
         modifier = Modifier
-            .height(56.dp)
+            .height(barHeight)
             .width(totalWidth) 
             .clip(RoundedCornerShape(50))
-            .background(floatingToolbarContainerColor(pureBlack))
+            .background(floatingToolbarContainerColor(pureBlack)),
+        contentAlignment = Alignment.CenterStart
     ) {
         val indicatorOpacity by animateFloatAsState(targetValue = if (isMainTabActive) 1f else 0f, label = "Opacity")
         
+        // Active Indicator (Blob)
         Box(
             Modifier
                 .graphicsLayer {
@@ -368,21 +387,22 @@ private fun MaterialLiquidTabBar(
                     alpha = indicatorOpacity
                 }
                 .width(tabWidth)
-                .fillMaxHeight()
-                .padding(4.dp)
+                .height(blobHeight)
+                .padding(horizontal = 4.dp) // Side gap
                 .clip(RoundedCornerShape(50))
                 .background(floatingToolbarSelectedItemContainerColor(pureBlack))
         )
 
+        // Icons and Labels Row
         Row(
             Modifier
                 .fillMaxSize()
-                .then(dampedDrag.modifier), 
+                .then(dampedDrag.modifier), // Swipe handler
             verticalAlignment = Alignment.CenterVertically
         ) {
             tabs.forEachIndexed { position, screen ->
-                val isSelected = remember(currentRoute, screen.route) {
-                    isRouteSelected(currentRoute, screen.route, navigationItems)
+                val isSelected = remember(currentRouteState, screen.route) {
+                    isRouteSelected(currentRouteState, screen.route, currentNavItems)
                 }
                 val currentIsSelected by rememberUpdatedState(isSelected)
                 
@@ -390,7 +410,7 @@ private fun MaterialLiquidTabBar(
                 val contentColor = if (isSelected) floatingToolbarSelectedItemContentColor(pureBlack) else floatingToolbarItemContentColor(pureBlack)
                 val animatedColor by animateColorAsState(targetValue = contentColor, label = "Color")
 
-                Box(
+                Column(
                     Modifier
                         .width(tabWidth)
                         .fillMaxHeight()
@@ -399,20 +419,32 @@ private fun MaterialLiquidTabBar(
                             indication = null, 
                             role = Role.Tab,
                             onClick = {
-                                if (draggedFlag[0]) {
-                                    onItemClick(tabs[dampedDrag.targetValue.roundToInt()], false)
-                                } else {
-                                    onItemClick(screen, currentIsSelected)
+                                if (!draggedFlag[0]) {
+                                    currentOnItemClick(screen, currentIsSelected)
                                 }
                             }
                         ),
-                    contentAlignment = Alignment.Center
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Icon(
                         painter = painterResource(id = iconRes),
                         contentDescription = stringResource(screen.titleId),
-                        tint = animatedColor
+                        tint = animatedColor,
+                        modifier = Modifier.size(24.dp)
                     )
+                    
+                    // TEXT LABEL (Sirf tabhi dikhega jab slimNav OFF ho)
+                    if (!slimNav) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = stringResource(screen.titleId),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = animatedColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
         }
