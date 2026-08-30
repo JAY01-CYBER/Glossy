@@ -2,33 +2,34 @@
 
 package com.jay.glossy.ui.component
 
-import com.jay.glossy.R
-
+import android.os.SystemClock
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.MutatorMutex
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingToolbarDefaults
-import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -41,29 +42,42 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.jay.glossy.constants.UseFloatingNavBarKey
 import com.jay.glossy.ui.screens.Screens
 import com.jay.glossy.utils.rememberPreference
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 @Immutable
 private data class NavItemState(
@@ -165,7 +179,7 @@ fun AppNavigationRail(
 }
 
 // ----------------------------------------------------
-// Main Navigation Bar Router (Checks Settings)
+// Main Navigation Bar Router
 // ----------------------------------------------------
 @Composable
 fun AppNavigationBar(
@@ -203,7 +217,7 @@ fun AppNavigationBar(
 }
 
 // ----------------------------------------------------
-// Premium Floating Navigation Bar
+// Premium MD3 Liquid Navigation Bar (Squash & Stretch)
 // ----------------------------------------------------
 @Composable
 private fun FloatingAppNavigationBar(
@@ -215,173 +229,214 @@ private fun FloatingAppNavigationBar(
     slimNav: Boolean = false,
     onSearchLongClick: (() -> Unit)? = null
 ) {
-    val toolbarContainerColor = floatingToolbarContainerColor(pureBlack = pureBlack)
-    val toolbarColors = FloatingToolbarDefaults.standardFloatingToolbarColors(
-        toolbarContainerColor = toolbarContainerColor,
-    )
-    
     val haptics = LocalHapticFeedback.current
     val viewConfiguration = LocalViewConfiguration.current
 
     val searchItem = navigationItems.find { it == Screens.Search }
     val mainItems = navigationItems.filter { it != Screens.Search }
 
-    BoxWithConstraints(
-        modifier = modifier.fillMaxWidth(),
-        contentAlignment = Alignment.BottomCenter,
-    ) {
-        HorizontalFloatingToolbar(
-            expanded = true,
-            floatingActionButton = {
-                if (searchItem != null) {
-                    val isSelected = remember(currentRoute, searchItem.route) {
-                        isRouteSelected(currentRoute, searchItem.route, navigationItems)
-                    }
-                    val currentIsSelected by rememberUpdatedState(isSelected)
-                    val iconRes = if (isSelected) searchItem.iconIdActive else searchItem.iconIdInactive
-                    val interactionSource = remember { MutableInteractionSource() }
+    // Check which main tab is currently active
+    val selectedMainIndex = mainItems.indexOfFirst { screen ->
+        isRouteSelected(currentRoute, screen.route, navigationItems)
+    }
+    
+    // Track last selected index so the pill doesn't snap to 0 when Search is active
+    var lastMainIndex by remember { mutableIntStateOf(maxOf(0, selectedMainIndex)) }
+    LaunchedEffect(selectedMainIndex) {
+        if (selectedMainIndex >= 0) {
+            lastMainIndex = selectedMainIndex
+        }
+    }
 
-                    if (onSearchLongClick != null) {
-                        LaunchedEffect(interactionSource) {
-                            var isLongClick = false
-                            interactionSource.interactions.collectLatest { interaction ->
-                                when (interaction) {
-                                    is PressInteraction.Press -> {
-                                        isLongClick = false
-                                        delay(viewConfiguration.longPressTimeoutMillis)
-                                        isLongClick = true
-                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        onSearchLongClick.invoke()
-                                    }
-                                    is PressInteraction.Release -> {
-                                        if (!isLongClick) {
-                                            onItemClick(searchItem, currentIsSelected)
-                                        }
-                                    }
-                                    is PressInteraction.Cancel -> {
-                                        isLongClick = false
-                                    }
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(bottom = 12.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // 1. The MD3 Sliding Pill Container
+        MaterialLiquidTabBar(
+            tabs = mainItems,
+            selectedIndex = lastMainIndex,
+            isMainTabActive = selectedMainIndex >= 0,
+            currentRoute = currentRoute,
+            navigationItems = navigationItems,
+            pureBlack = pureBlack,
+            slimNav = slimNav,
+            onItemClick = onItemClick
+        )
+
+        // 2. Detached Search FAB
+        if (searchItem != null) {
+            Spacer(modifier = Modifier.width(12.dp))
+            
+            val isSearchSelected = remember(currentRoute, searchItem.route) {
+                isRouteSelected(currentRoute, searchItem.route, navigationItems)
+            }
+            val currentIsSearchSelected by rememberUpdatedState(isSearchSelected)
+            val interactionSource = remember { MutableInteractionSource() }
+
+            if (onSearchLongClick != null) {
+                LaunchedEffect(interactionSource) {
+                    var isLongClick = false
+                    interactionSource.interactions.collectLatest { interaction ->
+                        when (interaction) {
+                            is PressInteraction.Press -> {
+                                isLongClick = false
+                                delay(viewConfiguration.longPressTimeoutMillis)
+                                isLongClick = true
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onSearchLongClick.invoke()
+                            }
+                            is PressInteraction.Release -> {
+                                if (!isLongClick) {
+                                    onItemClick(searchItem, currentIsSearchSelected)
                                 }
                             }
+                            is PressInteraction.Cancel -> isLongClick = false
                         }
                     }
+                }
+            }
 
-                    FloatingToolbarDefaults.VibrantFloatingActionButton(
-                        onClick = {
-                            if (onSearchLongClick == null) {
-                                onItemClick(searchItem, currentIsSelected)
-                            }
-                        },
-                        interactionSource = interactionSource,
-                        shape = CircleShape,
-                        containerColor = if (isSelected) floatingToolbarSelectedItemContainerColor(pureBlack) else floatingToolbarFabContainerColor(pureBlack),
-                        contentColor = if (isSelected) floatingToolbarSelectedItemContentColor(pureBlack) else floatingToolbarFabContentColor(pureBlack),
-                    ) {
-                        Icon(
-                            painter = painterResource(id = iconRes),
-                            contentDescription = stringResource(searchItem.titleId)
-                        )
+            FloatingToolbarDefaults.VibrantFloatingActionButton(
+                onClick = {
+                    if (onSearchLongClick == null) {
+                        onItemClick(searchItem, currentIsSearchSelected)
                     }
-                }
-            },
-            modifier = Modifier.widthIn(max = 480.dp),
-            colors = toolbarColors,
-        ) {
-            mainItems.forEachIndexed { index, screen ->
-                val isSelected = remember(currentRoute, screen.route) {
-                    isRouteSelected(currentRoute, screen.route, navigationItems)
-                }
-                val currentIsSelected by rememberUpdatedState(isSelected)
-
-                FloatingNavigationToolbarItem(
-                    screen = screen,
-                    selected = currentIsSelected,
-                    pureBlack = pureBlack,
-                    slim = slimNav,
-                    onClick = { onItemClick(screen, currentIsSelected) }
+                },
+                interactionSource = interactionSource,
+                shape = CircleShape,
+                containerColor = if (isSearchSelected) floatingToolbarSelectedItemContainerColor(pureBlack) else floatingToolbarFabContainerColor(pureBlack),
+                contentColor = if (isSearchSelected) floatingToolbarSelectedItemContentColor(pureBlack) else floatingToolbarFabContentColor(pureBlack),
+                modifier = Modifier.size(56.dp)
+            ) {
+                Icon(
+                    painter = painterResource(id = if (isSearchSelected) searchItem.iconIdActive else searchItem.iconIdInactive),
+                    contentDescription = stringResource(searchItem.titleId)
                 )
-
-                if (index < mainItems.lastIndex) {
-                    Spacer(modifier = Modifier.width(16.dp))
-                }
             }
         }
     }
 }
 
 @Composable
-private fun FloatingNavigationToolbarItem(
-    screen: Screens,
-    selected: Boolean,
+private fun MaterialLiquidTabBar(
+    tabs: List<Screens>,
+    selectedIndex: Int,
+    isMainTabActive: Boolean,
+    currentRoute: String?,
+    navigationItems: List<Screens>,
     pureBlack: Boolean,
-    slim: Boolean,
-    onClick: () -> Unit,
+    slimNav: Boolean,
+    onItemClick: (Screens, Boolean) -> Unit
 ) {
-    val shape = RoundedCornerShape(24.dp)
-    val containerColor by animateColorAsState(
-        targetValue = when {
-            selected -> floatingToolbarSelectedItemContainerColor(pureBlack = pureBlack)
-            else -> Color.Transparent
-        },
-        label = "",
-    )
-    val contentColor by animateColorAsState(
-        targetValue = when {
-            selected -> floatingToolbarSelectedItemContentColor(pureBlack = pureBlack)
-            else -> floatingToolbarItemContentColor(pureBlack = pureBlack)
-        },
-        label = "",
-    )
+    val tabsCount = tabs.size
+    val tabWidth = if (slimNav) 64.dp else 76.dp
+    val tabWidthPx = with(LocalDensity.current) { tabWidth.toPx() }
+    val animationScope = rememberCoroutineScope()
     
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.91f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium,
-        ),
-        label = "",
-    )
+    val draggedFlag = remember { booleanArrayOf(false) }
     
-    val showLabel = selected && !slim 
+    // Physics Engine for Squash and Stretch
+    val dampedDrag = remember(animationScope, tabsCount) {
+        DampedDragAnimation(
+            animationScope = animationScope,
+            initialValue = selectedIndex.coerceAtLeast(0).toFloat(),
+            valueRange = 0f..(tabsCount - 1).toFloat(),
+            visibilityThreshold = 0.001f,
+            initialScale = 1f,
+            pressedScale = 1.2f, // Bulge effect when swiped
+            onDragStarted = { draggedFlag[0] = false },
+            onDragStopped = {
+                if (draggedFlag[0]) {
+                    val target = targetValue.roundToInt().coerceIn(0, tabsCount - 1)
+                    animateToValue(target.toFloat())
+                }
+            },
+            onDrag = { _, dragAmount ->
+                if (dragAmount.x != 0f) draggedFlag[0] = true
+                updateValue((targetValue + dragAmount.x / tabWidthPx).coerceIn(0f, (tabsCount - 1).toFloat()))
+            }
+        )
+    }
 
-    Row(
+    LaunchedEffect(selectedIndex) {
+        dampedDrag.animateToValue(selectedIndex.toFloat())
+    }
+
+    Box(
         modifier = Modifier
-            .scale(scale)
-            .animateContentSize()
-            .clip(shape)
-            .background(color = containerColor, shape = shape)
-            .clickable(
-                interactionSource = interactionSource,
-                indication = LocalIndication.current,
-                role = Role.Tab,
-                onClick = onClick
-            )
-            .widthIn(min = 64.dp)
-            .padding(
-                horizontal = if (showLabel) 24.dp else 16.dp,
-                vertical = 12.dp,
-            ),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
+            .height(56.dp)
+            .clip(RoundedCornerShape(50))
+            .background(floatingToolbarContainerColor(pureBlack))
     ) {
-        val iconRes = if (selected) screen.iconIdActive else screen.iconIdInactive
-        Icon(
-            painter = painterResource(id = iconRes),
-            contentDescription = stringResource(screen.titleId),
-            tint = contentColor,
+        // The Sliding MD3 Indicator (Blob)
+        val indicatorOpacity by animateFloatAsState(targetValue = if (isMainTabActive) 1f else 0f, label = "Opacity")
+        
+        Box(
+            Modifier
+                .graphicsLayer {
+                    translationX = dampedDrag.value * tabWidthPx
+                    scaleX = dampedDrag.scaleX
+                    scaleY = dampedDrag.scaleY
+                    
+                    // Squash and stretch physics based on velocity
+                    val velocity = dampedDrag.velocity / 10f
+                    scaleX /= 1f - (velocity * 0.75f).coerceIn(-0.2f, 0.2f)
+                    scaleY *= 1f - (velocity * 0.25f).coerceIn(-0.2f, 0.2f)
+                    alpha = indicatorOpacity
+                }
+                .width(tabWidth)
+                .fillMaxHeight()
+                .padding(4.dp)
+                .clip(RoundedCornerShape(50))
+                .background(floatingToolbarSelectedItemContainerColor(pureBlack))
         )
 
-        if (showLabel) {
-            Spacer(modifier = Modifier.size(8.dp))
-            Text(
-                text = stringResource(screen.titleId),
-                color = contentColor,
-                style = MaterialTheme.typography.labelLarge,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+        // Tab Icons and click handling
+        Row(
+            Modifier
+                .matchParentSize()
+                .then(dampedDrag.modifier), // Handle drag logic across the bar
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            tabs.forEachIndexed { position, screen ->
+                val isSelected = remember(currentRoute, screen.route) {
+                    isRouteSelected(currentRoute, screen.route, navigationItems)
+                }
+                val currentIsSelected by rememberUpdatedState(isSelected)
+                
+                val iconRes = if (isSelected) screen.iconIdActive else screen.iconIdInactive
+                val contentColor = if (isSelected) floatingToolbarSelectedItemContentColor(pureBlack) else floatingToolbarItemContentColor(pureBlack)
+                val animatedColor by animateColorAsState(targetValue = contentColor, label = "Color")
+
+                Box(
+                    Modifier
+                        .width(tabWidth)
+                        .fillMaxHeight()
+                        .clickable(
+                            interactionSource = null,
+                            indication = null, 
+                            role = Role.Tab,
+                            onClick = {
+                                if (draggedFlag[0]) {
+                                    onItemClick(tabs[dampedDrag.targetValue.roundToInt()], false)
+                                } else {
+                                    onItemClick(screen, currentIsSelected)
+                                }
+                            }
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(id = iconRes),
+                        contentDescription = stringResource(screen.titleId),
+                        tint = animatedColor
+                    )
+                }
+            }
         }
     }
 }
@@ -474,7 +529,9 @@ private fun StandardAppNavigationBar(
     }
 }
 
+// ----------------------------------------------------
 // Color Providers
+// ----------------------------------------------------
 @Composable
 private fun floatingToolbarContainerColor(pureBlack: Boolean): Color = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
 @Composable
@@ -487,3 +544,110 @@ private fun floatingToolbarSelectedItemContainerColor(pureBlack: Boolean): Color
 private fun floatingToolbarSelectedItemContentColor(pureBlack: Boolean): Color = if (pureBlack) Color.White else MaterialTheme.colorScheme.onSecondaryContainer
 @Composable
 private fun floatingToolbarItemContentColor(pureBlack: Boolean): Color = if (pureBlack) Color.White.copy(alpha = 0.82f) else MaterialTheme.colorScheme.onSurfaceVariant
+
+// ----------------------------------------------------
+// Physics Engine for Squash and Stretch
+// ----------------------------------------------------
+class DampedDragAnimation(
+    private val animationScope: CoroutineScope,
+    val initialValue: Float,
+    val valueRange: ClosedRange<Float>,
+    val visibilityThreshold: Float,
+    val initialScale: Float,
+    val pressedScale: Float,
+    val onDragStarted: DampedDragAnimation.(position: Offset) -> Unit,
+    val onDragStopped: DampedDragAnimation.() -> Unit,
+    val onDrag: DampedDragAnimation.(size: IntSize, dragAmount: Offset) -> Unit,
+) {
+    private val valueAnimationSpec = spring<Float>(1f, 1000f, visibilityThreshold)
+    private val velocityAnimationSpec = spring<Float>(0.5f, 300f, visibilityThreshold * 10f)
+    private val pressProgressAnimationSpec = spring<Float>(1f, 1000f, 0.001f)
+    private val scaleXAnimationSpec = spring<Float>(0.6f, 250f, 0.001f)
+    private val scaleYAnimationSpec = spring<Float>(0.7f, 250f, 0.001f)
+
+    private val valueAnimation = Animatable(initialValue, visibilityThreshold)
+    private val velocityAnimation = Animatable(0f, 5f)
+    private val pressProgressAnimation = Animatable(0f, 0.001f)
+    private val scaleXAnimation = Animatable(initialScale, 0.001f)
+    private val scaleYAnimation = Animatable(initialScale, 0.001f)
+
+    private val mutatorMutex = MutatorMutex()
+    private val velocityTracker = VelocityTracker()
+
+    val value: Float get() = valueAnimation.value
+    val targetValue: Float get() = valueAnimation.targetValue
+    val scaleX: Float get() = scaleXAnimation.value
+    val scaleY: Float get() = scaleYAnimation.value
+    val velocity: Float get() = velocityAnimation.value
+
+    val modifier: Modifier = Modifier.pointerInput(Unit) {
+        detectDragGestures(
+            onDragStart = { offset ->
+                onDragStarted(offset)
+                press()
+            },
+            onDragEnd = {
+                onDragStopped()
+                release()
+            },
+            onDragCancel = {
+                onDragStopped()
+                release()
+            }
+        ) { change, dragAmount ->
+            change.consume()
+            onDrag(size, dragAmount)
+        }
+    }
+
+    fun press() {
+        velocityTracker.resetTracking()
+        animationScope.launch {
+            launch { pressProgressAnimation.animateTo(1f, pressProgressAnimationSpec) }
+            launch { scaleXAnimation.animateTo(pressedScale, scaleXAnimationSpec) }
+            launch { scaleYAnimation.animateTo(pressedScale, scaleYAnimationSpec) }
+        }
+    }
+
+    fun release() {
+        animationScope.launch {
+            withFrameNanos {}
+            if (value != targetValue) {
+                val threshold = (valueRange.endInclusive - valueRange.start) * 0.025f
+                snapshotFlow { valueAnimation.value }
+                    .filter { abs(it - valueAnimation.targetValue) < threshold }
+                    .first()
+            }
+            launch { pressProgressAnimation.animateTo(0f, pressProgressAnimationSpec) }
+            launch { scaleXAnimation.animateTo(initialScale, scaleXAnimationSpec) }
+            launch { scaleYAnimation.animateTo(initialScale, scaleYAnimationSpec) }
+        }
+    }
+
+    fun updateValue(value: Float) {
+        val target = value.coerceIn(valueRange.start, valueRange.endInclusive)
+        animationScope.launch {
+            valueAnimation.animateTo(target, valueAnimationSpec) { updateVelocity() }
+        }
+    }
+
+    fun animateToValue(value: Float) {
+        animationScope.launch {
+            mutatorMutex.mutate {
+                press()
+                val target = value.coerceIn(valueRange.start, valueRange.endInclusive)
+                launch { valueAnimation.animateTo(target, valueAnimationSpec) }
+                if (velocity != 0f) {
+                    launch { velocityAnimation.animateTo(0f, velocityAnimationSpec) }
+                }
+                release()
+            }
+        }
+    }
+
+    private fun updateVelocity() {
+        velocityTracker.addPosition(SystemClock.uptimeMillis(), Offset(value, 0f))
+        val targetVelocity = velocityTracker.calculateVelocity().x / (valueRange.endInclusive - valueRange.start)
+        animationScope.launch { velocityAnimation.animateTo(targetVelocity, velocityAnimationSpec) }
+    }
+}
