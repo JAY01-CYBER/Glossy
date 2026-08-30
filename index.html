@@ -36,6 +36,30 @@
             background: radial-gradient(circle, rgba(192,132,252,0.2) 0%, rgba(0,0,0,0) 70%);
             z-index: -1;
         }
+
+        /* Pure CSS Phone Mockup */
+        .phone-mockup {
+            border: 10px solid #2a2a35;
+            border-radius: 40px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 25px 50px -12px rgba(147, 51, 234, 0.4);
+            aspect-ratio: 9/19.5;
+            width: 100%;
+            max-w-xs;
+            background: #0f0f13;
+        }
+        .phone-mockup::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 50%;
+            transform: translateX(-50%);
+            width: 120px; height: 25px;
+            background: #2a2a35;
+            border-bottom-left-radius: 16px;
+            border-bottom-right-radius: 16px;
+            z-index: 10;
+        }
     </style>
 </head>
 <body class="bg-[#0f0f13] text-gray-200 min-h-screen relative overflow-x-hidden selection:bg-purple-500 selection:text-white">
@@ -43,75 +67,148 @@
     <div class="glow-orb-1 pointer-events-none"></div>
     <div class="glow-orb-2 pointer-events-none"></div>
 
-    <main class="max-w-5xl mx-auto px-6 py-20 flex flex-col items-center justify-center min-h-screen text-center relative z-10">
+    <main class="max-w-6xl mx-auto px-6 py-12 md:py-20 flex flex-col items-center justify-center min-h-screen relative z-10">
         
-        <!-- 🔥 तुम्हारा असली App Icon / Logo Area -->
-        <div class="w-24 h-24 mb-8 rounded-3xl glass-panel flex items-center justify-center transform hover:scale-105 transition-transform duration-300 overflow-hidden p-2">
-            <img src="logo.png" alt="Glossy Logo" class="w-full h-full object-contain rounded-2xl">
+        <div class="flex flex-col md:flex-row items-center gap-12 w-full">
+            
+            <!-- Left Side: Text & Actions -->
+            <div class="flex-1 text-center md:text-left">
+                <!-- App Icon -->
+                <div class="w-20 h-20 mb-6 rounded-3xl glass-panel flex items-center justify-center overflow-hidden p-2 mx-auto md:mx-0">
+                    <img src="logo.png" alt="Glossy Logo" class="w-full h-full object-contain rounded-2xl">
+                </div>
+
+                <!-- Headlines -->
+                <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight mb-4 text-white">
+                    Meet <span class="text-gradient">Glossy</span>
+                </h1>
+                <p class="text-lg md:text-xl text-gray-400 max-w-lg mb-6 leading-relaxed mx-auto md:mx-0">
+                    A beautiful, open-source Android music player built with Kotlin, Jetpack Compose, and Material 3 Expressive Design.
+                </p>
+
+                <!-- LIVE GitHub Badges -->
+                <div class="flex flex-wrap justify-center md:justify-start gap-3 mb-10">
+                    <img src="https://img.shields.io/github/stars/JAY01-CYBER/Glossy?style=for-the-badge&color=c084fc&logo=github" alt="GitHub Stars">
+                    <img src="https://img.shields.io/github/forks/JAY01-CYBER/Glossy?style=for-the-badge&color=c084fc&logo=github" alt="GitHub Forks">
+                    <img src="https://img.shields.io/github/downloads/JAY01-CYBER/Glossy/total?style=for-the-badge&color=c084fc" alt="Total Downloads">
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
+                    <div class="flex flex-col items-center md:items-start">
+                        <!-- Direct APK Download via JS -->
+                        <a id="download-btn" href="https://github.com/JAY01-CYBER/Glossy/releases/latest" 
+                           class="px-8 py-4 rounded-full bg-purple-600 hover:bg-purple-500 text-white font-semibold transition-all duration-300 shadow-[0_0_20px_rgba(147,51,234,0.4)] flex items-center gap-3 w-full sm:w-auto justify-center">
+                            <i class="fa-brands fa-android text-xl"></i>
+                            Download APK
+                        </a>
+                        <!-- Auto-updating version text -->
+                        <span id="version-text" class="text-xs text-gray-500 mt-2 font-medium tracking-wider">Fetching latest version...</span>
+                    </div>
+                    
+                    <a href="https://github.com/JAY01-CYBER/Glossy" 
+                       class="px-8 py-4 rounded-full glass-panel hover:bg-white/10 text-white font-semibold transition-all duration-300 flex items-center gap-3 h-[56px] w-full sm:w-auto justify-center">
+                        <i class="fa-brands fa-github text-xl"></i>
+                        Source Code
+                    </a>
+                </div>
+            </div>
+
+            <!-- Right Side: Phone Mockup -->
+            <div class="flex-1 flex justify-center w-full max-w-sm mx-auto perspective-[1000px]">
+                <div class="phone-mockup transform rotate-y-[-10deg] rotate-x-[5deg] hover:rotate-y-0 hover:rotate-x-0 transition-transform duration-500">
+                    <!-- 🔥 स्क्रीनशॉट की इमेज (यहाँ screenshot.png डालना होगा) -->
+                    <img src="screenshot.png" alt="App Screenshot" class="w-full h-full object-cover">
+                </div>
+            </div>
+
         </div>
 
-        <!-- Headlines -->
-        <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 text-white">
-            Meet <span class="text-gradient">Glossy</span>
-        </h1>
-        <p class="text-lg md:text-xl text-gray-400 max-w-2xl mb-12 leading-relaxed">
-            A beautiful, open-source Android music player built with Kotlin, Jetpack Compose, and Material 3 Expressive Design. Experience your music like never before.
-        </p>
-
-        <!-- Action Buttons -->
-        <div class="flex flex-col sm:flex-row gap-4 mb-20">
-            <!-- Download APK Button -->
-            <a href="https://github.com/JAY01-CYBER/Glossy/releases/latest" 
-               class="px-8 py-4 rounded-full bg-purple-600 hover:bg-purple-500 text-white font-semibold transition-all duration-300 shadow-[0_0_20px_rgba(147,51,234,0.4)] flex items-center justify-center gap-3">
-                <i class="fa-brands fa-android text-xl"></i>
-                Download Latest APK
-            </a>
+        <!-- Advanced Features Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full mt-32 text-left">
             
-            <!-- View Source Button -->
-            <a href="https://github.com/JAY01-CYBER/Glossy" 
-               class="px-8 py-4 rounded-full glass-panel hover:bg-white/10 text-white font-semibold transition-all duration-300 flex items-center justify-center gap-3">
-                <i class="fa-brands fa-github text-xl"></i>
-                View Source Code
-            </a>
-        </div>
-
-        <!-- Features Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full text-left">
-            
-            <!-- Feature 1 -->
             <div class="glass-panel p-8 rounded-3xl hover:border-purple-500/50 transition-colors duration-300">
                 <div class="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center mb-6">
                     <i class="fa-solid fa-palette text-purple-400 text-xl"></i>
                 </div>
                 <h3 class="text-xl font-bold text-white mb-3">Material 3 Expressive</h3>
-                <p class="text-gray-400 text-sm">Crafted with pure Material 3 guidelines featuring dynamic colors, squircle shapes, and premium shadows.</p>
+                <p class="text-gray-400 text-sm">Dynamic colors, squircle shapes, and premium glassy shadows optimized for Android.</p>
             </div>
 
-            <!-- Feature 2 -->
+            <div class="glass-panel p-8 rounded-3xl hover:border-purple-500/50 transition-colors duration-300">
+                <div class="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center mb-6">
+                    <i class="fa-solid fa-music text-purple-400 text-xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-3">Synchronized Lyrics</h3>
+                <p class="text-gray-400 text-sm">Powered by LRCLIB API. Read and sing along with perfectly synced lyrics in real-time.</p>
+            </div>
+
+            <div class="glass-panel p-8 rounded-3xl hover:border-purple-500/50 transition-colors duration-300">
+                <div class="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center mb-6">
+                    <i class="fa-solid fa-chart-line text-purple-400 text-xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-3">Scrobbling Support</h3>
+                <p class="text-gray-400 text-sm">Seamlessly integrated with ListenBrainz to automatically track and scrobble your listening history.</p>
+            </div>
+
+            <div class="glass-panel p-8 rounded-3xl hover:border-purple-500/50 transition-colors duration-300">
+                <div class="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center mb-6">
+                    <i class="fa-solid fa-globe text-purple-400 text-xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-3">Multi-Language</h3>
+                <p class="text-gray-400 text-sm">Fully localized via Crowdin. Enjoy Glossy in English, Hindi, Gujarati, Marwari, and many more.</p>
+            </div>
+
             <div class="glass-panel p-8 rounded-3xl hover:border-purple-500/50 transition-colors duration-300">
                 <div class="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center mb-6">
                     <i class="fa-solid fa-bolt text-purple-400 text-xl"></i>
                 </div>
                 <h3 class="text-xl font-bold text-white mb-3">Jetpack Compose</h3>
-                <p class="text-gray-400 text-sm">Built entirely using modern Android development tools. Fast, fluid animations and zero lag.</p>
+                <p class="text-gray-400 text-sm">Built entirely using modern declarative UI, delivering buttery smooth 60fps animations.</p>
             </div>
 
-            <!-- Feature 3 -->
             <div class="glass-panel p-8 rounded-3xl hover:border-purple-500/50 transition-colors duration-300">
                 <div class="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center mb-6">
                     <i class="fa-solid fa-code-branch text-purple-400 text-xl"></i>
                 </div>
                 <h3 class="text-xl font-bold text-white mb-3">100% Open Source</h3>
-                <p class="text-gray-400 text-sm">No ads, no tracking. Community-driven and built by passionate developers for Android lovers.</p>
+                <p class="text-gray-400 text-sm">Powered by GitHub Actions & Woodpecker CI. Transparent, ad-free, and community-driven.</p>
             </div>
 
         </div>
 
     </main>
 
-    <footer class="text-center py-8 text-gray-500 text-sm border-t border-white/5 relative z-10">
+    <footer class="text-center py-8 mt-10 text-gray-500 text-sm border-t border-white/5 relative z-10">
         <p>Designed and developed with ❤️ by <a href="https://github.com/JAY01-CYBER" class="text-purple-400 hover:underline">Jay Chaudhary</a></p>
     </footer>
 
+    <!-- 🔥 Direct APK Download JS Script -->
+    <script>
+        async function fetchLatestRelease() {
+            try {
+                // Fetch latest release from your specific repo
+                const response = await fetch('https://api.github.com/repos/JAY01-CYBER/Glossy/releases/latest');
+                const data = await response.json();
+                
+                // Find the APK file from the release assets
+                const apkAsset = data.assets.find(asset => asset.name.endsWith('.apk'));
+                
+                if (apkAsset) {
+                    // Update Button Link to direct APK download
+                    document.getElementById('download-btn').href = apkAsset.browser_download_url;
+                    // Update Text to show the live version tag (e.g., Latest: v1.2.0)
+                    document.getElementById('version-text').textContent = "Latest Stable: " + data.tag_name;
+                } else {
+                    document.getElementById('version-text').textContent = "Latest Release: " + data.tag_name;
+                }
+            } catch (error) {
+                console.error('Error fetching release:', error);
+                document.getElementById('version-text').textContent = "Check GitHub for latest version";
+            }
+        }
+        
+        fetchLatestRelease();
+    </script>
 </body>
 </html>
