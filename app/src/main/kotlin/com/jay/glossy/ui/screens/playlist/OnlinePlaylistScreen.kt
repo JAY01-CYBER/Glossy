@@ -9,6 +9,7 @@ import com.jay.glossy.R
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -37,7 +38,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -101,6 +101,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import coil3.toBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+
+import com.kmpalette.palette.graphics.Palette
+import com.kmpalette.rememberPaletteState
 
 import com.metrolist.innertube.models.PlaylistItem
 import com.metrolist.innertube.models.SongItem
@@ -123,6 +128,8 @@ import com.jay.glossy.ui.menu.YouTubePlaylistMenu
 import com.jay.glossy.ui.menu.YouTubeSelectionSongMenu
 import com.jay.glossy.ui.menu.YouTubeSongMenu
 import com.jay.glossy.ui.utils.backToMain
+import com.jay.glossy.ui.utils.resize
+import com.jay.glossy.ui.utils.toImmersiveBackground
 import com.jay.glossy.utils.makeTimeString
 import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.viewmodels.OnlinePlaylistViewModel
@@ -160,6 +167,9 @@ fun OnlinePlaylistScreen(
 
     var isSearching by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
+
+    val defaultColor = MaterialTheme.colorScheme.surface
+    var dominantColor by remember { mutableStateOf(defaultColor) }
 
     val filteredSongs =
         remember(songs, query) {
@@ -208,9 +218,15 @@ fun OnlinePlaylistScreen(
     }
 
     val currentPlaylist = playlist 
+    
+    val animatedExtractedColor by animateColorAsState(
+        targetValue = dominantColor,
+        animationSpec = tween(durationMillis = 1000),
+        label = "solidColor"
+    )
+
     val topPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp
 
-    // 🔥 MAIN BACKGROUND
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -287,7 +303,10 @@ fun OnlinePlaylistScreen(
                                 dbPlaylist = dbPlaylist,
                                 navController = navController,
                                 coroutineScope = coroutineScope,
-                                continuation = viewModel.continuation
+                                continuation = viewModel.continuation,
+                                solidBgColor = animatedExtractedColor,
+                                onSearchClick = { isSearching = true },
+                                onDominantColorExtracted = { dominantColor = it }
                             )
                         }
                     }
@@ -431,10 +450,11 @@ fun OnlinePlaylistScreen(
                                 Text(
                                     text = stringResource(R.string.search),
                                     style = MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                                 )
                             },
                             singleLine = true,
-                            textStyle = MaterialTheme.typography.titleLarge,
+                            textStyle = MaterialTheme.typography.titleLarge.copy(color = MaterialTheme.colorScheme.onBackground),
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                             colors = TextFieldDefaults.colors(
                                 focusedContainerColor = Color.Transparent,
@@ -516,23 +536,6 @@ fun OnlinePlaylistScreen(
                         ) {
                             Icon(painterResource(R.drawable.search), contentDescription = null)
                         }
-                        currentPlaylist?.let { nonNullPlaylist -> 
-                            com.jay.glossy.ui.component.IconButton(
-                                onClick = {
-                                    menuState.show {
-                                        YouTubePlaylistMenu(
-                                            playlist = nonNullPlaylist,
-                                            songs = songs,
-                                            coroutineScope = coroutineScope,
-                                            onDismiss = menuState::dismiss,
-                                        )
-                                    }
-                                },
-                                onLongClick = {} 
-                            ) {
-                                Icon(painterResource(R.drawable.more_vert), "More")
-                            }
-                        }
                     }
                 },
             )
@@ -545,7 +548,7 @@ fun OnlinePlaylistScreen(
     }
 }
 
-// EXACT MATERIAL 3 HEADER DESIGN (From User Screenshot)
+// EXACT MATERIAL 3 HEADER DESIGN (With functional Menu & Search buttons)
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun OnlinePlaylistHeader(
@@ -555,6 +558,9 @@ private fun OnlinePlaylistHeader(
     navController: NavController,
     coroutineScope: CoroutineScope,
     continuation: String?,
+    solidBgColor: Color,
+    onSearchClick: () -> Unit,
+    onDominantColorExtracted: (Color) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -568,11 +574,29 @@ private fun OnlinePlaylistHeader(
     val configuration = LocalConfiguration.current
     val screenHeight = configuration.screenHeightDp.dp
 
+    val paletteState = rememberPaletteState()
+    var imageBitmap by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
+    var paletteGeneratedFor by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(imageBitmap) {
+        val bm = imageBitmap
+        if (bm != null && playlist.thumbnail != null && paletteGeneratedFor != playlist.thumbnail) {
+            paletteState.generate(bm)
+            paletteGeneratedFor = playlist.thumbnail
+        }
+    }
+
+    LaunchedEffect(paletteState.palette) {
+        val palette = paletteState.palette
+        if (palette != null) {
+            onDominantColorExtracted(palette.toImmersiveBackground())
+        }
+    }
+
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // EDGE-TO-EDGE ARTWORK BOX
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -580,14 +604,16 @@ private fun OnlinePlaylistHeader(
         ) {
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
-                    .data(playlist.thumbnail)
+                    .data(playlist.thumbnail?.resize(1080, 1080))
                     .build(),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
+                onSuccess = { state ->
+                    imageBitmap = state.result.image.toBitmap().asImageBitmap()
+                },
                 modifier = Modifier.fillMaxSize()
             )
 
-            // Soft Gradient overlay
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -602,7 +628,6 @@ private fun OnlinePlaylistHeader(
                     )
             )
             
-            // Texts
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -644,7 +669,6 @@ private fun OnlinePlaylistHeader(
                 )
             }
 
-            //  TOP ROW BUTTONS
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -724,9 +748,12 @@ private fun OnlinePlaylistHeader(
                             )
                         }
                         
-                        com.jay.glossy.ui.component.IconButton(onClick = { /* Implement Search if needed here */ }, onLongClick = {}) {
+                        // SEARCH BUTTON HOOKED UP
+                        com.jay.glossy.ui.component.IconButton(onClick = onSearchClick, onLongClick = {}) {
                             Icon(painterResource(R.drawable.search), null)
                         }
+                        
+                        // MORE BUTTON HOOKED UP TO MENU
                         com.jay.glossy.ui.component.IconButton(onClick = {
                             menuState.show {
                                 YouTubePlaylistMenu(
@@ -744,7 +771,6 @@ private fun OnlinePlaylistHeader(
             }
         }
 
-        // BOTTOM ACTION ROW
         Row(
             modifier = Modifier
                 .fillMaxWidth()
