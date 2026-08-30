@@ -2,20 +2,12 @@
 
 package com.jay.glossy.ui.component
 
-import android.os.SystemClock
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.LocalIndication
-import androidx.compose.foundation.MutatorMutex
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -47,17 +39,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalViewConfiguration
@@ -65,18 +52,12 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.jay.glossy.constants.UseFloatingNavBarKey
 import com.jay.glossy.ui.screens.Screens
 import com.jay.glossy.utils.rememberPreference
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
-import kotlin.math.abs
 import kotlin.math.roundToInt
 
 @Immutable
@@ -235,12 +216,10 @@ private fun FloatingAppNavigationBar(
     val searchItem = navigationItems.find { it == Screens.Search }
     val mainItems = navigationItems.filter { it != Screens.Search }
 
-    // Check which main tab is currently active
     val selectedMainIndex = mainItems.indexOfFirst { screen ->
         isRouteSelected(currentRoute, screen.route, navigationItems)
     }
     
-    // Track last selected index so the pill doesn't snap to 0 when Search is active
     var lastMainIndex by remember { mutableIntStateOf(maxOf(0, selectedMainIndex)) }
     LaunchedEffect(selectedMainIndex) {
         if (selectedMainIndex >= 0) {
@@ -339,7 +318,6 @@ private fun MaterialLiquidTabBar(
     
     val draggedFlag = remember { booleanArrayOf(false) }
     
-    // Physics Engine for Squash and Stretch
     val dampedDrag = remember(animationScope, tabsCount) {
         DampedDragAnimation(
             animationScope = animationScope,
@@ -347,7 +325,7 @@ private fun MaterialLiquidTabBar(
             valueRange = 0f..(tabsCount - 1).toFloat(),
             visibilityThreshold = 0.001f,
             initialScale = 1f,
-            pressedScale = 1.2f, // Bulge effect when swiped
+            pressedScale = 1.2f, 
             onDragStarted = { draggedFlag[0] = false },
             onDragStopped = {
                 if (draggedFlag[0]) {
@@ -372,7 +350,6 @@ private fun MaterialLiquidTabBar(
             .clip(RoundedCornerShape(50))
             .background(floatingToolbarContainerColor(pureBlack))
     ) {
-        // The Sliding MD3 Indicator (Blob)
         val indicatorOpacity by animateFloatAsState(targetValue = if (isMainTabActive) 1f else 0f, label = "Opacity")
         
         Box(
@@ -382,7 +359,6 @@ private fun MaterialLiquidTabBar(
                     scaleX = dampedDrag.scaleX
                     scaleY = dampedDrag.scaleY
                     
-                    // Squash and stretch physics based on velocity
                     val velocity = dampedDrag.velocity / 10f
                     scaleX /= 1f - (velocity * 0.75f).coerceIn(-0.2f, 0.2f)
                     scaleY *= 1f - (velocity * 0.25f).coerceIn(-0.2f, 0.2f)
@@ -395,11 +371,10 @@ private fun MaterialLiquidTabBar(
                 .background(floatingToolbarSelectedItemContainerColor(pureBlack))
         )
 
-        // Tab Icons and click handling
         Row(
             Modifier
                 .matchParentSize()
-                .then(dampedDrag.modifier), // Handle drag logic across the bar
+                .then(dampedDrag.modifier), 
             verticalAlignment = Alignment.CenterVertically
         ) {
             tabs.forEachIndexed { position, screen ->
@@ -544,110 +519,3 @@ private fun floatingToolbarSelectedItemContainerColor(pureBlack: Boolean): Color
 private fun floatingToolbarSelectedItemContentColor(pureBlack: Boolean): Color = if (pureBlack) Color.White else MaterialTheme.colorScheme.onSecondaryContainer
 @Composable
 private fun floatingToolbarItemContentColor(pureBlack: Boolean): Color = if (pureBlack) Color.White.copy(alpha = 0.82f) else MaterialTheme.colorScheme.onSurfaceVariant
-
-// ----------------------------------------------------
-// Physics Engine for Squash and Stretch
-// ----------------------------------------------------
-class DampedDragAnimation(
-    private val animationScope: CoroutineScope,
-    val initialValue: Float,
-    val valueRange: ClosedRange<Float>,
-    val visibilityThreshold: Float,
-    val initialScale: Float,
-    val pressedScale: Float,
-    val onDragStarted: DampedDragAnimation.(position: Offset) -> Unit,
-    val onDragStopped: DampedDragAnimation.() -> Unit,
-    val onDrag: DampedDragAnimation.(size: IntSize, dragAmount: Offset) -> Unit,
-) {
-    private val valueAnimationSpec = spring<Float>(1f, 1000f, visibilityThreshold)
-    private val velocityAnimationSpec = spring<Float>(0.5f, 300f, visibilityThreshold * 10f)
-    private val pressProgressAnimationSpec = spring<Float>(1f, 1000f, 0.001f)
-    private val scaleXAnimationSpec = spring<Float>(0.6f, 250f, 0.001f)
-    private val scaleYAnimationSpec = spring<Float>(0.7f, 250f, 0.001f)
-
-    private val valueAnimation = Animatable(initialValue, visibilityThreshold)
-    private val velocityAnimation = Animatable(0f, 5f)
-    private val pressProgressAnimation = Animatable(0f, 0.001f)
-    private val scaleXAnimation = Animatable(initialScale, 0.001f)
-    private val scaleYAnimation = Animatable(initialScale, 0.001f)
-
-    private val mutatorMutex = MutatorMutex()
-    private val velocityTracker = VelocityTracker()
-
-    val value: Float get() = valueAnimation.value
-    val targetValue: Float get() = valueAnimation.targetValue
-    val scaleX: Float get() = scaleXAnimation.value
-    val scaleY: Float get() = scaleYAnimation.value
-    val velocity: Float get() = velocityAnimation.value
-
-    val modifier: Modifier = Modifier.pointerInput(Unit) {
-        detectDragGestures(
-            onDragStart = { offset ->
-                onDragStarted(offset)
-                press()
-            },
-            onDragEnd = {
-                onDragStopped()
-                release()
-            },
-            onDragCancel = {
-                onDragStopped()
-                release()
-            }
-        ) { change, dragAmount ->
-            change.consume()
-            onDrag(size, dragAmount)
-        }
-    }
-
-    fun press() {
-        velocityTracker.resetTracking()
-        animationScope.launch {
-            launch { pressProgressAnimation.animateTo(1f, pressProgressAnimationSpec) }
-            launch { scaleXAnimation.animateTo(pressedScale, scaleXAnimationSpec) }
-            launch { scaleYAnimation.animateTo(pressedScale, scaleYAnimationSpec) }
-        }
-    }
-
-    fun release() {
-        animationScope.launch {
-            withFrameNanos {}
-            if (value != targetValue) {
-                val threshold = (valueRange.endInclusive - valueRange.start) * 0.025f
-                snapshotFlow { valueAnimation.value }
-                    .filter { abs(it - valueAnimation.targetValue) < threshold }
-                    .first()
-            }
-            launch { pressProgressAnimation.animateTo(0f, pressProgressAnimationSpec) }
-            launch { scaleXAnimation.animateTo(initialScale, scaleXAnimationSpec) }
-            launch { scaleYAnimation.animateTo(initialScale, scaleYAnimationSpec) }
-        }
-    }
-
-    fun updateValue(value: Float) {
-        val target = value.coerceIn(valueRange.start, valueRange.endInclusive)
-        animationScope.launch {
-            valueAnimation.animateTo(target, valueAnimationSpec) { updateVelocity() }
-        }
-    }
-
-    fun animateToValue(value: Float) {
-        animationScope.launch {
-            mutatorMutex.mutate {
-                press()
-                val target = value.coerceIn(valueRange.start, valueRange.endInclusive)
-                launch { valueAnimation.animateTo(target, valueAnimationSpec) }
-                if (velocity != 0f) {
-                    launch { velocityAnimation.animateTo(0f, velocityAnimationSpec) }
-                }
-                release()
-            }
-        }
-    }
-
-    private fun updateVelocity() {
-        velocityTracker.addPosition(SystemClock.uptimeMillis(), Offset(value, 0f))
-        val targetVelocity = velocityTracker.calculateVelocity().x / (valueRange.endInclusive - valueRange.start)
-        animationScope.launch { velocityAnimation.animateTo(targetVelocity, velocityAnimationSpec) }
-    }
-}
