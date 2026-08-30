@@ -793,7 +793,7 @@ fun LocalPlaylistHeader(
             } else if (playlist.thumbnails.size <= 1 || overrideThumbnail.value != null) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
-                        .data((overrideThumbnail.value ?: playlist.thumbnails.firstOrNull())?.resize(1080, 1080))
+                        .data(overrideThumbnail.value ?: playlist.thumbnails.firstOrNull())
                         .build(),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
@@ -803,7 +803,7 @@ fun LocalPlaylistHeader(
                 Box(modifier = Modifier.fillMaxSize()) {
                     listOf(Alignment.TopStart, Alignment.TopEnd, Alignment.BottomStart, Alignment.BottomEnd).fastForEachIndexed { index, alignment ->
                         AsyncImage(
-                            model = playlist.thumbnails.getOrNull(index)?.resize(1080, 1080),
+                            model = playlist.thumbnails.getOrNull(index),
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.align(alignment).fillMaxSize(0.5f),
@@ -996,7 +996,7 @@ fun LocalPlaylistHeader(
             }
         }
 
-        // BOTTOM ACTION ROW
+        //  BOTTOM ACTION ROW
         Row(
             modifier = Modifier
                 .fillMaxWidth()
