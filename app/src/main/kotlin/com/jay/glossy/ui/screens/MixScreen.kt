@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -32,10 +33,9 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
-import com.jay.glossy.ui.component.LocalPlayerAwareWindowInsets
+import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.viewmodels.HomeViewModel
 import com.metrolist.innertube.models.PlaylistItem
-import androidx.compose.foundation.layout.asPaddingValues
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,11 +47,9 @@ fun MixScreen(
     val homePage by viewModel.homePage.collectAsStateWithLifecycle()
     val insetsPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues()
 
-  
     val mixPlaylists = remember(accountPlaylists, homePage) {
         val list = mutableListOf<PlaylistItem>()
 
-        // 1. Account Playlists me se mixes filter karna
         accountPlaylists?.forEach { playlist ->
             if (playlist.title.contains("Mix", ignoreCase = true) || 
                 playlist.title.contains("Liked Music", ignoreCase = true) ||
@@ -61,7 +59,6 @@ fun MixScreen(
             }
         }
 
-        // 2. Home Page ke sections me se saare auto-generated mixes nikalna
         homePage?.sections?.forEach { section ->
             section.items.filterIsInstance<PlaylistItem>().forEach { playlist ->
                 if (playlist.title.contains("Mix", ignoreCase = true) || 
@@ -73,7 +70,6 @@ fun MixScreen(
             }
         }
 
-        // Duplicate playlist IDs ko hata dena taaki ek mix do baar na dikhe
         list.distinctBy { it.id }
     }
 
@@ -148,7 +144,8 @@ fun MixCardItem(
             fontWeight = FontWeight.SemiBold,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 8.dp, horizontal = 4.dp)
+        
+            modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp) 
         )
         
         if (!item.author?.name.isNullOrEmpty()) {
@@ -158,7 +155,8 @@ fun MixCardItem(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(horizontal = 4.dp)
+
+                modifier = Modifier.padding(start = 4.dp, end = 4.dp) 
             )
         }
     }
