@@ -44,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -229,10 +230,15 @@ private fun FloatingAppNavigationBar(
         }
     }
 
+    // Dynamic Sizing (Fixed sizes so FAB and Pill match perfectly)
+    val barHeight = if (slimNav) 52.dp else 60.dp
+
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(bottom = 12.dp),
+            // Top padding pushes the bar away from the MiniPlayer!
+            // Total height inside 76dp bounds = 14 + 60 + 2 = 76dp. Perfectly fits!
+            .padding(top = 14.dp, bottom = 2.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -245,6 +251,7 @@ private fun FloatingAppNavigationBar(
             navigationItems = navigationItems,
             pureBlack = pureBlack,
             slimNav = slimNav,
+            barHeight = barHeight,
             onItemClick = onItemClick
         )
 
@@ -291,7 +298,9 @@ private fun FloatingAppNavigationBar(
                 shape = CircleShape,
                 containerColor = if (isSearchSelected) floatingToolbarSelectedItemContainerColor(pureBlack) else floatingToolbarFabContainerColor(pureBlack),
                 contentColor = if (isSearchSelected) floatingToolbarSelectedItemContentColor(pureBlack) else floatingToolbarFabContentColor(pureBlack),
-                modifier = Modifier.size(56.dp)
+                modifier = Modifier
+                    .size(barHeight) 
+                    .shadow(elevation = 12.dp, shape = CircleShape) 
             ) {
                 Icon(
                     painter = painterResource(id = if (isSearchSelected) searchItem.iconIdActive else searchItem.iconIdInactive),
@@ -311,14 +320,14 @@ private fun MaterialLiquidTabBar(
     navigationItems: List<Screens>,
     pureBlack: Boolean,
     slimNav: Boolean,
+    barHeight: androidx.compose.ui.unit.Dp,
     onItemClick: (Screens, Boolean) -> Unit
 ) {
     val tabsCount = tabs.size
     
-    // Dynamic Size aur Layout (Labels ke hisaab se bada ya chhota hoga)
-    val tabWidth = if (slimNav) 64.dp else 92.dp
-    val barHeight = if (slimNav) 56.dp else 68.dp
-    val blobHeight = if (slimNav) 48.dp else 56.dp
+    // Dynamic Width Calculation based on 3 tabs
+    val tabWidth = if (slimNav) 64.dp else 84.dp
+    val blobHeight = if (slimNav) 44.dp else 52.dp
     
     val tabWidthPx = with(LocalDensity.current) { tabWidth.toPx() }
     val totalWidth = tabWidth * tabsCount 
@@ -326,7 +335,6 @@ private fun MaterialLiquidTabBar(
     val animationScope = rememberCoroutineScope()
     val draggedFlag = remember { booleanArrayOf(false) }
     
-    // Callbacks ko states me rakha taki purani value pe na atke
     val currentOnItemClick by rememberUpdatedState(onItemClick)
     val currentRouteState by rememberUpdatedState(currentRoute)
     val currentTabs by rememberUpdatedState(tabs)
@@ -346,7 +354,6 @@ private fun MaterialLiquidTabBar(
                     val target = targetValue.roundToInt().coerceIn(0, tabsCount - 1)
                     animateToValue(target.toFloat())
                     
-                
                     val screen = currentTabs[target]
                     val isSelected = isRouteSelected(currentRouteState, screen.route, currentNavItems)
                     currentOnItemClick(screen, isSelected)
@@ -366,7 +373,8 @@ private fun MaterialLiquidTabBar(
     Box(
         modifier = Modifier
             .height(barHeight)
-            .width(totalWidth) 
+            .width(totalWidth)
+            .shadow(elevation = 12.dp, shape = RoundedCornerShape(50)) 
             .clip(RoundedCornerShape(50))
             .background(floatingToolbarContainerColor(pureBlack)),
         contentAlignment = Alignment.CenterStart
@@ -388,7 +396,7 @@ private fun MaterialLiquidTabBar(
                 }
                 .width(tabWidth)
                 .height(blobHeight)
-                .padding(horizontal = 4.dp) // Side gap
+                .padding(horizontal = 4.dp)
                 .clip(RoundedCornerShape(50))
                 .background(floatingToolbarSelectedItemContainerColor(pureBlack))
         )
@@ -397,7 +405,7 @@ private fun MaterialLiquidTabBar(
         Row(
             Modifier
                 .fillMaxSize()
-                .then(dampedDrag.modifier), // Swipe handler
+                .then(dampedDrag.modifier), 
             verticalAlignment = Alignment.CenterVertically
         ) {
             tabs.forEachIndexed { position, screen ->
@@ -434,7 +442,6 @@ private fun MaterialLiquidTabBar(
                         modifier = Modifier.size(24.dp)
                     )
                     
-                    // TEXT LABEL (Sirf tabhi dikhega jab slimNav OFF ho)
                     if (!slimNav) {
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
