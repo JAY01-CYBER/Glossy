@@ -257,6 +257,7 @@ fun AutoPlaylistScreen(
                 uris.forEachIndexed { index, uri ->
                     currentUploadIndex = index + 1
                     uploadProgress = 0f
+
                     try {
                         var fileName = uri.lastPathSegment?.substringAfterLast('/') ?: "unknown"
                         context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
@@ -393,7 +394,6 @@ fun AutoPlaylistScreen(
     val canRefresh = playlistType == PlaylistType.LIKE || playlistType == PlaylistType.UPLOADED
     val topPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp
 
-    //  MAIN BACKGROUND (App Theme Background, NO dark scheme override here)
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -587,10 +587,11 @@ fun AutoPlaylistScreen(
                 },
                 actions = {
                     if (inSelectMode) {
+                        val safeSongs = songs ?: emptyList()
                         Checkbox(
-                            checked = selection.size == songs.size && selection.isNotEmpty(),
+                            checked = selection.size == safeSongs.size && selection.isNotEmpty(),
                             onCheckedChange = {
-                                if (selection.size == songs.size) selection.clear() else { selection.clear(); selection.addAll(songs.map { it.id }) }
+                                if (selection.size == safeSongs.size) selection.clear() else { selection.clear(); selection.addAll(safeSongs.map { it.id }) }
                             },
                         )
                         com.jay.glossy.ui.component.IconButton(
@@ -623,7 +624,7 @@ fun AutoPlaylistScreen(
     }
 }
 
-//  EXACT MATERIAL 3 HEADER DESIGN 
+// PURE MATERIAL 3 HEADER
 @Composable
 fun AutoPlaylistHeader(
     name: String,
@@ -631,11 +632,12 @@ fun AutoPlaylistHeader(
     likeLength: Int,
     downloadState: Int,
     onShowRemoveDownloadDialog: () -> Unit,
+    navController: NavController,
+    menuState: com.jay.glossy.ui.component.MenuState,
     modifier: Modifier = Modifier,
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val context = LocalContext.current
-    val menuState = LocalMenuState.current
     val configuration = LocalConfiguration.current
     val screenHeight = configuration.screenHeightDp.dp
     val thumbUrl = songs.firstOrNull()?.song?.thumbnailUrl
@@ -644,13 +646,11 @@ fun AutoPlaylistHeader(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // 🔥 EDGE-TO-EDGE ARTWORK BOX
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(screenHeight / 2)
         ) {
-            // Full Background Image
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current).data(thumbUrl).build(),
                 contentDescription = null,
@@ -658,7 +658,6 @@ fun AutoPlaylistHeader(
                 modifier = Modifier.fillMaxSize()
             )
 
-            // Soft Gradient overlay to transition into pure background color seamlessly
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -673,7 +672,6 @@ fun AutoPlaylistHeader(
                     )
             )
 
-            // Title & Subtitle overlaid on the bottom of the image
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -708,8 +706,6 @@ fun AutoPlaylistHeader(
                 )
             }
 
-            //  TOP ROW BUTTONS (Solid M3, with shadows)
-            val navController = LocalNavController.current
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -719,7 +715,6 @@ fun AutoPlaylistHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Back Button
                 Surface(
                     onClick = { navController.navigateUp() },
                     shape = CircleShape,
@@ -733,7 +728,6 @@ fun AutoPlaylistHeader(
                     }
                 }
 
-                // Action Row (Heart, Search, More)
                 Surface(
                     shape = RoundedCornerShape(50),
                     color = MaterialTheme.colorScheme.surfaceVariant,
@@ -745,7 +739,6 @@ fun AutoPlaylistHeader(
                         modifier = Modifier.padding(horizontal = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Heart Icon (Since this is 'Liked Music', it can be a static heart or interactive)
                         com.jay.glossy.ui.component.IconButton(onClick = {}, onLongClick = {}) {
                             Icon(painterResource(R.drawable.favorite), null)
                         }
@@ -760,12 +753,11 @@ fun AutoPlaylistHeader(
             }
         }
 
-        //  BOTTOM ACTION ROW (Play & Shuffle buttons placed below artwork with exact sizes)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp)
-                .padding(top = 16.dp, bottom = 24.dp), // Spacing from artwork to tracklist
+                .padding(top = 16.dp, bottom = 24.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -788,7 +780,7 @@ fun AutoPlaylistHeader(
                 onClick = {
                     playerConnection.playQueue(ListQueue(title = name, items = songs.map { it.toMediaItem() }))
                 },
-                shape = RoundedCornerShape(50), // Exact Pill Shape
+                shape = RoundedCornerShape(50),
                 color = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 shadowElevation = 6.dp,
