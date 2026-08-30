@@ -139,9 +139,19 @@
 
 <div align="center">
 
-<h1><a id="faq"></a>FAQ</h1>
+<h1><a id="faq"></a>FAQ & Community</h1>
 
-<h3>Got questions? Feel free to open an issue or check out our community channels!</h3>
+<h3>Got questions? Feel free to open an issue or join our community channels!</h3>
+
+<br>
+
+<a href="https://discord.gg/ZzSkcVxuGX">
+  <img src="https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join Discord" height="40">
+</a>
+&nbsp;&nbsp;
+<a href="https://t.me/glossyplayer">
+  <img src="https://img.shields.io/badge/Telegram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white" alt="Join Telegram" height="40">
+</a>
 
 </div>
 
@@ -251,6 +261,6 @@ All trademarks, service marks, and intellectual property rights referenced in th
 
 <br/>
 
-**Developed with ❤️ by JAY**
+**Developed with ❤️ by Jay Chaudhary**
 
 </div>
