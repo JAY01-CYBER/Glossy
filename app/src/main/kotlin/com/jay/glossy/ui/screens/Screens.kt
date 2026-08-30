@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -25,6 +25,14 @@ sealed class Screens(
         route = "home"
     )
 
+    
+    object Mix : Screens(
+        titleId = R.string.mix,
+        iconIdInactive = R.drawable.radio, 
+        iconIdActive = R.drawable.radio,
+        route = "mix"
+    )
+
     object Search : Screens(
         titleId = R.string.search,
         iconIdInactive = R.drawable.search,
@@ -47,6 +55,6 @@ sealed class Screens(
     )
 
     companion object {
-        val MainScreens = listOf(Home, Search, ListenTogether, Library)
+        val MainScreens = listOf(Home, Mix, Search, ListenTogether, Library)
     }
 }
