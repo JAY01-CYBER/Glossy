@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -314,8 +315,9 @@ private fun MaterialLiquidTabBar(
     val tabsCount = tabs.size
     val tabWidth = if (slimNav) 64.dp else 76.dp
     val tabWidthPx = with(LocalDensity.current) { tabWidth.toPx() }
-    val animationScope = rememberCoroutineScope()
+    val totalWidth = tabWidth * tabsCount 
     
+    val animationScope = rememberCoroutineScope()
     val draggedFlag = remember { booleanArrayOf(false) }
     
     val dampedDrag = remember(animationScope, tabsCount) {
@@ -347,6 +349,7 @@ private fun MaterialLiquidTabBar(
     Box(
         modifier = Modifier
             .height(56.dp)
+            .width(totalWidth) 
             .clip(RoundedCornerShape(50))
             .background(floatingToolbarContainerColor(pureBlack))
     ) {
@@ -373,7 +376,7 @@ private fun MaterialLiquidTabBar(
 
         Row(
             Modifier
-                .matchParentSize()
+                .fillMaxSize()
                 .then(dampedDrag.modifier), 
             verticalAlignment = Alignment.CenterVertically
         ) {
