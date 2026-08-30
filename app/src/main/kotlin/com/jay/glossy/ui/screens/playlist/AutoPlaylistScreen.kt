@@ -88,11 +88,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -257,7 +255,6 @@ fun AutoPlaylistScreen(
                 uris.forEachIndexed { index, uri ->
                     currentUploadIndex = index + 1
                     uploadProgress = 0f
-
                     try {
                         var fileName = uri.lastPathSegment?.substringAfterLast('/') ?: "unknown"
                         context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
@@ -429,6 +426,7 @@ fun AutoPlaylistScreen(
                                     onShowRemoveDownloadDialog = { showRemoveDownloadDialog = true },
                                     navController = navController,
                                     menuState = menuState,
+                                    onSearchClick = { isSearching = true }
                                 )
                             }
                         }
@@ -624,7 +622,7 @@ fun AutoPlaylistScreen(
     }
 }
 
-// PURE MATERIAL 3 HEADER
+// EXACT MATERIAL 3 HEADER DESIGN 
 @Composable
 fun AutoPlaylistHeader(
     name: String,
@@ -632,25 +630,26 @@ fun AutoPlaylistHeader(
     likeLength: Int,
     downloadState: Int,
     onShowRemoveDownloadDialog: () -> Unit,
+    onSearchClick: () -> Unit,
     navController: NavController,
     menuState: com.jay.glossy.ui.component.MenuState,
     modifier: Modifier = Modifier,
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val context = LocalContext.current
-    val configuration = LocalConfiguration.current
-    val screenHeight = configuration.screenHeightDp.dp
     val thumbUrl = songs.firstOrNull()?.song?.thumbnailUrl
 
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        // EDGE-TO-EDGE ARTWORK BOX
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(screenHeight / 2)
+                .height(androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp / 2)
         ) {
+            // Full Background Image
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current).data(thumbUrl).build(),
                 contentDescription = null,
@@ -658,10 +657,11 @@ fun AutoPlaylistHeader(
                 modifier = Modifier.fillMaxSize()
             )
 
+            // Soft Gradient overlay to transition into pure background color seamlessly
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(screenHeight * 0.4f)
+                    .height(androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp * 0.4f)
                     .align(Alignment.BottomCenter)
                     .background(
                         Brush.verticalGradient(
@@ -672,6 +672,7 @@ fun AutoPlaylistHeader(
                     )
             )
 
+            // Title & Subtitle overlaid on the bottom of the image
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -706,6 +707,7 @@ fun AutoPlaylistHeader(
                 )
             }
 
+            // TOP ROW BUTTONS 
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -715,6 +717,7 @@ fun AutoPlaylistHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Back Button
                 Surface(
                     onClick = { navController.navigateUp() },
                     shape = CircleShape,
@@ -728,6 +731,7 @@ fun AutoPlaylistHeader(
                     }
                 }
 
+                // ACTION PILL (Search & More working perfectly)
                 Surface(
                     shape = RoundedCornerShape(50),
                     color = MaterialTheme.colorScheme.surfaceVariant,
@@ -739,13 +743,32 @@ fun AutoPlaylistHeader(
                         modifier = Modifier.padding(horizontal = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        com.jay.glossy.ui.component.IconButton(onClick = {}, onLongClick = {}) {
-                            Icon(painterResource(R.drawable.favorite), null)
-                        }
-                        com.jay.glossy.ui.component.IconButton(onClick = {}, onLongClick = {}) {
+                        // Search
+                        com.jay.glossy.ui.component.IconButton(onClick = onSearchClick, onLongClick = {}) {
                             Icon(painterResource(R.drawable.search), null)
                         }
-                        com.jay.glossy.ui.component.IconButton(onClick = { /* Open Menu */ }, onLongClick = {}) {
+                        // More
+                        com.jay.glossy.ui.component.IconButton(onClick = {
+                            menuState.show {
+                                AutoPlaylistMenu(
+                                    downloadState = downloadState,
+                                    onQueue = { playerConnection.addToQueue(songs.map { it.toMediaItem() }) },
+                                    onDownload = {
+                                        when (downloadState) {
+                                            Download.STATE_COMPLETED -> onShowRemoveDownloadDialog()
+                                            Download.STATE_DOWNLOADING -> songs.forEach { song -> DownloadService.sendRemoveDownload(context, ExoDownloadService::class.java, song.song.id, false) }
+                                            else -> songs.forEach { song ->
+                                                val downloadRequest = DownloadRequest.Builder(song.song.id, song.song.id.toUri()).setCustomCacheKey(song.song.id).setData(song.song.title.toByteArray()).build()
+                                                DownloadService.sendAddDownload(context, ExoDownloadService::class.java, downloadRequest, false)
+                                            }
+                                        }
+                                    },
+                                    onDismiss = { menuState.dismiss() },
+                                    songs = songs,
+                                    playlistName = name,
+                                )
+                            }
+                        }, onLongClick = {}) {
                             Icon(painterResource(R.drawable.more_vert), null)
                         }
                     }
@@ -753,11 +776,12 @@ fun AutoPlaylistHeader(
             }
         }
 
+        // BOTTOM ACTION ROW 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp)
-                .padding(top = 16.dp, bottom = 24.dp),
+                .padding(top = 16.dp, bottom = 24.dp), 
             horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -780,7 +804,7 @@ fun AutoPlaylistHeader(
                 onClick = {
                     playerConnection.playQueue(ListQueue(title = name, items = songs.map { it.toMediaItem() }))
                 },
-                shape = RoundedCornerShape(50),
+                shape = RoundedCornerShape(50), // Exact Pill Shape
                 color = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 shadowElevation = 6.dp,
@@ -795,23 +819,17 @@ fun AutoPlaylistHeader(
 
             Surface(
                 onClick = {
-                    menuState.show {
-                        AutoPlaylistMenu(
-                            downloadState = downloadState,
-                            onQueue = { playerConnection.addToQueue(songs.map { it.toMediaItem() }) },
-                            onDownload = {
-                                when (downloadState) {
-                                    Download.STATE_COMPLETED -> onShowRemoveDownloadDialog()
-                                    Download.STATE_DOWNLOADING -> songs.forEach { song -> DownloadService.sendRemoveDownload(context, ExoDownloadService::class.java, song.song.id, false) }
-                                    else -> songs.forEach { song ->
-                                        val downloadRequest = DownloadRequest.Builder(song.song.id, song.song.id.toUri()).setCustomCacheKey(song.song.id).setData(song.song.title.toByteArray()).build()
-                                        DownloadService.sendAddDownload(context, ExoDownloadService::class.java, downloadRequest, false)
-                                    }
-                                }
-                            },
-                            onDismiss = { menuState.dismiss() },
-                            songs = songs,
-                            playlistName = name,
+                    songs.forEach { song ->
+                        val downloadRequest = androidx.media3.exoplayer.offline.DownloadRequest
+                            .Builder(song.song.id, song.song.id.toUri())
+                            .setCustomCacheKey(song.song.id)
+                            .setData(song.song.title.toByteArray())
+                            .build()
+                        androidx.media3.exoplayer.offline.DownloadService.sendAddDownload(
+                            context,
+                            ExoDownloadService::class.java,
+                            downloadRequest,
+                            false
                         )
                     }
                 },
