@@ -3244,6 +3244,33 @@ object YouTube {
                 endpoint = endpoint,
             )
         }
+        suspend fun getMixedForYou(): Result<List<YTItem>> = runCatching {
+        // 'setLogin = true' FORCE karna zaruri hai, warna YouTube empty list bhejega
+        val response = innerTube.browse(
+            client = WEB_REMIX,
+            browseId = "FEmusic_mixed_for_you",
+            setLogin = true
+        ).body<BrowseResponse>()
+
+        val gridItems = response.contents
+            ?.singleColumnBrowseResultsRenderer
+            ?.tabs
+            ?.firstOrNull()
+            ?.tabRenderer
+            ?.content
+            ?.sectionListRenderer
+            ?.contents
+            ?.firstOrNull()
+            ?.gridRenderer
+            ?.items
+
+        gridItems?.mapNotNull { it.musicTwoRowItemRenderer }
+            ?.mapNotNull { renderer ->
+                LibraryPage.fromMusicTwoRowItemRenderer(renderer)
+                    ?: RelatedPage.fromMusicTwoRowItemRenderer(renderer)
+            } ?: emptyList()
+    }
+
 
     suspend fun lyrics(endpoint: BrowseEndpoint): Result<String?> =
         runCatching {
