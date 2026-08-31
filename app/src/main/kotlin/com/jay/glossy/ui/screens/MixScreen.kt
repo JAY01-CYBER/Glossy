@@ -44,41 +44,100 @@ import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.viewmodels.HomeViewModel
-import com.jay.glossy.viewmodels.MixViewModel
-import com.jay.glossy.viewmodels.MixUiItem
+import com.metrolist.innertube.models.AlbumItem
+import com.metrolist.innertube.models.Artist
+import com.metrolist.innertube.models.PlaylistItem
+import com.metrolist.innertube.models.SongItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MixScreen(
     navController: NavController,
-    homeViewModel: HomeViewModel = hiltViewModel(),
-    mixViewModel: MixViewModel = hiltViewModel()
+    viewModel: HomeViewModel = hiltViewModel() // Seedha apna HomeViewModel
 ) {
-    val accountPlaylists by homeViewModel.accountPlaylists.collectAsStateWithLifecycle()
-    val ytMixes by mixViewModel.mixPlaylists.collectAsStateWithLifecycle()
-    val isLoading by mixViewModel.isLoading.collectAsStateWithLifecycle()
+    val accountPlaylists by viewModel.accountPlaylists.collectAsStateWithLifecycle()
+    val homePage by viewModel.homePage.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     
     val insetsPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues()
 
-    // Screen khulte hi Mixes load karna shuru karo
     LaunchedEffect(Unit) {
-        mixViewModel.loadMixes()
-        homeViewModel.loadHomeData() // Backup ke liye
+        viewModel.loadHomeData()
     }
 
-    // Liked Music + YouTube Mixes Combine karo dynamically!
-    val finalPlaylists = remember(accountPlaylists, ytMixes) {
-        val list = mutableListOf<MixUiItem>()
-        
-        // Liked Music ko list me sabse pehle rakho
+    // Yeh block automatically update hoga jab bhi homePage me data aayega
+    val finalPlaylists = remember(accountPlaylists, homePage) {
+        val list = mutableListOf<PlaylistItem>()
+
+        // 1. Liked Music ko sabse upar daalo
         accountPlaylists?.find { 
             it.id == "LM" || it.title.equals("Liked Music", ignoreCase = true) 
         }?.let { 
-            list.add(MixUiItem(it.id, it.title, it.author?.name ?: "Auto playlist", it.thumbnail ?: ""))
+            list.add(it) 
         }
-        
-        // YouTube se aayi hui Grid list add karo
-        list.addAll(ytMixes)
+
+        // 2. Home Page me se original Mixes uthao (bina kisi fallback ke)
+        homePage?.sections?.forEach { section ->
+            val sectionTitle = section.title.lowercase()
+            val isMixSection = sectionTitle.contains("mix") || 
+                               sectionTitle.contains("मिक्स") || 
+                               sectionTitle.contains("મિક્સ")
+
+            section.items.forEach { item ->
+                var id = ""
+                var title = ""
+                var thumbnail = ""
+                var authorName = ""
+
+                // Extract details regardless of how YouTube sends them (Playlist, Album, Song)
+                when (item) {
+                    is PlaylistItem -> {
+                        id = item.id
+                        title = item.title
+                        thumbnail = item.thumbnail ?: ""
+                        authorName = item.author?.name ?: "Auto playlist"
+                    }
+                    is AlbumItem -> {
+                        id = item.playlistId ?: item.browseId
+                        title = item.title
+                        thumbnail = item.thumbnail
+                        authorName = item.artists?.joinToString { it.name } ?: "Auto playlist"
+                    }
+                    is SongItem -> {
+                        id = item.id
+                        title = item.title
+                        thumbnail = item.thumbnail
+                        authorName = item.artists.joinToString { it.name }
+                    }
+                }
+
+                // Remove the 'VL' prefix that YouTube sometimes adds to IDs
+                val cleanId = id.removePrefix("VL")
+                val itemTitle = title.lowercase()
+                
+                val isMixItem = cleanId == "RDMM" || 
+                                cleanId.startsWith("RDTMAK") || 
+                                cleanId.startsWith("RDAMPL") || 
+                                itemTitle.contains("mix") ||
+                                itemTitle.contains("मिक्स") ||
+                                itemTitle.contains("મિક્સ")
+
+                if ((isMixSection || isMixItem) && cleanId.isNotBlank() && cleanId != "LM") {
+                    list.add(
+                        PlaylistItem(
+                            id = cleanId, // Clean ID without VL ensure the playlist opens correctly
+                            title = title,
+                            author = Artist(name = authorName, id = null),
+                            songCountText = null,
+                            thumbnail = thumbnail,
+                            playEndpoint = null,
+                            shuffleEndpoint = null,
+                            radioEndpoint = null
+                        )
+                    )
+                }
+            }
+        }
         
         list.distinctBy { it.id }
     }
@@ -116,11 +175,11 @@ fun MixScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(finalPlaylists) { mix ->
+                    items(finalPlaylists) { playlist ->
                         MixCardItem(
-                            item = mix,
+                            item = playlist,
                             onClick = {
-                                navController.navigate("online_playlist/${mix.id}")
+                                navController.navigate("online_playlist/${playlist.id}")
                             }
                         )
                     }
@@ -143,7 +202,7 @@ fun MixScreen(
 
 @Composable
 fun MixCardItem(
-    item: MixUiItem,
+    item: PlaylistItem,
     onClick: () -> Unit
 ) {
     Column(
@@ -170,9 +229,9 @@ fun MixCardItem(
             modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp)
         )
         
-        if (item.subtitle.isNotEmpty()) {
+        if (!item.author?.name.isNullOrEmpty()) {
             Text(
-                text = item.subtitle,
+                text = item.author!!.name,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
