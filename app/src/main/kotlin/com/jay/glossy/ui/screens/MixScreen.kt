@@ -44,6 +44,7 @@ import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.viewmodels.HomeViewModel
+import com.metrolist.innertube.models.Artist
 import com.metrolist.innertube.models.PlaylistItem
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -61,10 +62,10 @@ fun MixScreen(
         viewModel.loadHomeData()
     }
 
-    val mixPlaylists = remember(accountPlaylists, homePage) {
+    val mixPlaylists = remember(accountPlaylists, homePage, isLoading) {
         val list = mutableListOf<PlaylistItem>()
 
-        // 1. Liked Music ko sabse upar rakhne ke liye
+        // 1. Sabse pehle 'Liked Music' add karenge
         val likedMusic = accountPlaylists?.find { 
             it.id == "LM" || it.title.equals("Liked Music", ignoreCase = true) 
         }
@@ -72,21 +73,59 @@ fun MixScreen(
             list.add(likedMusic)
         }
 
-        // 2. Home Page ke pre-loaded data se sirf exact Mixes filter karenge
+        // 2. Poore Home Page me jahan bhi 'Supermix' ya 'My Mix' mile, use utha lo (Section ignore karke)
         homePage?.sections?.forEach { section ->
-            val title = section.title.trim()
-            val isMixSection = title.equals("Mixed for you", ignoreCase = true) || 
-                               title.equals("Your mixes", ignoreCase = true) || 
-                               title.equals("My mixes", ignoreCase = true)
-
             section.items.filterIsInstance<PlaylistItem>().forEach { playlist ->
-                // RDMM = My Supermix | RDTMAK = My Mix 1, 2, 3, Discover Mix, etc.
-                val isPersonalizedMixId = playlist.id == "RDMM" || playlist.id.startsWith("RDTMAK")
-
-                // Agar section ka naam sahi hai YA ID exact personal mix wali hai
-                if ((isMixSection || isPersonalizedMixId) && playlist.id != "LM") {
+                val pTitle = playlist.title ?: ""
+                val isPersonalMix = pTitle.contains("Supermix", ignoreCase = true) || 
+                                    pTitle.contains("My Mix", ignoreCase = true) ||
+                                    pTitle.contains("Discover Mix", ignoreCase = true) ||
+                                    pTitle.contains("New Release Mix", ignoreCase = true) ||
+                                    pTitle.contains("Replay Mix", ignoreCase = true)
+                                    
+                if (isPersonalMix && playlist.id != "LM") {
                     list.add(playlist)
                 }
+            }
+        }
+
+        // 3. THE ULTIMATE FALLBACK: Agar YouTube API ne page pe mixes nahi bheje, toh hum Universal IDs add kar denge!
+        if (!isLoading && list.size <= 1) { 
+            if (list.none { it.id == "RDMM" }) {
+                list.add(
+                    PlaylistItem(
+                        id = "RDMM",
+                        title = "My Supermix",
+                        author = Artist(name = "Auto playlist", id = null),
+                        songCountText = null,
+                        thumbnail = "https://www.gstatic.com/youtube/media/ytm/images/pbg/supermix-light-v2-active.png", 
+                        playEndpoint = null, shuffleEndpoint = null, radioEndpoint = null
+                    )
+                )
+            }
+            if (list.none { it.id == "RDAMPLw" }) {
+                list.add(
+                    PlaylistItem(
+                        id = "RDAMPLw",
+                        title = "Discover Mix",
+                        author = Artist(name = "Auto playlist", id = null),
+                        songCountText = null,
+                        thumbnail = "https://www.gstatic.com/youtube/media/ytm/images/pbg/discover-mix-light-v2-active.png", 
+                        playEndpoint = null, shuffleEndpoint = null, radioEndpoint = null
+                    )
+                )
+            }
+            if (list.none { it.id == "RDATW" }) {
+                list.add(
+                    PlaylistItem(
+                        id = "RDATW",
+                        title = "New Release Mix",
+                        author = Artist(name = "Auto playlist", id = null),
+                        songCountText = null,
+                        thumbnail = "https://www.gstatic.com/youtube/media/ytm/images/pbg/new-release-mix-light-v2-active.png", 
+                        playEndpoint = null, shuffleEndpoint = null, radioEndpoint = null
+                    )
+                )
             }
         }
 
