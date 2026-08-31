@@ -25,47 +25,52 @@ class MixViewModel @Inject constructor() : ViewModel() {
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
 
-    fun loadMixes() {
-        // Agar pehle se loading ho rahi hai ya data hai, toh wapas call mat karo
+    fun loadMixes(accountPlaylists: List<PlaylistItem>? = null) {
+        // Agar pehle se load ho gaya hai toh dubara network call mat karo
         if (_mixPlaylists.value.isNotEmpty() || _isLoading.value) return
 
         viewModelScope.launch(Dispatchers.IO) {
             _isLoading.value = true
             try {
-                // 1. Home Page fetch karo taaki "Mixes" wala chip mil sake
-                val homePage = YouTube.home().getOrNull()
-                val mixChip = homePage?.chips?.find { it.title.contains("mix", ignoreCase = true) }
-
-                // FIXED: Smart cast issue resolved by storing params in a local variable
-                val params = mixChip?.endpoint?.params
-                
-                // 2. Agar "Mixes" chip mil gaya (params != null), toh exact uski list fetch karo, warna home sections use karo
-                val mixSections = if (params != null) {
-                    YouTube.home(params = params).getOrNull()?.sections ?: homePage?.sections
-                } else {
-                    homePage?.sections
-                }
-
                 val fetchedMixes = mutableListOf<PlaylistItem>()
 
-                // 3. Exact mixes filter karo (RD prefix aur mix names check karke)
-                mixSections?.forEach { section ->
-                    section.items.filterIsInstance<PlaylistItem>().forEach { playlist ->
-                        val title = playlist.title ?: ""
-                        val isMix = playlist.id.startsWith("RD") && 
-                                    (title.contains("mix", ignoreCase = true) || 
-                                     playlist.id == "RDMM" || 
-                                     playlist.id.startsWith("RDTMAK") ||
-                                     playlist.id.startsWith("RDAMPL"))
-                                     
-                        if (isMix) {
-                            fetchedMixes.add(playlist)
-                        }
+                // 1. Liked Music ko sabse upar add karo
+                accountPlaylists?.find { 
+                    it.id == "LM" || it.title.equals("Liked Music", ignoreCase = true) 
+                }?.let {
+                    fetchedMixes.add(it)
+                }
+
+                // 2. YouTube API me 4 pages deep tak search karenge "Mixed for you" ke liye
+                var continuation: String? = null
+                
+                for (i in 0..3) { // Page 0 se 3 tak check karega
+                    val homePage = YouTube.home(continuation = continuation).getOrNull()
+                    
+                    // Aisa section dhoondho jisme "mix" word ho (Jaise: "Mixed for you", "Your mixes")
+                    val mixSection = homePage?.sections?.find { section ->
+                        section.title.contains("mix", ignoreCase = true)
                     }
+
+                    if (mixSection != null) {
+                        // Mixes mil gaye! Inko list me daalo
+                        mixSection.items.filterIsInstance<PlaylistItem>().forEach { playlist ->
+                            if (playlist.id.startsWith("RD") && playlist.id != "LM") {
+                                fetchedMixes.add(playlist)
+                            }
+                        }
+                        // Mixes milne ke baad aur pages load karne ki zarurat nahi
+                        break 
+                    }
+
+                    // Agar nahi mila toh next page ka token lo
+                    continuation = homePage?.continuation
+                    if (continuation == null) break // Agar aur pages nahi hain toh ruk jao
                 }
                 
-                // Duplicates hata kar State update kar do
+                // State update karo (duplicates hata kar)
                 _mixPlaylists.value = fetchedMixes.distinctBy { it.id }
+                
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
