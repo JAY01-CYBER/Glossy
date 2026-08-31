@@ -1,3 +1,8 @@
+/**
+ * Glossy Project (C) 2026
+ * Licensed under GPL-3.0 | See git history for contributors
+ */
+
 package com.jay.glossy.ui.screens
 
 import androidx.compose.foundation.clickable
@@ -24,7 +29,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,47 +43,25 @@ import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.viewmodels.HomeViewModel
+import com.jay.glossy.viewmodels.MixViewModel
 import com.metrolist.innertube.models.PlaylistItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MixScreen(
     navController: NavController,
-    viewModel: HomeViewModel = hiltViewModel()
+    homeViewModel: HomeViewModel = hiltViewModel(),
+    mixViewModel: MixViewModel = hiltViewModel()
 ) {
-    val accountPlaylists by viewModel.accountPlaylists.collectAsStateWithLifecycle()
-    val homePage by viewModel.homePage.collectAsStateWithLifecycle()
-    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val accountPlaylists by homeViewModel.accountPlaylists.collectAsStateWithLifecycle()
+    val mixPlaylists by mixViewModel.mixPlaylists.collectAsStateWithLifecycle()
+    val isLoading by mixViewModel.isLoading.collectAsStateWithLifecycle()
+    
     val insetsPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues()
 
-    LaunchedEffect(Unit) {
-        viewModel.loadHomeData()
-    }
-
-    val mixPlaylists = remember(accountPlaylists, homePage) {
-        val list = mutableListOf<PlaylistItem>()
-
-        // 1. Sabse pehle 'Liked Music' add karenge taaki wo hamesha Top par rahe
-        val likedMusic = accountPlaylists?.find { 
-            it.id == "LM" || it.title.equals("Liked Music", ignoreCase = true) 
-        }
-        if (likedMusic != null) {
-            list.add(likedMusic)
-        }
-
-        // 2. Title me 'mix' dhoondhna aur ID me 'RD' prefix check karna
-        homePage?.sections?.forEach { section ->
-            val isMixSection = section.title.contains("mix", ignoreCase = true)
-
-            section.items.filterIsInstance<PlaylistItem>().forEach { playlist ->
-                // Agar section ka naam 'mix' hai YA ID 'RD' se shuru hoti hai (YouTube Mixes standard)
-                if ((isMixSection || playlist.id.startsWith("RD")) && playlist.id != "LM") {
-                    list.add(playlist)
-                }
-            }
-        }
-
-        list.distinctBy { it.id }
+    // Trigger API call when the screen is opened, passing accountPlaylists for 'Liked Music'
+    LaunchedEffect(accountPlaylists) {
+        mixViewModel.loadMixes(accountPlaylists)
     }
 
     Scaffold(
@@ -119,13 +101,13 @@ fun MixScreen(
                         MixCardItem(
                             item = playlist,
                             onClick = {
+                                // Navigate to the playlist using InnerTube's standard ID
                                 navController.navigate("online_playlist/${playlist.id}")
                             }
                         )
                     }
                 }
             } else if (isLoading) {
-                // Loading Spinner
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center),
                     color = MaterialTheme.colorScheme.primary
