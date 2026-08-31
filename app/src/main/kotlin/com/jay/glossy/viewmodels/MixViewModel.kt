@@ -26,7 +26,6 @@ class MixViewModel @Inject constructor() : ViewModel() {
     val isLoading = _isLoading.asStateFlow()
 
     fun loadMixes(accountPlaylists: List<PlaylistItem>? = null) {
-        // Agar pehle se load ho gaya hai toh dubara network call mat karo
         if (_mixPlaylists.value.isNotEmpty() || _isLoading.value) return
 
         viewModelScope.launch(Dispatchers.IO) {
@@ -41,36 +40,38 @@ class MixViewModel @Inject constructor() : ViewModel() {
                     fetchedMixes.add(it)
                 }
 
-                // 2. YouTube API me 4 pages deep tak search karenge "Mixed for you" ke liye
-                var continuation: String? = null
+                // 2. SimpMusic Approach: Seedha "Mixes" wale chip ka data fetch karo
+                val homePage = YouTube.home().getOrNull()
+                val mixChip = homePage?.chips?.find { it.title.contains("mix", ignoreCase = true) }
                 
-                for (i in 0..3) { // Page 0 se 3 tak check karega
-                    val homePage = YouTube.home(continuation = continuation).getOrNull()
-                    
-                    // Aisa section dhoondho jisme "mix" word ho (Jaise: "Mixed for you", "Your mixes")
-                    val mixSection = homePage?.sections?.find { section ->
-                        section.title.contains("mix", ignoreCase = true)
-                    }
+                // Kotlin Smart Cast Fix (params ko local variable me liya)
+                val params = mixChip?.endpoint?.params
 
-                    if (mixSection != null) {
-                        // Mixes mil gaye! Inko list me daalo
-                        mixSection.items.filterIsInstance<PlaylistItem>().forEach { playlist ->
-                            if (playlist.id.startsWith("RD") && playlist.id != "LM") {
-                                fetchedMixes.add(playlist)
-                            }
+                // Agar Mixes chip mil gaya toh direct uski list mangwao
+                val mixSections = if (params != null) {
+                    YouTube.home(params = params).getOrNull()?.sections ?: homePage?.sections
+                } else {
+                    homePage?.sections
+                }
+
+                // 3. Exact mixes filter karo
+                mixSections?.forEach { section ->
+                    section.items.filterIsInstance<PlaylistItem>().forEach { playlist ->
+                        val title = playlist.title ?: ""
+                        val isMix = playlist.id.startsWith("RD") && 
+                                    (title.contains("mix", ignoreCase = true) || 
+                                     playlist.id == "RDMM" || 
+                                     playlist.id.startsWith("RDTMAK") ||
+                                     playlist.id.startsWith("RDAMPL"))
+                                     
+                        if (isMix && playlist.id != "LM") {
+                            fetchedMixes.add(playlist)
                         }
-                        // Mixes milne ke baad aur pages load karne ki zarurat nahi
-                        break 
                     }
-
-                    // Agar nahi mila toh next page ka token lo
-                    continuation = homePage?.continuation
-                    if (continuation == null) break // Agar aur pages nahi hain toh ruk jao
                 }
                 
-                // State update karo (duplicates hata kar)
+                // Duplicates hata kar State update kar do
                 _mixPlaylists.value = fetchedMixes.distinctBy { it.id }
-                
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
