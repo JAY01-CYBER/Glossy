@@ -44,91 +44,40 @@ import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.viewmodels.HomeViewModel
-import com.metrolist.innertube.models.Artist
+import com.jay.glossy.viewmodels.MixViewModel
 import com.metrolist.innertube.models.PlaylistItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MixScreen(
     navController: NavController,
-    viewModel: HomeViewModel = hiltViewModel()
+    homeViewModel: HomeViewModel = hiltViewModel(),
+    mixViewModel: MixViewModel = hiltViewModel()
 ) {
-    val accountPlaylists by viewModel.accountPlaylists.collectAsStateWithLifecycle()
-    val homePage by viewModel.homePage.collectAsStateWithLifecycle()
-    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val accountPlaylists by homeViewModel.accountPlaylists.collectAsStateWithLifecycle()
+    val mixPlaylists by mixViewModel.mixPlaylists.collectAsStateWithLifecycle()
+    val isLoading by mixViewModel.isLoading.collectAsStateWithLifecycle()
+    
     val insetsPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues()
 
+    // Screen khulte hi Mixes fetch karo (API calls background me hongi)
     LaunchedEffect(Unit) {
-        viewModel.loadHomeData()
+        mixViewModel.loadMixes()
     }
 
-    val mixPlaylists = remember(accountPlaylists, homePage, isLoading) {
+    // Liked Music aur YouTube Mixes dono ko ek list me combine karo
+    val finalPlaylists = remember(accountPlaylists, mixPlaylists) {
         val list = mutableListOf<PlaylistItem>()
-
-        // 1. Sabse pehle 'Liked Music' add karenge
-        val likedMusic = accountPlaylists?.find { 
+        
+        // 'Liked Music' ko sabse top par rakho
+        accountPlaylists?.find { 
             it.id == "LM" || it.title.equals("Liked Music", ignoreCase = true) 
+        }?.let { 
+            list.add(it) 
         }
-        if (likedMusic != null) {
-            list.add(likedMusic)
-        }
-
-        // 2. Poore Home Page me jahan bhi 'Supermix' ya 'My Mix' mile, use utha lo (Section ignore karke)
-        homePage?.sections?.forEach { section ->
-            section.items.filterIsInstance<PlaylistItem>().forEach { playlist ->
-                val pTitle = playlist.title ?: ""
-                val isPersonalMix = pTitle.contains("Supermix", ignoreCase = true) || 
-                                    pTitle.contains("My Mix", ignoreCase = true) ||
-                                    pTitle.contains("Discover Mix", ignoreCase = true) ||
-                                    pTitle.contains("New Release Mix", ignoreCase = true) ||
-                                    pTitle.contains("Replay Mix", ignoreCase = true)
-                                    
-                if (isPersonalMix && playlist.id != "LM") {
-                    list.add(playlist)
-                }
-            }
-        }
-
-        // 3. THE ULTIMATE FALLBACK: Agar YouTube API ne page pe mixes nahi bheje, toh hum Universal IDs add kar denge!
-        if (!isLoading && list.size <= 1) { 
-            if (list.none { it.id == "RDMM" }) {
-                list.add(
-                    PlaylistItem(
-                        id = "RDMM",
-                        title = "My Supermix",
-                        author = Artist(name = "Auto playlist", id = null),
-                        songCountText = null,
-                        thumbnail = "https://www.gstatic.com/youtube/media/ytm/images/pbg/supermix-light-v2-active.png", 
-                        playEndpoint = null, shuffleEndpoint = null, radioEndpoint = null
-                    )
-                )
-            }
-            if (list.none { it.id == "RDAMPLw" }) {
-                list.add(
-                    PlaylistItem(
-                        id = "RDAMPLw",
-                        title = "Discover Mix",
-                        author = Artist(name = "Auto playlist", id = null),
-                        songCountText = null,
-                        thumbnail = "https://www.gstatic.com/youtube/media/ytm/images/pbg/discover-mix-light-v2-active.png", 
-                        playEndpoint = null, shuffleEndpoint = null, radioEndpoint = null
-                    )
-                )
-            }
-            if (list.none { it.id == "RDATW" }) {
-                list.add(
-                    PlaylistItem(
-                        id = "RDATW",
-                        title = "New Release Mix",
-                        author = Artist(name = "Auto playlist", id = null),
-                        songCountText = null,
-                        thumbnail = "https://www.gstatic.com/youtube/media/ytm/images/pbg/new-release-mix-light-v2-active.png", 
-                        playEndpoint = null, shuffleEndpoint = null, radioEndpoint = null
-                    )
-                )
-            }
-        }
-
+        
+        // Baaki ke API wale mixes add karo
+        list.addAll(mixPlaylists)
         list.distinctBy { it.id }
     }
 
@@ -152,7 +101,7 @@ fun MixScreen(
     ) { scaffoldPadding ->
         
         Box(modifier = Modifier.fillMaxSize()) {
-            if (mixPlaylists.isNotEmpty()) {
+            if (finalPlaylists.isNotEmpty()) {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2), 
                     contentPadding = PaddingValues(
@@ -165,7 +114,7 @@ fun MixScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(mixPlaylists) { playlist ->
+                    items(finalPlaylists) { playlist ->
                         MixCardItem(
                             item = playlist,
                             onClick = {
