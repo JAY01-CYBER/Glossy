@@ -29,7 +29,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,55 +43,25 @@ import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.viewmodels.HomeViewModel
+import com.jay.glossy.viewmodels.MixViewModel
 import com.metrolist.innertube.models.PlaylistItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MixScreen(
     navController: NavController,
-    viewModel: HomeViewModel = hiltViewModel()
+    homeViewModel: HomeViewModel = hiltViewModel(),
+    mixViewModel: MixViewModel = hiltViewModel()
 ) {
-    val accountPlaylists by viewModel.accountPlaylists.collectAsStateWithLifecycle()
-    val homePage by viewModel.homePage.collectAsStateWithLifecycle()
-    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val accountPlaylists by homeViewModel.accountPlaylists.collectAsStateWithLifecycle()
+    val mixPlaylists by mixViewModel.mixPlaylists.collectAsStateWithLifecycle()
+    val isLoading by mixViewModel.isLoading.collectAsStateWithLifecycle()
+    
     val insetsPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues()
 
-    LaunchedEffect(Unit) {
-        viewModel.loadHomeData()
-    }
-
-    val mixPlaylists = remember(accountPlaylists, homePage) {
-        val list = mutableListOf<PlaylistItem>()
-
-        // 1. Sabse pehle 'Liked Music' add karo
-        accountPlaylists?.find { 
-            it.id == "LM" || it.title.equals("Liked Music", ignoreCase = true) 
-        }?.let { 
-            list.add(it) 
-        }
-
-        // 2. Home Page me se seedha Mixes uthao (Kyuki wahan ekdum sahi aate hain)
-        homePage?.sections?.forEach { section ->
-            // Check karo ki kya yeh "Mixed for you" ya "Your mixes" wala section hai
-            val isMixSection = section.title.contains("mix", ignoreCase = true)
-
-            section.items.filterIsInstance<PlaylistItem>().forEach { playlist ->
-                // Playlist ki ID 'RD' (Radio/Mix) se shuru honi chahiye
-                if (playlist.id.startsWith("RD")) {
-                    
-                    val hasMixInTitle = playlist.title.contains("mix", ignoreCase = true)
-                    val isKnownMixId = playlist.id == "RDMM" || playlist.id.startsWith("RDTMAK") || playlist.id.startsWith("RDAMPL")
-
-                    // Agar ye Mix section ke andar hai YA iske naam/ID se pata chal raha hai ki ye Mix hai
-                    if (isMixSection || hasMixInTitle || isKnownMixId) {
-                        list.add(playlist)
-                    }
-                }
-            }
-        }
-
-        // Duplicate entries hata do
-        list.distinctBy { it.id }
+    // Jab Liked Music (accountPlaylists) aa jaye tab mixes dhoondhna start karo
+    LaunchedEffect(accountPlaylists) {
+        mixViewModel.loadMixes(accountPlaylists)
     }
 
     Scaffold(
