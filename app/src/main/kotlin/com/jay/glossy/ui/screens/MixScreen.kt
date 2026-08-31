@@ -30,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -63,7 +64,6 @@ fun MixScreen(
     
     val insetsPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues()
 
-    // Required for matching SimpMusic design & interactions
     val playerConnection = LocalPlayerConnection.current ?: return
     val isPlaying by playerConnection.isEffectivelyPlaying.collectAsStateWithLifecycle()
     val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
@@ -72,15 +72,13 @@ fun MixScreen(
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
     
-    // Naye animation ke liye state define ki hai
     val pullRefreshState = rememberPullToRefreshState()
 
     LaunchedEffect(Unit) {
-        homeViewModel.loadHomeData() // Load Liked Music
-        mixViewModel.loadMixes() // Load YT Mixes
+        homeViewModel.loadHomeData()
+        mixViewModel.loadMixes()
     }
 
-    // Combine Liked Music + Exact Mixes
     val finalPlaylists = remember(accountPlaylists, ytMixes) {
         val list = mutableListOf<YTItem>()
         
@@ -141,7 +139,6 @@ fun MixScreen(
                             else -> ""
                         }
 
-                        // Using Native Glossy Grid Component
                         YouTubeGridItem(
                             item = item,
                             isActive = itemId in listOf(mediaMetadata?.album?.id, mediaMetadata?.id),
@@ -179,7 +176,7 @@ fun MixScreen(
                 }
             } else if (isLoading) {
                 PlayStoreRefreshIndicator(
-                    isRefreshing = true, 
+                    isRefreshing = true,
                     state = pullRefreshState,
                     modifier = Modifier.align(Alignment.Center)
                 )
