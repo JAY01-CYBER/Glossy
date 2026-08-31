@@ -29,9 +29,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,99 +44,93 @@ import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.viewmodels.HomeViewModel
-import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.PlaylistItem
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import com.metrolist.innertube.models.AlbumItem
+import com.metrolist.innertube.models.Artist
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MixScreen(
     navController: NavController,
-    viewModel: HomeViewModel = hiltViewModel() // Sirf purana aur trusted HomeViewModel
+    viewModel: HomeViewModel = hiltViewModel()
 ) {
     val accountPlaylists by viewModel.accountPlaylists.collectAsStateWithLifecycle()
-    val isLoadingHome by viewModel.isLoading.collectAsStateWithLifecycle()
+    val homePage by viewModel.homePage.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    
     val insetsPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues()
 
-    var mixPlaylists by remember { mutableStateOf<List<PlaylistItem>>(emptyList()) }
-    var isFetchingMixes by remember { mutableStateOf(true) }
-
+    // Trigger API call when screen opens to ensure Home Data is loaded
     LaunchedEffect(Unit) {
-        // 1. HomeData load karna ZARURI hai, taaki 'Liked Music' mil sake
         viewModel.loadHomeData()
-
-        // 2. Mixes ko background me safely dhoondhna
-        if (mixPlaylists.isEmpty()) {
-            isFetchingMixes = true
-            withContext(Dispatchers.IO) {
-                try {
-                    val homePage = YouTube.home().getOrNull()
-                    val params = homePage?.chips?.find { it.title.contains("mix", ignoreCase = true) }?.endpoint?.params
-                    
-                    // Agar API ne Mix chip bheja hai, toh direct load karo. Warna Home page ke multiple pages scan karo.
-                    val mixSections = if (params != null) {
-                        YouTube.home(params = params).getOrNull()?.sections
-                    } else {
-                        var currentSections = homePage?.sections
-                        var continuation = homePage?.continuation
-                        
-                        // YouTube kabhi kabhi mixes 2nd ya 3rd page par chhupa deta hai, toh hum aage tak search karenge
-                        for (i in 0..2) {
-                            if (currentSections?.any { it.title.contains("mix", ignoreCase = true) } == true) {
-                                break
-                            }
-                            if (continuation == null) break
-                            
-                            val nextHome = YouTube.home(continuation = continuation).getOrNull()
-                            currentSections = currentSections.orEmpty() + nextHome?.sections.orEmpty()
-                            continuation = nextHome?.continuation
-                        }
-                        currentSections
-                    }
-
-                    val fetched = mutableListOf<PlaylistItem>()
-                    mixSections?.forEach { section ->
-                        val isMixSection = section.title.contains("mix", ignoreCase = true)
-                        
-                        section.items.filterIsInstance<PlaylistItem>().forEach { playlist ->
-                            val title = playlist.title ?: ""
-                            val isMix = isMixSection || 
-                                        title.contains("mix", ignoreCase = true) || 
-                                        playlist.id == "RDMM" || 
-                                        playlist.id.startsWith("RDTMAK") ||
-                                        playlist.id.startsWith("RDAMPL")
-                                        
-                            if (isMix && playlist.id != "LM") {
-                                fetched.add(playlist)
-                            }
-                        }
-                    }
-                    mixPlaylists = fetched.distinctBy { it.id }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                } finally {
-                    isFetchingMixes = false
-                }
-            }
-        }
     }
 
-    // Liked Music aur Youtube Mixes ko combine karna
-    val finalPlaylists = remember(accountPlaylists, mixPlaylists) {
+    // THE ULTIMATE FIX: Safely parse both Playlists and Albums for Mixes
+    val mixPlaylists = remember(accountPlaylists, homePage) {
         val list = mutableListOf<PlaylistItem>()
-        
+
+        // 1. Liked Music hamesha top par
         accountPlaylists?.find { 
             it.id == "LM" || it.title.equals("Liked Music", ignoreCase = true) 
         }?.let { 
             list.add(it) 
         }
+
+        // 2. Home Page se Mixes extract karo bina strict Type Cast ke
+        homePage?.sections?.forEach { section ->
+            val isMixSection = section.title.contains("mix", ignoreCase = true)
+
+            section.items.forEach { item ->
+                var id = ""
+                var title = ""
+                var thumbnail = ""
+                var authorName = ""
+
+                // YouTube API bug workaround: Mixes are often parsed as AlbumItem[span_0](start_span)[span_0](end_span)
+                when (item) {
+                    is PlaylistItem -> {
+                        id = item.id
+                        title = item.title
+                        thumbnail = item.thumbnail ?: ""
+                        authorName = item.author?.name ?: ""
+                    }
+                    is AlbumItem -> {
+                        id = item.playlistId ?: item.browseId
+                        title = item.title
+                        thumbnail = item.thumbnail
+                        authorName = item.artists?.joinToString { it.name } ?: "Auto playlist"
+                    }
+                }
+
+                val isMix = isMixSection || 
+                            title.contains("mix", ignoreCase = true) || 
+                            id == "RDMM" || 
+                            id.startsWith("RDTMAK") ||
+                            id.startsWith("RDAMPL")
+
+                if (isMix && id.isNotBlank() && id != "LM") {
+                    // Agar item Album format me aya tha toh usko proper Playlist format me convert kar do
+                    val playItem = if (item is PlaylistItem) {
+                        item
+                    } else {
+                        PlaylistItem(
+                            id = id,
+                            title = title,
+                            author = Artist(name = authorName, id = null),
+                            songCountText = null,
+                            thumbnail = thumbnail,
+                            playEndpoint = null,
+                            shuffleEndpoint = null,
+                            radioEndpoint = null
+                        )
+                    }
+                    list.add(playItem)
+                }
+            }
+        }
         
-        list.addAll(mixPlaylists)
         list.distinctBy { it.id }
     }
-
-    val isCurrentlyLoading = isLoadingHome || isFetchingMixes
 
     Scaffold(
         topBar = {
@@ -160,7 +152,7 @@ fun MixScreen(
     ) { scaffoldPadding ->
         
         Box(modifier = Modifier.fillMaxSize()) {
-            if (finalPlaylists.isNotEmpty()) {
+            if (mixPlaylists.isNotEmpty()) {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2), 
                     contentPadding = PaddingValues(
@@ -173,7 +165,7 @@ fun MixScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(finalPlaylists) { playlist ->
+                    items(mixPlaylists) { playlist ->
                         MixCardItem(
                             item = playlist,
                             onClick = {
@@ -182,7 +174,7 @@ fun MixScreen(
                         )
                     }
                 }
-            } else if (isCurrentlyLoading) {
+            } else if (isLoading) {
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center),
                     color = MaterialTheme.colorScheme.primary
