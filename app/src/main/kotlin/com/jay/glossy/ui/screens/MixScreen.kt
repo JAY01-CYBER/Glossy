@@ -67,26 +67,14 @@ fun MixScreen(
             list.add(likedMusic)
         }
 
-        // 2. Home Page se sirf "RDTMAK" ID wale asli YouTube Mixes nikalenge
-        // (RDTMAK = YouTube Music Auto-Generated Personalized Mixes)
+        // 2. Title me 'mix' dhoondhna aur ID me 'RD' prefix check karna
         homePage?.sections?.forEach { section ->
+            val isMixSection = section.title.contains("mix", ignoreCase = true)
+
             section.items.filterIsInstance<PlaylistItem>().forEach { playlist ->
-                if (playlist.id.startsWith("RDTMAK")) {
-                    if (playlist.id != "LM") { // Duplicate check
-                        list.add(playlist)
-                    }
-                }
-            }
-        }
-        
-        // 3. Fallback: Agar RDTMAK ID change ho gayi ho, toh section title se nikal lo
-        if (list.size <= 1) {
-            homePage?.sections?.forEach { section ->
-                if (section.title.equals("Mixed for you", ignoreCase = true) || 
-                    section.title.equals("Your mixes", ignoreCase = true)) {
-                    section.items.filterIsInstance<PlaylistItem>().forEach { playlist ->
-                        if (playlist.id != "LM") list.add(playlist)
-                    }
+                // Agar section ka naam 'mix' hai YA ID 'RD' se shuru hoti hai (YouTube Mixes standard)
+                if ((isMixSection || playlist.id.startsWith("RD")) && playlist.id != "LM") {
+                    list.add(playlist)
                 }
             }
         }
