@@ -29,6 +29,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,25 +44,54 @@ import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.viewmodels.HomeViewModel
-import com.jay.glossy.viewmodels.MixViewModel
 import com.metrolist.innertube.models.PlaylistItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MixScreen(
     navController: NavController,
-    homeViewModel: HomeViewModel = hiltViewModel(),
-    mixViewModel: MixViewModel = hiltViewModel()
+    viewModel: HomeViewModel = hiltViewModel() // Seedha wahi HomeViewModel use kar rahe hain
 ) {
-    val accountPlaylists by homeViewModel.accountPlaylists.collectAsStateWithLifecycle()
-    val mixPlaylists by mixViewModel.mixPlaylists.collectAsStateWithLifecycle()
-    val isLoading by mixViewModel.isLoading.collectAsStateWithLifecycle()
+    val accountPlaylists by viewModel.accountPlaylists.collectAsStateWithLifecycle()
+    val homePage by viewModel.homePage.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     
     val insetsPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues()
 
-    // Jab Liked Music (accountPlaylists) aa jaye tab mixes dhoondhna start karo
-    LaunchedEffect(accountPlaylists) {
-        mixViewModel.loadMixes(accountPlaylists)
+    // SABSE ZARURI STEP: Jab screen khule tab data load hona chahiye
+    LaunchedEffect(Unit) {
+        viewModel.loadHomeData()
+    }
+
+    // Home Page ke data se mixes nikalne ka seedha aur saaf tarika
+    val mixPlaylists = remember(accountPlaylists, homePage) {
+        val list = mutableListOf<PlaylistItem>()
+
+        // 1. Liked Music ko list me sabse upar daalo
+        accountPlaylists?.find { 
+            it.id == "LM" || it.title.equals("Liked Music", ignoreCase = true) 
+        }?.let { 
+            list.add(it) 
+        }
+
+        // 2. Home Page par jo bhi Mixes aaye hain, unhe utha lo
+        homePage?.sections?.forEach { section ->
+            section.items.filterIsInstance<PlaylistItem>().forEach { playlist ->
+                val title = playlist.title ?: ""
+                
+                // Agar title me 'Mix' likha hai YA My Supermix (RDMM) / RDTMAK ID hai
+                val isMix = title.contains("Mix", ignoreCase = true) || 
+                            playlist.id == "RDMM" || 
+                            playlist.id.startsWith("RDTMAK")
+                            
+                if (isMix && playlist.id != "LM") {
+                    list.add(playlist)
+                }
+            }
+        }
+
+        // Duplicate entries hata kar final list bhejo
+        list.distinctBy { it.id }
     }
 
     Scaffold(
