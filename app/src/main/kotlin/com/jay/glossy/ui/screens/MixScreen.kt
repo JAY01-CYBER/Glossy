@@ -49,10 +49,9 @@ fun MixScreen(
 ) {
     val accountPlaylists by viewModel.accountPlaylists.collectAsStateWithLifecycle()
     val homePage by viewModel.homePage.collectAsStateWithLifecycle()
-    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle() // Loading State check
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val insetsPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues()
 
-    //  Mix Screen khulte hi data fetch karne ka command
     LaunchedEffect(Unit) {
         viewModel.loadHomeData()
     }
@@ -60,22 +59,34 @@ fun MixScreen(
     val mixPlaylists = remember(accountPlaylists, homePage) {
         val list = mutableListOf<PlaylistItem>()
 
-        accountPlaylists?.forEach { playlist ->
-            if (playlist.title.contains("Mix", ignoreCase = true) || 
-                playlist.title.contains("Liked Music", ignoreCase = true) ||
-                playlist.id.startsWith("RD")
-            ) {
-                list.add(playlist)
-            }
+        // 1. Sabse pehle 'Liked Music' add karenge taaki wo hamesha Top par rahe
+        val likedMusic = accountPlaylists?.find { 
+            it.id == "LM" || it.title.equals("Liked Music", ignoreCase = true) 
+        }
+        if (likedMusic != null) {
+            list.add(likedMusic)
         }
 
+        // 2. Home Page se sirf "RDTMAK" ID wale asli YouTube Mixes nikalenge
+        // (RDTMAK = YouTube Music Auto-Generated Personalized Mixes)
         homePage?.sections?.forEach { section ->
             section.items.filterIsInstance<PlaylistItem>().forEach { playlist ->
-                if (playlist.title.contains("Mix", ignoreCase = true) || 
-                    playlist.title.contains("Liked Music", ignoreCase = true) ||
-                    playlist.id.startsWith("RD")
-                ) {
-                    list.add(playlist)
+                if (playlist.id.startsWith("RDTMAK")) {
+                    if (playlist.id != "LM") { // Duplicate check
+                        list.add(playlist)
+                    }
+                }
+            }
+        }
+        
+        // 3. Fallback: Agar RDTMAK ID change ho gayi ho, toh section title se nikal lo
+        if (list.size <= 1) {
+            homePage?.sections?.forEach { section ->
+                if (section.title.equals("Mixed for you", ignoreCase = true) || 
+                    section.title.equals("Your mixes", ignoreCase = true)) {
+                    section.items.filterIsInstance<PlaylistItem>().forEach { playlist ->
+                        if (playlist.id != "LM") list.add(playlist)
+                    }
                 }
             }
         }
@@ -126,13 +137,12 @@ fun MixScreen(
                     }
                 }
             } else if (isLoading) {
-                //  Agar load ho raha hai to bich mein loader aayega
+                // Loading Spinner
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center),
                     color = MaterialTheme.colorScheme.primary
                 )
             } else {
-                // Data load hone ke baad bhi agar mix nahi milte hain (Guest account)
                 Text(
                     text = "No mixes available right now.",
                     modifier = Modifier.align(Alignment.Center),
