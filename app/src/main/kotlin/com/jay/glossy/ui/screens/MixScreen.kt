@@ -29,7 +29,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,101 +46,145 @@ import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.viewmodels.HomeViewModel
+import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.AlbumItem
-import com.metrolist.innertube.models.Artist
 import com.metrolist.innertube.models.PlaylistItem
-import com.metrolist.innertube.models.SongItem
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+data class MixUiItem(
+    val id: String,
+    val title: String,
+    val subtitle: String,
+    val thumbnail: String
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MixScreen(
     navController: NavController,
-    viewModel: HomeViewModel = hiltViewModel() // Seedha apna HomeViewModel
+    viewModel: HomeViewModel = hiltViewModel()
 ) {
     val accountPlaylists by viewModel.accountPlaylists.collectAsStateWithLifecycle()
     val homePage by viewModel.homePage.collectAsStateWithLifecycle()
-    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val isLoadingHome by viewModel.isLoading.collectAsStateWithLifecycle()
     
     val insetsPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues()
+
+    var mixPlaylists by remember { mutableStateOf<List<MixUiItem>>(emptyList()) }
+    var isFetching by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
         viewModel.loadHomeData()
     }
 
-    // Yeh block automatically update hoga jab bhi homePage me data aayega
-    val finalPlaylists = remember(accountPlaylists, homePage) {
-        val list = mutableListOf<PlaylistItem>()
+    LaunchedEffect(homePage) {
+        if (mixPlaylists.isNotEmpty()) return@LaunchedEffect
+        
+        isFetching = true
+        withContext(Dispatchers.IO) {
+            try {
+                val result = mutableListOf<MixUiItem>()
+                var foundMixes = false
 
-        // 1. Liked Music ko sabse upar daalo
+                // STEP 1: Search using the "Mixes" Chip
+                val mixChip = homePage?.chips?.find { 
+                    val t = it.title.lowercase()
+                    t.contains("mix") || t.contains("मिक्स") || t.contains("મિક્સ")
+                }
+                
+                val params = mixChip?.endpoint?.params
+                if (params != null) {
+                    // YAHI THA MASTER FIX: browse() method GridRenderer ko perfectly read karta hai!
+                    val browseResult = YouTube.browse("FEmusic_home", params).getOrNull()
+                    
+                    browseResult?.items?.forEach { browseGroup ->
+                        browseGroup.items.forEach { item ->
+                            var id: String? = null
+                            var title = ""
+                            var thumbnail = ""
+                            var author = ""
+
+                            if (item is PlaylistItem) {
+                                id = item.id
+                                title = item.title
+                                thumbnail = item.thumbnail ?: ""
+                                author = item.author?.name ?: "Auto playlist"
+                            } else if (item is AlbumItem) {
+                                id = item.playlistId ?: item.browseId
+                                title = item.title
+                                thumbnail = item.thumbnail
+                                author = item.artists?.joinToString { it.name } ?: "Auto playlist"
+                            }
+
+                            if (id != null && id != "LM") {
+                                result.add(MixUiItem(id, title, author, thumbnail))
+                                foundMixes = true
+                            }
+                        }
+                    }
+                }
+
+                // STEP 2: Agar Chip approach se API ne data nahi diya, toh fallback to Current Home Page sections
+                if (!foundMixes) {
+                    homePage?.sections?.forEach { section ->
+                        section.items.forEach { item ->
+                            var id: String? = null
+                            var title = ""
+                            var thumbnail = ""
+                            var author = ""
+
+                            if (item is PlaylistItem) {
+                                id = item.id
+                                title = item.title
+                                thumbnail = item.thumbnail ?: ""
+                                author = item.author?.name ?: "Auto playlist"
+                            } else if (item is AlbumItem) {
+                                id = item.playlistId ?: item.browseId
+                                title = item.title
+                                thumbnail = item.thumbnail
+                                author = item.artists?.joinToString { it.name } ?: "Auto playlist"
+                            }
+
+                            if (id != null) {
+                                val isMix = id == "RDMM" || id.startsWith("RDTMAK") || id.startsWith("RDAMPL") || 
+                                            title.contains("mix", true) || title.contains("मिक्स", true) || title.contains("મિક્સ", true)
+                                if (isMix && id != "LM") {
+                                    result.add(MixUiItem(id, title, author, thumbnail))
+                                    foundMixes = true
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // STEP 3: Universal safe IDs agar Youtube pure API ko hide kar de
+                if (!foundMixes) {
+                    result.add(MixUiItem("RDMM", "My Supermix", "Auto playlist", "https://www.gstatic.com/youtube/media/ytm/images/pbg/supermix-light-v2-active.png"))
+                    result.add(MixUiItem("RDAMPLw", "Discover Mix", "Auto playlist", "https://www.gstatic.com/youtube/media/ytm/images/pbg/discover-mix-light-v2-active.png"))
+                    result.add(MixUiItem("RDATW", "New Release Mix", "Auto playlist", "https://www.gstatic.com/youtube/media/ytm/images/pbg/new-release-mix-light-v2-active.png"))
+                }
+
+                mixPlaylists = result.distinctBy { it.id }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                isFetching = false
+            }
+        }
+    }
+
+    // Liked Music + YouTube Mixes Combine
+    val finalPlaylists = remember(accountPlaylists, mixPlaylists) {
+        val list = mutableListOf<MixUiItem>()
+        
         accountPlaylists?.find { 
             it.id == "LM" || it.title.equals("Liked Music", ignoreCase = true) 
         }?.let { 
-            list.add(it) 
-        }
-
-        // 2. Home Page me se original Mixes uthao (bina kisi fallback ke)
-        homePage?.sections?.forEach { section ->
-            val sectionTitle = section.title.lowercase()
-            val isMixSection = sectionTitle.contains("mix") || 
-                               sectionTitle.contains("मिक्स") || 
-                               sectionTitle.contains("મિક્સ")
-
-            section.items.forEach { item ->
-                var id = ""
-                var title = ""
-                var thumbnail = ""
-                var authorName = ""
-
-                // Extract details regardless of how YouTube sends them (Playlist, Album, Song)
-                when (item) {
-                    is PlaylistItem -> {
-                        id = item.id
-                        title = item.title
-                        thumbnail = item.thumbnail ?: ""
-                        authorName = item.author?.name ?: "Auto playlist"
-                    }
-                    is AlbumItem -> {
-                        id = item.playlistId ?: item.browseId
-                        title = item.title
-                        thumbnail = item.thumbnail
-                        authorName = item.artists?.joinToString { it.name } ?: "Auto playlist"
-                    }
-                    is SongItem -> {
-                        id = item.id
-                        title = item.title
-                        thumbnail = item.thumbnail
-                        authorName = item.artists.joinToString { it.name }
-                    }
-                }
-
-                // Remove the 'VL' prefix that YouTube sometimes adds to IDs
-                val cleanId = id.removePrefix("VL")
-                val itemTitle = title.lowercase()
-                
-                val isMixItem = cleanId == "RDMM" || 
-                                cleanId.startsWith("RDTMAK") || 
-                                cleanId.startsWith("RDAMPL") || 
-                                itemTitle.contains("mix") ||
-                                itemTitle.contains("मिक्स") ||
-                                itemTitle.contains("મિક્સ")
-
-                if ((isMixSection || isMixItem) && cleanId.isNotBlank() && cleanId != "LM") {
-                    list.add(
-                        PlaylistItem(
-                            id = cleanId, // Clean ID without VL ensure the playlist opens correctly
-                            title = title,
-                            author = Artist(name = authorName, id = null),
-                            songCountText = null,
-                            thumbnail = thumbnail,
-                            playEndpoint = null,
-                            shuffleEndpoint = null,
-                            radioEndpoint = null
-                        )
-                    )
-                }
-            }
+            list.add(MixUiItem(it.id, it.title, it.author?.name ?: "Auto playlist", it.thumbnail ?: ""))
         }
         
+        list.addAll(mixPlaylists)
         list.distinctBy { it.id }
     }
 
@@ -175,16 +221,16 @@ fun MixScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(finalPlaylists) { playlist ->
+                    items(finalPlaylists) { mix ->
                         MixCardItem(
-                            item = playlist,
+                            item = mix,
                             onClick = {
-                                navController.navigate("online_playlist/${playlist.id}")
+                                navController.navigate("online_playlist/${mix.id}")
                             }
                         )
                     }
                 }
-            } else if (isLoading) {
+            } else if (isLoadingHome || isFetching) {
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center),
                     color = MaterialTheme.colorScheme.primary
@@ -202,7 +248,7 @@ fun MixScreen(
 
 @Composable
 fun MixCardItem(
-    item: PlaylistItem,
+    item: MixUiItem,
     onClick: () -> Unit
 ) {
     Column(
@@ -229,9 +275,9 @@ fun MixCardItem(
             modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp)
         )
         
-        if (!item.author?.name.isNullOrEmpty()) {
+        if (item.subtitle.isNotEmpty()) {
             Text(
-                text = item.author!!.name,
+                text = item.subtitle,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
