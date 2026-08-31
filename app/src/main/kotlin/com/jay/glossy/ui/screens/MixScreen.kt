@@ -44,6 +44,7 @@ import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.viewmodels.HomeViewModel
+import com.jay.glossy.viewmodels.MixViewModel
 import com.metrolist.innertube.models.AlbumItem
 import com.metrolist.innertube.models.PlaylistItem
 import com.metrolist.innertube.models.YTItem
@@ -52,62 +53,32 @@ import com.metrolist.innertube.models.YTItem
 @Composable
 fun MixScreen(
     navController: NavController,
-    viewModel: HomeViewModel = hiltViewModel()
+    homeViewModel: HomeViewModel = hiltViewModel(),
+    mixViewModel: MixViewModel = hiltViewModel()
 ) {
-    val accountPlaylists by viewModel.accountPlaylists.collectAsStateWithLifecycle()
-    val homePage by viewModel.homePage.collectAsStateWithLifecycle()
-    val isLoadingHome by viewModel.isLoading.collectAsStateWithLifecycle()
+    val accountPlaylists by homeViewModel.accountPlaylists.collectAsStateWithLifecycle()
+    val ytMixes by mixViewModel.mixPlaylists.collectAsStateWithLifecycle()
+    val isLoading by mixViewModel.isLoading.collectAsStateWithLifecycle()
     
     val insetsPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues()
 
     LaunchedEffect(Unit) {
-        viewModel.loadHomeData()
+        homeViewModel.loadHomeData() // Liked Music load karne ke liye
+        mixViewModel.loadMixes() // Dedicated Mixes API hit karne ke liye
     }
 
-    // Yahan seedha `homePage` ko observe kar rahe hain bina kisi side-effect ke
-    val finalPlaylists = remember(accountPlaylists, homePage) {
+    // Combine Liked Music + Pure YouTube Mixes
+    val finalPlaylists = remember(accountPlaylists, ytMixes) {
         val list = mutableListOf<YTItem>()
         
-        // 1. Liked Music
         accountPlaylists?.find { 
             it.id == "LM" || (it is PlaylistItem && it.title.equals("Liked Music", ignoreCase = true)) 
         }?.let { 
             list.add(it) 
         }
         
-        // 2. Extracting exact items from Home Page Sections
-        homePage?.sections?.forEach { section ->
-            val secTitle = section.title.lowercase()
-            val isMixSection = secTitle.contains("mix") || secTitle.contains("मिक्स") || secTitle.contains("મિક્સ")
-
-            section.items.forEach { item ->
-                val id = when (item) {
-                    is PlaylistItem -> item.id
-                    is AlbumItem -> item.browseId
-                    else -> null
-                }
-                val title = when (item) {
-                    is PlaylistItem -> item.title
-                    is AlbumItem -> item.title
-                    else -> ""
-                }.lowercase()
-
-                val isMixItem = isMixSection || title.contains("mix") || title.contains("मिक्स") || title.contains("મિક્સ") ||
-                                id == "RDMM" || id?.startsWith("RDTMAK") == true || id?.startsWith("RDAMPL") == true
-
-                if (isMixItem && id != null && id != "LM") {
-                    // SABSE BADA FIX: 'VL' ko yahi par delete karna zaruri hai
-                    val cleanItem = when (item) {
-                        is PlaylistItem -> item.copy(id = item.id.removePrefix("VL"))
-                        is AlbumItem -> item.copy(browseId = item.browseId.removePrefix("VL"))
-                        else -> item
-                    }
-                    list.add(cleanItem)
-                }
-            }
-        }
+        list.addAll(ytMixes)
         
-        // Duplicates hatao
         list.distinctBy { 
             when (it) {
                 is PlaylistItem -> it.id
@@ -173,7 +144,7 @@ fun MixScreen(
                             subtitle = subtitle ?: "YouTube Music",
                             thumbnail = thumbnail ?: "",
                             onClick = {
-                                // Home Screen wala same navigation logic[span_2](start_span)[span_2](end_span)
+                                // Ekdum flawless navigation based on YTItem type
                                 when (item) {
                                     is PlaylistItem -> navController.navigate("online_playlist/${item.id}")
                                     is AlbumItem -> navController.navigate("album/${item.browseId}")
@@ -183,7 +154,7 @@ fun MixScreen(
                         )
                     }
                 }
-            } else if (isLoadingHome) {
+            } else if (isLoading) {
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center),
                     color = MaterialTheme.colorScheme.primary
