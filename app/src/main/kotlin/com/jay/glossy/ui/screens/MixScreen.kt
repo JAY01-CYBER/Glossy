@@ -86,7 +86,7 @@ fun MixScreen(
                 var thumbnail = ""
                 var authorName = ""
 
-                // YouTube API bug workaround: Mixes are often parsed as AlbumItem[span_0](start_span)[span_0](end_span)
+                // Kotlin Exhaustive When fix: Added else branch for other YTItem types
                 when (item) {
                     is PlaylistItem -> {
                         id = item.id
@@ -99,6 +99,9 @@ fun MixScreen(
                         title = item.title
                         thumbnail = item.thumbnail
                         authorName = item.artists?.joinToString { it.name } ?: "Auto playlist"
+                    }
+                    else -> {
+                        // Ignore SongItem, ArtistItem, PodcastItem, EpisodeItem
                     }
                 }
 
