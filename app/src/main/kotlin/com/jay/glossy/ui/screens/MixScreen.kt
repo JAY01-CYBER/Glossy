@@ -29,9 +29,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,12 +44,9 @@ import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.viewmodels.HomeViewModel
-import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.AlbumItem
 import com.metrolist.innertube.models.PlaylistItem
 import com.metrolist.innertube.models.YTItem
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,81 +55,59 @@ fun MixScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val accountPlaylists by viewModel.accountPlaylists.collectAsStateWithLifecycle()
+    val homePage by viewModel.homePage.collectAsStateWithLifecycle()
+    val isLoadingHome by viewModel.isLoading.collectAsStateWithLifecycle()
+    
     val insetsPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues()
 
-    var ytMixes by remember { mutableStateOf<List<YTItem>>(emptyList()) }
-    var isFetching by remember { mutableStateOf(true) }
-
     LaunchedEffect(Unit) {
-        viewModel.loadHomeData() // Ensure Liked Music loads
-
-        withContext(Dispatchers.IO) {
-            try {
-                val fetched = mutableListOf<YTItem>()
-                var currentHome = YouTube.home().getOrNull()
-
-                // Deep scan up to 4 pages of YouTube's home feed to force it to reveal the Mixes
-                for (i in 1..4) {
-                    currentHome?.sections?.forEach { section ->
-                        val isMixSec = section.title.lowercase().let { 
-                            it.contains("mix") || it.contains("मिक्स") || it.contains("મિક્સ") 
-                        }
-                        
-                        section.items.forEach { item ->
-                            val id = when (item) {
-                                is PlaylistItem -> item.id
-                                is AlbumItem -> item.browseId
-                                else -> ""
-                            }
-                            val title = when (item) {
-                                is PlaylistItem -> item.title
-                                is AlbumItem -> item.title
-                                else -> ""
-                            }.lowercase()
-
-                            val isMixItem = isMixSec || id == "RDMM" || id.startsWith("RDTMAK") || 
-                                            id.startsWith("RDAMPL") || title.contains("mix") || 
-                                            title.contains("मिक्स") || title.contains("મિક્સ")
-
-                            if (isMixItem && id != "LM" && id.isNotBlank()) {
-                                fetched.add(item)
-                            }
-                        }
-                    }
-                    
-                    if (fetched.isNotEmpty()) break // Mixes found, stop scanning!
-                    
-                    val continuation = currentHome?.continuation ?: break
-                    currentHome = YouTube.home(continuation = continuation).getOrNull()
-                }
-
-                ytMixes = fetched.distinctBy {
-                    when (it) {
-                        is PlaylistItem -> it.id
-                        is AlbumItem -> it.browseId
-                        else -> it.hashCode().toString()
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            } finally {
-                isFetching = false
-            }
-        }
+        viewModel.loadHomeData()
     }
 
-    // Combine Liked Music (from accountPlaylists) with fetched Mixes safely
-    val finalPlaylists = remember(accountPlaylists, ytMixes) {
+    // Yahan seedha `homePage` ko observe kar rahe hain bina kisi side-effect ke
+    val finalPlaylists = remember(accountPlaylists, homePage) {
         val list = mutableListOf<YTItem>()
         
+        // 1. Liked Music
         accountPlaylists?.find { 
             it.id == "LM" || (it is PlaylistItem && it.title.equals("Liked Music", ignoreCase = true)) 
         }?.let { 
             list.add(it) 
         }
         
-        list.addAll(ytMixes)
+        // 2. Extracting exact items from Home Page Sections
+        homePage?.sections?.forEach { section ->
+            val secTitle = section.title.lowercase()
+            val isMixSection = secTitle.contains("mix") || secTitle.contains("मिक्स") || secTitle.contains("મિક્સ")
+
+            section.items.forEach { item ->
+                val id = when (item) {
+                    is PlaylistItem -> item.id
+                    is AlbumItem -> item.browseId
+                    else -> null
+                }
+                val title = when (item) {
+                    is PlaylistItem -> item.title
+                    is AlbumItem -> item.title
+                    else -> ""
+                }.lowercase()
+
+                val isMixItem = isMixSection || title.contains("mix") || title.contains("मिक्स") || title.contains("મિક્સ") ||
+                                id == "RDMM" || id?.startsWith("RDTMAK") == true || id?.startsWith("RDAMPL") == true
+
+                if (isMixItem && id != null && id != "LM") {
+                    // SABSE BADA FIX: 'VL' ko yahi par delete karna zaruri hai
+                    val cleanItem = when (item) {
+                        is PlaylistItem -> item.copy(id = item.id.removePrefix("VL"))
+                        is AlbumItem -> item.copy(browseId = item.browseId.removePrefix("VL"))
+                        else -> item
+                    }
+                    list.add(cleanItem)
+                }
+            }
+        }
         
+        // Duplicates hatao
         list.distinctBy { 
             when (it) {
                 is PlaylistItem -> it.id
@@ -200,7 +173,7 @@ fun MixScreen(
                             subtitle = subtitle ?: "YouTube Music",
                             thumbnail = thumbnail ?: "",
                             onClick = {
-                                // Uses exactly the same navigation logic as HomeScreen to prevent empty playlists
+                                // Home Screen wala same navigation logic[span_2](start_span)[span_2](end_span)
                                 when (item) {
                                     is PlaylistItem -> navController.navigate("online_playlist/${item.id}")
                                     is AlbumItem -> navController.navigate("album/${item.browseId}")
@@ -210,7 +183,7 @@ fun MixScreen(
                         )
                     }
                 }
-            } else if (isFetching) {
+            } else if (isLoadingHome) {
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center),
                     color = MaterialTheme.colorScheme.primary
