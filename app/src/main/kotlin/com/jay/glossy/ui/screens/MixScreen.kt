@@ -29,6 +29,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,7 +45,7 @@ import coil3.compose.AsyncImage
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.viewmodels.HomeViewModel
 import com.jay.glossy.viewmodels.MixViewModel
-import com.metrolist.innertube.models.PlaylistItem
+import com.jay.glossy.viewmodels.MixUiItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,13 +55,32 @@ fun MixScreen(
     mixViewModel: MixViewModel = hiltViewModel()
 ) {
     val accountPlaylists by homeViewModel.accountPlaylists.collectAsStateWithLifecycle()
-    val mixPlaylists by mixViewModel.mixPlaylists.collectAsStateWithLifecycle()
+    val ytMixes by mixViewModel.mixPlaylists.collectAsStateWithLifecycle()
     val isLoading by mixViewModel.isLoading.collectAsStateWithLifecycle()
     
     val insetsPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues()
 
-    LaunchedEffect(accountPlaylists) {
-        mixViewModel.loadMixes(accountPlaylists)
+    // Screen khulte hi Mixes load karna shuru karo
+    LaunchedEffect(Unit) {
+        mixViewModel.loadMixes()
+        homeViewModel.loadHomeData() // Backup ke liye
+    }
+
+    // Liked Music + YouTube Mixes Combine karo dynamically!
+    val finalPlaylists = remember(accountPlaylists, ytMixes) {
+        val list = mutableListOf<MixUiItem>()
+        
+        // Liked Music ko list me sabse pehle rakho
+        accountPlaylists?.find { 
+            it.id == "LM" || it.title.equals("Liked Music", ignoreCase = true) 
+        }?.let { 
+            list.add(MixUiItem(it.id, it.title, it.author?.name ?: "Auto playlist", it.thumbnail ?: ""))
+        }
+        
+        // YouTube se aayi hui Grid list add karo
+        list.addAll(ytMixes)
+        
+        list.distinctBy { it.id }
     }
 
     Scaffold(
@@ -83,7 +103,7 @@ fun MixScreen(
     ) { scaffoldPadding ->
         
         Box(modifier = Modifier.fillMaxSize()) {
-            if (mixPlaylists.isNotEmpty()) {
+            if (finalPlaylists.isNotEmpty()) {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2), 
                     contentPadding = PaddingValues(
@@ -96,11 +116,11 @@ fun MixScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(mixPlaylists) { playlist ->
+                    items(finalPlaylists) { mix ->
                         MixCardItem(
-                            item = playlist,
+                            item = mix,
                             onClick = {
-                                navController.navigate("online_playlist/${playlist.id}")
+                                navController.navigate("online_playlist/${mix.id}")
                             }
                         )
                     }
@@ -123,7 +143,7 @@ fun MixScreen(
 
 @Composable
 fun MixCardItem(
-    item: PlaylistItem,
+    item: MixUiItem,
     onClick: () -> Unit
 ) {
     Column(
@@ -150,9 +170,9 @@ fun MixCardItem(
             modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp)
         )
         
-        if (!item.author?.name.isNullOrEmpty()) {
+        if (item.subtitle.isNotEmpty()) {
             Text(
-                text = item.author!!.name,
+                text = item.subtitle,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
