@@ -1,3 +1,8 @@
+/**
+ * Glossy Project (C) 2026
+ * Licensed under GPL-3.0 | See git history for contributors
+ */
+
 package com.metrolist.innertube
 
 import com.metrolist.innertube.models.AccountInfo
@@ -1608,6 +1613,27 @@ object YouTube {
                     }.orEmpty(),
                 continuation,
             )
+        }
+
+    suspend fun mixedForYou(): Result<List<PlaylistItem>> =
+        runCatching {
+            val homePage = home().getOrThrow()
+            val mixes = mutableListOf<PlaylistItem>()
+
+            homePage.sections.forEach { section ->
+                val title = section.title.trim().lowercase()
+                val isMixSection = title == "mixed for you" || title == "your mixes" || title == "my mixes"
+
+                section.items.filterIsInstance<PlaylistItem>().forEach { playlist ->
+                    // RDMM = My Supermix | RDTMAK = My Mix 1, 2, Discover Mix
+                    val isPersonalizedMixId = playlist.id == "RDMM" || playlist.id.startsWith("RDTMAK")
+                    
+                    if (isMixSection || isPersonalizedMixId) {
+                        mixes.add(playlist)
+                    }
+                }
+            }
+            mixes.distinctBy { it.id }
         }
 
     suspend fun explore(): Result<ExplorePage> =
