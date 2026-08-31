@@ -60,62 +60,55 @@ fun MixScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val accountPlaylists by viewModel.accountPlaylists.collectAsStateWithLifecycle()
-    val homePage by viewModel.homePage.collectAsStateWithLifecycle()
-    val isLoadingHome by viewModel.isLoading.collectAsStateWithLifecycle()
-    
     val insetsPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues()
 
-    // RAW YTItem list - No type casting, no data loss!
     var ytMixes by remember { mutableStateOf<List<YTItem>>(emptyList()) }
     var isFetching by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
-        viewModel.loadHomeData()
-    }
+        viewModel.loadHomeData() // Ensure Liked Music loads
 
-    LaunchedEffect(homePage) {
-        if (ytMixes.isNotEmpty()) return@LaunchedEffect
-        
-        isFetching = true
         withContext(Dispatchers.IO) {
             try {
                 val fetched = mutableListOf<YTItem>()
+                var currentHome = YouTube.home().getOrNull()
 
-                // 1. Dhoondho "Mix" wala chip (HomeScreen logic)
-                val mixChip = homePage?.chips?.find { 
-                    val t = it.title.lowercase()
-                    t.contains("mix") || t.contains("मिक्स") || t.contains("મિક્સ")
-                }
-                
-                val params = mixChip?.endpoint?.params
-                if (params != null) {
-                    // Browse FEmusic_home with params - This parses Grids perfectly
-                    val browseResult = YouTube.browse("FEmusic_home", params).getOrNull()
-                    browseResult?.items?.forEach { group ->
-                        fetched.addAll(group.items)
-                    }
-                }
-
-                // 2. Agar chip nahi chala, toh current homePage ke sections scan karo
-                if (fetched.isEmpty()) {
-                    homePage?.sections?.forEach { section ->
-                        val isMixSec = section.title.lowercase().let { it.contains("mix") || it.contains("मिक्स") || it.contains("મિક્સ") }
+                // Deep scan up to 4 pages of YouTube's home feed to force it to reveal the Mixes
+                for (i in 1..4) {
+                    currentHome?.sections?.forEach { section ->
+                        val isMixSec = section.title.lowercase().let { 
+                            it.contains("mix") || it.contains("मिक्स") || it.contains("મિક્સ") 
+                        }
                         
                         section.items.forEach { item ->
-                            val title = when (item) { is PlaylistItem -> item.title; is AlbumItem -> item.title; else -> "" }.lowercase()
-                            val id = when (item) { is PlaylistItem -> item.id; is AlbumItem -> item.browseId; else -> "" }
-                            
-                            val isMixItem = isMixSec || id == "RDMM" || id.startsWith("RDTMAK") || id.startsWith("RDAMPL") || title.contains("mix") || title.contains("मिक्स")
-                            
-                            if (isMixItem && id != "LM") {
+                            val id = when (item) {
+                                is PlaylistItem -> item.id
+                                is AlbumItem -> item.browseId
+                                else -> ""
+                            }
+                            val title = when (item) {
+                                is PlaylistItem -> item.title
+                                is AlbumItem -> item.title
+                                else -> ""
+                            }.lowercase()
+
+                            val isMixItem = isMixSec || id == "RDMM" || id.startsWith("RDTMAK") || 
+                                            id.startsWith("RDAMPL") || title.contains("mix") || 
+                                            title.contains("मिक्स") || title.contains("મિક્સ")
+
+                            if (isMixItem && id != "LM" && id.isNotBlank()) {
                                 fetched.add(item)
                             }
                         }
                     }
+                    
+                    if (fetched.isNotEmpty()) break // Mixes found, stop scanning!
+                    
+                    val continuation = currentHome?.continuation ?: break
+                    currentHome = YouTube.home(continuation = continuation).getOrNull()
                 }
 
-                // Store untouched YTItems
-                ytMixes = fetched.distinctBy { 
+                ytMixes = fetched.distinctBy {
                     when (it) {
                         is PlaylistItem -> it.id
                         is AlbumItem -> it.browseId
@@ -130,7 +123,7 @@ fun MixScreen(
         }
     }
 
-    // Combine Liked Music (from accountPlaylists) with fetched Mixes
+    // Combine Liked Music (from accountPlaylists) with fetched Mixes safely
     val finalPlaylists = remember(accountPlaylists, ytMixes) {
         val list = mutableListOf<YTItem>()
         
@@ -186,7 +179,6 @@ fun MixScreen(
                 ) {
                     items(finalPlaylists) { item ->
                         
-                        // Extract Display Data from Raw YTItem
                         val title = when (item) {
                             is PlaylistItem -> item.title
                             is AlbumItem -> item.title
@@ -208,17 +200,17 @@ fun MixScreen(
                             subtitle = subtitle ?: "YouTube Music",
                             thumbnail = thumbnail ?: "",
                             onClick = {
-                                // EXACT HOME SCREEN NAVIGATION LOGIC - THIS FIXES THE EMPTY PLAYLIST CRASH!
+                                // Uses exactly the same navigation logic as HomeScreen to prevent empty playlists
                                 when (item) {
                                     is PlaylistItem -> navController.navigate("online_playlist/${item.id}")
-                                    is AlbumItem -> navController.navigate("album/${item.id}")
+                                    is AlbumItem -> navController.navigate("album/${item.browseId}")
                                     else -> {}
                                 }
                             }
                         )
                     }
                 }
-            } else if (isLoadingHome || isFetching) {
+            } else if (isFetching) {
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center),
                     color = MaterialTheme.colorScheme.primary
