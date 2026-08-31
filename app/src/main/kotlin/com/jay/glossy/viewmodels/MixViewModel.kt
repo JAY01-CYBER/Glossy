@@ -25,29 +25,44 @@ class MixViewModel @Inject constructor() : ViewModel() {
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
 
-    fun loadMixes(accountPlaylists: List<PlaylistItem>? = null) {
-        // Prevent duplicate API calls if already loaded or currently loading
+    fun loadMixes() {
+        // Agar pehle se loading ho rahi hai ya data hai, toh wapas call mat karo
         if (_mixPlaylists.value.isNotEmpty() || _isLoading.value) return
 
         viewModelScope.launch(Dispatchers.IO) {
             _isLoading.value = true
             try {
-                YouTube.mixedForYou().onSuccess { mixes ->
-                    val finalMixes = mutableListOf<PlaylistItem>()
+                // 1. Home Page fetch karo taaki "Mixes" wala chip mil sake
+                val homePage = YouTube.home().getOrNull()
+                val mixChip = homePage?.chips?.find { it.title.contains("mix", ignoreCase = true) }
 
-                    // 1. Keep 'Liked Music' pinned at the top
-                    accountPlaylists?.find { 
-                        it.id == "LM" || it.title.equals("Liked Music", ignoreCase = true) 
-                    }?.let {
-                        finalMixes.add(it)
-                    }
-
-                    // 2. Add the actual YouTube Mixes
-                    finalMixes.addAll(mixes)
-                    
-                    // Update state after removing any potential duplicates
-                    _mixPlaylists.value = finalMixes.distinctBy { it.id }
+                // 2. Agar "Mixes" chip mil gaya, toh exact uski list fetch karo, warna home sections use karo
+                val mixSections = if (mixChip?.endpoint?.params != null) {
+                    YouTube.home(params = mixChip.endpoint.params).getOrNull()?.sections ?: homePage?.sections
+                } else {
+                    homePage?.sections
                 }
+
+                val fetchedMixes = mutableListOf<PlaylistItem>()
+
+                // 3. Exact mixes filter karo (RD prefix aur mix names check karke)
+                mixSections?.forEach { section ->
+                    section.items.filterIsInstance<PlaylistItem>().forEach { playlist ->
+                        val title = playlist.title ?: ""
+                        val isMix = playlist.id.startsWith("RD") && 
+                                    (title.contains("mix", ignoreCase = true) || 
+                                     playlist.id == "RDMM" || 
+                                     playlist.id.startsWith("RDTMAK") ||
+                                     playlist.id.startsWith("RDAMPL"))
+                                     
+                        if (isMix) {
+                            fetchedMixes.add(playlist)
+                        }
+                    }
+                }
+                
+                // Duplicates hata kar State update kar do
+                _mixPlaylists.value = fetchedMixes.distinctBy { it.id }
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
