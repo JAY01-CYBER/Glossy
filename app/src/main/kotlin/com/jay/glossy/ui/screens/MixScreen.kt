@@ -29,7 +29,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,10 +46,12 @@ import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.viewmodels.HomeViewModel
+import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.AlbumItem
 import com.metrolist.innertube.models.PlaylistItem
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
-// UI ko YouTube ke formats se alag rakhne ke liye ek simple Data Class
 data class MixUiItem(
     val id: String,
     val title: String,
@@ -59,81 +63,110 @@ data class MixUiItem(
 @Composable
 fun MixScreen(
     navController: NavController,
-    viewModel: HomeViewModel = hiltViewModel() // Direct HomeViewModel use kar rahe hain
+    viewModel: HomeViewModel = hiltViewModel()
 ) {
     val accountPlaylists by viewModel.accountPlaylists.collectAsStateWithLifecycle()
     val homePage by viewModel.homePage.collectAsStateWithLifecycle()
-    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val isLoadingHome by viewModel.isLoading.collectAsStateWithLifecycle()
     
     val insetsPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues()
+
+    var mixPlaylists by remember { mutableStateOf<List<MixUiItem>>(emptyList()) }
+    var isFetching by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
         viewModel.loadHomeData()
     }
 
-    // TERA IDEA: Home Screen ka data copy karo
-    val mixPlaylists = remember(accountPlaylists, homePage) {
-        val list = mutableListOf<MixUiItem>()
+    LaunchedEffect(homePage) {
+        // Agar already mixes load ho gaye hain toh dubara math fetch karo
+        if (mixPlaylists.isNotEmpty()) return@LaunchedEffect
+        
+        isFetching = true
+        withContext(Dispatchers.IO) {
+            try {
+                val result = mutableListOf<MixUiItem>()
+                var foundMixes = false
 
-        // 1. Sabse pehle 'Liked Music' add karo
-        accountPlaylists?.find { 
-            it.id == "LM" || it.title.equals("Liked Music", ignoreCase = true) 
-        }?.let { 
-            list.add(MixUiItem(it.id, it.title, it.author?.name ?: "Auto playlist", it.thumbnail ?: ""))
-        }
+                // Helper Function: Item extraction ke liye
+                fun extract(items: List<Any>) {
+                    items.forEach { item ->
+                        var id: String? = null
+                        var title = ""
+                        var thumbnail = ""
+                        var author = ""
 
-        if (homePage != null) {
-            // 2. Home page me woh Pura Section dhoondho jiske andar 'RDMM' (Supermix) hai
-            val mixSection = homePage!!.sections.find { section ->
-                section.items.any { item ->
-                    val id = when (item) {
-                        is PlaylistItem -> item.id
-                        is AlbumItem -> item.playlistId ?: item.browseId
-                        else -> null
-                    }
-                    id == "RDMM" || id?.startsWith("RDTMAK") == true
-                }
-            }
+                        if (item is PlaylistItem) {
+                            id = item.id
+                            title = item.title
+                            thumbnail = item.thumbnail ?: ""
+                            author = item.author?.name ?: "Auto playlist"
+                        } else if (item is AlbumItem) {
+                            id = item.playlistId ?: item.browseId
+                            title = item.title
+                            thumbnail = item.thumbnail
+                            author = item.artists?.joinToString { it.name } ?: "Auto playlist"
+                        }
 
-            // 3. Agar wo section mil gaya, toh uske saare mixes utha kar apni list me daal do!
-            if (mixSection != null) {
-                mixSection.items.forEach { item ->
-                    when (item) {
-                        is PlaylistItem -> {
-                            list.add(MixUiItem(item.id, item.title, item.author?.name ?: "Auto playlist", item.thumbnail ?: ""))
-                        }
-                        is AlbumItem -> {
-                            val id = item.playlistId ?: item.browseId
-                            if (id != null) {
-                                list.add(MixUiItem(id, item.title, item.artists?.joinToString { it.name } ?: "Auto playlist", item.thumbnail))
-                            }
-                        }
-                        else -> {}
-                    }
-                }
-            } else {
-                // FALLBACK: Agar exact section nahi mila, toh pure home page me jahan bhi mix mile, utha lo
-                homePage!!.sections.forEach { section ->
-                    section.items.forEach { item ->
-                        val id = when (item) {
-                            is PlaylistItem -> item.id
-                            is AlbumItem -> item.playlistId ?: item.browseId
-                            else -> null
-                        }
-                        if (id == "RDMM" || id?.startsWith("RDTMAK") == true || id?.startsWith("RDAMPL") == true) {
-                            when (item) {
-                                is PlaylistItem -> list.add(MixUiItem(item.id, item.title, item.author?.name ?: "Auto playlist", item.thumbnail ?: ""))
-                                is AlbumItem -> list.add(MixUiItem(id, item.title, item.artists?.joinToString { it.name } ?: "Auto playlist", item.thumbnail))
-                                else -> {}
+                        if (id != null && id != "LM") {
+                            // Check for mix keywords (English, Hindi, Gujarati) OR default mix IDs
+                            val isMix = id == "RDMM" || id.startsWith("RDTMAK") || id.startsWith("RDAMPL") || 
+                                        title.contains("mix", true) || title.contains("मिक्स", true) || title.contains("મિક્સ", true)
+                            if (isMix) {
+                                result.add(MixUiItem(id, title, author, thumbnail))
+                                foundMixes = true
                             }
                         }
                     }
                 }
+
+                // STEP 1: Try to find in currently loaded Home Page Cache
+                homePage?.sections?.forEach { section ->
+                    extract(section.items)
+                }
+
+                // STEP 2: SimpMusic Approach -> Search via Mixes Chip
+                if (!foundMixes) {
+                    val mixChip = homePage?.chips?.find { 
+                        val t = it.title.lowercase()
+                        t.contains("mix") || t.contains("मिक्स") || t.contains("મિક્સ")
+                    }
+                    if (mixChip?.endpoint?.params != null) {
+                        val chipPage = YouTube.home(params = mixChip.endpoint.params).getOrNull()
+                        chipPage?.sections?.forEach { section ->
+                            extract(section.items)
+                        }
+                    }
+                }
+
+                // STEP 3: Deep Scan Pagination -> Load next 3 pages to find hidden mixes
+                if (!foundMixes) {
+                    var continuation = homePage?.continuation
+                    for (i in 1..3) { 
+                        if (continuation == null) break
+                        val nextPage = YouTube.home(continuation = continuation).getOrNull()
+                        nextPage?.sections?.forEach { section ->
+                            extract(section.items)
+                        }
+                        if (foundMixes) break
+                        continuation = nextPage?.continuation
+                    }
+                }
+
+                // STEP 4: Ultimate Fallback -> Hardcode universally working mixes so screen is NEVER blank
+                if (result.isEmpty()) {
+                    result.add(MixUiItem("RDMM", "My Supermix", "Auto playlist", "https://www.gstatic.com/youtube/media/ytm/images/pbg/supermix-light-v2-active.png"))
+                    result.add(MixUiItem("RDAMPLw", "Discover Mix", "Auto playlist", "https://www.gstatic.com/youtube/media/ytm/images/pbg/discover-mix-light-v2-active.png"))
+                    result.add(MixUiItem("RDATW", "New Release Mix", "Auto playlist", "https://www.gstatic.com/youtube/media/ytm/images/pbg/new-release-mix-light-v2-active.png"))
+                }
+
+                mixPlaylists = result.distinctBy { it.id }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                isFetching = false
             }
         }
-
-        // Duplicates hata kar final list bhejo
-        list.filter { it.id.isNotBlank() && it.id != "LM" }.distinctBy { it.id }
     }
 
     Scaffold(
@@ -169,7 +202,7 @@ fun MixScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    // Liked Music manually print kar rahe hain taki wo hamesha rahe
+                    // Liked Music rendering
                     accountPlaylists?.find { it.id == "LM" || it.title.equals("Liked Music", ignoreCase = true) }?.let { liked ->
                         item {
                             MixCardItem(
@@ -179,7 +212,7 @@ fun MixScreen(
                         }
                     }
 
-                    // Fir uske baad Home page se copy kiye hue mixes print karo
+                    // YouTube Mixes rendering
                     items(mixPlaylists) { mix ->
                         MixCardItem(
                             item = mix,
@@ -189,7 +222,7 @@ fun MixScreen(
                         )
                     }
                 }
-            } else if (isLoading) {
+            } else if (isLoadingHome || isFetching) {
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center),
                     color = MaterialTheme.colorScheme.primary
@@ -207,7 +240,7 @@ fun MixScreen(
 
 @Composable
 fun MixCardItem(
-    item: MixUiItem, // Ab yeh Playlist model pe depend nahi karta!
+    item: MixUiItem,
     onClick: () -> Unit
 ) {
     Column(
