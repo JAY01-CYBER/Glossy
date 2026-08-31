@@ -36,9 +36,12 @@ class MixViewModel @Inject constructor() : ViewModel() {
                 val homePage = YouTube.home().getOrNull()
                 val mixChip = homePage?.chips?.find { it.title.contains("mix", ignoreCase = true) }
 
-                // 2. Agar "Mixes" chip mil gaya, toh exact uski list fetch karo, warna home sections use karo
-                val mixSections = if (mixChip?.endpoint?.params != null) {
-                    YouTube.home(params = mixChip.endpoint.params).getOrNull()?.sections ?: homePage?.sections
+                // FIXED: Smart cast issue resolved by storing params in a local variable
+                val params = mixChip?.endpoint?.params
+                
+                // 2. Agar "Mixes" chip mil gaya (params != null), toh exact uski list fetch karo, warna home sections use karo
+                val mixSections = if (params != null) {
+                    YouTube.home(params = params).getOrNull()?.sections ?: homePage?.sections
                 } else {
                     homePage?.sections
                 }
