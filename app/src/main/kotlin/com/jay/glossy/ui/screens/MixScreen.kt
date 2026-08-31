@@ -44,40 +44,54 @@ import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.viewmodels.HomeViewModel
-import com.jay.glossy.viewmodels.MixViewModel
 import com.metrolist.innertube.models.PlaylistItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MixScreen(
     navController: NavController,
-    homeViewModel: HomeViewModel = hiltViewModel(),
-    mixViewModel: MixViewModel = hiltViewModel()
+    viewModel: HomeViewModel = hiltViewModel()
 ) {
-    val accountPlaylists by homeViewModel.accountPlaylists.collectAsStateWithLifecycle()
-    val mixPlaylists by mixViewModel.mixPlaylists.collectAsStateWithLifecycle()
-    val isLoading by mixViewModel.isLoading.collectAsStateWithLifecycle()
-    
+    val accountPlaylists by viewModel.accountPlaylists.collectAsStateWithLifecycle()
+    val homePage by viewModel.homePage.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val insetsPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues()
 
-    // Screen khulte hi Mixes fetch karo (API calls background me hongi)
     LaunchedEffect(Unit) {
-        mixViewModel.loadMixes()
+        viewModel.loadHomeData()
     }
 
-    // Liked Music aur YouTube Mixes dono ko ek list me combine karo
-    val finalPlaylists = remember(accountPlaylists, mixPlaylists) {
+    val mixPlaylists = remember(accountPlaylists, homePage) {
         val list = mutableListOf<PlaylistItem>()
-        
-        // 'Liked Music' ko sabse top par rakho
+
+        // 1. Sabse pehle 'Liked Music' add karo
         accountPlaylists?.find { 
             it.id == "LM" || it.title.equals("Liked Music", ignoreCase = true) 
         }?.let { 
             list.add(it) 
         }
-        
-        // Baaki ke API wale mixes add karo
-        list.addAll(mixPlaylists)
+
+        // 2. Home Page me se seedha Mixes uthao (Kyuki wahan ekdum sahi aate hain)
+        homePage?.sections?.forEach { section ->
+            // Check karo ki kya yeh "Mixed for you" ya "Your mixes" wala section hai
+            val isMixSection = section.title.contains("mix", ignoreCase = true)
+
+            section.items.filterIsInstance<PlaylistItem>().forEach { playlist ->
+                // Playlist ki ID 'RD' (Radio/Mix) se shuru honi chahiye
+                if (playlist.id.startsWith("RD")) {
+                    
+                    val hasMixInTitle = playlist.title.contains("mix", ignoreCase = true)
+                    val isKnownMixId = playlist.id == "RDMM" || playlist.id.startsWith("RDTMAK") || playlist.id.startsWith("RDAMPL")
+
+                    // Agar ye Mix section ke andar hai YA iske naam/ID se pata chal raha hai ki ye Mix hai
+                    if (isMixSection || hasMixInTitle || isKnownMixId) {
+                        list.add(playlist)
+                    }
+                }
+            }
+        }
+
+        // Duplicate entries hata do
         list.distinctBy { it.id }
     }
 
@@ -101,7 +115,7 @@ fun MixScreen(
     ) { scaffoldPadding ->
         
         Box(modifier = Modifier.fillMaxSize()) {
-            if (finalPlaylists.isNotEmpty()) {
+            if (mixPlaylists.isNotEmpty()) {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2), 
                     contentPadding = PaddingValues(
@@ -114,7 +128,7 @@ fun MixScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(finalPlaylists) { playlist ->
+                    items(mixPlaylists) { playlist ->
                         MixCardItem(
                             item = playlist,
                             onClick = {
