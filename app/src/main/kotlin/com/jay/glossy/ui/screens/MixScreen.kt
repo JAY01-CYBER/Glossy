@@ -49,15 +49,9 @@ import com.jay.glossy.viewmodels.HomeViewModel
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.AlbumItem
 import com.metrolist.innertube.models.PlaylistItem
+import com.metrolist.innertube.models.YTItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-
-data class MixUiItem(
-    val id: String,
-    val title: String,
-    val subtitle: String,
-    val thumbnail: String
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,7 +65,8 @@ fun MixScreen(
     
     val insetsPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues()
 
-    var mixPlaylists by remember { mutableStateOf<List<MixUiItem>>(emptyList()) }
+    // RAW YTItem list - No type casting, no data loss!
+    var ytMixes by remember { mutableStateOf<List<YTItem>>(emptyList()) }
     var isFetching by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
@@ -79,15 +74,14 @@ fun MixScreen(
     }
 
     LaunchedEffect(homePage) {
-        if (mixPlaylists.isNotEmpty()) return@LaunchedEffect
+        if (ytMixes.isNotEmpty()) return@LaunchedEffect
         
         isFetching = true
         withContext(Dispatchers.IO) {
             try {
-                val result = mutableListOf<MixUiItem>()
-                var foundMixes = false
+                val fetched = mutableListOf<YTItem>()
 
-                // STEP 1: Search using the "Mixes" Chip
+                // 1. Dhoondho "Mix" wala chip (HomeScreen logic)
                 val mixChip = homePage?.chips?.find { 
                     val t = it.title.lowercase()
                     t.contains("mix") || t.contains("मिक्स") || t.contains("મિક્સ")
@@ -95,77 +89,39 @@ fun MixScreen(
                 
                 val params = mixChip?.endpoint?.params
                 if (params != null) {
-                    // YAHI THA MASTER FIX: browse() method GridRenderer ko perfectly read karta hai!
+                    // Browse FEmusic_home with params - This parses Grids perfectly
                     val browseResult = YouTube.browse("FEmusic_home", params).getOrNull()
-                    
-                    browseResult?.items?.forEach { browseGroup ->
-                        browseGroup.items.forEach { item ->
-                            var id: String? = null
-                            var title = ""
-                            var thumbnail = ""
-                            var author = ""
-
-                            if (item is PlaylistItem) {
-                                id = item.id
-                                title = item.title
-                                thumbnail = item.thumbnail ?: ""
-                                author = item.author?.name ?: "Auto playlist"
-                            } else if (item is AlbumItem) {
-                                id = item.playlistId ?: item.browseId
-                                title = item.title
-                                thumbnail = item.thumbnail
-                                author = item.artists?.joinToString { it.name } ?: "Auto playlist"
-                            }
-
-                            if (id != null && id != "LM") {
-                                result.add(MixUiItem(id, title, author, thumbnail))
-                                foundMixes = true
-                            }
-                        }
+                    browseResult?.items?.forEach { group ->
+                        fetched.addAll(group.items)
                     }
                 }
 
-                // STEP 2: Agar Chip approach se API ne data nahi diya, toh fallback to Current Home Page sections
-                if (!foundMixes) {
+                // 2. Agar chip nahi chala, toh current homePage ke sections scan karo
+                if (fetched.isEmpty()) {
                     homePage?.sections?.forEach { section ->
+                        val isMixSec = section.title.lowercase().let { it.contains("mix") || it.contains("मिक्स") || it.contains("મિક્સ") }
+                        
                         section.items.forEach { item ->
-                            var id: String? = null
-                            var title = ""
-                            var thumbnail = ""
-                            var author = ""
-
-                            if (item is PlaylistItem) {
-                                id = item.id
-                                title = item.title
-                                thumbnail = item.thumbnail ?: ""
-                                author = item.author?.name ?: "Auto playlist"
-                            } else if (item is AlbumItem) {
-                                id = item.playlistId ?: item.browseId
-                                title = item.title
-                                thumbnail = item.thumbnail
-                                author = item.artists?.joinToString { it.name } ?: "Auto playlist"
-                            }
-
-                            if (id != null) {
-                                val isMix = id == "RDMM" || id.startsWith("RDTMAK") || id.startsWith("RDAMPL") || 
-                                            title.contains("mix", true) || title.contains("मिक्स", true) || title.contains("મિક્સ", true)
-                                if (isMix && id != "LM") {
-                                    result.add(MixUiItem(id, title, author, thumbnail))
-                                    foundMixes = true
-                                }
+                            val title = when (item) { is PlaylistItem -> item.title; is AlbumItem -> item.title; else -> "" }.lowercase()
+                            val id = when (item) { is PlaylistItem -> item.id; is AlbumItem -> item.browseId; else -> "" }
+                            
+                            val isMixItem = isMixSec || id == "RDMM" || id.startsWith("RDTMAK") || id.startsWith("RDAMPL") || title.contains("mix") || title.contains("मिक्स")
+                            
+                            if (isMixItem && id != "LM") {
+                                fetched.add(item)
                             }
                         }
                     }
                 }
 
-                // STEP 3: Universal safe IDs agar Youtube pure API ko hide kar de
-                if (!foundMixes) {
-                    result.add(MixUiItem("RDMM", "My Supermix", "Auto playlist", "https://www.gstatic.com/youtube/media/ytm/images/pbg/supermix-light-v2-active.png"))
-                    result.add(MixUiItem("RDAMPLw", "Discover Mix", "Auto playlist", "https://www.gstatic.com/youtube/media/ytm/images/pbg/discover-mix-light-v2-active.png"))
-                    result.add(MixUiItem("RDATW", "New Release Mix", "Auto playlist", "https://www.gstatic.com/youtube/media/ytm/images/pbg/new-release-mix-light-v2-active.png"))
+                // Store untouched YTItems
+                ytMixes = fetched.distinctBy { 
+                    when (it) {
+                        is PlaylistItem -> it.id
+                        is AlbumItem -> it.browseId
+                        else -> it.hashCode().toString()
+                    }
                 }
-
-                mixPlaylists = result.distinctBy { it.id }
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
@@ -174,18 +130,25 @@ fun MixScreen(
         }
     }
 
-    // Liked Music + YouTube Mixes Combine
-    val finalPlaylists = remember(accountPlaylists, mixPlaylists) {
-        val list = mutableListOf<MixUiItem>()
+    // Combine Liked Music (from accountPlaylists) with fetched Mixes
+    val finalPlaylists = remember(accountPlaylists, ytMixes) {
+        val list = mutableListOf<YTItem>()
         
         accountPlaylists?.find { 
-            it.id == "LM" || it.title.equals("Liked Music", ignoreCase = true) 
+            it.id == "LM" || (it is PlaylistItem && it.title.equals("Liked Music", ignoreCase = true)) 
         }?.let { 
-            list.add(MixUiItem(it.id, it.title, it.author?.name ?: "Auto playlist", it.thumbnail ?: ""))
+            list.add(it) 
         }
         
-        list.addAll(mixPlaylists)
-        list.distinctBy { it.id }
+        list.addAll(ytMixes)
+        
+        list.distinctBy { 
+            when (it) {
+                is PlaylistItem -> it.id
+                is AlbumItem -> it.browseId
+                else -> it.hashCode().toString()
+            }
+        }
     }
 
     Scaffold(
@@ -221,11 +184,36 @@ fun MixScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(finalPlaylists) { mix ->
+                    items(finalPlaylists) { item ->
+                        
+                        // Extract Display Data from Raw YTItem
+                        val title = when (item) {
+                            is PlaylistItem -> item.title
+                            is AlbumItem -> item.title
+                            else -> ""
+                        }
+                        val subtitle = when (item) {
+                            is PlaylistItem -> item.author?.name
+                            is AlbumItem -> item.artists?.joinToString { it.name }
+                            else -> ""
+                        }
+                        val thumbnail = when (item) {
+                            is PlaylistItem -> item.thumbnail
+                            is AlbumItem -> item.thumbnail
+                            else -> ""
+                        }
+
                         MixCardItem(
-                            item = mix,
+                            title = title,
+                            subtitle = subtitle ?: "YouTube Music",
+                            thumbnail = thumbnail ?: "",
                             onClick = {
-                                navController.navigate("online_playlist/${mix.id}")
+                                // EXACT HOME SCREEN NAVIGATION LOGIC - THIS FIXES THE EMPTY PLAYLIST CRASH!
+                                when (item) {
+                                    is PlaylistItem -> navController.navigate("online_playlist/${item.id}")
+                                    is AlbumItem -> navController.navigate("album/${item.id}")
+                                    else -> {}
+                                }
                             }
                         )
                     }
@@ -248,7 +236,9 @@ fun MixScreen(
 
 @Composable
 fun MixCardItem(
-    item: MixUiItem,
+    title: String,
+    subtitle: String,
+    thumbnail: String,
     onClick: () -> Unit
 ) {
     Column(
@@ -257,8 +247,8 @@ fun MixCardItem(
             .clickable { onClick() }
     ) {
         AsyncImage(
-            model = item.thumbnail,
-            contentDescription = item.title,
+            model = thumbnail,
+            contentDescription = title,
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .fillMaxWidth()
@@ -267,7 +257,7 @@ fun MixCardItem(
         )
         
         Text(
-            text = item.title,
+            text = title,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
             maxLines = 2,
@@ -275,9 +265,9 @@ fun MixCardItem(
             modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp)
         )
         
-        if (item.subtitle.isNotEmpty()) {
+        if (subtitle.isNotEmpty()) {
             Text(
-                text = item.subtitle,
+                text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
