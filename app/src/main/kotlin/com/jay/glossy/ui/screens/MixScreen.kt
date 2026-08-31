@@ -29,9 +29,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,127 +43,24 @@ import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.viewmodels.HomeViewModel
-import com.metrolist.innertube.YouTube
-import com.metrolist.innertube.models.AlbumItem
+import com.jay.glossy.viewmodels.MixViewModel
 import com.metrolist.innertube.models.PlaylistItem
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-
-data class MixUiItem(
-    val id: String,
-    val title: String,
-    val subtitle: String,
-    val thumbnail: String
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MixScreen(
     navController: NavController,
-    viewModel: HomeViewModel = hiltViewModel()
+    homeViewModel: HomeViewModel = hiltViewModel(),
+    mixViewModel: MixViewModel = hiltViewModel()
 ) {
-    val accountPlaylists by viewModel.accountPlaylists.collectAsStateWithLifecycle()
-    val homePage by viewModel.homePage.collectAsStateWithLifecycle()
-    val isLoadingHome by viewModel.isLoading.collectAsStateWithLifecycle()
+    val accountPlaylists by homeViewModel.accountPlaylists.collectAsStateWithLifecycle()
+    val mixPlaylists by mixViewModel.mixPlaylists.collectAsStateWithLifecycle()
+    val isLoading by mixViewModel.isLoading.collectAsStateWithLifecycle()
     
     val insetsPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues()
 
-    var mixPlaylists by remember { mutableStateOf<List<MixUiItem>>(emptyList()) }
-    var isFetching by remember { mutableStateOf(true) }
-
-    LaunchedEffect(Unit) {
-        viewModel.loadHomeData()
-    }
-
-    LaunchedEffect(homePage) {
-        // Agar already mixes load ho gaye hain toh dubara math fetch karo
-        if (mixPlaylists.isNotEmpty()) return@LaunchedEffect
-        
-        isFetching = true
-        withContext(Dispatchers.IO) {
-            try {
-                val result = mutableListOf<MixUiItem>()
-                var foundMixes = false
-
-                // Helper Function: Item extraction ke liye
-                fun extract(items: List<Any>) {
-                    items.forEach { item ->
-                        var id: String? = null
-                        var title = ""
-                        var thumbnail = ""
-                        var author = ""
-
-                        if (item is PlaylistItem) {
-                            id = item.id
-                            title = item.title
-                            thumbnail = item.thumbnail ?: ""
-                            author = item.author?.name ?: "Auto playlist"
-                        } else if (item is AlbumItem) {
-                            id = item.playlistId ?: item.browseId
-                            title = item.title
-                            thumbnail = item.thumbnail
-                            author = item.artists?.joinToString { it.name } ?: "Auto playlist"
-                        }
-
-                        if (id != null && id != "LM") {
-                            // Check for mix keywords (English, Hindi, Gujarati) OR default mix IDs
-                            val isMix = id == "RDMM" || id.startsWith("RDTMAK") || id.startsWith("RDAMPL") || 
-                                        title.contains("mix", true) || title.contains("मिक्स", true) || title.contains("મિક્સ", true)
-                            if (isMix) {
-                                result.add(MixUiItem(id, title, author, thumbnail))
-                                foundMixes = true
-                            }
-                        }
-                    }
-                }
-
-                // STEP 1: Try to find in currently loaded Home Page Cache
-                homePage?.sections?.forEach { section ->
-                    extract(section.items)
-                }
-
-                // STEP 2: SimpMusic Approach -> Search via Mixes Chip
-                if (!foundMixes) {
-                    val mixChip = homePage?.chips?.find { 
-                        val t = it.title.lowercase()
-                        t.contains("mix") || t.contains("मिक्स") || t.contains("મિક્સ")
-                    }
-                    if (mixChip?.endpoint?.params != null) {
-                        val chipPage = YouTube.home(params = mixChip.endpoint.params).getOrNull()
-                        chipPage?.sections?.forEach { section ->
-                            extract(section.items)
-                        }
-                    }
-                }
-
-                // STEP 3: Deep Scan Pagination -> Load next 3 pages to find hidden mixes
-                if (!foundMixes) {
-                    var continuation = homePage?.continuation
-                    for (i in 1..3) { 
-                        if (continuation == null) break
-                        val nextPage = YouTube.home(continuation = continuation).getOrNull()
-                        nextPage?.sections?.forEach { section ->
-                            extract(section.items)
-                        }
-                        if (foundMixes) break
-                        continuation = nextPage?.continuation
-                    }
-                }
-
-                // STEP 4: Ultimate Fallback -> Hardcode universally working mixes so screen is NEVER blank
-                if (result.isEmpty()) {
-                    result.add(MixUiItem("RDMM", "My Supermix", "Auto playlist", "https://www.gstatic.com/youtube/media/ytm/images/pbg/supermix-light-v2-active.png"))
-                    result.add(MixUiItem("RDAMPLw", "Discover Mix", "Auto playlist", "https://www.gstatic.com/youtube/media/ytm/images/pbg/discover-mix-light-v2-active.png"))
-                    result.add(MixUiItem("RDATW", "New Release Mix", "Auto playlist", "https://www.gstatic.com/youtube/media/ytm/images/pbg/new-release-mix-light-v2-active.png"))
-                }
-
-                mixPlaylists = result.distinctBy { it.id }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            } finally {
-                isFetching = false
-            }
-        }
+    LaunchedEffect(accountPlaylists) {
+        mixViewModel.loadMixes(accountPlaylists)
     }
 
     Scaffold(
@@ -189,7 +83,7 @@ fun MixScreen(
     ) { scaffoldPadding ->
         
         Box(modifier = Modifier.fillMaxSize()) {
-            if (mixPlaylists.isNotEmpty() || accountPlaylists?.isNotEmpty() == true) {
+            if (mixPlaylists.isNotEmpty()) {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2), 
                     contentPadding = PaddingValues(
@@ -202,27 +96,16 @@ fun MixScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    // Liked Music rendering
-                    accountPlaylists?.find { it.id == "LM" || it.title.equals("Liked Music", ignoreCase = true) }?.let { liked ->
-                        item {
-                            MixCardItem(
-                                item = MixUiItem(liked.id, liked.title, liked.author?.name ?: "Auto playlist", liked.thumbnail ?: ""),
-                                onClick = { navController.navigate("online_playlist/${liked.id}") }
-                            )
-                        }
-                    }
-
-                    // YouTube Mixes rendering
-                    items(mixPlaylists) { mix ->
+                    items(mixPlaylists) { playlist ->
                         MixCardItem(
-                            item = mix,
+                            item = playlist,
                             onClick = {
-                                navController.navigate("online_playlist/${mix.id}")
+                                navController.navigate("online_playlist/${playlist.id}")
                             }
                         )
                     }
                 }
-            } else if (isLoadingHome || isFetching) {
+            } else if (isLoading) {
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center),
                     color = MaterialTheme.colorScheme.primary
@@ -240,7 +123,7 @@ fun MixScreen(
 
 @Composable
 fun MixCardItem(
-    item: MixUiItem,
+    item: PlaylistItem,
     onClick: () -> Unit
 ) {
     Column(
@@ -267,9 +150,9 @@ fun MixCardItem(
             modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp)
         )
         
-        if (item.subtitle.isNotEmpty()) {
+        if (!item.author?.name.isNullOrEmpty()) {
             Text(
-                text = item.subtitle,
+                text = item.author!!.name,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
