@@ -5,51 +5,26 @@
 
 package com.jay.glossy.ui.screens
 
+import com.jay.glossy.R
+
 import android.app.Activity
-import android.os.Build
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarScrollBehavior
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.dialog
 import androidx.navigation.navArgument
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-
-import com.jay.glossy.R
 import com.jay.glossy.constants.DarkModeKey
 import com.jay.glossy.constants.PureBlackKey
 import com.jay.glossy.ui.screens.artist.ArtistAlbumsScreen
@@ -89,11 +64,16 @@ import com.jay.glossy.ui.screens.settings.integrations.DiscordSettings
 import com.jay.glossy.ui.screens.settings.integrations.IntegrationScreen
 import com.jay.glossy.ui.screens.settings.integrations.LastFMSettings
 import com.jay.glossy.ui.screens.settings.integrations.ListenTogetherSettings
+
 import com.jay.glossy.ui.screens.wrapped.WrappedScreen
 import com.jay.glossy.utils.rememberEnumPreference
 import com.jay.glossy.utils.rememberPreference
-import com.jay.glossy.utils.safeDataStoreEdit
 
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import com.jay.glossy.utils.safeDataStoreEdit
+import kotlinx.coroutines.launch
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.rememberCoroutineScope
 
 @OptIn(ExperimentalMaterial3Api::class)
 fun NavGraphBuilder.navigationBuilder(
@@ -103,18 +83,6 @@ fun NavGraphBuilder.navigationBuilder(
     activity: Activity,
     snackbarHostState: SnackbarHostState,
 ) {
-    // --- SPLASH SCREEN ROUTE (New Premium Boot Screen) ---
-    composable("splash") {
-        GlossySplashScreen(
-            savedGuestName = "Jay", // Hardcoded premium name
-            onSplashComplete = {
-                navController.navigate(Screens.Home.route) {
-                    popUpTo("splash") { inclusive = true }
-                }
-            }
-        )
-    }
-
     // --- WELCOME SCREEN ROUTE ---
     composable("welcome") {
         val context = LocalContext.current
@@ -132,6 +100,9 @@ fun NavGraphBuilder.navigationBuilder(
                 }
             },
             onGoogleLoginClick = { 
+                // BUG FIX: Yahan 'has_seen_welcome' ko true nahi karna hai aur 
+                // 'welcome' screen ko history se delete (popUpTo) nahi karna hai.
+                // Sirf login screen par navigate karna hai.
                 navController.navigate("login")
             }
         )
@@ -520,115 +491,5 @@ fun NavGraphBuilder.navigationBuilder(
     }
     composable("settings/android_auto") {
         AndroidAutoSettings(navController)
-    }
-}
-
-// ==============================================================
-// SPLASH SCREEN COMPOSABLE
-// ==============================================================
-@Composable
-fun GlossySplashScreen(
-    savedGuestName: String,
-    onSplashComplete: () -> Unit
-) {
-    val isDark = isSystemInDarkTheme()
-    val bgImage = if (isDark) R.drawable.welcome_bg_dark else R.drawable.welcome_bg_light
-    val supportsBlur = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-    val textColor = if (isDark) Color.White else Color.Black
-    val subTextColor = if (isDark) Color.LightGray else Color.DarkGray
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-        // Background Image with optional blur
-        Image(
-            painter = painterResource(id = bgImage),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .fillMaxSize()
-                .then(if (supportsBlur) Modifier.blur(16.dp) else Modifier)
-        )
-
-        // Overlay for text readability
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    if (isDark) Color.Black.copy(alpha = if (supportsBlur) 0.4f else 0.7f)
-                    else Color.White.copy(alpha = if (supportsBlur) 0.4f else 0.7f)
-                )
-        )
-
-        // Loading Content
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 24.dp)
-                .systemBarsPadding(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Spacer(modifier = Modifier.weight(1.8f))
-
-            Icon(
-                painter = painterResource(R.drawable.small_icon),
-                contentDescription = "Glossy Logo",
-                tint = textColor,
-                modifier = Modifier.size(84.dp)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = "Glossy",
-                color = textColor,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "Welcome Back,\n$savedGuestName",
-                color = textColor,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Medium,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(64.dp))
-
-            CircularProgressIndicator(
-                color = textColor,
-                strokeWidth = 3.dp,
-                modifier = Modifier.size(32.dp)
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            Text(
-                text = "\"Life buffering ho sakti hai, music nahi.\"",
-                color = subTextColor,
-                style = MaterialTheme.typography.bodySmall,
-                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
-            )
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            Text(
-                text = "Jay & M4TRX",
-                color = if (isDark) Color.DarkGray else Color.Gray,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 2.sp,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-        }
-    }
-
-    // 1.2 Second Splash Delay
-    LaunchedEffect(Unit) {
-        delay(1200L)
-        onSplashComplete()
     }
 }
