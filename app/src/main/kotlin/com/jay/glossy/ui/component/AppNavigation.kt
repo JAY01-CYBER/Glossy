@@ -230,15 +230,12 @@ private fun FloatingAppNavigationBar(
         }
     }
 
-    // Dynamic Sizing (Fixed sizes so FAB and Pill match perfectly)
-    val barHeight = if (slimNav) 52.dp else 60.dp
+    val barHeight = if (slimNav) 56.dp else 68.dp 
 
     Row(
         modifier = modifier
             .fillMaxWidth()
-            // Top padding pushes the bar away from the MiniPlayer!
-            // Total height inside 76dp bounds = 14 + 60 + 2 = 76dp. Perfectly fits!
-            .padding(top = 14.dp, bottom = 2.dp),
+            .padding(top = 10.dp, bottom = 6.dp), 
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -257,7 +254,7 @@ private fun FloatingAppNavigationBar(
 
         // 2. Detached Search FAB
         if (searchItem != null) {
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(16.dp)) 
             
             val isSearchSelected = remember(currentRoute, searchItem.route) {
                 isRouteSelected(currentRoute, searchItem.route, navigationItems)
@@ -300,11 +297,12 @@ private fun FloatingAppNavigationBar(
                 contentColor = if (isSearchSelected) floatingToolbarSelectedItemContentColor(pureBlack) else floatingToolbarFabContentColor(pureBlack),
                 modifier = Modifier
                     .size(barHeight) 
-                    .shadow(elevation = 12.dp, shape = CircleShape) 
+                    .shadow(elevation = 14.dp, shape = CircleShape) 
             ) {
                 Icon(
                     painter = painterResource(id = if (isSearchSelected) searchItem.iconIdActive else searchItem.iconIdInactive),
-                    contentDescription = stringResource(searchItem.titleId)
+                    contentDescription = stringResource(searchItem.titleId),
+                    modifier = Modifier.size(28.dp) 
                 )
             }
         }
@@ -325,9 +323,9 @@ private fun MaterialLiquidTabBar(
 ) {
     val tabsCount = tabs.size
     
-    // Dynamic Width Calculation based on 3 tabs
-    val tabWidth = if (slimNav) 64.dp else 84.dp
-    val blobHeight = if (slimNav) 44.dp else 52.dp
+    
+    val tabWidth = if (slimNav) 72.dp else 92.dp 
+    val blobHeight = if (slimNav) 48.dp else 58.dp 
     
     val tabWidthPx = with(LocalDensity.current) { tabWidth.toPx() }
     val totalWidth = tabWidth * tabsCount 
@@ -374,7 +372,7 @@ private fun MaterialLiquidTabBar(
         modifier = Modifier
             .height(barHeight)
             .width(totalWidth)
-            .shadow(elevation = 12.dp, shape = RoundedCornerShape(50)) 
+            .shadow(elevation = 14.dp, shape = RoundedCornerShape(50)) 
             .clip(RoundedCornerShape(50))
             .background(floatingToolbarContainerColor(pureBlack)),
         contentAlignment = Alignment.CenterStart
@@ -396,7 +394,7 @@ private fun MaterialLiquidTabBar(
                 }
                 .width(tabWidth)
                 .height(blobHeight)
-                .padding(horizontal = 4.dp)
+                .padding(horizontal = 5.dp) 
                 .clip(RoundedCornerShape(50))
                 .background(floatingToolbarSelectedItemContainerColor(pureBlack))
         )
@@ -439,7 +437,7 @@ private fun MaterialLiquidTabBar(
                         painter = painterResource(id = iconRes),
                         contentDescription = stringResource(screen.titleId),
                         tint = animatedColor,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(26.dp) 
                     )
                     
                     if (!slimNav) {
