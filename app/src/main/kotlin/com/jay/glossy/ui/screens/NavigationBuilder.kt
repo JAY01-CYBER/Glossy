@@ -132,9 +132,6 @@ fun NavGraphBuilder.navigationBuilder(
                 }
             },
             onGoogleLoginClick = { 
-                // BUG FIX: Yahan 'has_seen_welcome' ko true nahi karna hai aur 
-                // 'welcome' screen ko history se delete (popUpTo) nahi karna hai.
-                // Sirf login screen par navigate karna hai[span_0](start_span)[span_0](end_span).
                 navController.navigate("login")
             }
         )
@@ -525,7 +522,6 @@ fun NavGraphBuilder.navigationBuilder(
         AndroidAutoSettings(navController)
     }
 }
-
 
 // ==============================================================
 // SPLASH SCREEN COMPOSABLE
