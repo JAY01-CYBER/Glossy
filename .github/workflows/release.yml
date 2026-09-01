@@ -202,7 +202,7 @@ jobs:
 
       - name: Create Release
         env:
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           echo "Creating release v${{ needs.check-version.outputs.new_version }}"
 
