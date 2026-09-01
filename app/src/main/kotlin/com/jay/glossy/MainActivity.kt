@@ -1391,7 +1391,14 @@ class MainActivity : ComponentActivity() {
                             Box(Modifier.weight(1f)) {
                                 NavHost(
                                     navController = navController,
-                                    startDestination = if (!hasSeenWelcome) "welcome" else "splash",
+                                    startDestination =
+                                        if (!hasSeenWelcome) "welcome" else {
+                                            when (tabOpenedFromShortcut ?: defaultOpenTab) {
+                                                NavigationTab.HOME -> Screens.Home
+                                                NavigationTab.LIBRARY -> Screens.Library
+                                                else -> Screens.Home
+                                            }.route
+                                        },
                                     enterTransition = {
                                         val currentRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
                                         val previousRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
