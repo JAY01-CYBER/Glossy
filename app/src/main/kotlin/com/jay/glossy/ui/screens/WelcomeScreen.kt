@@ -1,5 +1,6 @@
 package com.jay.glossy.ui.screens
 
+import android.os.Build
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -14,8 +15,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
@@ -31,7 +34,6 @@ import kotlinx.coroutines.delay
 import com.jay.glossy.utils.safeDataStoreEdit
 import com.jay.glossy.R 
 
-// NAYE IMPORTS LOGIN CHECK KE LIYE
 import com.jay.glossy.constants.InnerTubeCookieKey
 import com.jay.glossy.utils.rememberPreference
 
@@ -44,42 +46,54 @@ fun GlossyWelcomeScreen(
     onSetupComplete: (String) -> Unit,
     onGoogleLoginClick: () -> Unit
 ) {
-    var currentState by remember { mutableStateOf(WelcomeState.INTRO) }
-    var guestName by remember { mutableStateOf("") }
+    // rememberSaveable ensures state survives configuration changes (like rotation)
+    var currentState by rememberSaveable { mutableStateOf(WelcomeState.INTRO) }
+    var guestName by rememberSaveable { mutableStateOf("") }
     
     val isDark = isSystemInDarkTheme()
-    
     val bgImage = if (isDark) R.drawable.welcome_bg_dark else R.drawable.welcome_bg_light
 
-    // ==========================================
-    // SMART LOGIN CHECKER: 
-    // Jaise hi login complete hoga (cookie aayegi), ye automatically Home Screen par bhej dega!
-    // ==========================================
     val (cookie) = rememberPreference(InnerTubeCookieKey, defaultValue = "")
     
     LaunchedEffect(cookie) {
         if (cookie.isNotBlank()) {
-            // Agar cookie mil gayi matlab user successfully login ho gaya hai
             onSetupComplete("Google User") 
         }
     }
-    // ==========================================
+
+    // Android 12+ check for blur support
+    val supportsBlur = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
     Box(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
     ) {
+        // Background Image with conditional blur
         Image(
             painter = painterResource(id = bgImage),
-            contentDescription = "Welcome Background",
+            contentDescription = null, // Accessibility improvement: decorative image
             contentScale = ContentScale.Crop, 
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .then(
+                    if (currentState != WelcomeState.INTRO && supportsBlur) {
+                        Modifier.blur(16.dp)
+                    } else {
+                        Modifier
+                    }
+                )
         )
 
+        // Fallback or complementary overlay for readability
         if (currentState != WelcomeState.INTRO) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(if (isDark) Color.Black.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.6f))
+                    .background(
+                        if (isDark) Color.Black.copy(alpha = if (supportsBlur) 0.4f else 0.7f) 
+                        else Color.White.copy(alpha = if (supportsBlur) 0.4f else 0.7f)
+                    )
             )
         }
 
@@ -88,7 +102,8 @@ fun GlossyWelcomeScreen(
             transitionSpec = {
                 fadeIn(animationSpec = tween(600)) togetherWith fadeOut(animationSpec = tween(600))
             },
-            label = "WelcomeTransition"
+            label = "WelcomeTransition",
+            modifier = Modifier.systemBarsPadding() // Prevents clipping with system bars
         ) { state ->
             when (state) {
                 WelcomeState.INTRO -> {
@@ -116,7 +131,7 @@ fun GlossyWelcomeScreen(
                     val context = LocalContext.current
                     
                     LaunchedEffect(Unit) {
-                        delay(3000)
+                        delay(1500L) // Reduced delay for better UX
                         
                         context.safeDataStoreEdit { prefs ->
                             prefs[stringPreferencesKey("guest_name")] = guestName
@@ -141,7 +156,7 @@ fun IntroSection(isDark: Boolean, onGuestClick: () -> Unit, onGoogleClick: () ->
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.weight(1.8f))
@@ -157,7 +172,7 @@ fun IntroSection(isDark: Boolean, onGuestClick: () -> Unit, onGoogleClick: () ->
         Text(
             text = "Welcome to Glossy",
             color = textColor,
-            fontSize = 28.sp,
+            style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(12.dp))
@@ -165,9 +180,8 @@ fun IntroSection(isDark: Boolean, onGuestClick: () -> Unit, onGoogleClick: () ->
         Text(
             text = "A beautifully crafted music player, made for the\nway you listen — completely free, with no\nsubscriptions and no ads",
             color = subTextColor,
-            fontSize = 12.sp,
+            style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
-            lineHeight = 18.sp,
             fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
         )
 
@@ -184,27 +198,30 @@ fun IntroSection(isDark: Boolean, onGuestClick: () -> Unit, onGoogleClick: () ->
             ),
             shape = CircleShape
         ) {
-            Text("Continue with Google", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Text("Continue with Google", style = MaterialTheme.typography.titleMedium)
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        Text(
-            text = "Continue as a guest",
-            color = subTextColor,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier
-                .clickable { onGuestClick() }
-                .padding(8.dp)
-        )
+        // TextButton for better touch target
+        TextButton(
+            onClick = onGuestClick,
+            modifier = Modifier.padding(8.dp)
+        ) {
+            Text(
+                text = "Continue as a guest",
+                color = subTextColor,
+                style = MaterialTheme.typography.titleSmall
+            )
+        }
 
         Spacer(modifier = Modifier.weight(0.4f))
 
         Text(
-            text = "By tapping Get Started, I agree with the Terms of\nService and Privacy Policy.",
-            color = if (isDark) Color.DarkGray else Color.Gray,
-            fontSize = 10.sp,
+            text = "Crafted with ❤️ by Jay",
+            color = subTextColor,
+            style = MaterialTheme.typography.labelSmall,
+            letterSpacing = 1.sp,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(bottom = 16.dp)
         )
@@ -218,11 +235,12 @@ fun GuestInputSection(isDark: Boolean, name: String, onNameChange: (String) -> U
     val inputBgColor = if (isDark) Color(0xFF1E1E1E).copy(alpha = 0.8f) else Color(0xFFE0E0E0).copy(alpha = 0.8f)
     val btnBgColor = if (isDark) Color.White else Color.Black
     val btnTextColor = if (isDark) Color.Black else Color.White
+    val subTextColor = if (isDark) Color.LightGray else Color.DarkGray
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(80.dp))
@@ -238,7 +256,7 @@ fun GuestInputSection(isDark: Boolean, name: String, onNameChange: (String) -> U
         Text(
             text = "Sign in as a Guest",
             color = textColor,
-            fontSize = 24.sp,
+            style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold
         )
         
@@ -259,7 +277,7 @@ fun GuestInputSection(isDark: Boolean, name: String, onNameChange: (String) -> U
                     contentAlignment = Alignment.Center
                 ) {
                     if (name.isEmpty()) {
-                        Text("Please Enter Your Name", color = Color.Gray, fontSize = 16.sp)
+                        Text("Please Enter Your Name", color = Color.Gray, style = MaterialTheme.typography.bodyLarge)
                     }
                     innerTextField()
                 }
@@ -279,15 +297,16 @@ fun GuestInputSection(isDark: Boolean, name: String, onNameChange: (String) -> U
             ),
             shape = CircleShape
         ) {
-            Text("Continue as a Guest", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Text("Continue as a Guest", style = MaterialTheme.typography.titleMedium)
         }
 
         Spacer(modifier = Modifier.weight(1f))
 
         Text(
-            text = "By tapping Get Started, I agree with the Terms of\nService and Privacy Policy.",
-            color = if (isDark) Color.DarkGray else Color.Gray,
-            fontSize = 10.sp,
+            text = "Crafted with ❤️ by Jay",
+            color = subTextColor,
+            style = MaterialTheme.typography.labelSmall,
+            letterSpacing = 1.sp,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(bottom = 16.dp)
         )
@@ -303,7 +322,7 @@ fun LoadingSection(isDark: Boolean, name: String) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.weight(1.8f))
@@ -319,7 +338,7 @@ fun LoadingSection(isDark: Boolean, name: String) {
         Text(
             text = "Glossy",
             color = textColor,
-            fontSize = 28.sp,
+            style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -327,7 +346,7 @@ fun LoadingSection(isDark: Boolean, name: String) {
         Text(
             text = "Welcome Back,\n$name",
             color = textColor,
-            fontSize = 24.sp,
+            style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Medium,
             textAlign = TextAlign.Center
         )
@@ -345,16 +364,16 @@ fun LoadingSection(isDark: Boolean, name: String) {
         Text(
             text = "\"Life buffering ho sakti hai, music nahi.\"",
             color = subTextColor,
-            fontSize = 12.sp,
+            style = MaterialTheme.typography.bodySmall,
             fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
         )
 
         Spacer(modifier = Modifier.weight(1f))
 
         Text(
-            text = "FLUXXLEUX & M4TRX",
+            text = "Jay & M4TRX",
             color = if (isDark) Color.DarkGray else Color.Gray,
-            fontSize = 10.sp,
+            style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
             letterSpacing = 2.sp,
             modifier = Modifier.padding(bottom = 16.dp)
