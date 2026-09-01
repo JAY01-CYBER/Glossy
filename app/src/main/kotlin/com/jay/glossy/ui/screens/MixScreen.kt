@@ -9,10 +9,13 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -20,8 +23,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -35,16 +36,19 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.LocalPlayerConnection
+import com.jay.glossy.ui.component.GreetingSection
 import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.component.PlayStoreRefreshIndicator
 import com.jay.glossy.ui.component.YouTubeGridItem
 import com.jay.glossy.ui.menu.YouTubeAlbumMenu
 import com.jay.glossy.ui.menu.YouTubePlaylistMenu
+import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.viewmodels.HomeViewModel
 import com.jay.glossy.viewmodels.MixViewModel
 import com.metrolist.innertube.models.AlbumItem
@@ -62,6 +66,10 @@ fun MixScreen(
     val ytMixes by mixViewModel.mixPlaylists.collectAsStateWithLifecycle()
     val isLoading by mixViewModel.isLoading.collectAsStateWithLifecycle()
     
+    // Greeting Section ke liye variables
+    val accountName by homeViewModel.accountName.collectAsStateWithLifecycle()
+    val guestNamePref by rememberPreference(stringPreferencesKey("guest_name"), "")
+    
     val insetsPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues()
 
     val playerConnection = LocalPlayerConnection.current ?: return
@@ -73,6 +81,15 @@ fun MixScreen(
     val scope = rememberCoroutineScope()
     
     val pullRefreshState = rememberPullToRefreshState()
+
+    // Greeting section ke liye final name decide karna
+    val finalName = remember(accountName, guestNamePref) {
+        when {
+            !accountName.isNullOrBlank() && !accountName.equals("Guest", ignoreCase = true) -> accountName!!
+            guestNamePref.isNotBlank() -> guestNamePref
+            else -> "J"
+        }
+    }
 
     LaunchedEffect(Unit) {
         homeViewModel.loadHomeData()
@@ -101,18 +118,21 @@ fun MixScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { 
-                    Text(
-                        text = "Mix for you", 
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.headlineMedium
-                    ) 
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
+            // TERA CUSTOM GREETING SECTION WALA TOP BAR
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+            ) {
+                GreetingSection(userName = finalName)
+                
+                Text(
+                    text = "Mix for you",
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
-            )
+            }
         },
         modifier = Modifier.fillMaxSize(),
         containerColor = Color.Transparent
@@ -125,7 +145,7 @@ fun MixScreen(
                     contentPadding = PaddingValues(
                         start = 16.dp,
                         end = 16.dp,
-                        top = scaffoldPadding.calculateTopPadding() + 8.dp,
+                        top = scaffoldPadding.calculateTopPadding(),
                         bottom = insetsPadding.calculateBottomPadding() + 32.dp 
                     ),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
