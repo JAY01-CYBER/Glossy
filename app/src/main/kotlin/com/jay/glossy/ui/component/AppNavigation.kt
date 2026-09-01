@@ -2,56 +2,53 @@
 
 package com.jay.glossy.ui.component
 
-import com.jay.glossy.R
-
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FloatingToolbarDefaults
-import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.painterResource
@@ -64,6 +61,7 @@ import com.jay.glossy.ui.screens.Screens
 import com.jay.glossy.utils.rememberPreference
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlin.math.roundToInt
 
 @Immutable
 private data class NavItemState(
@@ -165,7 +163,7 @@ fun AppNavigationRail(
 }
 
 // ----------------------------------------------------
-// Main Navigation Bar Router (Checks Settings)
+// Main Navigation Bar Router
 // ----------------------------------------------------
 @Composable
 fun AppNavigationBar(
@@ -203,7 +201,7 @@ fun AppNavigationBar(
 }
 
 // ----------------------------------------------------
-// Premium Floating Navigation Bar
+// Premium MD3 Liquid Navigation Bar (Squash & Stretch)
 // ----------------------------------------------------
 @Composable
 private fun FloatingAppNavigationBar(
@@ -215,94 +213,103 @@ private fun FloatingAppNavigationBar(
     slimNav: Boolean = false,
     onSearchLongClick: (() -> Unit)? = null
 ) {
-    val toolbarContainerColor = floatingToolbarContainerColor(pureBlack = pureBlack)
-    val toolbarColors = FloatingToolbarDefaults.standardFloatingToolbarColors(
-        toolbarContainerColor = toolbarContainerColor,
-    )
-    
     val haptics = LocalHapticFeedback.current
     val viewConfiguration = LocalViewConfiguration.current
 
     val searchItem = navigationItems.find { it == Screens.Search }
     val mainItems = navigationItems.filter { it != Screens.Search }
 
-    BoxWithConstraints(
-        modifier = modifier.fillMaxWidth(),
-        contentAlignment = Alignment.BottomCenter,
-    ) {
-        HorizontalFloatingToolbar(
-            expanded = true,
-            floatingActionButton = {
-                if (searchItem != null) {
-                    val isSelected = remember(currentRoute, searchItem.route) {
-                        isRouteSelected(currentRoute, searchItem.route, navigationItems)
-                    }
-                    val currentIsSelected by rememberUpdatedState(isSelected)
-                    val iconRes = if (isSelected) searchItem.iconIdActive else searchItem.iconIdInactive
-                    val interactionSource = remember { MutableInteractionSource() }
+    val selectedMainIndex = mainItems.indexOfFirst { screen ->
+        isRouteSelected(currentRoute, screen.route, navigationItems)
+    }
+    
+    var lastMainIndex by remember { mutableIntStateOf(maxOf(0, selectedMainIndex)) }
+    LaunchedEffect(selectedMainIndex) {
+        if (selectedMainIndex >= 0) {
+            lastMainIndex = selectedMainIndex
+        }
+    }
 
-                    if (onSearchLongClick != null) {
-                        LaunchedEffect(interactionSource) {
-                            var isLongClick = false
-                            interactionSource.interactions.collectLatest { interaction ->
-                                when (interaction) {
-                                    is PressInteraction.Press -> {
-                                        isLongClick = false
-                                        delay(viewConfiguration.longPressTimeoutMillis)
-                                        isLongClick = true
-                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        onSearchLongClick.invoke()
-                                    }
-                                    is PressInteraction.Release -> {
-                                        if (!isLongClick) {
-                                            onItemClick(searchItem, currentIsSelected)
-                                        }
-                                    }
-                                    is PressInteraction.Cancel -> {
-                                        isLongClick = false
-                                    }
+    // YAHAN HUA HAI FIX! Height kam kar di gayi hai (Sleek & Premium look)
+    val barHeight = if (slimNav) 48.dp else 56.dp 
+    val fabSize = if (slimNav) 48.dp else 56.dp 
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(top = 12.dp, bottom = 8.dp), 
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // 1. The MD3 Sliding Pill Container
+        MaterialLiquidTabBar(
+            tabs = mainItems,
+            selectedIndex = lastMainIndex,
+            isMainTabActive = selectedMainIndex >= 0,
+            currentRoute = currentRoute,
+            navigationItems = navigationItems,
+            pureBlack = pureBlack,
+            slimNav = slimNav,
+            barHeight = barHeight,
+            onItemClick = onItemClick
+        )
+
+        // 2. Detached Search FAB (Guaranteed to be a PERFECT CIRCLE now)
+        if (searchItem != null) {
+            Spacer(modifier = Modifier.width(16.dp)) 
+            
+            val isSearchSelected = remember(currentRoute, searchItem.route) {
+                isRouteSelected(currentRoute, searchItem.route, navigationItems)
+            }
+            val currentIsSearchSelected by rememberUpdatedState(isSearchSelected)
+            val interactionSource = remember { MutableInteractionSource() }
+
+            if (onSearchLongClick != null) {
+                LaunchedEffect(interactionSource) {
+                    var isLongClick = false
+                    interactionSource.interactions.collectLatest { interaction ->
+                        when (interaction) {
+                            is PressInteraction.Press -> {
+                                isLongClick = false
+                                delay(viewConfiguration.longPressTimeoutMillis)
+                                isLongClick = true
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onSearchLongClick.invoke()
+                            }
+                            is PressInteraction.Release -> {
+                                if (!isLongClick) {
+                                    onItemClick(searchItem, currentIsSearchSelected)
                                 }
                             }
+                            is PressInteraction.Cancel -> isLongClick = false
                         }
                     }
+                }
+            }
 
-                    FloatingToolbarDefaults.VibrantFloatingActionButton(
-                        onClick = {
-                            if (onSearchLongClick == null) {
-                                onItemClick(searchItem, currentIsSelected)
-                            }
-                        },
-                        interactionSource = interactionSource,
-                        shape = CircleShape,
-                        containerColor = if (isSelected) floatingToolbarSelectedItemContainerColor(pureBlack) else floatingToolbarFabContainerColor(pureBlack),
-                        contentColor = if (isSelected) floatingToolbarSelectedItemContentColor(pureBlack) else floatingToolbarFabContentColor(pureBlack),
-                    ) {
-                        Icon(
-                            painter = painterResource(id = iconRes),
-                            contentDescription = stringResource(searchItem.titleId)
-                        )
+            // Using Surface guarantees the shape will NOT stretch into a rectangle
+            Surface(
+                onClick = {
+                    if (onSearchLongClick == null) {
+                        onItemClick(searchItem, currentIsSearchSelected)
                     }
-                }
-            },
-            modifier = Modifier.widthIn(max = 480.dp),
-            colors = toolbarColors,
-        ) {
-            mainItems.forEachIndexed { index, screen ->
-                val isSelected = remember(currentRoute, screen.route) {
-                    isRouteSelected(currentRoute, screen.route, navigationItems)
-                }
-                val currentIsSelected by rememberUpdatedState(isSelected)
-
-                FloatingNavigationToolbarItem(
-                    screen = screen,
-                    selected = currentIsSelected,
-                    pureBlack = pureBlack,
-                    slim = slimNav,
-                    onClick = { onItemClick(screen, currentIsSelected) }
-                )
-
-                if (index < mainItems.lastIndex) {
-                    Spacer(modifier = Modifier.width(16.dp))
+                },
+                interactionSource = interactionSource,
+                shape = CircleShape,
+                color = if (isSearchSelected) floatingToolbarSelectedItemContainerColor(pureBlack) else floatingToolbarFabContainerColor(pureBlack),
+                contentColor = if (isSearchSelected) floatingToolbarSelectedItemContentColor(pureBlack) else floatingToolbarFabContentColor(pureBlack),
+                shadowElevation = 12.dp,
+                modifier = Modifier.size(fabSize) // Exactly 56x56 Circle
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center, 
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Icon(
+                        painter = painterResource(id = if (isSearchSelected) searchItem.iconIdActive else searchItem.iconIdInactive),
+                        contentDescription = stringResource(searchItem.titleId),
+                        modifier = Modifier.size(24.dp) 
+                    )
                 }
             }
         }
@@ -310,78 +317,148 @@ private fun FloatingAppNavigationBar(
 }
 
 @Composable
-private fun FloatingNavigationToolbarItem(
-    screen: Screens,
-    selected: Boolean,
+private fun MaterialLiquidTabBar(
+    tabs: List<Screens>,
+    selectedIndex: Int,
+    isMainTabActive: Boolean,
+    currentRoute: String?,
+    navigationItems: List<Screens>,
     pureBlack: Boolean,
-    slim: Boolean,
-    onClick: () -> Unit,
+    slimNav: Boolean,
+    barHeight: androidx.compose.ui.unit.Dp,
+    onItemClick: (Screens, Boolean) -> Unit
 ) {
-    val shape = RoundedCornerShape(24.dp)
-    val containerColor by animateColorAsState(
-        targetValue = when {
-            selected -> floatingToolbarSelectedItemContainerColor(pureBlack = pureBlack)
-            else -> Color.Transparent
-        },
-        label = "",
-    )
-    val contentColor by animateColorAsState(
-        targetValue = when {
-            selected -> floatingToolbarSelectedItemContentColor(pureBlack = pureBlack)
-            else -> floatingToolbarItemContentColor(pureBlack = pureBlack)
-        },
-        label = "",
-    )
+    val tabsCount = tabs.size
     
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.91f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium,
-        ),
-        label = "",
-    )
+    // Tab width aur indicator height bhi sleek kar diye hain
+    val tabWidth = if (slimNav) 64.dp else 80.dp 
+    val blobHeight = if (slimNav) 36.dp else 44.dp 
     
-    val showLabel = selected && !slim 
+    val tabWidthPx = with(LocalDensity.current) { tabWidth.toPx() }
+    val totalWidth = tabWidth * tabsCount 
+    
+    val animationScope = rememberCoroutineScope()
+    val draggedFlag = remember { booleanArrayOf(false) }
+    
+    val currentOnItemClick by rememberUpdatedState(onItemClick)
+    val currentRouteState by rememberUpdatedState(currentRoute)
+    val currentTabs by rememberUpdatedState(tabs)
+    val currentNavItems by rememberUpdatedState(navigationItems)
+    
+    val dampedDrag = remember(animationScope, tabsCount) {
+        DampedDragAnimation(
+            animationScope = animationScope,
+            initialValue = selectedIndex.coerceAtLeast(0).toFloat(),
+            valueRange = 0f..(tabsCount - 1).toFloat(),
+            visibilityThreshold = 0.001f,
+            initialScale = 1f,
+            pressedScale = 1.15f, 
+            onDragStarted = { draggedFlag[0] = false },
+            onDragStopped = {
+                if (draggedFlag[0]) {
+                    val target = targetValue.roundToInt().coerceIn(0, tabsCount - 1)
+                    animateToValue(target.toFloat())
+                    
+                    val screen = currentTabs[target]
+                    val isSelected = isRouteSelected(currentRouteState, screen.route, currentNavItems)
+                    currentOnItemClick(screen, isSelected)
+                }
+            },
+            onDrag = { _, dragAmount ->
+                if (dragAmount.x != 0f) draggedFlag[0] = true
+                updateValue((targetValue + dragAmount.x / tabWidthPx).coerceIn(0f, (tabsCount - 1).toFloat()))
+            }
+        )
+    }
 
-    Row(
+    LaunchedEffect(selectedIndex) {
+        dampedDrag.animateToValue(selectedIndex.toFloat())
+    }
+
+    Box(
         modifier = Modifier
-            .scale(scale)
-            .animateContentSize()
-            .clip(shape)
-            .background(color = containerColor, shape = shape)
-            .clickable(
-                interactionSource = interactionSource,
-                indication = LocalIndication.current,
-                role = Role.Tab,
-                onClick = onClick
-            )
-            .widthIn(min = 64.dp)
-            .padding(
-                horizontal = if (showLabel) 24.dp else 16.dp,
-                vertical = 12.dp,
-            ),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
+            .height(barHeight)
+            .width(totalWidth)
+            .shadow(elevation = 12.dp, shape = RoundedCornerShape(50)) 
+            .clip(RoundedCornerShape(50))
+            .background(floatingToolbarContainerColor(pureBlack)),
+        contentAlignment = Alignment.CenterStart
     ) {
-        val iconRes = if (selected) screen.iconIdActive else screen.iconIdInactive
-        Icon(
-            painter = painterResource(id = iconRes),
-            contentDescription = stringResource(screen.titleId),
-            tint = contentColor,
+        val indicatorOpacity by animateFloatAsState(targetValue = if (isMainTabActive) 1f else 0f, label = "Opacity")
+        
+        // Active Indicator (Blob)
+        Box(
+            Modifier
+                .graphicsLayer {
+                    translationX = dampedDrag.value * tabWidthPx
+                    scaleX = dampedDrag.scaleX
+                    scaleY = dampedDrag.scaleY
+                    
+                    val velocity = dampedDrag.velocity / 10f
+                    scaleX /= 1f - (velocity * 0.75f).coerceIn(-0.2f, 0.2f)
+                    scaleY *= 1f - (velocity * 0.25f).coerceIn(-0.2f, 0.2f)
+                    alpha = indicatorOpacity
+                }
+                .width(tabWidth)
+                .height(blobHeight)
+                .padding(horizontal = 6.dp) 
+                .clip(RoundedCornerShape(50))
+                .background(floatingToolbarSelectedItemContainerColor(pureBlack))
         )
 
-        if (showLabel) {
-            Spacer(modifier = Modifier.size(8.dp))
-            Text(
-                text = stringResource(screen.titleId),
-                color = contentColor,
-                style = MaterialTheme.typography.labelLarge,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+        // Icons and Labels Row
+        Row(
+            Modifier
+                .fillMaxSize()
+                .then(dampedDrag.modifier), 
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            tabs.forEachIndexed { position, screen ->
+                val isSelected = remember(currentRouteState, screen.route) {
+                    isRouteSelected(currentRouteState, screen.route, currentNavItems)
+                }
+                val currentIsSelected by rememberUpdatedState(isSelected)
+                
+                val iconRes = if (isSelected) screen.iconIdActive else screen.iconIdInactive
+                val contentColor = if (isSelected) floatingToolbarSelectedItemContentColor(pureBlack) else floatingToolbarItemContentColor(pureBlack)
+                val animatedColor by animateColorAsState(targetValue = contentColor, label = "Color")
+
+                Column(
+                    Modifier
+                        .width(tabWidth)
+                        .fillMaxHeight()
+                        .clickable(
+                            interactionSource = null,
+                            indication = null, 
+                            role = Role.Tab,
+                            onClick = {
+                                if (!draggedFlag[0]) {
+                                    currentOnItemClick(screen, currentIsSelected)
+                                }
+                            }
+                        ),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        painter = painterResource(id = iconRes),
+                        contentDescription = stringResource(screen.titleId),
+                        tint = animatedColor,
+                        modifier = Modifier.size(24.dp) 
+                    )
+                    
+                    if (!slimNav) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = stringResource(screen.titleId),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = animatedColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -474,7 +551,9 @@ private fun StandardAppNavigationBar(
     }
 }
 
+// ----------------------------------------------------
 // Color Providers
+// ----------------------------------------------------
 @Composable
 private fun floatingToolbarContainerColor(pureBlack: Boolean): Color = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
 @Composable

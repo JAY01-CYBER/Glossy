@@ -263,13 +263,8 @@ class MainActivity : ComponentActivity() {
     private var pendingIntent: Intent? = null
     private var latestVersionName by mutableStateOf(BuildConfig.VERSION_NAME)
 
-    // Keep PlayerConnection as regular property - NOT mutableStateOf to prevent UI recomposition
-    // when it becomes null during onStop. Only update the snapshot for Compose when needed.
     private var playerConnection: PlayerConnection? = null
-
-    // This is the snapshot we pass to Compose - changes here trigger recomposition
     private var playerConnectionSnapshot by mutableStateOf<PlayerConnection?>(null)
-
     private var isServiceBound = false
 
     private val serviceConnection =
@@ -286,11 +281,8 @@ class MainActivity : ComponentActivity() {
             }
 
             override fun onServiceDisconnected(name: ComponentName?) {
-                // Disconnect Listen Together manager
                 listenTogetherManager.setPlayerConnection(null)
                 playerConnection?.dispose()
-                // DO NOT null out playerConnection here - keep it for when service reconnects
-                // DO NOT update playerConnectionSnapshot - this is the key to preventing recomposition
             }
         }
 
@@ -304,24 +296,17 @@ class MainActivity : ComponentActivity() {
             isServiceBound = false
             listenTogetherManager.setPlayerConnection(null)
             playerConnection?.dispose()
-            // DO NOT null out playerConnection here - keep it for reconnection
-            // DO NOT update playerConnectionSnapshot - this prevents UI recomposition
         }
     }
 
     override fun onStart() {
         super.onStart()
-        // Request notification permission on Android 13+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1000)
             }
         }
 
-        // Start the playback service explicitly once so it can outlive binding.
-        // Re-issuing startForegroundService() while an existing service instance is already
-        // running can trigger "did not then call startForeground" on some Android 9 devices
-        // when the framework expects a fresh foreground promotion for that start request.
         if (!MusicService.isRunning) {
             val serviceIntent = Intent(this, MusicService::class.java)
             try {
@@ -337,7 +322,6 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        // Bind to service - if already bound, this is a no-op but ensures we stay connected
         if (!isServiceBound) {
             bindService(
                 Intent(this, MusicService::class.java),
@@ -349,11 +333,6 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onStop() {
-        // Keep the service binding, PlayerConnection and Listen Together wiring alive while
-        // the Activity is backgrounded. The MusicService is a foreground service and keeps
-        // running, so the host must keep reporting playback state to the LT server; detaching
-        // the player listener here used to break LT for any host that wasn't staring at the
-        // app the whole session. Full teardown happens in onDestroy() via safeUnbindService().
         super.onStop()
     }
 
@@ -362,18 +341,15 @@ class MainActivity : ComponentActivity() {
             listenTogetherManager.disconnect()
         }
         super.onDestroy()
-        // Use effective playing state so Cast (local player paused, remote playing) is included.
         val stopServiceOnClear =
             dataStore.get(StopMusicOnTaskClearKey, false) &&
                 playerConnection?.isEffectivelyPlaying?.value == true &&
                 isFinishing
 
-        // Full cleanup - only on actual destroy
         playerConnection?.dispose()
         playerConnection = null
         playerConnectionSnapshot = null
 
-        // Unbind before stopService: a started+bound service does not stop until all clients unbind.
         safeUnbindService("onDestroy()")
 
         if (stopServiceOnClear) {
@@ -398,7 +374,6 @@ class MainActivity : ComponentActivity() {
         window.decorView.layoutDirection = View.LAYOUT_DIRECTION_LTR
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        // Initialize Listen Together manager
         listenTogetherManager.initialize()
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
@@ -426,26 +401,24 @@ class MainActivity : ComponentActivity() {
                 }
         }
 
-        // Defer migration and version tracking to avoid blocking first frame
         lifecycleScope.launch(Dispatchers.IO) {
             val preferences = dataStore.data.first()
             val currentVersion = BuildConfig.VERSION_NAME
 
-            // SimpMusic Removal Migration
             if (preferences[SimpMusicMigrationDoneKey] != true) {
                 safeDataStoreEdit { settings ->
                     val currentOrder = settings[LyricsProviderOrderKey] ?: ""
                     if (currentOrder.contains("SimpMusic")) {
                         val orderList =
                             currentOrder
-                                .split(",")
+                                .split(";")
                                 .map { it.trim() }
                                 .filter { it.isNotBlank() && it != "SimpMusic" }
                                 .toMutableList()
                         if (orderList.isEmpty()) {
                             settings[LyricsProviderOrderKey] = ""
                         } else {
-                            settings[LyricsProviderOrderKey] = orderList.joinToString(",")
+                            settings[LyricsProviderOrderKey] = orderList.joinToString(";")
                         }
                     }
                     if (settings[PreferredLyricsProviderKey] == "SIMPMUSIC") {
@@ -755,6 +728,7 @@ class MainActivity : ComponentActivity() {
                         listOf(
                             Screens.Home.route,
                             Screens.Library.route,
+                            Screens.Mix.route,
                             Screens.ListenTogether.route,
                             "settings",
                         )
@@ -874,7 +848,6 @@ class MainActivity : ComponentActivity() {
                         },
                     )
 
-                // Navigation tracking
                 LaunchedEffect(navBackStackEntry) {
                     if (inSearchScreen) {
                         val searchQuery =
@@ -891,7 +864,6 @@ class MainActivity : ComponentActivity() {
                         onQueryChange(TextFieldValue())
                     }
 
-                    // Reset scroll behavior for main navigation items
                     if (navigationItems.fastAny { it.route == navBackStackEntry?.destination?.route }) {
                         if (navigationItems.fastAny { it.route == previousTab }) {
                             topAppBarScrollBehavior.state.resetHeightOffset()
@@ -900,14 +872,12 @@ class MainActivity : ComponentActivity() {
 
                     topAppBarScrollBehavior.state.resetHeightOffset()
 
-                    // Collapse player when navigating to equalizer
                     if (navBackStackEntry?.destination?.route == "equalizer" &&
                         playerBottomSheetState.isExpanded
                     ) {
                         playerBottomSheetState.collapseSoft()
                     }
 
-                    // Track previous tab for animations
                     navController.currentBackStackEntry?.destination?.route?.let {
                         setPreviousTab(it)
                     }
@@ -1063,14 +1033,12 @@ class MainActivity : ComponentActivity() {
                                     TopAppBar(
                                         title = {
                                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                                // 1. Aapka Small Icon - Gap nikal diya gaya hai
                                                 Icon(
                                                     painter = painterResource(R.drawable.small_icon), 
                                                     contentDescription = null,
                                                     modifier = Modifier.size(52.dp),
                                                     tint = MaterialTheme.colorScheme.onSurface
                                                 )
-                                                // 2. TEXT WITH CUSTOM FONT
                                                 Text(
                                                     text = "Glossy",
                                                     style = MaterialTheme.typography.headlineMedium.copy(
@@ -1084,20 +1052,17 @@ class MainActivity : ComponentActivity() {
                                             }
                                         },
                                         actions = {
-                                            // 3. SOLID PILL WITH PREMIUM FADE EFFECT
                                             Surface(
                                                 shape = CircleShape, 
-                                                // 100% Solid background (No transparency issue) jisse peeche ke gaane na dikhein
                                                 color = MaterialTheme.colorScheme.surfaceVariant, 
                                                 modifier = Modifier.padding(end = 8.dp)
                                             ) {
-                                                // Yahan Premium Fade Effect add kiya hai (Box ke andar Gradient)
                                                 Box(
                                                     modifier = Modifier.background(
                                                         brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
                                                             colors = listOf(
                                                                 Color.Transparent,
-                                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) // Halka sa premium fade/glow
+                                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
                                                             )
                                                         )
                                                     )
@@ -1105,7 +1070,6 @@ class MainActivity : ComponentActivity() {
                                                     Row(
                                                         verticalAlignment = Alignment.CenterVertically,
                                                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-                                                        // EKDUM Tight Spacing
                                                         horizontalArrangement = Arrangement.spacedBy(2.dp) 
                                                     ) {
                                                         if (showHistoryButton) {
@@ -1143,7 +1107,6 @@ class MainActivity : ComponentActivity() {
                                                             )
                                                         }
                                                         
-                                                        // Profile icon
                                                         BadgedBox(
                                                             badge = {
                                                                 if (latestVersionName != BuildConfig.VERSION_NAME) {
@@ -1184,7 +1147,7 @@ class MainActivity : ComponentActivity() {
                                         },
                                         scrollBehavior = topAppBarScrollBehavior,
                                         colors = TopAppBarDefaults.topAppBarColors(
-                                            containerColor = Color.Transparent, // Set transparent to let our box background shine through
+                                            containerColor = Color.Transparent, 
                                             scrolledContainerColor = Color.Transparent, 
                                             titleContentColor = MaterialTheme.colorScheme.onSurface,
                                             actionIconContentColor = MaterialTheme.colorScheme.onSurface,
@@ -1282,6 +1245,7 @@ class MainActivity : ComponentActivity() {
                                         )
                                     }
 
+                                    // YAHAN HUA HAI FIX! Animation box smooth translation ke sath!
                                     Box(
                                         modifier =
                                             Modifier
@@ -1289,13 +1253,27 @@ class MainActivity : ComponentActivity() {
                                                 .align(Alignment.BottomCenter)
                                                 .height(if (useFloatingNavBar) bottomInsetDp + 90.dp else bottomInsetDp)
                                                 .graphicsLayer {
-                                                    val progress = playerBottomSheetState.progress
-                                                    alpha =
-                                                        if (progress > 0f || (useNewMiniPlayerDesign && !shouldShowNavigationBar)) {
-                                                            0f
+                                                    val navBarHeightPx = navigationBarHeight.toPx()
+                                                    val totalHeightPx = navBarTotalHeight.toPx()
+                                                    val progress = playerBottomSheetState.progress.coerceIn(0f, 1f)
+
+                                                    // Background ab abruptly gayab nahi hoga, Navigation Bar ke sath smoothly niche jayega!
+                                                    translationY =
+                                                        if (navBarHeightPx == 0f) {
+                                                            totalHeightPx
                                                         } else {
-                                                            1f
+                                                            val slideOffset = totalHeightPx * progress
+                                                            val hideOffset =
+                                                                totalHeightPx * (1 - navBarHeightPx / NavigationBarHeight.toPx())
+                                                            slideOffset + hideOffset
                                                         }
+
+                                                    // Alpha ko smooth fade kar diya, instant 0 pe nahi girega
+                                                    alpha = if (useNewMiniPlayerDesign && !shouldShowNavigationBar) {
+                                                        0f
+                                                    } else {
+                                                        1f - progress
+                                                    }
                                                 }
                                                 .background(if (useFloatingNavBar) fadeBrush else solidBrush)
                                     )
@@ -1351,9 +1329,13 @@ class MainActivity : ComponentActivity() {
                                             .align(Alignment.BottomCenter)
                                             .height(bottomInsetDp)
                                             .graphicsLayer {
-                                                val progress = playerBottomSheetState.progress
+                                                val progress = playerBottomSheetState.progress.coerceIn(0f, 1f)
                                                 alpha =
-                                                    if (progress > 0f || (useNewMiniPlayerDesign && !shouldShowNavigationBar) || useFloatingNavBar) 0f else 1f
+                                                    if ((useNewMiniPlayerDesign && !shouldShowNavigationBar) || useFloatingNavBar) {
+                                                        0f
+                                                    } else {
+                                                        1f - progress
+                                                    }
                                             }.background(baseBg),
                                 )
                             }
@@ -1571,10 +1553,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /**
-     * Handles the ACTION_RECOGNITION intent sent from the Music Recognizer Widget.
-     * Always navigates to the recognition screen to show the result.
-     */
     private fun handleRecognitionIntent(
         intent: Intent,
         navController: NavHostController,

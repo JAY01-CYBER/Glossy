@@ -1,3 +1,8 @@
+/**
+ * Glossy Project (C) 2026
+ * Licensed under GPL-3.0 | See git history for contributors
+ */
+
 package com.metrolist.innertube
 
 import com.metrolist.innertube.models.AccountInfo
@@ -1610,6 +1615,27 @@ object YouTube {
             )
         }
 
+    suspend fun mixedForYou(): Result<List<PlaylistItem>> =
+        runCatching {
+            val homePage = home().getOrThrow()
+            val mixes = mutableListOf<PlaylistItem>()
+
+            homePage.sections.forEach { section ->
+                val title = section.title.trim().lowercase()
+                val isMixSection = title == "mixed for you" || title == "your mixes" || title == "my mixes"
+
+                section.items.filterIsInstance<PlaylistItem>().forEach { playlist ->
+                    // RDMM = My Supermix | RDTMAK = My Mix 1, 2, Discover Mix
+                    val isPersonalizedMixId = playlist.id == "RDMM" || playlist.id.startsWith("RDTMAK")
+                    
+                    if (isMixSection || isPersonalizedMixId) {
+                        mixes.add(playlist)
+                    }
+                }
+            }
+            mixes.distinctBy { it.id }
+        }
+
     suspend fun explore(): Result<ExplorePage> =
         runCatching {
             val response = innerTube.browse(WEB_REMIX, browseId = "FEmusic_explore").body<BrowseResponse>()
@@ -3218,6 +3244,33 @@ object YouTube {
                 endpoint = endpoint,
             )
         }
+        suspend fun getMixedForYou(): Result<List<YTItem>> = runCatching {
+        // 'setLogin = true' FORCE karna zaruri hai, warna YouTube empty list bhejega
+        val response = innerTube.browse(
+            client = WEB_REMIX,
+            browseId = "FEmusic_mixed_for_you",
+            setLogin = true
+        ).body<BrowseResponse>()
+
+        val gridItems = response.contents
+            ?.singleColumnBrowseResultsRenderer
+            ?.tabs
+            ?.firstOrNull()
+            ?.tabRenderer
+            ?.content
+            ?.sectionListRenderer
+            ?.contents
+            ?.firstOrNull()
+            ?.gridRenderer
+            ?.items
+
+        gridItems?.mapNotNull { it.musicTwoRowItemRenderer }
+            ?.mapNotNull { renderer ->
+                LibraryPage.fromMusicTwoRowItemRenderer(renderer)
+                    ?: RelatedPage.fromMusicTwoRowItemRenderer(renderer)
+            } ?: emptyList()
+    }
+
 
     suspend fun lyrics(endpoint: BrowseEndpoint): Result<String?> =
         runCatching {
