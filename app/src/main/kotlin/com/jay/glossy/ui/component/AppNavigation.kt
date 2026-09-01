@@ -24,12 +24,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -230,13 +230,14 @@ private fun FloatingAppNavigationBar(
         }
     }
 
-    val barHeight = if (slimNav) 56.dp else 68.dp 
-    val fabSize = if (slimNav) 52.dp else 60.dp 
+    // YAHAN HUA HAI FIX! Height kam kar di gayi hai (Sleek & Premium look)
+    val barHeight = if (slimNav) 48.dp else 56.dp 
+    val fabSize = if (slimNav) 48.dp else 56.dp 
 
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(top = 10.dp, bottom = 6.dp), 
+            .padding(top = 12.dp, bottom = 8.dp), 
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -253,7 +254,7 @@ private fun FloatingAppNavigationBar(
             onItemClick = onItemClick
         )
 
-        // 2. Detached Search FAB (Now guaranteed to be a Perfect Circle)
+        // 2. Detached Search FAB (Guaranteed to be a PERFECT CIRCLE now)
         if (searchItem != null) {
             Spacer(modifier = Modifier.width(16.dp)) 
             
@@ -286,28 +287,30 @@ private fun FloatingAppNavigationBar(
                 }
             }
 
-            // Using IconButton guarantees a perfect circle ripple and bounds
-            IconButton(
+            // Using Surface guarantees the shape will NOT stretch into a rectangle
+            Surface(
                 onClick = {
                     if (onSearchLongClick == null) {
                         onItemClick(searchItem, currentIsSearchSelected)
                     }
                 },
                 interactionSource = interactionSource,
-                modifier = Modifier
-                    .size(fabSize) // Exactly 60x60
-                    .shadow(elevation = 14.dp, shape = CircleShape) 
-                    .clip(CircleShape) // Force circle clipping
-                    .background(
-                        color = if (isSearchSelected) floatingToolbarSelectedItemContainerColor(pureBlack) else floatingToolbarFabContainerColor(pureBlack)
-                    )
+                shape = CircleShape,
+                color = if (isSearchSelected) floatingToolbarSelectedItemContainerColor(pureBlack) else floatingToolbarFabContainerColor(pureBlack),
+                contentColor = if (isSearchSelected) floatingToolbarSelectedItemContentColor(pureBlack) else floatingToolbarFabContentColor(pureBlack),
+                shadowElevation = 12.dp,
+                modifier = Modifier.size(fabSize) // Exactly 56x56 Circle
             ) {
-                Icon(
-                    painter = painterResource(id = if (isSearchSelected) searchItem.iconIdActive else searchItem.iconIdInactive),
-                    contentDescription = stringResource(searchItem.titleId),
-                    tint = if (isSearchSelected) floatingToolbarSelectedItemContentColor(pureBlack) else floatingToolbarFabContentColor(pureBlack),
-                    modifier = Modifier.size(26.dp) 
-                )
+                Box(
+                    contentAlignment = Alignment.Center, 
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Icon(
+                        painter = painterResource(id = if (isSearchSelected) searchItem.iconIdActive else searchItem.iconIdInactive),
+                        contentDescription = stringResource(searchItem.titleId),
+                        modifier = Modifier.size(24.dp) 
+                    )
+                }
             }
         }
     }
@@ -327,8 +330,9 @@ private fun MaterialLiquidTabBar(
 ) {
     val tabsCount = tabs.size
     
-    val tabWidth = if (slimNav) 72.dp else 92.dp 
-    val blobHeight = if (slimNav) 48.dp else 58.dp 
+    // Tab width aur indicator height bhi sleek kar diye hain
+    val tabWidth = if (slimNav) 64.dp else 80.dp 
+    val blobHeight = if (slimNav) 36.dp else 44.dp 
     
     val tabWidthPx = with(LocalDensity.current) { tabWidth.toPx() }
     val totalWidth = tabWidth * tabsCount 
@@ -375,7 +379,7 @@ private fun MaterialLiquidTabBar(
         modifier = Modifier
             .height(barHeight)
             .width(totalWidth)
-            .shadow(elevation = 14.dp, shape = RoundedCornerShape(50)) 
+            .shadow(elevation = 12.dp, shape = RoundedCornerShape(50)) 
             .clip(RoundedCornerShape(50))
             .background(floatingToolbarContainerColor(pureBlack)),
         contentAlignment = Alignment.CenterStart
@@ -397,7 +401,7 @@ private fun MaterialLiquidTabBar(
                 }
                 .width(tabWidth)
                 .height(blobHeight)
-                .padding(horizontal = 5.dp) 
+                .padding(horizontal = 6.dp) 
                 .clip(RoundedCornerShape(50))
                 .background(floatingToolbarSelectedItemContainerColor(pureBlack))
         )
@@ -440,7 +444,7 @@ private fun MaterialLiquidTabBar(
                         painter = painterResource(id = iconRes),
                         contentDescription = stringResource(screen.titleId),
                         tint = animatedColor,
-                        modifier = Modifier.size(26.dp) 
+                        modifier = Modifier.size(24.dp) 
                     )
                     
                     if (!slimNav) {
