@@ -438,14 +438,14 @@ class MainActivity : ComponentActivity() {
                     if (currentOrder.contains("SimpMusic")) {
                         val orderList =
                             currentOrder
-                                .split(",")
+                                .split(";")
                                 .map { it.trim() }
                                 .filter { it.isNotBlank() && it != "SimpMusic" }
                                 .toMutableList()
                         if (orderList.isEmpty()) {
                             settings[LyricsProviderOrderKey] = ""
                         } else {
-                            settings[LyricsProviderOrderKey] = orderList.joinToString(",")
+                            settings[LyricsProviderOrderKey] = orderList.joinToString(";")
                         }
                     }
                     if (settings[PreferredLyricsProviderKey] == "SIMPMUSIC") {
@@ -755,6 +755,7 @@ class MainActivity : ComponentActivity() {
                         listOf(
                             Screens.Home.route,
                             Screens.Library.route,
+                            Screens.Mix.route,
                             Screens.ListenTogether.route,
                             "settings",
                         )
