@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -48,7 +49,7 @@ import com.metrolist.innertube.models.AlbumItem
 import com.metrolist.innertube.models.PlaylistItem
 import com.metrolist.innertube.models.YTItem
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun MixScreen(
     navController: NavController,
@@ -69,9 +70,8 @@ fun MixScreen(
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
     
-    val pullRefreshState = rememberPullToRefreshState(
-        positionalThreshold = 100.dp
-    )
+    // ERROR FIX: Removed positionalThreshold, back to default just like HomeScreen.kt
+    val pullRefreshState = rememberPullToRefreshState()
 
     LaunchedEffect(Unit) {
         homeViewModel.loadHomeData()
@@ -98,7 +98,7 @@ fun MixScreen(
         }
     }
 
-    // No Scaffold/TopAppBar here! The global Top Bar in MainActivity will handle it[span_0](start_span)[span_0](end_span).
+    // No Scaffold/TopAppBar here! The global Top Bar in MainActivity will handle it.
     // We just render the content below it.
     Box(modifier = Modifier.fillMaxSize()) {
         if (finalPlaylists.isNotEmpty()) {
