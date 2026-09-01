@@ -23,7 +23,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FloatingToolbarDefaults
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -230,7 +231,9 @@ private fun FloatingAppNavigationBar(
         }
     }
 
-    val barHeight = if (slimNav) 56.dp else 68.dp 
+    // FIX: Main Bar ki height alag (64dp) aur Search Button ki fixed perfect circle size (60dp)
+    val barHeight = if (slimNav) 52.dp else 64.dp 
+    val fabSize = if (slimNav) 52.dp else 60.dp 
 
     Row(
         modifier = modifier
@@ -252,7 +255,7 @@ private fun FloatingAppNavigationBar(
             onItemClick = onItemClick
         )
 
-        // 2. Detached Search FAB
+        // 2. Detached Search FAB (Now a perfect Circle!)
         if (searchItem != null) {
             Spacer(modifier = Modifier.width(16.dp)) 
             
@@ -285,7 +288,7 @@ private fun FloatingAppNavigationBar(
                 }
             }
 
-            FloatingToolbarDefaults.VibrantFloatingActionButton(
+            FloatingActionButton(
                 onClick = {
                     if (onSearchLongClick == null) {
                         onItemClick(searchItem, currentIsSearchSelected)
@@ -295,14 +298,15 @@ private fun FloatingAppNavigationBar(
                 shape = CircleShape,
                 containerColor = if (isSearchSelected) floatingToolbarSelectedItemContainerColor(pureBlack) else floatingToolbarFabContainerColor(pureBlack),
                 contentColor = if (isSearchSelected) floatingToolbarSelectedItemContentColor(pureBlack) else floatingToolbarFabContentColor(pureBlack),
+                elevation = FloatingActionButtonDefaults.elevation(0.dp), // Shadow is applied below manually to match Pill
                 modifier = Modifier
-                    .size(barHeight) 
+                    .size(fabSize) // Exact 60dp x 60dp for a perfect circle
                     .shadow(elevation = 14.dp, shape = CircleShape) 
             ) {
                 Icon(
                     painter = painterResource(id = if (isSearchSelected) searchItem.iconIdActive else searchItem.iconIdInactive),
                     contentDescription = stringResource(searchItem.titleId),
-                    modifier = Modifier.size(28.dp) 
+                    modifier = Modifier.size(26.dp) 
                 )
             }
         }
@@ -323,9 +327,8 @@ private fun MaterialLiquidTabBar(
 ) {
     val tabsCount = tabs.size
     
-    
-    val tabWidth = if (slimNav) 72.dp else 92.dp 
-    val blobHeight = if (slimNav) 48.dp else 58.dp 
+    val tabWidth = if (slimNav) 72.dp else 90.dp 
+    val blobHeight = if (slimNav) 44.dp else 56.dp // Balanced with 64dp barHeight
     
     val tabWidthPx = with(LocalDensity.current) { tabWidth.toPx() }
     val totalWidth = tabWidth * tabsCount 
