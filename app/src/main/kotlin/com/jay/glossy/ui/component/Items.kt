@@ -22,10 +22,12 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkOut
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.MarqueeAnimationMode
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -47,6 +49,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
@@ -324,7 +327,7 @@ inline fun ListItem(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .padding(vertical = 6.dp, horizontal = 15.dp)
+                    .padding(vertical = 8.dp, horizontal = 15.dp) // Simp Music precise padding
                     .fillMaxWidth()
             ) {
                 if (leadingContent != null) {
@@ -366,10 +369,17 @@ inline fun ListItem(
                 ) {
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.titleSmall,
+                        style = MaterialTheme.typography.titleMedium,
                         color = if (isActive) MaterialTheme.colorScheme.primary else contentColor,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .wrapContentHeight(align = Alignment.CenterVertically)
+                            .basicMarquee(
+                                iterations = Int.MAX_VALUE,
+                                animationMode = MarqueeAnimationMode.Immediately,
+                            )
+                            .focusable()
                     )
 
                     if (subtitle != null) {
@@ -394,7 +404,7 @@ inline fun ListItem(
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ListItem(
     modifier: Modifier = Modifier,
@@ -415,10 +425,17 @@ fun ListItem(
         if (subtitle != null) {
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight(align = Alignment.CenterVertically)
+                    .basicMarquee(
+                        iterations = Int.MAX_VALUE,
+                        animationMode = MarqueeAnimationMode.Immediately,
+                    )
+                    .focusable()
             )
         }
     },
@@ -430,7 +447,7 @@ fun ListItem(
     showDivider = showDivider
 )
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ListItem(
     modifier: Modifier = Modifier,
@@ -452,10 +469,17 @@ fun ListItem(
         if (!subtitle.isNullOrEmpty()) {
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight(align = Alignment.CenterVertically)
+                    .basicMarquee(
+                        iterations = Int.MAX_VALUE,
+                        animationMode = MarqueeAnimationMode.Immediately,
+                    )
+                    .focusable()
             )
         }
     },
@@ -471,7 +495,7 @@ fun ListItem(
 // GRID ITEM DESIGN
 // ------------------------------------------------------------------------
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun GridItem(
     modifier: Modifier = Modifier,
@@ -527,7 +551,7 @@ fun GridItem(
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun GridItem(
     modifier: Modifier = Modifier,
@@ -545,9 +569,14 @@ fun GridItem(
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Start,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .basicMarquee(
+                    iterations = Int.MAX_VALUE,
+                    animationMode = MarqueeAnimationMode.Immediately,
+                )
+                .focusable()
         )
     },
     subtitle = {
@@ -556,7 +585,13 @@ fun GridItem(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.secondary,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .fillMaxWidth()
+                .basicMarquee(
+                    iterations = Int.MAX_VALUE,
+                    animationMode = MarqueeAnimationMode.Immediately,
+                )
+                .focusable()
         )
     },
     badges = badges,
@@ -569,7 +604,7 @@ fun GridItem(
 // SPECIFIC LIST ITEMS (Songs, Albums, Artists, etc)
 // ------------------------------------------------------------------------
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun SongListItem(
     song: Song,
@@ -612,18 +647,32 @@ fun SongListItem(
                               song.orderedArtists.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name },
                               makeTimeString(song.song.duration * 1000L)
                           ),
-                          style = MaterialTheme.typography.bodySmall,
+                          style = MaterialTheme.typography.bodyMedium,
                           color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                           maxLines = 1,
-                          overflow = TextOverflow.Ellipsis,
+                          modifier = Modifier
+                              .fillMaxWidth()
+                              .wrapContentHeight(align = Alignment.CenterVertically)
+                              .basicMarquee(
+                                  iterations = Int.MAX_VALUE,
+                                  animationMode = MarqueeAnimationMode.Immediately,
+                              )
+                              .focusable()
                       )
                   } else {
                      Text(
                          text = subtitleOverride,
-                         style = MaterialTheme.typography.bodySmall,
+                         style = MaterialTheme.typography.bodyMedium,
                          color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                          maxLines = 1,
-                         overflow = TextOverflow.Ellipsis,
+                         modifier = Modifier
+                             .fillMaxWidth()
+                             .wrapContentHeight(align = Alignment.CenterVertically)
+                             .basicMarquee(
+                                 iterations = Int.MAX_VALUE,
+                                 animationMode = MarqueeAnimationMode.Immediately,
+                             )
+                             .focusable()
                      )
                  }
              },
@@ -697,7 +746,6 @@ fun SongGridItem(
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.basicMarquee().fillMaxWidth()
         )
     },
@@ -709,8 +757,8 @@ fun SongGridItem(
             ),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.secondary,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
+            maxLines = 1,
+            modifier = Modifier.basicMarquee().fillMaxWidth()
         )
     },
     badges = badges,
@@ -733,7 +781,7 @@ fun SongGridItem(
     modifier = modifier
 )
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ArtistListItem(
     artist: Artist,
@@ -774,7 +822,7 @@ fun ArtistListItem(
     modifier = modifier,
 )
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ArtistGridItem(
     artist: Artist,
@@ -808,7 +856,7 @@ fun ArtistGridItem(
     modifier = modifier
 )
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun AlbumListItem(
     album: Album,
@@ -858,10 +906,17 @@ fun AlbumListItem(
                 pluralStringResource(R.plurals.n_song, album.album.songCount, album.album.songCount),
                 album.album.year?.toString()
             ),
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight(align = Alignment.CenterVertically)
+                .basicMarquee(
+                    iterations = Int.MAX_VALUE,
+                    animationMode = MarqueeAnimationMode.Immediately,
+                )
+                .focusable()
         )
     },
     thumbnailContent = {
@@ -869,7 +924,7 @@ fun AlbumListItem(
             thumbnailUrl = album.album.thumbnailUrl,
             isActive = isActive,
             isPlaying = isPlaying,
-            shape = RoundedCornerShape(4.dp),
+            shape = RoundedCornerShape(8.dp),
             modifier = Modifier.fillMaxSize()
         )
     },
@@ -937,7 +992,6 @@ fun AlbumGridItem(
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.basicMarquee().fillMaxWidth()
         )
     },
@@ -946,8 +1000,8 @@ fun AlbumGridItem(
              text = album.artists.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name },
              style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.secondary,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
+            maxLines = 1,
+            modifier = Modifier.basicMarquee().fillMaxWidth()
         )
     },
     badges = badges,
@@ -981,7 +1035,7 @@ fun AlbumGridItem(
     modifier = modifier
 )
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun PlaylistListItem(
     playlist: Playlist,
@@ -1055,7 +1109,7 @@ fun PlaylistListItem(
                     modifier = Modifier.size(24.dp)
                 )
             },
-            shape = RoundedCornerShape(4.dp)
+            shape = RoundedCornerShape(8.dp) // Playlists usually use slightly larger radius
         )
     },
     trailingContent = trailingContent,
@@ -1104,7 +1158,6 @@ fun PlaylistGridItem(
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.basicMarquee().fillMaxWidth()
         )
     },
@@ -1130,8 +1183,8 @@ fun PlaylistGridItem(
             text = subtitle,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.secondary,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
+            maxLines = 1,
+            modifier = Modifier.basicMarquee().fillMaxWidth()
         )
     },
     badges = badges,
@@ -1167,7 +1220,7 @@ fun PlaylistGridItem(
     modifier = modifier
 )
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun MediaMetadataListItem(
     mediaMetadata: MediaMetadata,
@@ -1195,10 +1248,17 @@ fun MediaMetadataListItem(
                         }
                     }
                 },
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight(align = Alignment.CenterVertically)
+                    .basicMarquee(
+                        iterations = Int.MAX_VALUE,
+                        animationMode = MarqueeAnimationMode.Immediately,
+                    )
+                    .focusable()
             )
         },
         thumbnailContent = {
@@ -1219,10 +1279,10 @@ fun MediaMetadataListItem(
 }
 
 // ------------------------------------------------------------------------
-// EXACT SIMP MUSIC FULL WIDTH ITEM DESIGN
+// EXACT FULL WIDTH ITEM DESIGN
 // ------------------------------------------------------------------------
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun YouTubeListItem(
     item: YTItem,
@@ -1300,14 +1360,22 @@ fun YouTubeListItem(
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .padding(start = 12.dp, end = 10.dp) 
+                            .padding(start = 12.dp, end = 10.dp),
+                        verticalArrangement = Arrangement.Center
                     ) {
                         Text(
                             text = item.title,
-                            style = MaterialTheme.typography.titleSmall,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = if (isActive) MaterialTheme.colorScheme.primary else contentColor,
                             maxLines = 1,
-                            color = contentColor,
-                            overflow = TextOverflow.Ellipsis
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .wrapContentHeight(align = Alignment.CenterVertically)
+                                .basicMarquee(
+                                    iterations = Int.MAX_VALUE,
+                                    animationMode = MarqueeAnimationMode.Immediately,
+                                )
+                                .focusable()
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         
@@ -1325,10 +1393,17 @@ fun YouTubeListItem(
                             if (subtitleText != null) {
                                 Text(
                                     text = subtitleText,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    maxLines = 1,
+                                    style = MaterialTheme.typography.bodyMedium,
                                     color = subtitleColor,
-                                    overflow = TextOverflow.Ellipsis
+                                    maxLines = 1,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .wrapContentHeight(align = Alignment.CenterVertically)
+                                        .basicMarquee(
+                                            iterations = Int.MAX_VALUE,
+                                            animationMode = MarqueeAnimationMode.Immediately,
+                                        )
+                                        .focusable()
                                 )
                             }
                         }
@@ -1406,7 +1481,6 @@ fun YouTubeGridItem(
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
             textAlign = if (item is ArtistItem) TextAlign.Center else TextAlign.Start,
             modifier = Modifier.basicMarquee().fillMaxWidth()
         )
@@ -1425,8 +1499,8 @@ fun YouTubeGridItem(
                 text = subtitle,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.secondary,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
+                maxLines = 1,
+                modifier = Modifier.basicMarquee().fillMaxWidth()
             )
         }
     },
@@ -1486,19 +1560,14 @@ fun LocalSongsGrid(
     fillMaxWidth: Boolean = false,
     modifier: Modifier = Modifier
 ) = GridItem(
-    title = { Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+    title = { Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.basicMarquee().fillMaxWidth()) },
     subtitle = {
         Text(
             text = subtitle,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.secondary,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.basicMarquee(
-                iterations = 3,
-                initialDelayMillis = 1000,
-                velocity = 30.dp
-            )
+            modifier = Modifier.basicMarquee().fillMaxWidth()
         )
     },
     badges = badges,
@@ -1529,19 +1598,14 @@ fun LocalArtistsGrid(
     fillMaxWidth: Boolean = false,
     modifier: Modifier = Modifier
 ) = GridItem(
-    title = { Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+    title = { Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.basicMarquee().fillMaxWidth()) },
     subtitle = {
         Text(
             text = subtitle,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.secondary,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.basicMarquee(
-                iterations = 3,
-                initialDelayMillis = 1000,
-                velocity = 30.dp
-            )
+            modifier = Modifier.basicMarquee().fillMaxWidth()
         )
     },
     badges = badges,
@@ -1572,19 +1636,14 @@ fun LocalAlbumsGrid(
     fillMaxWidth: Boolean = false,
     modifier: Modifier = Modifier
 ) = GridItem(
-    title = { Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+    title = { Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.basicMarquee().fillMaxWidth()) },
     subtitle = {
         Text(
             text = subtitle,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.secondary,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.basicMarquee(
-                iterations = 3,
-                initialDelayMillis = 1000,
-                velocity = 30.dp
-            )
+            modifier = Modifier.basicMarquee().fillMaxWidth()
         )
     },
     badges = badges,
