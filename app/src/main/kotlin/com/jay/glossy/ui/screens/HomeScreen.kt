@@ -107,6 +107,10 @@ import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.kmpalette.rememberDominantColorState
+import com.kmpalette.loader.rememberNetworkLoader
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.cio.CIO
+import io.ktor.http.Url
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.AlbumItem
 import com.metrolist.innertube.models.ArtistItem
@@ -772,16 +776,17 @@ fun HomeScreen(
     val animatedColor by animateColorAsState(targetValue = topHeaderColor, animationSpec = tween(500), label = "GradientColor")
 
     val dominantImageUrl = spotlightItems.firstOrNull()?.thumbnail?.resize(1080, 1080) 
-        ?: mediaMetadata?.artworkUri?.toString()
 
+    val networkLoader = rememberNetworkLoader(HttpClient(CIO))
     val dominantColorState = rememberDominantColorState(
         defaultColor = backgroundColor,
         defaultOnColor = backgroundColor,
+        loader = networkLoader
     )
 
     LaunchedEffect(dominantImageUrl) {
         dominantImageUrl?.let {
-            dominantColorState.updateFrom(it)
+            dominantColorState.updateFrom(Url(it))
         }
     }
 
@@ -1240,7 +1245,7 @@ fun HomeScreen(
                     val finalName = when {
                         !accountName.isNullOrBlank() && !accountName!!.equals("Guest", ignoreCase = true) -> accountName!!
                         guestNamePref.isNotBlank() -> guestNamePref
-                        else -> "J"
+                        else -> "Jay Chaudhary"
                     }
 
                     GreetingSection(userName = finalName)
@@ -1449,7 +1454,7 @@ fun HomeScreen(
                                         Column(
                                             modifier = Modifier.padding(16.dp),
                                             horizontalAlignment = Alignment.CenterHorizontally,
-                                            verticalAlignment = Alignment.CenterVertically,
+                                            verticalArrangement = Arrangement.Center,
                                         ) {
                                             Text(
                                                 text = stringResource(R.string.wrapped_ready_title),
