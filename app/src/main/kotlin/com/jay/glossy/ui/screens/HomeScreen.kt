@@ -106,7 +106,7 @@ import coil3.compose.AsyncImage
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
-import com.materialkolor.palette.rememberNetworkDominantColorState
+import com.kmpalette.extensions.network.rememberNetworkDominantColorState
 import io.ktor.http.Url
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.AlbumItem
