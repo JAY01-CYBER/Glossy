@@ -81,6 +81,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -176,7 +177,9 @@ import com.jay.glossy.ui.menu.YouTubePlaylistMenu
 import com.jay.glossy.ui.menu.YouTubeSongMenu
 import com.jay.glossy.ui.utils.SnapLayoutInfoProvider
 import com.jay.glossy.ui.utils.resize
+import com.jay.glossy.utils.joinByBullet
 import com.jay.glossy.utils.joinToArtistString
+import com.jay.glossy.utils.makeTimeString
 import com.jay.glossy.utils.rememberEnumPreference
 import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.viewmodels.CommunityPlaylistItem
@@ -206,8 +209,17 @@ sealed class HomeSection(
 }
 
 @Composable
-fun SimpSectionHeader(subtitle: String, title: String) {
-    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+fun SimpSectionHeader(
+    subtitle: String, 
+    title: String, 
+    onClick: (() -> Unit)? = null
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = onClick != null) { onClick?.invoke() }
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
         if (subtitle.isNotEmpty()) {
             Text(
                 text = subtitle.uppercase(),
@@ -650,6 +662,7 @@ fun DailyDiscoverCard(
         }
     }
 }
+
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -1457,20 +1470,7 @@ fun HomeScreen(
                     if (showFeaturedCarouselPref && spotlightItems.isNotEmpty()) {
                         item(key = "featured_spotlight_carousel") {
                             Column(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
-                                NavigationTitle(
-                                    title = "Featured Spotlight",
-                                    label = "HANDPICKED FOR YOU",
-                                    onPlayAllClick = if (!isListenTogetherGuest) {
-                                        {
-                                            playerConnection.playQueue(
-                                                ListQueue(
-                                                    title = "Featured Spotlight",
-                                                    items = spotlightItems.map { it.toMediaMetadata().toMediaItem() }
-                                                )
-                                            )
-                                        }
-                                    } else null
-                                )
+                                SimpSectionHeader(subtitle = "HANDPICKED FOR YOU", title = "Featured Spotlight")
 
                                 val pagerState = rememberPagerState(pageCount = { spotlightItems.size })
                                 
@@ -1933,7 +1933,7 @@ fun HomeScreen(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 8.dp), 
+                                        .padding(horizontal = 16.dp, vertical = 8.dp), 
                                     horizontalArrangement = Arrangement.SpaceBetween, 
                                     verticalAlignment = Alignment.Bottom
                                 ) {
@@ -2705,10 +2705,10 @@ fun HomeScreen(
                                         contentPadding = PaddingValues(6.dp),
                                         modifier =
                                             Modifier
-                                                .height((com.jay.glossy.ui.component.MoodAndGenresButtonHeight + 12.dp) * 4 + 12.dp),
+                                                .height((MoodAndGenresButtonHeight + 12.dp) * 4 + 12.dp),
                                     ) {
                                         items(moodAndGenres.distinctBy { "${it.title}_${it.endpoint.browseId}_${it.endpoint.params}" }, key = { "${it.title}_${it.endpoint.browseId}_${it.endpoint.params}" }) {
-                                            com.jay.glossy.ui.component.MoodAndGenresButton(
+                                            MoodAndGenresButton(
                                                 title = it.title,
                                                 onClick = {
                                                     navController.navigate(
@@ -2763,7 +2763,7 @@ fun HomeScreen(
                                 Row {
                                     repeat(2) {
                                         TextPlaceholder(
-                                            height = com.jay.glossy.ui.component.MoodAndGenresButtonHeight,
+                                            height = MoodAndGenresButtonHeight,
                                             shape = RoundedCornerShape(6.dp),
                                             modifier =
                                                 Modifier
