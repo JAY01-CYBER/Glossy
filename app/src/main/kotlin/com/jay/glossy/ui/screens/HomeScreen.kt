@@ -130,6 +130,7 @@ import com.metrolist.innertube.models.PodcastItem
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.WatchEndpoint
 import com.metrolist.innertube.models.YTItem
+import com.metrolist.innertube.models.HomePage
 import com.metrolist.innertube.utils.completed
 import com.metrolist.innertube.utils.parseCookieString
 import com.jay.glossy.LocalDatabase
@@ -172,10 +173,10 @@ import com.jay.glossy.ui.component.LocalBottomSheetPageState
 import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.component.NavigationTitle
 import com.jay.glossy.ui.component.RandomizeGridItem
-import com.jay.glossy.ui.component.SimpSongListItem
 import com.jay.glossy.ui.component.SongGridItem
 import com.jay.glossy.ui.component.SpeedDialGridItem
 import com.jay.glossy.ui.component.YouTubeGridItem
+import com.jay.glossy.ui.component.YouTubeListItem
 import com.jay.glossy.ui.component.shimmer.GridItemPlaceHolder
 import com.jay.glossy.ui.component.shimmer.ShimmerHost
 import com.jay.glossy.ui.component.shimmer.TextPlaceholder
@@ -227,9 +228,9 @@ fun SimpTopBar(
     hazeState: HazeState,
     accountName: String?,
     accountImageUrl: String?,
-    chips: List<Pair<com.metrolist.innertube.models.PlaylistItem, String>>,
-    selectedChip: com.metrolist.innertube.models.PlaylistItem?,
-    onChipToggle: (com.metrolist.innertube.models.PlaylistItem) -> Unit
+    chips: List<Pair<HomePage.Chip, String>>,
+    selectedChip: HomePage.Chip?,
+    onChipToggle: (HomePage.Chip?) -> Unit
 ) {
     val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
     val greeting = when (currentHour) {
@@ -264,7 +265,7 @@ fun SimpTopBar(
         ) {
             Column {
                 Text(
-                    text = "Glossy", // Or SimpMusic
+                    text = "Glossy",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -766,19 +767,23 @@ fun HomeScreen(
                                         ) {
                                             itemsIndexed(items = quickPicks.distinctBy { it.id }, key = { _, originalSong -> "home_quickpick_${originalSong.id}" }) { index, originalSong ->
                                                 val song by database.song(originalSong.id).collectAsStateWithLifecycle(initialValue = originalSong)
-                                                SimpSongListItem(
-                                                    song = song!!.song,
+                                                YouTubeListItem(
+                                                    item = song!!.song,
                                                     isActive = song!!.id == mediaMetadata?.id,
                                                     isPlaying = isPlaying,
-                                                    onClick = {
-                                                        if (!isListenTogetherGuest) {
-                                                            if (song!!.id == mediaMetadata?.id) playerConnection.togglePlayPause()
-                                                            else playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue.radio(song!!.toMediaMetadata()) else ListQueue(title = song!!.title, items = listOf(song!!.toMediaItem())))
-                                                        }
-                                                    },
-                                                    onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); menuState.show { SongMenu(originalSong = song!!, onDismiss = menuState::dismiss) } },
-                                                    trailingContent = { IconButton(onClick = { menuState.show { SongMenu(originalSong = song!!, onDismiss = menuState::dismiss) } }) { Icon(painter = painterResource(R.drawable.more_vert), contentDescription = null) } },
-                                                    modifier = Modifier.width(horizontalLazyGridItemWidth)
+                                                    isSwipeable = false,
+                                                    trailingContent = { IconButton(onClick = { menuState.show { YouTubeSongMenu(song = song!!.song, onDismiss = menuState::dismiss) } }) { Icon(painter = painterResource(R.drawable.more_vert), contentDescription = null) } },
+                                                    modifier = Modifier
+                                                        .width(horizontalLazyGridItemWidth)
+                                                        .combinedClickable(
+                                                            onClick = {
+                                                                if (!isListenTogetherGuest) {
+                                                                    if (song!!.id == mediaMetadata?.id) playerConnection.togglePlayPause()
+                                                                    else playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue.radio(song!!.toMediaMetadata()) else ListQueue(title = song!!.title, items = listOf(song!!.toMediaItem())))
+                                                                }
+                                                            },
+                                                            onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); menuState.show { YouTubeSongMenu(song = song!!.song, onDismiss = menuState::dismiss) } }
+                                                        )
                                                 )
                                             }
                                         }
@@ -791,7 +796,11 @@ fun HomeScreen(
                                     var expanded by remember { mutableStateOf(false) }
                                     val countries = listOf("Global", "India", "United States", "United Kingdom", "Japan", "South Korea")
                                     var selectedCountry by rememberSaveable { mutableStateOf(countries[1]) }
-                                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, top = 24.dp, bottom = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 8.dp), 
+                                        horizontalArrangement = Arrangement.SpaceBetween, 
+                                        verticalAlignment = Alignment.Bottom
+                                    ) {
                                         Column {
                                             Text(text = "WHAT IS BEST CHOICE TODAY", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                             Text(text = "Chart", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
@@ -849,18 +858,22 @@ fun HomeScreen(
                                                 modifier = Modifier.fillMaxWidth().height(ListItemHeight * 4),
                                             ) {
                                                 itemsIndexed(items = sectionSongs.distinctBy { it.id }, key = { _, song -> "home_section_${section.index}_song_${song.id}" }) { _, song ->
-                                                    SimpSongListItem(
-                                                        song = song,
+                                                    YouTubeListItem(
+                                                        item = song,
                                                         isActive = song.id == mediaMetadata?.id,
                                                         isPlaying = isPlaying,
-                                                        onClick = {
-                                                            if (!isListenTogetherGuest) {
-                                                                playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue(song.endpoint ?: WatchEndpoint(videoId = song.id), song.toMediaMetadata()) else ListQueue(title = song.title, items = listOf(song.toMediaItem())))
-                                                            }
-                                                        },
-                                                        onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); menuState.show { YouTubeSongMenu(song = song, onDismiss = menuState::dismiss) } },
+                                                        isSwipeable = false,
                                                         trailingContent = { IconButton(onClick = { menuState.show { YouTubeSongMenu(song = song, onDismiss = menuState::dismiss) } }) { Icon(painter = painterResource(R.drawable.more_vert), contentDescription = null) } },
-                                                        modifier = Modifier.width(horizontalLazyGridItemWidth)
+                                                        modifier = Modifier
+                                                            .width(horizontalLazyGridItemWidth)
+                                                            .combinedClickable(
+                                                                onClick = {
+                                                                    if (!isListenTogetherGuest) {
+                                                                        playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue(song.endpoint ?: WatchEndpoint(videoId = song.id), song.toMediaMetadata()) else ListQueue(title = song.title, items = listOf(song.toMediaItem())))
+                                                                    }
+                                                                },
+                                                                onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); menuState.show { YouTubeSongMenu(song = song, onDismiss = menuState::dismiss) } }
+                                                            )
                                                     )
                                                 }
                                             }
@@ -885,7 +898,7 @@ fun HomeScreen(
             }
         }
         
-        // SimpMusic Top Bar Overlaid with Haze
+        // Top Bar Overlaid with Haze
         SimpTopBar(
             hazeState = hazeState,
             accountName = accountName,
