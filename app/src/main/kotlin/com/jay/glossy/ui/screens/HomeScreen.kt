@@ -106,10 +106,7 @@ import coil3.compose.AsyncImage
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
-import com.kmpalette.rememberDominantColorState
-import com.kmpalette.loader.rememberNetworkLoader
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.cio.CIO
+import com.materialkolor.palette.rememberNetworkDominantColorState
 import io.ktor.http.Url
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.AlbumItem
@@ -775,13 +772,11 @@ fun HomeScreen(
     var topHeaderColor by remember { mutableStateOf(backgroundColor) }
     val animatedColor by animateColorAsState(targetValue = topHeaderColor, animationSpec = tween(500), label = "GradientColor")
 
-    val dominantImageUrl = spotlightItems.firstOrNull()?.thumbnail?.resize(1080, 1080) 
+    val dominantImageUrl = spotlightItems.firstOrNull()?.thumbnail?.resize(1080, 1080)
 
-    val networkLoader = rememberNetworkLoader(HttpClient(CIO))
-    val dominantColorState = rememberDominantColorState(
+    val dominantColorState = rememberNetworkDominantColorState(
         defaultColor = backgroundColor,
-        defaultOnColor = backgroundColor,
-        loader = networkLoader
+        defaultOnColor = backgroundColor
     )
 
     LaunchedEffect(dominantImageUrl) {
