@@ -50,9 +50,6 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -189,39 +186,586 @@ import kotlinx.coroutines.withContext
 import kotlin.math.min
 import kotlin.random.Random
 
-// NEW IMPORTS FOR GREETING
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.jay.glossy.ui.component.GreetingSection
+
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.haze
+import dev.chrisbanes.haze.hazeChild
+import dev.chrisbanes.haze.materials.HazeMaterials
+import com.kmpalette.rememberDominantColorState
+import com.kmpalette.loader.rememberNetworkLoader
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.cio.CIO
+import io.ktor.http.Url
+import java.util.Calendar
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.ui.graphics.lerp
 
 sealed class HomeSection(
     val id: String,
     val baseWeight: Int,
 ) {
     data object SpeedDial : HomeSection("speed_dial", 100)
-
     data object QuickPicks : HomeSection("quick_picks", 90)
-    
-    data object Charts : HomeSection("charts", 85) // Added Charts Section
-
+    data object Charts : HomeSection("charts", 85)
     data object DailyDiscover : HomeSection("daily_discover", 80)
-
     data object KeepListening : HomeSection("keep_listening", 50)
-
     data object AccountPlaylists : HomeSection("account_playlists", 40)
-
     data object ForgottenFavorites : HomeSection("forgotten_favorites", 30)
-
     data object FromTheCommunity : HomeSection("from_the_community", 20)
-
-    data class SimilarRecommendation(
-        val index: Int,
-    ) : HomeSection("similar_recommendation_$index", 10)
-
-    data class HomePageSection(
-        val index: Int,
-    ) : HomeSection("home_page_section_$index", 10)
-
+    data class SimilarRecommendation(val index: Int) : HomeSection("similar_recommendation_$index", 10)
+    data class HomePageSection(val index: Int) : HomeSection("home_page_section_$index", 10)
     data object MoodAndGenres : HomeSection("mood_and_genres", 5)
+}
+
+@Composable
+fun CommunityPlaylistCard(
+    item: CommunityPlaylistItem,
+    onClick: () -> Unit,
+    onSongClick: (SongItem) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val database = LocalDatabase.current
+    val playerConnection = LocalPlayerConnection.current
+    val listenTogetherManager = LocalListenTogetherManager.current
+    val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
+    val scope = rememberCoroutineScope()
+    val isDark = isSystemInDarkTheme()
+
+    val containerColor =
+        if (isDark) {
+            MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        }
+
+    val dbPlaylist by database.playlistByBrowseId(item.playlist.id).collectAsStateWithLifecycle(initialValue = null)
+    val isBookmarked = dbPlaylist?.playlist?.bookmarkedAt != null
+
+    Card(
+        modifier =
+            modifier
+                .width(320.dp)
+                .height(420.dp),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = containerColor,
+            ),
+        shape = RoundedCornerShape(28.dp),
+        onClick = onClick,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Box(
+                    modifier =
+                        Modifier
+                            .size(100.dp)
+                            .clip(RoundedCornerShape(12.dp)),
+                ) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        Row(modifier = Modifier.weight(1f)) {
+                            AsyncImage(
+                                model =
+                                    item.songs
+                                        .getOrNull(0)
+                                        ?.thumbnail
+                                        ?.resize(200, 200),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier =
+                                    Modifier
+                                        .weight(1f)
+                                        .fillMaxSize(),
+                            )
+                            AsyncImage(
+                                model =
+                                    item.songs
+                                        .getOrNull(1)
+                                        ?.thumbnail
+                                        ?.resize(200, 200),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier =
+                                    Modifier
+                                        .weight(1f)
+                                        .fillMaxSize(),
+                            )
+                        }
+                        Row(modifier = Modifier.weight(1f)) {
+                            AsyncImage(
+                                model =
+                                    item.songs
+                                        .getOrNull(2)
+                                        ?.thumbnail
+                                        ?.resize(200, 200),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier =
+                                    Modifier
+                                        .weight(1f)
+                                        .fillMaxSize(),
+                            )
+                            AsyncImage(
+                                model =
+                                    item.songs
+                                        .getOrNull(3)
+                                        ?.thumbnail
+                                        ?.resize(200, 200),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier =
+                                    Modifier
+                                        .weight(1f)
+                                        .fillMaxSize(),
+                            )
+                        }
+                    }
+                }
+
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Text(
+                        text = item.playlist.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = item.playlist.author?.name ?: "",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                        maxLines = 1,
+                    )
+                }
+            }
+
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .padding(horizontal = 16.dp),
+            ) {
+                item.songs.take(3).forEach { song ->
+                    Row(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .combinedClickable(onClick = { onSongClick(song) }),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        AsyncImage(
+                            model = song.thumbnail.resize(200, 200),
+                            contentDescription = null,
+                            modifier =
+                                Modifier
+                                    .size(56.dp)
+                                    .clip(RoundedCornerShape(12.dp)),
+                            contentScale = ContentScale.Crop,
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = song.title,
+                                style = MaterialTheme.typography.bodyMedium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(
+                                text = song.artists.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                }
+            }
+
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+            ) {
+                IconButton(
+                    onClick = {
+                        if (!isListenTogetherGuest) {
+                            item.playlist.playEndpoint?.let {
+                                playerConnection?.playQueue(YouTubeQueue(it))
+                            }
+                        }
+                    },
+                    modifier =
+                        Modifier
+                            .size(48.dp)
+                            .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_widget_play),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+
+                IconButton(
+                    onClick = {
+                        if (!isListenTogetherGuest) {
+                            item.playlist.radioEndpoint?.let {
+                                playerConnection?.playQueue(YouTubeQueue(it))
+                            }
+                        }
+                    },
+                    modifier =
+                        Modifier
+                            .size(48.dp)
+                            .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f), CircleShape),
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.radio),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+
+                IconButton(
+                    onClick = {
+                        scope.launch(Dispatchers.IO) {
+                            if (dbPlaylist?.playlist == null) {
+                                val playlistEntity =
+                                    PlaylistEntity(
+                                        name = item.playlist.title,
+                                        browseId = item.playlist.id,
+                                        thumbnailUrl = item.playlist.thumbnail,
+                                        remoteSongCount =
+                                            item.playlist.songCountText
+                                                ?.split(" ")
+                                                ?.firstOrNull()
+                                                ?.toIntOrNull(),
+                                        playEndpointParams = item.playlist.playEndpoint?.params,
+                                        shuffleEndpointParams = item.playlist.shuffleEndpoint?.params,
+                                        radioEndpointParams = item.playlist.radioEndpoint?.params,
+                                    ).toggleLike()
+                                val songMetadata =
+                                    item.songs
+                                        .ifEmpty {
+                                            YouTube
+                                                .playlist(item.playlist.id)
+                                                .completed()
+                                                .getOrNull()
+                                                ?.songs
+                                                .orEmpty()
+                                        }.map { it.toMediaMetadata() }
+                                if (songMetadata.isNotEmpty()) {
+                                    database.withTransaction {
+                                        insert(playlistEntity)
+                                        songMetadata.onEach { insert(it) }
+                                        val songIds = songMetadata.map { it.id to it.setVideoId }
+                                        val createdPlaylist = database.playlistBlocking(playlistEntity.id)
+                                        if (createdPlaylist != null) {
+                                            addSongsToPlaylist(createdPlaylist, songIds)
+                                        }
+                                    }
+                                }
+                            } else {
+                                database.transaction {
+                                    val currentPlaylist = dbPlaylist!!.playlist
+                                    update(currentPlaylist.toggleLike())
+                                }
+                            }
+                        }
+                    },
+                    modifier =
+                        Modifier
+                            .size(48.dp)
+                            .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f), CircleShape),
+                ) {
+                    Icon(
+                        painter = painterResource(if (isBookmarked) R.drawable.library_add_check else R.drawable.library_add),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@Composable
+fun DailyDiscoverCard(
+    dailyDiscover: com.jay.glossy.viewmodels.DailyDiscoverItem,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val navController = LocalNavController.current
+    val database = LocalDatabase.current
+    val playCount by database.getLifetimePlayCount(dailyDiscover.recommendation.id).collectAsStateWithLifecycle(initialValue = 0)
+    val menuState = LocalMenuState.current
+    val haptic = LocalHapticFeedback.current
+
+    val song = dailyDiscover.recommendation as? SongItem
+    val playsString = stringResource(R.string.plays)
+
+    Card(
+        modifier =
+            modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(28.dp))
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        if (song != null) {
+                            menuState.show {
+                                YouTubeSongMenu(
+                                    song = song,
+                                    onDismiss = { menuState.dismiss() },
+                                )
+                            }
+                        }
+                    },
+                ),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            ),
+        shape = RoundedCornerShape(28.dp),
+    ) {
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            AsyncImage(
+                model =
+                    ImageRequest
+                        .Builder(LocalContext.current)
+                        .data(dailyDiscover.recommendation.thumbnail?.resize(1080, 1080))
+                        .crossfade(true)
+                        .build(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier =
+                    Modifier
+                        .fillMaxSize(),
+            )
+
+            if (maxWidth > 200.dp) {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .background(
+                                brush =
+                                    Brush.verticalGradient(
+                                        colors =
+                                            listOf(
+                                                Color.Black.copy(alpha = 0.3f),
+                                                Color.Transparent,
+                                                Color.Black.copy(alpha = 0.6f),
+                                                Color.Black.copy(alpha = 0.9f),
+                                            ),
+                                    ),
+                            ),
+                )
+
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(24.dp),
+                    verticalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column {
+                        Text(
+                            text = dailyDiscover.recommendation.title,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.White,
+                        )
+                        Text(
+                            text =
+                                buildString {
+                                    append((dailyDiscover.recommendation as? SongItem)?.artists?.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name } ?: "")
+                                    if (playCount > 0) {
+                                        append(" | $playCount $playsString")
+                                    }
+                                },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.7f),
+                        )
+                    }
+
+                    val messages =
+                        listOf(
+                            R.string.daily_discover_sounds_like,
+                            R.string.daily_discover_because_you_listen_to,
+                            R.string.daily_discover_similar_to,
+                            R.string.daily_discover_based_on,
+                            R.string.daily_discover_for_fans_of,
+                        )
+                    val messageRes =
+                        remember(dailyDiscover.seed.id) {
+                            messages[kotlin.math.abs(dailyDiscover.seed.id.hashCode()) % messages.size]
+                        }
+
+                    Text(
+                        text =
+                            stringResource(
+                                messageRes,
+                                "${dailyDiscover.seed.title} • ${dailyDiscover.seed.artists.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name }}",
+                            ),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
+                        color = Color.White.copy(alpha = 0.6f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun <T> SimpTopBar(
+    hazeState: HazeState,
+    accountName: String?,
+    accountImageUrl: String?,
+    chips: List<Pair<T, String>>,
+    selectedChip: T?,
+    onChipToggle: (T) -> Unit
+) {
+    val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+    val greeting = when (currentHour) {
+        in 0..11 -> "Good Morning"
+        in 12..16 -> "Good Afternoon"
+        else -> "Good Evening"
+    }
+
+    val guestNamePref by rememberPreference(stringPreferencesKey("guest_name"), "")
+    val finalName = when {
+        !accountName.isNullOrBlank() && !accountName.equals("Guest", ignoreCase = true) -> accountName
+        guestNamePref.isNotBlank() -> guestNamePref
+        else -> "Jay Chaudhary"
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .hazeChild(
+                state = hazeState,
+                style = HazeMaterials.thin(MaterialTheme.colorScheme.surface)
+            )
+            .padding(top = WindowInsets.systemBars.asPaddingValues().calculateTopPadding())
+    ) {
+        // Top Header Row
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "Glossy",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = greeting,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Icon(
+                    imageVector = Icons.Outlined.Notifications,
+                    contentDescription = "Notifications",
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(26.dp)
+                )
+                Icon(
+                    imageVector = Icons.Outlined.History,
+                    contentDescription = "History",
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(26.dp)
+                )
+                Icon(
+                    imageVector = Icons.Outlined.Settings,
+                    contentDescription = "Settings",
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(26.dp)
+                )
+            }
+        }
+
+        // Chips Row
+        if (chips.isNotEmpty()) {
+            ChipsRow(
+                chips = chips,
+                currentValue = selectedChip,
+                onValueUpdate = onChipToggle,
+            )
+        }
+
+        // Welcome Back Row
+        if (selectedChip == null) {
+            Column(modifier = Modifier.padding(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 12.dp)) {
+                Text(
+                    text = "Welcome back,",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(accountImageUrl)
+                            .crossfade(true)
+                            .build(),
+                        placeholder = painterResource(id = R.drawable.person),
+                        error = painterResource(id = R.drawable.person),
+                        contentDescription = "Profile Pic",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = finalName,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -258,6 +802,9 @@ fun HomeScreen(
     val pinnedSpeedDialItems by viewModel.pinnedSpeedDialItems.collectAsStateWithLifecycle()
     val selectedChip by viewModel.selectedChip.collectAsStateWithLifecycle()
 
+    val savedPodcastShows by viewModel.savedPodcastShows.collectAsStateWithLifecycle()
+    val episodesForLater by viewModel.episodesForLater.collectAsStateWithLifecycle()
+
     val isLoading: Boolean by viewModel.isLoading.collectAsStateWithLifecycle()
     val isMoodAndGenresLoading = isLoading && explorePage?.moodAndGenres == null
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
@@ -266,6 +813,8 @@ fun HomeScreen(
 
     val quickPicksLazyGridState = rememberLazyGridState()
     val forgottenFavoritesLazyGridState = rememberLazyGridState()
+    
+    val hazeState = remember { HazeState() }
 
     val accountName by viewModel.accountName.collectAsStateWithLifecycle()
     val accountImageUrl by viewModel.accountImageUrl.collectAsStateWithLifecycle()
@@ -288,6 +837,43 @@ fun HomeScreen(
             "SAPISID" in parseCookieString(innerTubeCookie)
         }
     val url = if (isLoggedIn) accountImageUrl else null
+
+    var cachedPodcasts by remember { mutableStateOf<List<PodcastItem>>(emptyList()) }
+
+    val featuredPodcasts =
+        remember(homePage, selectedChip) {
+            if (selectedChip == null) {
+                cachedPodcasts = emptyList()
+                emptyList()
+            } else {
+                val newPodcasts =
+                    homePage
+                        ?.sections
+                        ?.flatMap { it.items }
+                        ?.filterIsInstance<EpisodeItem>()
+                        ?.mapNotNull { episode ->
+                            episode.podcast?.let { podcast ->
+                                PodcastItem(
+                                    id = podcast.id,
+                                    title = podcast.name,
+                                    author = episode.author,
+                                    episodeCountText = null,
+                                    thumbnail = episode.thumbnail,
+                                    playEndpoint = null,
+                                    shuffleEndpoint = null,
+                                )
+                            }
+                        }?.distinctBy { it.id }
+                        ?.shuffled()
+                        ?.take(10)
+                        ?: emptyList()
+
+                if (newPodcasts.isNotEmpty()) {
+                    cachedPodcasts = newPodcasts
+                }
+                cachedPodcasts
+            }
+        }
 
     val scope = rememberCoroutineScope()
     var randomizeJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
@@ -314,6 +900,35 @@ fun HomeScreen(
             ?.shuffled(Random(randomSeed))
             ?.take(8)
             ?: emptyList()
+    }
+
+    val backgroundColor = MaterialTheme.colorScheme.background
+    val isLightTheme = backgroundColor.luminance() > 0.5f
+
+    var topHeaderColor by remember { mutableStateOf(backgroundColor) }
+    val animatedColor by animateColorAsState(targetValue = topHeaderColor, animationSpec = tween(500), label = "GradientColor")
+
+    val dominantImageUrl = spotlightItems.firstOrNull()?.thumbnail?.resize(1080, 1080) 
+
+    val networkLoader = rememberNetworkLoader(HttpClient(CIO))
+    val dominantColorState = rememberDominantColorState(
+        defaultColor = backgroundColor,
+        defaultOnColor = backgroundColor,
+        loader = networkLoader
+    )
+
+    LaunchedEffect(dominantImageUrl) {
+        dominantImageUrl?.let {
+            dominantColorState.updateFrom(Url(it))
+        }
+    }
+
+    LaunchedEffect(dominantColorState.color, isLightTheme) {
+        topHeaderColor = if (isLightTheme) {
+            lerp(dominantColorState.color, Color.White, 0.85f)
+        } else {
+            dominantColorState.color.copy(alpha = 0.3f)
+        }
     }
 
     LaunchedEffect(isRefreshing) {
@@ -616,7 +1231,6 @@ fun HomeScreen(
             if (randomizeHomeOrder) {
                 list.sortedByDescending { section ->
                     val sectionRandom = Random(randomSeed + section.id.hashCode())
-
                     val base =
                         when (section) {
                             HomeSection.SpeedDial,
@@ -624,16 +1238,13 @@ fun HomeScreen(
                             HomeSection.DailyDiscover,
                             HomeSection.Charts,
                             -> 500
-
                             HomeSection.KeepListening,
                             HomeSection.AccountPlaylists,
                             HomeSection.ForgottenFavorites,
                             HomeSection.FromTheCommunity,
                             -> 300
-
                             else -> 100 
                         }
-
                     val modifier =
                         when (section) {
                             HomeSection.SpeedDial,
@@ -641,13 +1252,11 @@ fun HomeScreen(
                             HomeSection.DailyDiscover,
                             HomeSection.Charts,
                             -> sectionRandom.nextInt(-200, 400)
-
                             HomeSection.KeepListening,
                             HomeSection.AccountPlaylists,
                             HomeSection.ForgottenFavorites,
                             HomeSection.FromTheCommunity,
                             -> sectionRandom.nextInt(-100, 400)
-
                             else -> sectionRandom.nextInt(-50, 50)
                         }
                     base + modifier
@@ -766,7 +1375,7 @@ fun HomeScreen(
                                         .only(WindowInsetsSides.Horizontal)
                                         .asPaddingValues(),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
                             ) {
                                 items(5) {
                                     TextPlaceholder(
@@ -774,6 +1383,155 @@ fun HomeScreen(
                                         shape = RoundedCornerShape(16.dp),
                                         modifier = Modifier.width(72.dp),
                                     )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (selectedChip?.title?.contains("Podcast", ignoreCase = true) == true) {
+                    if (savedPodcastShows.isNotEmpty()) {
+                        item(key = "00_your_shows_title") {
+                            NavigationTitle(
+                                title = stringResource(R.string.your_shows),
+                                onClick = {
+                                    navController.navigate("youtube_browse/FEmusic_library_non_music_audio_list")
+                                },
+                            )
+                        }
+
+                        item(key = "00_your_shows_list") {
+                            LazyRow(
+                                contentPadding =
+                                    WindowInsets.systemBars
+                                        .only(WindowInsetsSides.Horizontal)
+                                        .asPaddingValues(),
+                            ) {
+                                items(savedPodcastShows.distinctBy { it.id }, key = { "home_saved_podcast_${it.id}" }) { podcast ->
+                                    ytGridItem(podcast)
+                                }
+                            }
+                        }
+                    }
+
+                    if (episodesForLater.isNotEmpty()) {
+                        item(key = "00_episodes_for_later_title") {
+                            NavigationTitle(
+                                title = stringResource(R.string.episodes_for_later),
+                                onClick = {
+                                    navController.navigate("online_playlist/SE")
+                                },
+                            )
+                        }
+
+                        item(key = "00_episodes_for_later_list") {
+                            LazyRow(
+                                contentPadding =
+                                    WindowInsets.systemBars
+                                        .only(WindowInsetsSides.Horizontal)
+                                        .asPaddingValues(),
+                            ) {
+                                items(episodesForLater.distinctBy { it.id }, key = { "home_episode_later_${it.id}" }) { episode ->
+                                    ytGridItem(episode)
+                                }
+                            }
+                        }
+                    }
+
+                    if (featuredPodcasts.isNotEmpty() && savedPodcastShows.isEmpty()) {
+                        item(key = "0_podcast_channels_title") {
+                            NavigationTitle(
+                                title = stringResource(R.string.podcast_channels),
+                            )
+                        }
+
+                        item(key = "0_podcast_channels_list") {
+                            LazyRow(
+                                contentPadding =
+                                    WindowInsets.systemBars
+                                        .only(WindowInsetsSides.Horizontal)
+                                        .asPaddingValues(),
+                            ) {
+                                items(featuredPodcasts.distinctBy { it.id }, key = { "home_featured_podcast_${it.id}" }) { podcast ->
+                                    ytGridItem(podcast)
+                                }
+                            }
+                        }
+                    }
+
+                    if (homeSections.filterIsInstance<HomeSection.HomePageSection>().isNotEmpty()) {
+                        item(key = "0_latest_episodes_title") {
+                            NavigationTitle(
+                                title = stringResource(R.string.latest_episodes),
+                            )
+                        }
+                    }
+
+                    homeSections.filterIsInstance<HomeSection.HomePageSection>().forEach { section ->
+                        val sectionData = homePage?.sections?.getOrNull(section.index)
+                        val skipTitles = listOf("your shows", "episodes for later", "podcast channels", "new episodes")
+                        if (sectionData?.title?.lowercase()?.let { title -> skipTitles.any { title.contains(it) } } == true) {
+                            return@forEach
+                        }
+                        sectionData?.let {
+                            item(key = "1_chip_section_title_${section.index}") {
+                                NavigationTitle(
+                                    title = sectionData.title,
+                                    label = sectionData.label,
+                                    thumbnail =
+                                        sectionData.thumbnail?.let { thumbnailUrl ->
+                                            {
+                                                val shape =
+                                                    if (sectionData.endpoint?.isArtistEndpoint == true) {
+                                                        CircleShape
+                                                    } else {
+                                                        RoundedCornerShape(
+                                                            ThumbnailCornerRadius,
+                                                        )
+                                                    }
+                                                AsyncImage(
+                                                    model = thumbnailUrl,
+                                                    contentDescription = null,
+                                                    modifier =
+                                                        Modifier
+                                                            .size(ListThumbnailSize)
+                                                            .clip(shape),
+                                                )
+                                            }
+                                        },
+                                    onClick =
+                                        sectionData.endpoint?.let { endpoint ->
+                                            {
+                                                when {
+                                                    endpoint.browseId == "FEmusic_moods_and_genres" -> {
+                                                        navController.navigate("mood_and_genres")
+                                                    }
+
+                                                    endpoint.params != null -> {
+                                                        navController.navigate(
+                                                            "youtube_browse/${endpoint.browseId}?params=${endpoint.params}",
+                                                        )
+                                                    }
+
+                                                    else -> {
+                                                        navController.navigate("browse/${endpoint.browseId}")
+                                                    }
+                                                }
+                                            }
+                                        },
+                                )
+                            }
+
+                            item(key = "1_chip_section_list_${section.index}") {
+                                LazyRow(
+                                    contentPadding =
+                                        WindowInsets.systemBars
+                                            .only(WindowInsetsSides.Horizontal)
+                                            .asPaddingValues(),
+                                ) {
+                                    items(sectionData.items.distinctBy { it.id }, key = { "home_chip_section_${it.id}" }) { item ->
+                                        ytGridItem(item)
+                                    }
                                 }
                             }
                         }
@@ -1322,7 +2080,7 @@ fun HomeScreen(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 8.dp), 
+                                        .padding(start = 16.dp, top = 24.dp, end = 16.dp, bottom = 8.dp), 
                                     horizontalArrangement = Arrangement.SpaceBetween, 
                                     verticalAlignment = Alignment.Bottom
                                 ) {
@@ -1377,10 +2135,10 @@ fun HomeScreen(
                                                 contentPadding = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal).asPaddingValues(),
                                                 modifier = Modifier.fillMaxWidth().height(ListItemHeight * rowsCount),
                                             ) {
-                                                itemsIndexed(
+                                                items(
                                                     items = quickPicksList.distinctBy { it.id },
-                                                    key = { _, originalSong -> "home_quickpick_${originalSong.id}" },
-                                                ) { _, originalSong ->
+                                                    key = { "home_quickpick_${it.id}" },
+                                                ) { originalSong ->
                                                     val song by database.song(originalSong.id).collectAsStateWithLifecycle(initialValue = originalSong)
 
                                                     SongListItem(
@@ -2006,10 +2764,10 @@ fun HomeScreen(
                                                     contentPadding = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal).asPaddingValues(),
                                                     modifier = Modifier.fillMaxWidth().height(ListItemHeight * rowsCount),
                                                 ) {
-                                                    itemsIndexed(
+                                                    items(
                                                         items = sectionSongs.distinctBy { it.id },
-                                                        key = { _, song -> "home_section_${section.index}_song_${song.id}" },
-                                                    ) { _, song ->
+                                                        key = { "home_section_${section.index}_song_${it.id}" },
+                                                    ) { song ->
                                                         YouTubeListItem(
                                                             item = song,
                                                             isActive = song.id == mediaMetadata?.id,
