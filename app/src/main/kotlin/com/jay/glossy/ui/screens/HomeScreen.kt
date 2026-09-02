@@ -9,8 +9,6 @@ import com.jay.glossy.R
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -68,6 +66,7 @@ import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults.LoadingIndicator
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -82,7 +81,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -178,9 +176,7 @@ import com.jay.glossy.ui.menu.YouTubePlaylistMenu
 import com.jay.glossy.ui.menu.YouTubeSongMenu
 import com.jay.glossy.ui.utils.SnapLayoutInfoProvider
 import com.jay.glossy.ui.utils.resize
-import com.jay.glossy.utils.joinByBullet
 import com.jay.glossy.utils.joinToArtistString
-import com.jay.glossy.utils.makeTimeString
 import com.jay.glossy.utils.rememberEnumPreference
 import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.viewmodels.CommunityPlaylistItem
@@ -654,7 +650,6 @@ fun DailyDiscoverCard(
         }
     }
 }
-
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -1980,14 +1975,15 @@ fun HomeScreen(
                                 item(key = "quick_picks_list") {
                                     when (quickPicksStylePref) {
                                         QuickPicksStyle.GRID, QuickPicksStyle.LIST -> {
+                                            val rowsCount = if (quickPicksStylePref == QuickPicksStyle.GRID) 4 else 1
                                             LazyHorizontalGrid(
                                                 state = quickPicksLazyGridState,
-                                                rows = GridCells.Fixed(4),
+                                                rows = GridCells.Fixed(rowsCount),
                                                 flingBehavior = rememberSnapFlingBehavior(quickPicksSnapLayoutInfoProvider),
                                                 contentPadding = PaddingValues(horizontal = 16.dp),
                                                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                                                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                                                modifier = Modifier.fillMaxWidth().height(ListItemHeight * 4 + 24.dp),
+                                                modifier = Modifier.fillMaxWidth().height(ListItemHeight * rowsCount + 24.dp),
                                             ) {
                                                 items(
                                                     items = quickPicksList.distinctBy { it.id },
