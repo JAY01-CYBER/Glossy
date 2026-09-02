@@ -9,6 +9,8 @@ import com.jay.glossy.R
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -81,6 +83,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -102,6 +106,7 @@ import coil3.compose.AsyncImage
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import com.kmpalette.rememberDominantColorState
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.AlbumItem
 import com.metrolist.innertube.models.ArtistItem
@@ -184,7 +189,6 @@ import kotlinx.coroutines.withContext
 import kotlin.math.min
 import kotlin.random.Random
 
-// NEW IMPORTS FOR GREETING
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.jay.glossy.ui.component.GreetingSection
 
@@ -193,27 +197,14 @@ sealed class HomeSection(
     val baseWeight: Int,
 ) {
     data object SpeedDial : HomeSection("speed_dial", 100)
-
     data object QuickPicks : HomeSection("quick_picks", 90)
-
     data object DailyDiscover : HomeSection("daily_discover", 80)
-
     data object KeepListening : HomeSection("keep_listening", 50)
-
     data object AccountPlaylists : HomeSection("account_playlists", 40)
-
     data object ForgottenFavorites : HomeSection("forgotten_favorites", 30)
-
     data object FromTheCommunity : HomeSection("from_the_community", 20)
-
-    data class SimilarRecommendation(
-        val index: Int,
-    ) : HomeSection("similar_recommendation_$index", 10)
-
-    data class HomePageSection(
-        val index: Int,
-    ) : HomeSection("home_page_section_$index", 10)
-
+    data class SimilarRecommendation(val index: Int) : HomeSection("similar_recommendation_$index", 10)
+    data class HomePageSection(val index: Int) : HomeSection("home_page_section_$index", 10)
     data object MoodAndGenres : HomeSection("mood_and_genres", 5)
 }
 
@@ -675,7 +666,6 @@ fun HomeScreen(
     val pinnedSpeedDialItems by viewModel.pinnedSpeedDialItems.collectAsStateWithLifecycle()
     val selectedChip by viewModel.selectedChip.collectAsStateWithLifecycle()
 
-    // Official podcast API data
     val savedPodcastShows by viewModel.savedPodcastShows.collectAsStateWithLifecycle()
     val episodesForLater by viewModel.episodesForLater.collectAsStateWithLifecycle()
 
@@ -710,8 +700,6 @@ fun HomeScreen(
         }
     val url = if (isLoggedIn) accountImageUrl else null
 
-    // Extract unique podcasts from episodes for "Podcast Channels" row
-    // Cache the podcasts to prevent them from disappearing during refresh
     var cachedPodcasts by remember { mutableStateOf<List<PodcastItem>>(emptyList()) }
 
     val featuredPodcasts =
@@ -742,7 +730,6 @@ fun HomeScreen(
                         ?.take(10)
                         ?: emptyList()
 
-                // Only update cache if we got valid data; keep old data during refresh
                 if (newPodcasts.isNotEmpty()) {
                     cachedPodcasts = newPodcasts
                 }
@@ -751,7 +738,6 @@ fun HomeScreen(
         }
 
     val scope = rememberCoroutineScope()
-    // Track randomization job
     var randomizeJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
 
     val lazylistState = rememberLazyListState()
@@ -768,7 +754,6 @@ fun HomeScreen(
 
     var randomSeed by rememberSaveable { mutableLongStateOf(System.currentTimeMillis()) }
 
-    // Dhyan rakhein ki variables ko LazyColumn se pehle initialize karein
     val spotlightItems = remember(homePage, randomSeed) {
         homePage?.sections
             ?.flatMap { it.items }
@@ -778,6 +763,36 @@ fun HomeScreen(
             ?.take(8)
             ?: emptyList()
     }
+
+    // --- DYNAMIC GRADIENT LOGIC START ---
+    val backgroundColor = MaterialTheme.colorScheme.background
+    val isLightTheme = backgroundColor.luminance() > 0.5f
+
+    var topHeaderColor by remember { mutableStateOf(backgroundColor) }
+    val animatedColor by animateColorAsState(targetValue = topHeaderColor, animationSpec = tween(500), label = "GradientColor")
+
+    val dominantImageUrl = spotlightItems.firstOrNull()?.thumbnail?.resize(1080, 1080) 
+        ?: mediaMetadata?.artworkUri?.toString()
+
+    val dominantColorState = rememberDominantColorState(
+        defaultColor = backgroundColor,
+        defaultOnColor = backgroundColor,
+    )
+
+    LaunchedEffect(dominantImageUrl) {
+        dominantImageUrl?.let {
+            dominantColorState.updateFrom(it)
+        }
+    }
+
+    LaunchedEffect(dominantColorState.color, isLightTheme) {
+        topHeaderColor = if (isLightTheme) {
+            lerp(dominantColorState.color, Color.White, 0.85f)
+        } else {
+            dominantColorState.color.copy(alpha = 0.3f)
+        }
+    }
+    // --- DYNAMIC GRADIENT LOGIC END ---
 
     LaunchedEffect(isRefreshing) {
         if (isRefreshing) {
@@ -792,7 +807,7 @@ fun HomeScreen(
             scope.launch {
                 snackbarHostState.showSnackbar(foundInSettings)
             }
-            backStackEntry?.savedStateHandle?.set("wrapped_seen", false) // Reset the value
+            backStackEntry?.savedStateHandle?.set("wrapped_seen", false)
         }
     }
 
@@ -818,7 +833,6 @@ fun HomeScreen(
 
     if (selectedChip != null) {
         BackHandler {
-            // if a chip is selected, go back to the normal homepage first
             viewModel.toggleChip(selectedChip)
         }
     }
@@ -1078,13 +1092,8 @@ fun HomeScreen(
 
             if (randomizeHomeOrder) {
                 list.sortedByDescending { section ->
-                    // Use a stable seed for each section based on the session seed + section ID hash
-                    // This ensures the weight for a specific section remains constant during a session (until refresh)
-                    // even if other sections appear/disappear, preventing jumping.
                     val sectionRandom = Random(randomSeed + section.id.hashCode())
 
-                    // Flatten the base values to allow for more overlap and variation
-                    // All "main" sections start closer together
                     val base =
                         when (section) {
                             HomeSection.SpeedDial,
@@ -1092,38 +1101,28 @@ fun HomeScreen(
                             HomeSection.DailyDiscover,
                             -> 500
 
-                            // Top tier starts equal
-
                             HomeSection.KeepListening,
                             HomeSection.AccountPlaylists,
                             HomeSection.ForgottenFavorites,
                             HomeSection.FromTheCommunity,
                             -> 300
 
-                            // Middle tier starts equal
-
-                            else -> 100 // Bottom tier
+                            else -> 100 
                         }
 
                     val modifier =
                         when (section) {
-                            // Top tier: High variance to allow shuffling among themselves
-                            // Range: [500-200, 500+400] = [300, 900]
                             HomeSection.SpeedDial,
                             HomeSection.QuickPicks,
                             HomeSection.DailyDiscover,
                             -> sectionRandom.nextInt(-200, 400)
 
-                            // Middle tier: Can jump up to challenge top tier, or drop lower
-                            // Range: [300-100, 300+400] = [200, 700]
-                            // This allows them to occasionally appear above a "bad roll" top tier item
                             HomeSection.KeepListening,
                             HomeSection.AccountPlaylists,
                             HomeSection.ForgottenFavorites,
                             HomeSection.FromTheCommunity,
                             -> sectionRandom.nextInt(-100, 400)
 
-                            // Bottom tier: Standard variance
                             else -> sectionRandom.nextInt(-50, 50)
                         }
                     base + modifier
@@ -1180,6 +1179,23 @@ fun HomeScreen(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.TopStart,
         ) {
+            
+            // ---> DYNAMIC GRADIENT UI BOX START <---
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(400.dp)
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                animatedColor, 
+                                backgroundColor
+                            )
+                        )
+                    )
+            )
+            // ---> DYNAMIC GRADIENT UI BOX END <---
+            
             val horizontalLazyGridItemWidthFactor = if (maxWidth * 0.475f >= 320.dp) 0.475f else 0.9f
             val horizontalLazyGridItemWidth = maxWidth * horizontalLazyGridItemWidthFactor
             val quickPicksSnapLayoutInfoProvider =
@@ -1255,9 +1271,7 @@ fun HomeScreen(
                     }
                 }
 
-                // Show podcast sections FIRST when podcast chip is selected (fixed at top)
                 if (selectedChip?.title?.contains("Podcast", ignoreCase = true) == true) {
-                    // Show "Your Shows" section from official API
                     if (savedPodcastShows.isNotEmpty()) {
                         item(key = "00_your_shows_title") {
                             NavigationTitle(
@@ -1282,7 +1296,6 @@ fun HomeScreen(
                         }
                     }
 
-                    // Show "Episodes for Later" section from official API
                     if (episodesForLater.isNotEmpty()) {
                         item(key = "00_episodes_for_later_title") {
                             NavigationTitle(
@@ -1307,8 +1320,6 @@ fun HomeScreen(
                         }
                     }
 
-                    // Show Podcast Channels row if we have any (extracted from episodes)
-                    // Only show if "Your Shows" from official API is empty (to avoid duplicates)
                     if (featuredPodcasts.isNotEmpty() && savedPodcastShows.isEmpty()) {
                         item(key = "0_podcast_channels_title") {
                             NavigationTitle(
@@ -1330,7 +1341,6 @@ fun HomeScreen(
                         }
                     }
 
-                    // Add "Latest Episodes" header before episode sections (if we have any sections)
                     if (homeSections.filterIsInstance<HomeSection.HomePageSection>().isNotEmpty()) {
                         item(key = "0_latest_episodes_title") {
                             NavigationTitle(
@@ -1339,12 +1349,8 @@ fun HomeScreen(
                         }
                     }
 
-                    // Render the regular sections from the chip (episodes grouped by category)
-                    // Use key prefix "1_" to ensure episodes sort after channels "0_"
-                    // Skip sections that duplicate official API sections (Your Shows, Episodes for Later)
                     homeSections.filterIsInstance<HomeSection.HomePageSection>().forEach { section ->
                         val sectionData = homePage?.sections?.getOrNull(section.index)
-                        // Skip if this section duplicates an official API section
                         val skipTitles = listOf("your shows", "episodes for later", "podcast channels", "new episodes")
                         if (sectionData?.title?.lowercase()?.let { title -> skipTitles.any { title.contains(it) } } == true) {
                             return@forEach
@@ -1443,7 +1449,7 @@ fun HomeScreen(
                                         Column(
                                             modifier = Modifier.padding(16.dp),
                                             horizontalAlignment = Alignment.CenterHorizontally,
-                                            verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
+                                            verticalAlignment = Alignment.CenterVertically,
                                         ) {
                                             Text(
                                                 text = stringResource(R.string.wrapped_ready_title),
@@ -2404,7 +2410,6 @@ fun HomeScreen(
                                 }
 
                                 item(key = "forgotten_favorites_list") {
-                                    // take min in case list size is less than 4
                                     val rows = min(4, forgottenFavorites.size)
                                     LazyHorizontalGrid(
                                         state = forgottenFavoritesLazyGridState,
@@ -2559,17 +2564,13 @@ fun HomeScreen(
                         }
 
                         is HomeSection.HomePageSection -> {
-                            // Skip HomePageSection rendering when podcast chip is selected
-                            // Podcast sections are handled separately with special UI
                             if (selectedChip?.title?.contains("Podcast", ignoreCase = true) == true) {
                                 return@forEach
                             }
                             val sectionData = homePage?.sections?.getOrNull(section.index)
                             sectionData?.let {
-                                // Check if section contains songs for Play All functionality
                                 val sectionSongs = sectionData.items.filterIsInstance<SongItem>()
                                 val hasPlayableSongs = sectionSongs.isNotEmpty()
-                                // Check if this section contains ONLY songs (like Quick picks, Trending songs)
                                 val isSongsOnlySection =
                                     sectionData.items.isNotEmpty() &&
                                         sectionData.items.all { it is SongItem }
@@ -2607,7 +2608,6 @@ fun HomeScreen(
                                                             navController.navigate("mood_and_genres")
                                                         }
 
-                                                        // Handle podcast-related browse endpoints
                                                         endpoint.browseId.startsWith("FEmusic_library_non_music_audio") ||
                                                             endpoint.browseId.startsWith("FEmusic_non_music_audio") -> {
                                                             navController.navigate("youtube_browse/${endpoint.browseId}")
@@ -2642,7 +2642,6 @@ fun HomeScreen(
                                 }
 
                                 if (isSongsOnlySection) {
-                                    // Render songs as a horizontal scrollable list (like Quick picks in YouTube Music)
                                     item(key = "home_section_list_${section.index}") {
                                         when (quickPicksStylePref) {
                                             QuickPicksStyle.GRID, QuickPicksStyle.LIST -> {
@@ -2824,7 +2823,6 @@ fun HomeScreen(
                                         }
                                     }
                                 } else {
-                                    // Render mixed content as horizontal grid items (albums, playlists, artists, etc.)
                                     item(key = "home_section_list_${section.index}") {
                                         LazyRow(
                                             contentPadding =
@@ -2845,7 +2843,6 @@ fun HomeScreen(
                         }
 
                         HomeSection.MoodAndGenres -> {
-                            // Skip MoodAndGenres when podcast chip is selected
                             if (selectedChip?.title?.contains("Podcast", ignoreCase = true) == true) {
                                 return@forEach
                             }
@@ -2887,7 +2884,6 @@ fun HomeScreen(
                     }
                 }
 
-                // Only show shimmer during initial loading, not for pagination
                 if (isLoading && homePage?.sections.isNullOrEmpty()) {
                     item(key = "loading_shimmer") {
                         ShimmerHost(
