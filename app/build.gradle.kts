@@ -345,6 +345,7 @@ dependencies {
     
     implementation(libs.palette)
     implementation(libs.kmpalette.core)
+    implementation(libs.kmpalette.extensions.network)
     
     implementation(libs.materialKolor)
 
