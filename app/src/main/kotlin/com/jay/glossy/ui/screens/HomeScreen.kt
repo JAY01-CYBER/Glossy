@@ -130,6 +130,7 @@ import com.metrolist.innertube.models.PodcastItem
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.WatchEndpoint
 import com.metrolist.innertube.models.YTItem
+import com.metrolist.innertube.models.HomePage
 import com.metrolist.innertube.utils.completed
 import com.metrolist.innertube.utils.parseCookieString
 import com.jay.glossy.LocalDatabase
@@ -228,9 +229,9 @@ fun SimpTopBar(
     hazeState: HazeState,
     accountName: String?,
     accountImageUrl: String?,
-    chips: List<Pair<PlaylistItem, String>>,
-    selectedChip: PlaylistItem?,
-    onChipToggle: (PlaylistItem) -> Unit
+    chips: List<Pair<HomePage.Chip, String>>,
+    selectedChip: HomePage.Chip?,
+    onChipToggle: (HomePage.Chip) -> Unit
 ) {
     val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
     val greeting = when (currentHour) {
@@ -259,7 +260,7 @@ fun SimpTopBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -310,7 +311,7 @@ fun SimpTopBar(
 
         // Welcome Back Row
         if (selectedChip == null) {
-            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp)) {
                 Text(
                     text = "Welcome back,",
                     style = MaterialTheme.typography.bodyMedium,
@@ -751,7 +752,7 @@ fun HomeScreen(
                             }
 
                             HomeSection.QuickPicks -> {
-                                quickPicks?.takeIf { it.isNotEmpty() }?.let { quickPicks ->
+                                quickPicks?.takeIf { it.isNotEmpty() }?.let { quickPicksList ->
                                     item(key = "quick_picks_title") {
                                         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                                             Text(text = "LET'S START WITH A RADIO", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -765,24 +766,24 @@ fun HomeScreen(
                                             contentPadding = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal).asPaddingValues(),
                                             modifier = Modifier.fillMaxWidth().height(ListItemHeight * 4),
                                         ) {
-                                            itemsIndexed(items = quickPicks.distinctBy { it.id }, key = { _, originalSong -> "home_quickpick_${originalSong.id}" }) { _, originalSong ->
+                                            items(items = quickPicksList.distinctBy { it.id }, key = { "home_quickpick_${it.id}" }) { originalSong ->
                                                 val song by database.song(originalSong.id).collectAsStateWithLifecycle(initialValue = originalSong)
                                                 SongListItem(
-                                                    song = song!!,
-                                                    isActive = song!!.id == mediaMetadata?.id,
+                                                    song = song as Song,
+                                                    isActive = (song as Song).id == mediaMetadata?.id,
                                                     isPlaying = isPlaying,
                                                     isSwipeable = false,
-                                                    trailingContent = { IconButton(onClick = { menuState.show { SongMenu(originalSong = song!!, onDismiss = menuState::dismiss) } }) { Icon(painter = painterResource(R.drawable.more_vert), contentDescription = null) } },
+                                                    trailingContent = { IconButton(onClick = { menuState.show { SongMenu(originalSong = (song as Song), onDismiss = menuState::dismiss) } }) { Icon(painter = painterResource(R.drawable.more_vert), contentDescription = null) } },
                                                     modifier = Modifier
                                                         .width(horizontalLazyGridItemWidth)
                                                         .combinedClickable(
                                                             onClick = {
                                                                 if (!isListenTogetherGuest) {
-                                                                    if (song!!.id == mediaMetadata?.id) playerConnection.togglePlayPause()
-                                                                    else playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue.radio(song!!.toMediaMetadata()) else ListQueue(title = song!!.title, items = listOf(song!!.toMediaItem())))
+                                                                    if ((song as Song).id == mediaMetadata?.id) playerConnection.togglePlayPause()
+                                                                    else playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue.radio((song as Song).toMediaMetadata()) else ListQueue(title = (song as Song).title, items = listOf((song as Song).toMediaItem())))
                                                                 }
                                                             },
-                                                            onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); menuState.show { SongMenu(originalSong = song!!, onDismiss = menuState::dismiss) } }
+                                                            onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); menuState.show { SongMenu(originalSong = (song as Song), onDismiss = menuState::dismiss) } }
                                                         )
                                                 )
                                             }
@@ -796,7 +797,7 @@ fun HomeScreen(
                                     var expanded by remember { mutableStateOf(false) }
                                     val countries = listOf("Global", "India", "United States", "United Kingdom", "Japan", "South Korea")
                                     var selectedCountry by rememberSaveable { mutableStateOf(countries[1]) }
-                                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, top = 24.dp, bottom = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
+                                    Row(modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
                                         Column {
                                             Text(text = "WHAT IS BEST CHOICE TODAY", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                             Text(text = "Chart", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
@@ -853,7 +854,7 @@ fun HomeScreen(
                                                 contentPadding = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal).asPaddingValues(),
                                                 modifier = Modifier.fillMaxWidth().height(ListItemHeight * 4),
                                             ) {
-                                                itemsIndexed(items = sectionSongs.distinctBy { it.id }, key = { _, song -> "home_section_${section.index}_song_${song.id}" }) { _, song ->
+                                                items(items = sectionSongs.distinctBy { it.id }, key = { "home_section_${section.index}_song_${it.id}" }) { song ->
                                                     YouTubeListItem(
                                                         item = song,
                                                         isActive = song.id == mediaMetadata?.id,
@@ -901,7 +902,7 @@ fun HomeScreen(
             accountImageUrl = url,
             chips = homePage?.chips?.map { it to it.title } ?: emptyList(),
             selectedChip = selectedChip,
-            onChipToggle = { it?.let { viewModel.toggleChip(it) } }
+            onChipToggle = { viewModel.toggleChip(it) }
         )
         
         HideOnScrollFAB(
