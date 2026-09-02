@@ -130,7 +130,6 @@ import com.metrolist.innertube.models.PodcastItem
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.WatchEndpoint
 import com.metrolist.innertube.models.YTItem
-import com.metrolist.innertube.models.HomePage
 import com.metrolist.innertube.utils.completed
 import com.metrolist.innertube.utils.parseCookieString
 import com.jay.glossy.LocalDatabase
@@ -177,6 +176,7 @@ import com.jay.glossy.ui.component.SongGridItem
 import com.jay.glossy.ui.component.SpeedDialGridItem
 import com.jay.glossy.ui.component.YouTubeGridItem
 import com.jay.glossy.ui.component.YouTubeListItem
+import com.jay.glossy.ui.component.SongListItem
 import com.jay.glossy.ui.component.shimmer.GridItemPlaceHolder
 import com.jay.glossy.ui.component.shimmer.ShimmerHost
 import com.jay.glossy.ui.component.shimmer.TextPlaceholder
@@ -228,9 +228,9 @@ fun SimpTopBar(
     hazeState: HazeState,
     accountName: String?,
     accountImageUrl: String?,
-    chips: List<Pair<HomePage.Chip, String>>,
-    selectedChip: HomePage.Chip?,
-    onChipToggle: (HomePage.Chip?) -> Unit
+    chips: List<Pair<PlaylistItem, String>>,
+    selectedChip: PlaylistItem?,
+    onChipToggle: (PlaylistItem) -> Unit
 ) {
     val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
     val greeting = when (currentHour) {
@@ -765,14 +765,14 @@ fun HomeScreen(
                                             contentPadding = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal).asPaddingValues(),
                                             modifier = Modifier.fillMaxWidth().height(ListItemHeight * 4),
                                         ) {
-                                            itemsIndexed(items = quickPicks.distinctBy { it.id }, key = { _, originalSong -> "home_quickpick_${originalSong.id}" }) { index, originalSong ->
+                                            itemsIndexed(items = quickPicks.distinctBy { it.id }, key = { _, originalSong -> "home_quickpick_${originalSong.id}" }) { _, originalSong ->
                                                 val song by database.song(originalSong.id).collectAsStateWithLifecycle(initialValue = originalSong)
-                                                YouTubeListItem(
-                                                    item = song!!.song,
+                                                SongListItem(
+                                                    song = song!!,
                                                     isActive = song!!.id == mediaMetadata?.id,
                                                     isPlaying = isPlaying,
                                                     isSwipeable = false,
-                                                    trailingContent = { IconButton(onClick = { menuState.show { YouTubeSongMenu(song = song!!.song, onDismiss = menuState::dismiss) } }) { Icon(painter = painterResource(R.drawable.more_vert), contentDescription = null) } },
+                                                    trailingContent = { IconButton(onClick = { menuState.show { SongMenu(originalSong = song!!, onDismiss = menuState::dismiss) } }) { Icon(painter = painterResource(R.drawable.more_vert), contentDescription = null) } },
                                                     modifier = Modifier
                                                         .width(horizontalLazyGridItemWidth)
                                                         .combinedClickable(
@@ -782,7 +782,7 @@ fun HomeScreen(
                                                                     else playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue.radio(song!!.toMediaMetadata()) else ListQueue(title = song!!.title, items = listOf(song!!.toMediaItem())))
                                                                 }
                                                             },
-                                                            onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); menuState.show { YouTubeSongMenu(song = song!!.song, onDismiss = menuState::dismiss) } }
+                                                            onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); menuState.show { SongMenu(originalSong = song!!, onDismiss = menuState::dismiss) } }
                                                         )
                                                 )
                                             }
@@ -796,11 +796,7 @@ fun HomeScreen(
                                     var expanded by remember { mutableStateOf(false) }
                                     val countries = listOf("Global", "India", "United States", "United Kingdom", "Japan", "South Korea")
                                     var selectedCountry by rememberSaveable { mutableStateOf(countries[1]) }
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 8.dp), 
-                                        horizontalArrangement = Arrangement.SpaceBetween, 
-                                        verticalAlignment = Alignment.Bottom
-                                    ) {
+                                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, top = 24.dp, bottom = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
                                         Column {
                                             Text(text = "WHAT IS BEST CHOICE TODAY", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                             Text(text = "Chart", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
@@ -898,14 +894,14 @@ fun HomeScreen(
             }
         }
         
-        // Top Bar Overlaid with Haze
+        // SimpMusic Top Bar Overlaid with Haze
         SimpTopBar(
             hazeState = hazeState,
             accountName = accountName,
             accountImageUrl = url,
             chips = homePage?.chips?.map { it to it.title } ?: emptyList(),
             selectedChip = selectedChip,
-            onChipToggle = { viewModel.toggleChip(it) }
+            onChipToggle = { it?.let { viewModel.toggleChip(it) } }
         )
         
         HideOnScrollFAB(
