@@ -1,0 +1,4 @@
+HSPLcom/jay/glossy/**
+HSPLandroidx/compose/foundation/**
+HSPLandroidx/compose/ui/**
+HSPLandroidx/compose/material3/**
