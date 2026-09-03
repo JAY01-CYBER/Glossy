@@ -106,6 +106,7 @@ import androidx.media3.exoplayer.offline.Download.STATE_DOWNLOADING
 import androidx.media3.exoplayer.offline.Download.STATE_QUEUED
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import coil3.request.CachePolicy
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.AlbumItem
 import com.metrolist.innertube.models.ArtistItem
@@ -500,7 +501,6 @@ fun GridItem(
 ) {
     val gridHeight = currentGridThumbnailHeight()
     
-    // Removed Card and Background Box to match SimpMusic
     Column(
         modifier = if (fillMaxWidth) {
             modifier
@@ -773,39 +773,46 @@ fun ArtistListItem(
     modifier: Modifier = Modifier,
     badges: @Composable RowScope.() -> Unit = {},
     trailingContent: @Composable RowScope.() -> Unit = {},
-) = ListItem(
-    title = artist.artist.name,
-    subtitle = if (artist.songCount > 0) pluralStringResource(R.plurals.n_song, artist.songCount, artist.songCount) else null,
-    badges = badges,
-    thumbnailContent = {
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(artist.artist.thumbnailUrl?.resize(144, 144))
-                .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
-                .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
-                .networkCachePolicy(coil3.request.CachePolicy.ENABLED)
-                .build(),
-            contentDescription = null,
-            modifier = Modifier
-                .fillMaxSize()
-                .clip(CircleShape),
-        )
-    },
-    trailingContent = {
-        if (artist.artist.bookmarkedAt != null) {
-            Icon(
-                painter = painterResource(R.drawable.favorite),
+) {
+    val context = LocalContext.current
+    ListItem(
+        title = artist.artist.name,
+        subtitle = if (artist.songCount > 0) pluralStringResource(R.plurals.n_song, artist.songCount, artist.songCount) else null,
+        badges = badges,
+        thumbnailContent = {
+            AsyncImage(
+                model = remember(artist.artist.thumbnailUrl) {
+                    ImageRequest.Builder(context)
+                        .data(artist.artist.thumbnailUrl?.resize(144, 144))
+                        .memoryCachePolicy(CachePolicy.ENABLED)
+                        .diskCachePolicy(CachePolicy.ENABLED)
+                        .networkCachePolicy(CachePolicy.ENABLED)
+                        .allowHardware(true)
+                        .crossfade(200)
+                        .build()
+                },
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.error,
                 modifier = Modifier
-                    .size(16.dp)
-                    .padding(end = 4.dp),
+                    .fillMaxSize()
+                    .clip(CircleShape),
             )
-        }
-        trailingContent()
-    },
-    modifier = modifier,
-)
+        },
+        trailingContent = {
+            if (artist.artist.bookmarkedAt != null) {
+                Icon(
+                    painter = painterResource(R.drawable.favorite),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier
+                        .size(16.dp)
+                        .padding(end = 4.dp),
+                )
+            }
+            trailingContent()
+        },
+        modifier = modifier,
+    )
+}
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -818,28 +825,35 @@ fun ArtistGridItem(
         }
     },
     fillMaxWidth: Boolean = false,
-) = GridItem(
-    title = artist.artist.name,
-    subtitle = if (artist.songCount > 0) pluralStringResource(R.plurals.n_song, artist.songCount, artist.songCount) else "",
-    badges = badges,
-    thumbnailContent = {
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(artist.artist.thumbnailUrl?.resize(544, 544))
-                .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
-                .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
-                .networkCachePolicy(coil3.request.CachePolicy.ENABLED)
-                .build(),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .fillMaxSize()
-                .clip(CircleShape)
-        )
-    },
-    fillMaxWidth = fillMaxWidth,
-    modifier = modifier
-)
+) {
+    val context = LocalContext.current
+    GridItem(
+        title = artist.artist.name,
+        subtitle = if (artist.songCount > 0) pluralStringResource(R.plurals.n_song, artist.songCount, artist.songCount) else "",
+        badges = badges,
+        thumbnailContent = {
+            AsyncImage(
+                model = remember(artist.artist.thumbnailUrl) {
+                    ImageRequest.Builder(context)
+                        .data(artist.artist.thumbnailUrl?.resize(544, 544))
+                        .memoryCachePolicy(CachePolicy.ENABLED)
+                        .diskCachePolicy(CachePolicy.ENABLED)
+                        .networkCachePolicy(CachePolicy.ENABLED)
+                        .allowHardware(true)
+                        .crossfade(200)
+                        .build()
+                },
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape)
+            )
+        },
+        fillMaxWidth = fillMaxWidth,
+        modifier = modifier
+    )
+}
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -1094,7 +1108,7 @@ fun PlaylistListItem(
                     modifier = Modifier.size(24.dp)
                 )
             },
-            shape = RoundedCornerShape(8.dp) // Playlists usually use slightly larger radius
+            shape = RoundedCornerShape(8.dp) 
         )
     },
     trailingContent = trailingContent,
@@ -1651,6 +1665,7 @@ fun ItemThumbnail(
     thumbnailRatio: Float = 1f
 ) {
     val cropAlbumArt by rememberPreference(CropAlbumArtKey, false)
+    val context = LocalContext.current
     
     Box(
         contentAlignment = Alignment.Center,
@@ -1661,12 +1676,16 @@ fun ItemThumbnail(
     ) {
         if (albumIndex == null) {
             AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(thumbnailUrl?.resize(544, 544))
-                    .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
-                    .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
-                    .networkCachePolicy(coil3.request.CachePolicy.ENABLED)
-                    .build(),
+                model = remember(thumbnailUrl) {
+                    ImageRequest.Builder(context)
+                        .data(thumbnailUrl?.resize(544, 544))
+                        .memoryCachePolicy(CachePolicy.ENABLED)
+                        .diskCachePolicy(CachePolicy.ENABLED)
+                        .networkCachePolicy(CachePolicy.ENABLED)
+                        .allowHardware(true)
+                        .crossfade(200)
+                        .build()
+                },
                 contentDescription = null,
                 contentScale = if (cropAlbumArt) ContentScale.Crop else ContentScale.Fit,
                 modifier = Modifier
@@ -1741,6 +1760,7 @@ fun LocalThumbnail(
     thumbnailRatio: Float = 1f
 ) {
     val cropAlbumArt by rememberPreference(CropAlbumArtKey, false)
+    val context = LocalContext.current
     
     Box(
         contentAlignment = Alignment.Center,
@@ -1749,12 +1769,16 @@ fun LocalThumbnail(
             .clip(shape)
     ) {
         AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(thumbnailUrl)
-                .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
-                .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
-                .networkCachePolicy(coil3.request.CachePolicy.ENABLED)
-                .build(),
+            model = remember(thumbnailUrl) {
+                ImageRequest.Builder(context)
+                    .data(thumbnailUrl)
+                    .memoryCachePolicy(CachePolicy.ENABLED)
+                    .diskCachePolicy(CachePolicy.ENABLED)
+                    .networkCachePolicy(CachePolicy.ENABLED)
+                    .allowHardware(true)
+                    .crossfade(200)
+                    .build()
+            },
             contentDescription = null,
             contentScale = if (cropAlbumArt) ContentScale.Crop else ContentScale.Fit,
             modifier = Modifier.fillMaxSize()
@@ -1848,6 +1872,7 @@ fun PlaylistThumbnail(
     cacheKey: String? = null
 ) {
     val cropAlbumArt by rememberPreference(CropAlbumArtKey, false)
+    val context = LocalContext.current
     
     when (thumbnails.size) {
         0 -> Box(
@@ -1859,21 +1884,28 @@ fun PlaylistThumbnail(
         ) {
             placeHolder()
         }
-        1 -> AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(thumbnails[0].resize((size.value * 3).toInt()))
-                .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
-                .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
-                .networkCachePolicy(coil3.request.CachePolicy.ENABLED)
-                .build(),
-            contentDescription = null,
-            contentScale = if (cropAlbumArt) ContentScale.Crop else ContentScale.Fit,
-            placeholder = painterResource(R.drawable.queue_music),
-            error = painterResource(R.drawable.queue_music),
-            modifier = Modifier
-                .size(size)
-                .clip(shape)
-        )
+        1 -> {
+            val thumbUrl = thumbnails[0].resize((size.value * 3).toInt())
+            AsyncImage(
+                model = remember(thumbUrl) {
+                    ImageRequest.Builder(context)
+                        .data(thumbUrl)
+                        .memoryCachePolicy(CachePolicy.ENABLED)
+                        .diskCachePolicy(CachePolicy.ENABLED)
+                        .networkCachePolicy(CachePolicy.ENABLED)
+                        .allowHardware(true)
+                        .crossfade(200)
+                        .build()
+                },
+                contentDescription = null,
+                contentScale = if (cropAlbumArt) ContentScale.Crop else ContentScale.Fit,
+                placeholder = painterResource(R.drawable.queue_music),
+                error = painterResource(R.drawable.queue_music),
+                modifier = Modifier
+                    .size(size)
+                    .clip(shape)
+            )
+        }
         else -> Box(
             modifier = Modifier
                 .size(size)
@@ -1885,13 +1917,18 @@ fun PlaylistThumbnail(
                 Alignment.BottomStart,
                 Alignment.BottomEnd
             ).fastForEachIndexed { index, alignment ->
+                val thumbUrl = thumbnails.getOrNull(index)?.resize((size.value * 1.5).toInt())
                 AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(thumbnails.getOrNull(index)?.resize((size.value * 1.5).toInt()))
-                        .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
-                        .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
-                        .networkCachePolicy(coil3.request.CachePolicy.ENABLED)
-                        .build(),
+                    model = remember(thumbUrl) {
+                        ImageRequest.Builder(context)
+                            .data(thumbUrl)
+                            .memoryCachePolicy(CachePolicy.ENABLED)
+                            .diskCachePolicy(CachePolicy.ENABLED)
+                            .networkCachePolicy(CachePolicy.ENABLED)
+                            .allowHardware(true)
+                            .crossfade(200)
+                            .build()
+                    },
                     contentDescription = null,
                     contentScale = if (cropAlbumArt) ContentScale.Crop else ContentScale.Fit,
                     placeholder = painterResource(R.drawable.queue_music),
@@ -2193,4 +2230,13 @@ fun AppleMusicVisualizer(modifier: Modifier = Modifier, color: Color = Color.Whi
         Box(modifier = Modifier.width(4.dp).fillMaxHeight(anim3).clip(RoundedCornerShape(50)).background(color))
         Box(modifier = Modifier.width(4.dp).fillMaxHeight(anim4).clip(RoundedCornerShape(50)).background(color))
     }
+}
+
+fun Modifier.fastShadow(
+    elevation: Dp,
+    shape: androidx.compose.ui.graphics.Shape
+): Modifier = this.graphicsLayer {
+    shadowElevation = elevation.toPx()
+    this.shape = shape
+    clip = true
 }
