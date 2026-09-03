@@ -156,8 +156,8 @@ import com.jay.glossy.ui.component.GreetingSection
 import com.jay.glossy.ui.component.HideOnScrollFAB
 import com.jay.glossy.ui.component.LocalBottomSheetPageState
 import com.jay.glossy.ui.component.LocalMenuState
-import com.jay.glossy.ui.component.MoodAndGenresButton
-import com.jay.glossy.ui.component.MoodAndGenresButtonHeight
+import com.jay.glossy.ui.screen.MoodAndGenresButton
+import com.jay.glossy.ui.screen.MoodAndGenresButtonHeight
 import com.jay.glossy.ui.component.NavigationTitle
 import com.jay.glossy.ui.component.RandomizeGridItem
 import com.jay.glossy.ui.component.SongGridItem
