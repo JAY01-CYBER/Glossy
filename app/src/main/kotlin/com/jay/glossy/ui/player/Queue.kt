@@ -200,6 +200,48 @@ fun Queue(
     val menuState = LocalMenuState.current
     val sleepTimerDefaultSetTemplate = stringResource(R.string.sleep_timer_default_set)
     val bottomSheetPageState = LocalBottomSheetPageState.current
+    var showAudioDeviceBottomSheet by remember { mutableStateOf(false) }
+
+    val isHeadsetConnected by produceState(initialValue = isBluetoothHeadphoneConnected(context) || isWiredHeadphoneConnected(context)) {
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                value = isBluetoothHeadphoneConnected(context) || isWiredHeadphoneConnected(context)
+            }
+        }
+
+        val callback = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            object : android.media.AudioDeviceCallback() {
+                override fun onAudioDevicesAdded(addedDevices: Array<out android.media.AudioDeviceInfo>?) {
+                    value = isBluetoothHeadphoneConnected(context) || isWiredHeadphoneConnected(context)
+                }
+                override fun onAudioDevicesRemoved(removedDevices: Array<out android.media.AudioDeviceInfo>?) {
+                    value = isBluetoothHeadphoneConnected(context) || isWiredHeadphoneConnected(context)
+                }
+            }
+        } else null
+
+        val filter = IntentFilter().apply {
+            addAction(AudioManager.ACTION_HEADSET_PLUG)
+            addAction("android.bluetooth.adapter.action.STATE_CHANGED")
+            addAction("android.bluetooth.device.action.ACL_CONNECTED")
+            addAction("android.bluetooth.device.action.ACL_DISCONNECTED")
+            addAction("android.media.AUDIO_BECOMING_NOISY")
+        }
+        
+        context.registerReceiver(receiver, filter)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && callback != null) {
+            audioManager.registerAudioDeviceCallback(callback, Handler(Looper.getMainLooper()))
+        }
+
+        awaitDispose {
+            context.unregisterReceiver(receiver)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && callback != null) {
+                audioManager.unregisterAudioDeviceCallback(callback)
+            }
+        }
+    }
 
     val (playerStyle) = rememberEnumPreference(
         com.jay.glossy.constants.PlayerStyleKey, 
@@ -328,84 +370,172 @@ fun Queue(
                         )
                     }
                     
-                    // Middle Group (Play/Pause & Next Circles)
-                    Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                        
-                        // Play/Pause Button
-                        val playInteractionSource = remember { MutableInteractionSource() }
-                        val isPlayPressed by playInteractionSource.collectIsPressedAsState()
-                        val playScale by animateFloatAsState(if (isPlayPressed) 0.7f else 1f, spring(0.6f, 500f), label = "playScale")
-                        val effectiveIsPlaying = if (isCasting) castIsPlaying else isPlaying
-                        
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .graphicsLayer(scaleX = playScale, scaleY = playScale)
-                                .clip(CircleShape)
-                                .border(1.dp, circleBorder, CircleShape)
-                                .background(circleBg)
-                                .clickable(
-                                    interactionSource = playInteractionSource,
-                                    indication = LocalIndication.current
+                    // Middle Group (Dynamic depending on Lyrics mode)
+                    AnimatedContent(
+                        targetState = showInlineLyrics,
+                        label = "ViviNewBottomBarControls"
+                    ) { showingLyrics ->
+                        if (showingLyrics) {
+                            // 🎵 LYRICS MODE: Play/Pause and Next 🎵
+                            Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                                // Play/Pause Button
+                                val playInteractionSource = remember { MutableInteractionSource() }
+                                val isPlayPressed by playInteractionSource.collectIsPressedAsState()
+                                val playScale by animateFloatAsState(if (isPlayPressed) 0.7f else 1f, spring(0.6f, 500f), label = "playScale")
+                                val effectiveIsPlaying = if (isCasting) castIsPlaying else isPlaying
+                                
+                                Box(
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .graphicsLayer(scaleX = playScale, scaleY = playScale)
+                                        .clip(CircleShape)
+                                        .border(1.dp, circleBorder, CircleShape)
+                                        .background(circleBg)
+                                        .clickable(
+                                            interactionSource = playInteractionSource,
+                                            indication = LocalIndication.current
+                                        ) {
+                                            if (isListenTogetherGuest) {
+                                                playerConnection.toggleMute()
+                                            } else if (isCasting) {
+                                                if (castIsPlaying) castHandler?.pause() else castHandler?.play()
+                                            } else if (playbackState == Player.STATE_ENDED) {
+                                                playerConnection.player.seekTo(0, 0)
+                                                playerConnection.player.playWhenReady = true
+                                            } else {
+                                                playerConnection.togglePlayPause()
+                                            }
+                                        },
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    if (isListenTogetherGuest) {
-                                        playerConnection.toggleMute()
-                                    } else if (isCasting) {
-                                        if (castIsPlaying) castHandler?.pause() else castHandler?.play()
-                                    } else if (playbackState == Player.STATE_ENDED) {
-                                        playerConnection.player.seekTo(0, 0)
-                                        playerConnection.player.playWhenReady = true
-                                    } else {
-                                        playerConnection.togglePlayPause()
-                                    }
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                painter = painterResource(
-                                    if (isListenTogetherGuest) {
-                                        if (isMuted) R.drawable.volume_off else R.drawable.volume_up
-                                    } else if (playbackState == Player.STATE_ENDED) {
-                                        R.drawable.replay
-                                    } else if (effectiveIsPlaying) {
-                                        R.drawable.pause_applemusic
-                                    } else {
-                                        R.drawable.play_applemusic
-                                    }
-                                ), 
-                                contentDescription = "Play/Pause", 
-                                tint = iconTint, 
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                        
-                        // Next Button
-                        val nextInteractionSource = remember { MutableInteractionSource() }
-                        val isNextPressed by nextInteractionSource.collectIsPressedAsState()
-                        val nextScale by animateFloatAsState(if (isNextPressed) 0.7f else 1f, spring(0.6f, 500f), label = "nextScale")
-                        
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .graphicsLayer(scaleX = nextScale, scaleY = nextScale)
-                                .clip(CircleShape)
-                                .border(1.dp, circleBorder, CircleShape)
-                                .background(circleBg)
-                                .clickable(
-                                    enabled = canSkipNext && !isListenTogetherGuest,
-                                    interactionSource = nextInteractionSource,
-                                    indication = LocalIndication.current
+                                    Icon(
+                                        painter = painterResource(
+                                            if (isListenTogetherGuest) {
+                                                if (isMuted) R.drawable.volume_off else R.drawable.volume_up
+                                            } else if (playbackState == Player.STATE_ENDED) {
+                                                R.drawable.replay
+                                            } else if (effectiveIsPlaying) {
+                                                R.drawable.pause_applemusic
+                                            } else {
+                                                R.drawable.play_applemusic
+                                            }
+                                        ), 
+                                        contentDescription = "Play/Pause", 
+                                        tint = iconTint, 
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                                
+                                // Next Button
+                                val nextInteractionSource = remember { MutableInteractionSource() }
+                                val isNextPressed by nextInteractionSource.collectIsPressedAsState()
+                                val nextScale by animateFloatAsState(if (isNextPressed) 0.7f else 1f, spring(0.6f, 500f), label = "nextScale")
+                                
+                                Box(
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .graphicsLayer(scaleX = nextScale, scaleY = nextScale)
+                                        .clip(CircleShape)
+                                        .border(1.dp, circleBorder, CircleShape)
+                                        .background(circleBg)
+                                        .clickable(
+                                            enabled = canSkipNext && !isListenTogetherGuest,
+                                            interactionSource = nextInteractionSource,
+                                            indication = LocalIndication.current
+                                        ) {
+                                            playerConnection.seekToNext()
+                                        },
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    playerConnection.seekToNext()
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.apple_skip_next), 
-                                contentDescription = "Next", 
-                                tint = iconTint.copy(alpha = if (canSkipNext && !isListenTogetherGuest) 1f else 0.5f), 
-                                modifier = Modifier.size(20.dp)
-                            )
+                                    Icon(
+                                        painter = painterResource(R.drawable.apple_skip_next), 
+                                        contentDescription = "Next", 
+                                        tint = iconTint.copy(alpha = if (canSkipNext && !isListenTogetherGuest) 1f else 0.5f), 
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        } else {
+                            // 🎧 NORMAL MODE: Audio Devices and Sleep Timer 🎧
+                            Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                                // Devices Button
+                                val devicesInteractionSource = remember { MutableInteractionSource() }
+                                val isDevicesPressed by devicesInteractionSource.collectIsPressedAsState()
+                                val devicesScale by animateFloatAsState(if (isDevicesPressed) 0.7f else 1f, spring(0.6f, 500f), label = "devicesScale")
+                                
+                                Box(
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .graphicsLayer(scaleX = devicesScale, scaleY = devicesScale)
+                                        .clip(CircleShape)
+                                        .border(1.dp, circleBorder, CircleShape)
+                                        .background(circleBg)
+                                        .clickable(
+                                            interactionSource = devicesInteractionSource,
+                                            indication = LocalIndication.current
+                                        ) {
+                                            showAudioDeviceBottomSheet = true
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        painter = painterResource(
+                                            if (isHeadsetConnected) R.drawable.headset_applemusic else R.drawable.speaker_apple
+                                        ), 
+                                        contentDescription = "Audio Devices", 
+                                        tint = iconTint, 
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                
+                                // Sleep Timer Button
+                                val sleepInteractionSource = remember { MutableInteractionSource() }
+                                val isSleepPressed by sleepInteractionSource.collectIsPressedAsState()
+                                val sleepScale by animateFloatAsState(if (isSleepPressed) 0.7f else 1f, spring(0.6f, 500f), label = "sleepScale")
+                                
+                                Box(
+                                    modifier = Modifier
+                                        .height(44.dp)
+                                        .widthIn(min = 44.dp)
+                                        .animateContentSize()
+                                        .graphicsLayer(scaleX = sleepScale, scaleY = sleepScale)
+                                        .clip(CircleShape)
+                                        .border(1.dp, if (sleepTimerEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else circleBorder, CircleShape)
+                                        .background(if (sleepTimerEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else circleBg)
+                                        .clickable(
+                                            interactionSource = sleepInteractionSource,
+                                            indication = LocalIndication.current
+                                        ) {
+                                            if (sleepTimerEnabled) playerConnection.service.sleepTimer?.clear()
+                                            else showSleepTimerDialog = true
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center,
+                                        modifier = Modifier.padding(horizontal = if (sleepTimerEnabled) 12.dp else 0.dp)
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.bedtime), 
+                                            contentDescription = "Sleep Timer", 
+                                            tint = if (sleepTimerEnabled) MaterialTheme.colorScheme.primary else iconTint, 
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        if (sleepTimerEnabled) {
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = makeTimeString(sleepTimerTimeLeft),
+                                                style = MaterialTheme.typography.labelMedium,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                fontWeight = FontWeight.Bold,
+                                                maxLines = 1,
+                                                modifier = Modifier.basicMarquee()
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                     
