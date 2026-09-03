@@ -211,6 +211,11 @@ android {
         }
     }
 
+    // Compose Compiler configuration for Strong Skipping Mode
+    composeCompiler {
+        enableStrongSkippingMode = true
+    }
+
     buildFeatures {
         compose = true
         buildConfig = true
