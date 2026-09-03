@@ -787,7 +787,6 @@ fun ArtistListItem(
                         .memoryCachePolicy(CachePolicy.ENABLED)
                         .diskCachePolicy(CachePolicy.ENABLED)
                         .networkCachePolicy(CachePolicy.ENABLED)
-                        .allowHardware(true)
                         .crossfade(200)
                         .build()
                 },
@@ -839,7 +838,6 @@ fun ArtistGridItem(
                         .memoryCachePolicy(CachePolicy.ENABLED)
                         .diskCachePolicy(CachePolicy.ENABLED)
                         .networkCachePolicy(CachePolicy.ENABLED)
-                        .allowHardware(true)
                         .crossfade(200)
                         .build()
                 },
@@ -1108,7 +1106,7 @@ fun PlaylistListItem(
                     modifier = Modifier.size(24.dp)
                 )
             },
-            shape = RoundedCornerShape(8.dp) 
+            shape = RoundedCornerShape(8.dp) // Playlists usually use slightly larger radius
         )
     },
     trailingContent = trailingContent,
@@ -1682,7 +1680,6 @@ fun ItemThumbnail(
                         .memoryCachePolicy(CachePolicy.ENABLED)
                         .diskCachePolicy(CachePolicy.ENABLED)
                         .networkCachePolicy(CachePolicy.ENABLED)
-                        .allowHardware(true)
                         .crossfade(200)
                         .build()
                 },
@@ -1775,7 +1772,6 @@ fun LocalThumbnail(
                     .memoryCachePolicy(CachePolicy.ENABLED)
                     .diskCachePolicy(CachePolicy.ENABLED)
                     .networkCachePolicy(CachePolicy.ENABLED)
-                    .allowHardware(true)
                     .crossfade(200)
                     .build()
             },
@@ -1893,7 +1889,6 @@ fun PlaylistThumbnail(
                         .memoryCachePolicy(CachePolicy.ENABLED)
                         .diskCachePolicy(CachePolicy.ENABLED)
                         .networkCachePolicy(CachePolicy.ENABLED)
-                        .allowHardware(true)
                         .crossfade(200)
                         .build()
                 },
@@ -1925,7 +1920,6 @@ fun PlaylistThumbnail(
                             .memoryCachePolicy(CachePolicy.ENABLED)
                             .diskCachePolicy(CachePolicy.ENABLED)
                             .networkCachePolicy(CachePolicy.ENABLED)
-                            .allowHardware(true)
                             .crossfade(200)
                             .build()
                     },
