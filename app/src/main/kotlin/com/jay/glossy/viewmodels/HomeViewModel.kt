@@ -583,12 +583,12 @@ class HomeViewModel @Inject constructor(
                     .filter { it.album.thumbnailUrl != null }.shuffled().take(5)
                 val artists = database.mostPlayedArtists(fromTimeStamp).first()
                     .filter { it.artist.isYouTubeArtist && it.artist.thumbnailUrl != null }.shuffled().take(5)
+                
                 keepListening.value = (songs + albums + artists).distinctBy {
                     when(it) {
                         is Song -> it.id
                         is Album -> it.id
-                        is Artist -> it.id
-                        is Playlist -> it.id
+                        is com.jay.glossy.db.entities.Artist -> it.id
                         else -> it.toString()
                     }
                 }.shuffled()
