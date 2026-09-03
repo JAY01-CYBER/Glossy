@@ -107,6 +107,7 @@ import androidx.media3.exoplayer.offline.Download.STATE_QUEUED
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.CachePolicy
+import coil3.request.crossfade
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.AlbumItem
 import com.metrolist.innertube.models.ArtistItem
@@ -787,7 +788,7 @@ fun ArtistListItem(
                         .memoryCachePolicy(CachePolicy.ENABLED)
                         .diskCachePolicy(CachePolicy.ENABLED)
                         .networkCachePolicy(CachePolicy.ENABLED)
-                        .crossfade(200)
+                        .crossfade(true)
                         .build()
                 },
                 contentDescription = null,
@@ -838,7 +839,7 @@ fun ArtistGridItem(
                         .memoryCachePolicy(CachePolicy.ENABLED)
                         .diskCachePolicy(CachePolicy.ENABLED)
                         .networkCachePolicy(CachePolicy.ENABLED)
-                        .crossfade(200)
+                        .crossfade(true)
                         .build()
                 },
                 contentDescription = null,
@@ -1680,7 +1681,7 @@ fun ItemThumbnail(
                         .memoryCachePolicy(CachePolicy.ENABLED)
                         .diskCachePolicy(CachePolicy.ENABLED)
                         .networkCachePolicy(CachePolicy.ENABLED)
-                        .crossfade(200)
+                        .crossfade(true)
                         .build()
                 },
                 contentDescription = null,
@@ -1772,7 +1773,7 @@ fun LocalThumbnail(
                     .memoryCachePolicy(CachePolicy.ENABLED)
                     .diskCachePolicy(CachePolicy.ENABLED)
                     .networkCachePolicy(CachePolicy.ENABLED)
-                    .crossfade(200)
+                    .crossfade(true)
                     .build()
             },
             contentDescription = null,
@@ -1889,7 +1890,7 @@ fun PlaylistThumbnail(
                         .memoryCachePolicy(CachePolicy.ENABLED)
                         .diskCachePolicy(CachePolicy.ENABLED)
                         .networkCachePolicy(CachePolicy.ENABLED)
-                        .crossfade(200)
+                        .crossfade(true)
                         .build()
                 },
                 contentDescription = null,
@@ -1920,7 +1921,7 @@ fun PlaylistThumbnail(
                             .memoryCachePolicy(CachePolicy.ENABLED)
                             .diskCachePolicy(CachePolicy.ENABLED)
                             .networkCachePolicy(CachePolicy.ENABLED)
-                            .crossfade(200)
+                            .crossfade(true)
                             .build()
                     },
                     contentDescription = null,
@@ -2226,6 +2227,8 @@ fun AppleMusicVisualizer(modifier: Modifier = Modifier, color: Color = Color.Whi
     }
 }
 
+// 🔥 TIP APPLIED: Fast Hardware Accelerated Shadows
+// इसे Modifier.shadow() की जगह Modifier.fastShadow() की तरह यूज़ करो जहाँ भी भारी शैडो लगानी हो
 fun Modifier.fastShadow(
     elevation: Dp,
     shape: androidx.compose.ui.graphics.Shape
