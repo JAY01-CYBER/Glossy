@@ -236,6 +236,7 @@ fun CommunityPlaylistCard(
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
     val scope = rememberCoroutineScope()
     val isDark = isSystemInDarkTheme()
+    val context = LocalContext.current
 
     val containerColor =
         if (isDark) {
@@ -277,28 +278,40 @@ fun CommunityPlaylistCard(
                 ) {
                     Column(modifier = Modifier.fillMaxSize()) {
                         Row(modifier = Modifier.weight(1f)) {
+                            val thumb0 = item.songs.getOrNull(0)?.thumbnail?.resize(200, 200)
                             AsyncImage(
-                                model = item.songs.getOrNull(0)?.thumbnail?.resize(200, 200),
+                                model = remember(thumb0) {
+                                    ImageRequest.Builder(context).data(thumb0).memoryCachePolicy(CachePolicy.ENABLED).crossfade(200).build()
+                                },
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.weight(1f).fillMaxSize(),
                             )
+                            val thumb1 = item.songs.getOrNull(1)?.thumbnail?.resize(200, 200)
                             AsyncImage(
-                                model = item.songs.getOrNull(1)?.thumbnail?.resize(200, 200),
+                                model = remember(thumb1) {
+                                    ImageRequest.Builder(context).data(thumb1).memoryCachePolicy(CachePolicy.ENABLED).crossfade(200).build()
+                                },
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.weight(1f).fillMaxSize(),
                             )
                         }
                         Row(modifier = Modifier.weight(1f)) {
+                            val thumb2 = item.songs.getOrNull(2)?.thumbnail?.resize(200, 200)
                             AsyncImage(
-                                model = item.songs.getOrNull(2)?.thumbnail?.resize(200, 200),
+                                model = remember(thumb2) {
+                                    ImageRequest.Builder(context).data(thumb2).memoryCachePolicy(CachePolicy.ENABLED).crossfade(200).build()
+                                },
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.weight(1f).fillMaxSize(),
                             )
+                            val thumb3 = item.songs.getOrNull(3)?.thumbnail?.resize(200, 200)
                             AsyncImage(
-                                model = item.songs.getOrNull(3)?.thumbnail?.resize(200, 200),
+                                model = remember(thumb3) {
+                                    ImageRequest.Builder(context).data(thumb3).memoryCachePolicy(CachePolicy.ENABLED).crossfade(200).build()
+                                },
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.weight(1f).fillMaxSize(),
@@ -345,13 +358,13 @@ fun CommunityPlaylistCard(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
+                        val thumbList = song.thumbnail.resize(200, 200)
                         AsyncImage(
-                            model = song.thumbnail.resize(200, 200),
+                            model = remember(thumbList) {
+                                ImageRequest.Builder(context).data(thumbList).memoryCachePolicy(CachePolicy.ENABLED).crossfade(200).build()
+                            },
                             contentDescription = null,
-                            modifier =
-                                Modifier
-                                    .size(56.dp)
-                                    .clip(RoundedCornerShape(12.dp)),
+                            modifier = Modifier.size(56.dp).clip(RoundedCornerShape(12.dp)),
                             contentScale = ContentScale.Crop,
                         )
                         Column(modifier = Modifier.weight(1f)) {
@@ -497,6 +510,7 @@ fun DailyDiscoverCard(
     val playCount by database.getLifetimePlayCount(dailyDiscover.recommendation.id).collectAsStateWithLifecycle(initialValue = 0)
     val menuState = LocalMenuState.current
     val haptic = LocalHapticFeedback.current
+    val context = LocalContext.current
 
     val song = dailyDiscover.recommendation as? SongItem
     val playsString = stringResource(R.string.plays)
@@ -527,18 +541,14 @@ fun DailyDiscoverCard(
         shape = RoundedCornerShape(28.dp),
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            val thumb = dailyDiscover.recommendation.thumbnail?.resize(1080, 1080)
             AsyncImage(
-                model =
-                    ImageRequest
-                        .Builder(LocalContext.current)
-                        .data(dailyDiscover.recommendation.thumbnail?.resize(1080, 1080))
-                        .crossfade(true)
-                        .build(),
+                model = remember(thumb) {
+                    ImageRequest.Builder(context).data(thumb).memoryCachePolicy(CachePolicy.ENABLED).crossfade(200).build()
+                },
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                modifier =
-                    Modifier
-                        .fillMaxSize(),
+                modifier = Modifier.fillMaxSize(),
             )
 
             if (maxWidth > 200.dp) {
@@ -631,6 +641,7 @@ fun HomeScreen(
     val haptic = LocalHapticFeedback.current
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
+    val context = LocalContext.current
 
     val isPlaying by playerConnection.isEffectivelyPlaying.collectAsStateWithLifecycle()
     val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
@@ -1017,7 +1028,12 @@ fun HomeScreen(
                                         thumbnail = sectionData.thumbnail?.let { thumbnailUrl ->
                                             {
                                                 val shape = if (sectionData.endpoint?.isArtistEndpoint == true) CircleShape else RoundedCornerShape(ThumbnailCornerRadius)
-                                                AsyncImage(model = thumbnailUrl, contentDescription = null, modifier = Modifier.size(ListThumbnailSize).clip(shape))
+                                                AsyncImage(
+                                                    model = remember(thumbnailUrl) {
+                                                        ImageRequest.Builder(context).data(thumbnailUrl).memoryCachePolicy(CachePolicy.ENABLED).crossfade(200).build()
+                                                    },
+                                                    contentDescription = null, modifier = Modifier.size(ListThumbnailSize).clip(shape)
+                                                )
                                             }
                                         },
                                         onClick = sectionData.endpoint?.let { endpoint ->
@@ -1122,8 +1138,11 @@ fun HomeScreen(
                                                 }
                                             )
                                     ) {
+                                        val thumbUrl = item.thumbnail.resize(1080, 1080)
                                         AsyncImage(
-                                            model = ImageRequest.Builder(LocalContext.current).data(item.thumbnail.resize(1080, 1080)).crossfade(true).build(),
+                                            model = remember(thumbUrl) {
+                                                ImageRequest.Builder(context).data(thumbUrl).memoryCachePolicy(CachePolicy.ENABLED).crossfade(200).build()
+                                            },
                                             contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()
                                         )
                                         Box(
@@ -1461,11 +1480,11 @@ fun HomeScreen(
                                                     shape = currentShape
                                                 ) {
                                                     Box(modifier = Modifier.fillMaxSize()) {
+                                                        val thumbUrl = (song as Song).song.thumbnailUrl?.resize(1080, 1080)
                                                         AsyncImage(
-                                                            model = ImageRequest.Builder(LocalContext.current)
-                                                                .data((song as Song).song.thumbnailUrl?.resize(1080, 1080))
-                                                                .crossfade(true)
-                                                                .build(),
+                                                            model = remember(thumbUrl) {
+                                                                ImageRequest.Builder(context).data(thumbUrl).memoryCachePolicy(CachePolicy.ENABLED).crossfade(200).build()
+                                                            },
                                                             contentDescription = null,
                                                             contentScale = ContentScale.Crop,
                                                             modifier = Modifier.fillMaxSize()
@@ -1903,11 +1922,11 @@ fun HomeScreen(
                                                         shape = currentShape
                                                     ) {
                                                         Box(modifier = Modifier.fillMaxSize()) {
+                                                            val thumbUrl = song.thumbnail.resize(1080, 1080)
                                                             AsyncImage(
-                                                                model = ImageRequest.Builder(LocalContext.current)
-                                                                    .data(song.thumbnail.resize(1080, 1080))
-                                                                    .crossfade(true)
-                                                                    .build(),
+                                                                model = remember(thumbUrl) {
+                                                                    ImageRequest.Builder(context).data(thumbUrl).memoryCachePolicy(CachePolicy.ENABLED).crossfade(200).build()
+                                                                },
                                                                 contentDescription = null,
                                                                 contentScale = ContentScale.Crop,
                                                                 modifier = Modifier.fillMaxSize()
