@@ -314,7 +314,7 @@ inline fun ListItem(
     isSelected: Boolean? = false,
     isActive: Boolean = false,
     isAvailable: Boolean = true,
-    showDivider: Boolean = true,
+    showDivider: Boolean = false,
 ) {
     val contentColor = MaterialTheme.colorScheme.onBackground
     
@@ -393,14 +393,6 @@ inline fun ListItem(
                 trailingContent()
             }
         }
-        
-        if (showDivider) {
-            androidx.compose.material3.HorizontalDivider(
-                modifier = Modifier.padding(start = 75.dp, end = 16.dp), 
-                thickness = 0.5.dp,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.12f)
-            )
-        }
     }
 }
 
@@ -416,7 +408,7 @@ fun ListItem(
     leadingContent: (@Composable () -> Unit)? = null,
     isSelected: Boolean? = false,
     isActive: Boolean = false,
-    showDivider: Boolean = true,
+    showDivider: Boolean = false,
 ) = ListItem(
     title = title,
     leadingContent = leadingContent,
@@ -459,7 +451,7 @@ fun ListItem(
     leadingContent: (@Composable () -> Unit)? = null,
     isSelected: Boolean? = false,
     isActive: Boolean = false,
-    showDivider: Boolean = true,
+    showDivider: Boolean = false,
 ) = ListItem(
     title = title,
     leadingContent = leadingContent,
@@ -508,46 +500,39 @@ fun GridItem(
 ) {
     val gridHeight = currentGridThumbnailHeight()
     
-    Box(
+    // Removed Card and Background Box to match SimpMusic
+    Column(
         modifier = if (fillMaxWidth) {
             modifier
                 .padding(horizontal = 8.dp, vertical = 4.dp)
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
         } else {
             modifier
                 .padding(horizontal = 8.dp, vertical = 4.dp)
-                .width((gridHeight * thumbnailRatio) + 16.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                .width(gridHeight * thumbnailRatio)
         }
     ) {
-        Column(
-            modifier = Modifier.padding(8.dp)
+        BoxWithConstraints(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(thumbnailRatio)
         ) {
-            BoxWithConstraints(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(thumbnailRatio)
-            ) {
-                thumbnailContent()
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            title()
-
-            Spacer(modifier = Modifier.height(2.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                badges()
-                subtitle()
-            }
-            
-            Spacer(modifier = Modifier.height(2.dp))
+            thumbnailContent()
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        title()
+
+        Spacer(modifier = Modifier.height(2.dp))
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            badges()
+            subtitle()
+        }
+        
+        Spacer(modifier = Modifier.height(2.dp))
     }
 }
 
@@ -1292,7 +1277,7 @@ fun YouTubeListItem(
     isActive: Boolean = false,
     isPlaying: Boolean = false,
     isSwipeable: Boolean = true,
-    showDivider: Boolean = true,
+    showDivider: Boolean = false,
     trailingContent: @Composable RowScope.() -> Unit = {},
     thumbnailShape: Shape = if (item is ArtistItem) CircleShape else RoundedCornerShape(4.dp),
     badges: @Composable RowScope.() -> Unit = {
@@ -1420,14 +1405,6 @@ fun YouTubeListItem(
 
                     trailingContent()
                 }
-            }
-            
-            if (showDivider) {
-                androidx.compose.material3.HorizontalDivider(
-                    modifier = Modifier.padding(start = 75.dp, end = 16.dp), 
-                    thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.12f)
-                )
             }
         }
     }
