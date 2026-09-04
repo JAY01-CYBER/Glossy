@@ -62,6 +62,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -184,7 +185,6 @@ private fun NewMiniPlayer(
     val playerConnection = LocalPlayerConnection.current ?: return
     val menuState = LocalMenuState.current
 
-    // Theme settings - these rarely change
     val miniPlayerBackground by rememberEnumPreference(
         MiniPlayerBackgroundStyleKey,
         defaultValue = MiniPlayerBackgroundStyle.DEFAULT,
@@ -198,13 +198,11 @@ private fun NewMiniPlayer(
             if (darkTheme == DarkMode.AUTO) isSystemInDarkTheme else darkTheme == DarkMode.ON
         }
 
-    // Player states - only collect what's needed at this level
     val playbackState by playerConnection.playbackState.collectAsState()
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
     val canSkipNext by playerConnection.canSkipNext.collectAsStateWithLifecycle()
     val canSkipPrevious by playerConnection.canSkipPrevious.collectAsStateWithLifecycle()
 
-    // Cast state - safely access castConnectionHandler to prevent crashes during service lifecycle changes
     val castHandler =
         remember(playerConnection) {
             try {
@@ -215,11 +213,9 @@ private fun NewMiniPlayer(
         }
     val isCasting by castHandler?.isCasting?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(false) }
 
-    // Swipe settings
     val swipeSensitivity by rememberPreference(SwipeSensitivityKey, 0.73f)
     val swipeThumbnailPref by rememberPreference(SwipeThumbnailKey, true)
 
-    // Disable swipe for Listen Together guests
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
     val swipeThumbnail = swipeThumbnailPref && !isListenTogetherGuest
@@ -235,7 +231,6 @@ private fun NewMiniPlayer(
             (windowInfo.containerSize.width / density.density) >= 600f && configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         }
 
-    // Swipe animation state
     val offsetXAnimatable = remember { Animatable(0f) }
     var dragStartTime by remember { mutableLongStateOf(0L) }
     var totalDragDistance by remember { mutableFloatStateOf(0f) }
@@ -252,7 +247,6 @@ private fun NewMiniPlayer(
 
     LaunchedEffect(mediaMetadata?.id, miniPlayerBackground) {
         gradientColors = emptyList()
-        // GRADIENT aur ANIMATED_MESH dono ko palette ki zaroorat hoti hai
         if (miniPlayerBackground == MiniPlayerBackgroundStyle.GRADIENT || 
             miniPlayerBackground == MiniPlayerBackgroundStyle.ANIMATED_MESH) {
             val url = mediaMetadata?.thumbnailUrl
@@ -291,7 +285,6 @@ private fun NewMiniPlayer(
         }
     }
 
-    // Memoize colors
     val backgroundColor = when (miniPlayerBackground) {
         MiniPlayerBackgroundStyle.DEFAULT    -> MaterialTheme.colorScheme.surfaceContainer
         MiniPlayerBackgroundStyle.TRANSPARENT -> Color.Black.copy(alpha = 0.25f)
@@ -425,10 +418,10 @@ private fun NewMiniPlayer(
                     Box(
                         Modifier
                             .fillMaxSize()
-                            .background(
-                                Brush.horizontalGradient(colors)
-                            )
-                            .background(Color.Black.copy(alpha = 0.15f)),
+                            .drawBehind {
+                                drawRect(Brush.horizontalGradient(colors))
+                                drawRect(Color.Black.copy(alpha = 0.15f))
+                            }
                     )
                 }
                 MiniPlayerBackgroundStyle.ANIMATED_MESH -> {
@@ -441,7 +434,7 @@ private fun NewMiniPlayer(
                         colors = colors,
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.2f))
+                            .drawBehind { drawRect(Color.Black.copy(alpha = 0.2f)) }
                     )
                 }
                 else -> {}
@@ -555,6 +548,10 @@ private fun NewMiniPlayerPlayButton(
 
     val trackColor = outlineColor.copy(alpha = 0.2f)
     val strokeWidth = 3.dp
+    val density = LocalDensity.current
+    val stroke = remember(strokeWidth, density) {
+        Stroke(width = with(density) { strokeWidth.toPx() }, cap = StrokeCap.Round)
+    }
 
     Box(
         contentAlignment = Alignment.Center,
@@ -565,7 +562,6 @@ private fun NewMiniPlayerPlayButton(
                     drawContent()
                     // Draw progress arc - this reads progressState.progress during draw phase only
                     val progress = progressState.progress
-                    val stroke = Stroke(width = strokeWidth.toPx(), cap = StrokeCap.Round)
                     val startAngle = -90f
                     val sweepAngle = 360f * progress
                     val diameter = size.minDimension
@@ -1079,7 +1075,6 @@ private fun SubscribeButton(
     val database = LocalDatabase.current
     val libraryArtist by database.artist(artistId).collectAsStateWithLifecycle(initialValue = null)
     val isSubscribed = libraryArtist?.artist?.bookmarkedAt != null
-
 
     Box(
         contentAlignment = Alignment.Center,
