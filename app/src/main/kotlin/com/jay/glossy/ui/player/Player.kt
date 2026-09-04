@@ -2300,7 +2300,7 @@ fun BottomSheetPlayer(
                                             Box(contentAlignment = Alignment.Center) {
                                                 Icon(
                                                     painterResource(if (isFavorite) R.drawable.favorite else R.drawable.favorite_border), 
-                                                    null, 
+                                                    contentDescription = null, 
                                                     modifier = Modifier.size(22.dp),
                                                     tint = if (isFavorite) Color.White else sideButtonContentColor
                                                 )
@@ -2323,7 +2323,7 @@ fun BottomSheetPlayer(
                                             Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                                                 Icon(
                                                     painterResource(R.drawable.bedtime), 
-                                                    null, 
+                                                    contentDescription = null, 
                                                     modifier = Modifier.size(20.dp),
                                                     tint = if (sleepTimerEnabled) Color.White else sideButtonContentColor
                                                 )
@@ -2353,7 +2353,7 @@ fun BottomSheetPlayer(
                                                             else -> R.drawable.repeat
                                                         }
                                                     ), 
-                                                    null, 
+                                                    contentDescription = null, 
                                                     modifier = Modifier.size(20.dp),
                                                     tint = if (repeatMode != Player.REPEAT_MODE_OFF) Color.White else sideButtonContentColor
                                                 )
@@ -2386,7 +2386,7 @@ fun BottomSheetPlayer(
                                             Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                                                 Icon(
                                                     painterResource(R.drawable.lyrics), 
-                                                    null, 
+                                                    contentDescription = null, 
                                                     modifier = Modifier.size(18.dp),
                                                     tint = if (showInlineLyrics) Color.White else sideButtonContentColor
                                                 )
@@ -2410,7 +2410,7 @@ fun BottomSheetPlayer(
                                             Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                                                 Icon(
                                                     painterResource(R.drawable.queue_music), 
-                                                    null, 
+                                                    contentDescription = null, 
                                                     modifier = Modifier.size(18.dp),
                                                     tint = sideButtonContentColor
                                                 )
