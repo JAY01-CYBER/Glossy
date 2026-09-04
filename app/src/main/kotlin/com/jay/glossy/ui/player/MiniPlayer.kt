@@ -443,7 +443,6 @@ private fun NewMiniPlayer(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 8.dp),
             ) {
-                // Play button with progress - isolated composable
                 NewMiniPlayerPlayButton(
                     progressState = progressState,
                     playbackState = playbackState,
@@ -458,7 +457,6 @@ private fun NewMiniPlayer(
 
                 Spacer(modifier = Modifier.width(16.dp))
 
-                // Song info - isolated composable
                 NewMiniPlayerSongInfo(
                     mediaMetadata = mediaMetadata,
                     onSurfaceColor = onSurfaceColor,
@@ -468,7 +466,6 @@ private fun NewMiniPlayer(
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                // Cast indicator
                 if (isCasting) {
                     Icon(
                         painter = painterResource(R.drawable.cast_connected),
@@ -479,7 +476,6 @@ private fun NewMiniPlayer(
                     Spacer(modifier = Modifier.width(12.dp))
                 }
 
-                // Subscribe button - isolated composable
                 mediaMetadata?.artists?.firstOrNull()?.id?.let { artistId ->
                     SubscribeButton(
                         artistId = artistId,
@@ -492,7 +488,6 @@ private fun NewMiniPlayer(
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                // Add to playlist button - isolated composable
                 mediaMetadata?.let { metadata ->
                     AddToPlaylistButton(
                         onClick = {
@@ -511,7 +506,6 @@ private fun NewMiniPlayer(
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                // Favorite button - isolated composable
                 mediaMetadata?.let { FavoriteButton(
                     songId = it.id,
                     errorColor = errorColor,
@@ -524,10 +518,6 @@ private fun NewMiniPlayer(
     }
 }
 
-/**
- * Play button with circular progress indicator
- * Uses drawWithContent to update progress without recomposition
- */
 @Composable
 private fun NewMiniPlayerPlayButton(
     progressState: ProgressState,
@@ -560,14 +550,12 @@ private fun NewMiniPlayerPlayButton(
                 .size(48.dp)
                 .drawWithContent {
                     drawContent()
-                    // Draw progress arc - this reads progressState.progress during draw phase only
                     val progress = progressState.progress
                     val startAngle = -90f
                     val sweepAngle = 360f * progress
                     val diameter = size.minDimension
                     val topLeft = Offset((size.width - diameter) / 2, (size.height - diameter) / 2)
 
-                    // Draw track
                     drawArc(
                         color = trackColor,
                         startAngle = 0f,
@@ -577,7 +565,6 @@ private fun NewMiniPlayerPlayButton(
                         size = Size(diameter, diameter),
                         style = stroke,
                     )
-                    // Draw progress
                     drawArc(
                         color = primaryColor,
                         startAngle = startAngle,
@@ -589,7 +576,6 @@ private fun NewMiniPlayerPlayButton(
                     )
                 },
     ) {
-        // Thumbnail with play/pause overlay
         Box(
             contentAlignment = Alignment.Center,
             modifier =
@@ -621,11 +607,13 @@ private fun NewMiniPlayerPlayButton(
                     model = thumbnailUrl,
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize().clip(CircleShape),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape)
+                        .sharedAlbumArt(metadata.id) 
                 )
             }
 
-            // Overlay for paused state or muted (guest)
             if (isListenTogetherGuest && isMuted ||
                 (!isListenTogetherGuest && (!effectiveIsPlaying || playbackState == Player.STATE_ENDED))
             ) {
@@ -655,9 +643,6 @@ private fun NewMiniPlayerPlayButton(
     }
 }
 
-/**
- * Song info display - title and artist
- */
 @Composable
 private fun NewMiniPlayerSongInfo(
     mediaMetadata: MediaMetadata?,
@@ -742,7 +727,6 @@ private fun LegacyMiniPlayer(
     val swipeSensitivity by rememberPreference(SwipeSensitivityKey, 0.73f)
     val swipeThumbnailPref by rememberPreference(SwipeThumbnailKey, true)
 
-    // Disable swipe for Listen Together guests
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
     val swipeThumbnail = swipeThumbnailPref && !isListenTogetherGuest
@@ -853,7 +837,6 @@ private fun LegacyMiniPlayer(
                     }
                 },
     ) {
-        // Progress bar - uses drawWithContent to avoid recomposition
         Box(
             modifier =
                 Modifier
@@ -901,7 +884,6 @@ private fun LegacyMiniPlayer(
             }
         }
 
-        // Swipe indicator
         if (offsetXAnimatable.value.absoluteValue > 50f) {
             Box(
                 modifier =
@@ -1009,7 +991,8 @@ private fun LegacyMiniMediaInfo(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .clip(RoundedCornerShape(ThumbnailCornerRadius)),
+                        .clip(RoundedCornerShape(ThumbnailCornerRadius))
+                        .sharedAlbumArt(mediaMetadata.id) 
             )
 
             androidx.compose.animation.AnimatedVisibility(visible = error != null, enter = fadeIn(), exit = fadeOut()) {
@@ -1163,7 +1146,6 @@ private fun FavoriteButton(
     val database = LocalDatabase.current
     val playerConnection = LocalPlayerConnection.current ?: return
     val librarySong by database.song(songId).collectAsStateWithLifecycle(initialValue = null)
-    // For episodes, show saved state (inLibrary); for songs, show liked state
     val isEpisode = librarySong?.song?.isEpisode == true
     val isLiked = if (isEpisode) librarySong?.song?.inLibrary != null else librarySong?.song?.liked == true
 
