@@ -376,9 +376,7 @@ fun Queue(
                         label = "ViviNewBottomBarControls"
                     ) { showingLyrics ->
                         if (showingLyrics) {
-                            // 七 LYRICS MODE: Play/Pause and Next 七
                             Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                                // Play/Pause Button
                                 val playInteractionSource = remember { MutableInteractionSource() }
                                 val isPlayPressed by playInteractionSource.collectIsPressedAsState()
                                 val playScale by animateFloatAsState(if (isPlayPressed) 0.7f else 1f, spring(0.6f, 500f), label = "playScale")
@@ -426,7 +424,6 @@ fun Queue(
                                     )
                                 }
                                 
-                                // Next Button
                                 val nextInteractionSource = remember { MutableInteractionSource() }
                                 val isNextPressed by nextInteractionSource.collectIsPressedAsState()
                                 val nextScale by animateFloatAsState(if (isNextPressed) 0.7f else 1f, spring(0.6f, 500f), label = "nextScale")
@@ -456,9 +453,7 @@ fun Queue(
                                 }
                             }
                         } else {
-                            // 而 NORMAL MODE: Audio Devices and Sleep Timer 而
                             Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                                // Devices Button
                                 val devicesInteractionSource = remember { MutableInteractionSource() }
                                 val isDevicesPressed by devicesInteractionSource.collectIsPressedAsState()
                                 val devicesScale by animateFloatAsState(if (isDevicesPressed) 0.7f else 1f, spring(0.6f, 500f), label = "devicesScale")
@@ -488,7 +483,6 @@ fun Queue(
                                     )
                                 }
                                 
-                                // Sleep Timer Button
                                 val sleepInteractionSource = remember { MutableInteractionSource() }
                                 val isSleepPressed by sleepInteractionSource.collectIsPressedAsState()
                                 val sleepScale by animateFloatAsState(if (isSleepPressed) 0.7f else 1f, spring(0.6f, 500f), label = "sleepScale")
