@@ -83,7 +83,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -2293,7 +2292,7 @@ fun BottomSheetPlayer(
                                         Surface(
                                             shape = RoundedCornerShape(50),
                                             color = sideButtonContainerColor,
-                                            contentColor = if (isFavorite) Color.White else sideButtonContentColor,
+                                            contentColor = sideButtonContentColor,
                                             modifier = Modifier.height(52.dp).weight(0.8f),
                                             onClick = { playerConnection.toggleLike() }
                                         ) {
@@ -2310,7 +2309,7 @@ fun BottomSheetPlayer(
                                         Surface(
                                             shape = RoundedCornerShape(50),
                                             color = sideButtonContainerColor,
-                                            contentColor = if (sleepTimerEnabled) Color.White else sideButtonContentColor,
+                                            contentColor = sideButtonContentColor,
                                             modifier = Modifier.height(52.dp).weight(1.5f),
                                             onClick = { 
                                                 if (sleepTimerEnabled) {
@@ -2341,7 +2340,7 @@ fun BottomSheetPlayer(
                                         Surface(
                                             shape = RoundedCornerShape(50),
                                             color = sideButtonContainerColor,
-                                            contentColor = if (repeatMode != Player.REPEAT_MODE_OFF) Color.White else sideButtonContentColor,
+                                            contentColor = sideButtonContentColor,
                                             modifier = Modifier.height(52.dp).weight(1.5f),
                                             onClick = { playerConnection.player.toggleRepeatMode() }
                                         ) {
@@ -2379,7 +2378,7 @@ fun BottomSheetPlayer(
                                         Surface(
                                             shape = RoundedCornerShape(50),
                                             color = sideButtonContainerColor,
-                                            contentColor = if (showInlineLyrics) Color.White else sideButtonContentColor,
+                                            contentColor = sideButtonContentColor,
                                             modifier = Modifier.height(40.dp).weight(1f),
                                             onClick = { showInlineLyrics = !showInlineLyrics }
                                         ) {
