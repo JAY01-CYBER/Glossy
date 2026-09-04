@@ -2229,23 +2229,35 @@ fun BottomSheetPlayer(
                                 Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                     
                                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                                        
+                                        // Optimization: Smooth scale animations for Wavy controls
+                                        val prevInteractionSource = remember { MutableInteractionSource() }
+                                        val isPrevPressed by prevInteractionSource.collectIsPressedAsState()
+                                        val prevScale by animateFloatAsState(if (isPrevPressed) 0.85f else 1f, spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessLow), label = "prevScale")
+
                                         FilledIconButton(
                                             onClick = playerConnection::seekToPrevious,
                                             enabled = canSkipPrevious && !isListenTogetherGuest,
                                             shape = RoundedCornerShape(24.dp),
                                             colors = IconButtonDefaults.filledIconButtonColors(containerColor = sideButtonContainerColor, contentColor = sideButtonContentColor),
-                                            modifier = Modifier.height(72.dp).width(80.dp)
+                                            interactionSource = prevInteractionSource,
+                                            modifier = Modifier.height(72.dp).width(80.dp).graphicsLayer(scaleX = prevScale, scaleY = prevScale)
                                         ) {
                                             Icon(painter = painterResource(R.drawable.skip_previous), contentDescription = null, modifier = Modifier.size(32.dp))
                                         }
 
                                         Spacer(modifier = Modifier.width(16.dp))
 
+                                        val playInteractionSource = remember { MutableInteractionSource() }
+                                        val isPlayPressed by playInteractionSource.collectIsPressedAsState()
+                                        val playScale by animateFloatAsState(if (isPlayPressed) 0.88f else 1f, spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessLow), label = "playScale")
+
                                         FilledIconButton(
                                             onClick = onPlayPauseLogic,
                                             shape = RoundedCornerShape(24.dp),
                                             colors = IconButtonDefaults.filledIconButtonColors(containerColor = textButtonColor, contentColor = iconButtonColor),
-                                            modifier = Modifier.height(72.dp).width(112.dp).focusRequester(focusRequester)
+                                            interactionSource = playInteractionSource,
+                                            modifier = Modifier.height(72.dp).width(112.dp).focusRequester(focusRequester).graphicsLayer(scaleX = playScale, scaleY = playScale)
                                         ) {
                                             Icon(
                                                 painter = painterResource(
@@ -2262,12 +2274,17 @@ fun BottomSheetPlayer(
 
                                         Spacer(modifier = Modifier.width(16.dp))
 
+                                        val nextInteractionSource = remember { MutableInteractionSource() }
+                                        val isNextPressed by nextInteractionSource.collectIsPressedAsState()
+                                        val nextScale by animateFloatAsState(if (isNextPressed) 0.85f else 1f, spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessLow), label = "nextScale")
+
                                         FilledIconButton(
                                             onClick = playerConnection::seekToNext,
                                             enabled = canSkipNext && !isListenTogetherGuest,
                                             shape = RoundedCornerShape(24.dp),
                                             colors = IconButtonDefaults.filledIconButtonColors(containerColor = sideButtonContainerColor, contentColor = sideButtonContentColor),
-                                            modifier = Modifier.height(72.dp).width(80.dp)
+                                            interactionSource = nextInteractionSource,
+                                            modifier = Modifier.height(72.dp).width(80.dp).graphicsLayer(scaleX = nextScale, scaleY = nextScale)
                                         ) {
                                             Icon(painter = painterResource(R.drawable.skip_next), contentDescription = null, modifier = Modifier.size(32.dp))
                                         }
@@ -2291,17 +2308,23 @@ fun BottomSheetPlayer(
                                             }
                                         }
                                         
+                                        // ⬇️ DOWNLOAD BUTTON FIX HERE ⬇️
+                                        val isDownloaded = download != null
                                         Surface(
                                             shape = RoundedCornerShape(50),
-                                            color = sideButtonContainerColor,
-                                            contentColor = sideButtonContentColor,
+                                            color = if (isDownloaded) textButtonColor else sideButtonContainerColor,
+                                            contentColor = if (isDownloaded) iconButtonColor else sideButtonContentColor,
                                             modifier = Modifier.height(52.dp).weight(1.5f),
-                                            onClick = { /* Add Download logic */ }
+                                            onClick = { /* Add Download Action logic here */ }
                                         ) {
                                             Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                                                 Icon(painterResource(R.drawable.offline), null, modifier = Modifier.size(20.dp))
                                                 Spacer(Modifier.width(6.dp))
-                                                Text("Download", style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                                                Text(
+                                                    text = if (isDownloaded) "Downloaded" else "Download", 
+                                                    style = MaterialTheme.typography.labelMedium, 
+                                                    maxLines = 1
+                                                )
                                             }
                                         }
 
