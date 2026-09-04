@@ -375,83 +375,176 @@ fun Queue(
                         )
                     }
                     
-                    // Middle Group (Devices & Timer Circles)
-                    Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                        // Devices Button (Circle Box)
-                        val devicesInteractionSource = remember { MutableInteractionSource() }
-                        val isDevicesPressed by devicesInteractionSource.collectIsPressedAsState()
-                        val devicesScale by animateFloatAsState(if (isDevicesPressed) 0.7f else 1f, spring(0.6f, 500f), label = "devicesScale")
-                        
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .graphicsLayer(scaleX = devicesScale, scaleY = devicesScale)
-                                .clip(CircleShape)
-                                .border(1.dp, circleBorder, CircleShape)
-                                .background(circleBg)
-                                .clickable(
-                                    interactionSource = devicesInteractionSource,
-                                    indication = LocalIndication.current
+                    // Middle Group (Dynamic: Play/Pause & Next when Lyrics Open, Devices & Sleep Timer when closed)
+                    AnimatedContent(
+                        targetState = showInlineLyrics,
+                        label = "ViviMiddleControls"
+                    ) { isLyricsOpen ->
+                        if (isLyricsOpen) {
+                            // WHEN LYRICS ARE OPEN: Show Play/Pause and Next
+                            val playbackState by playerConnection.playbackState.collectAsStateWithLifecycle()
+                            val canSkipNext by playerConnection.canSkipNext.collectAsStateWithLifecycle()
+                            val isMuted by playerConnection.isMuted.collectAsStateWithLifecycle()
+
+                            val onPlayPauseLogic: () -> Unit = {
+                                if (isListenTogetherGuest) {
+                                    playerConnection.toggleMute()
+                                } else if (isCasting) {
+                                    if (castIsPlaying) castHandler?.pause() else castHandler?.play()
+                                } else if (playbackState == Player.STATE_ENDED) {
+                                    playerConnection.player.seekTo(0, 0)
+                                    playerConnection.player.playWhenReady = true
+                                } else {
+                                    playerConnection.togglePlayPause()
+                                }
+                            }
+
+                            Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                                // Play/Pause Button
+                                val playInteractionSource = remember { MutableInteractionSource() }
+                                val isPlayPressed by playInteractionSource.collectIsPressedAsState()
+                                val playScale by animateFloatAsState(if (isPlayPressed) 0.7f else 1f, spring(0.6f, 500f), label = "playScale")
+
+                                Box(
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .graphicsLayer(scaleX = playScale, scaleY = playScale)
+                                        .clip(CircleShape)
+                                        .border(1.dp, circleBorder, CircleShape)
+                                        .background(circleBg)
+                                        .clickable(
+                                            interactionSource = playInteractionSource,
+                                            indication = LocalIndication.current
+                                        ) {
+                                            onPlayPauseLogic()
+                                        },
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    showAudioDeviceBottomSheet = true
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                painter = painterResource(
-                                    if (isHeadsetConnected) R.drawable.headset_applemusic else R.drawable.speaker_apple
-                                ), 
-                                contentDescription = "Audio Devices", 
-                                tint = iconTint, 
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        
-                        // Sleep Timer Button (Circle to Pill Box)
-                        val sleepInteractionSource = remember { MutableInteractionSource() }
-                        val isSleepPressed by sleepInteractionSource.collectIsPressedAsState()
-                        val sleepScale by animateFloatAsState(if (isSleepPressed) 0.7f else 1f, spring(0.6f, 500f), label = "sleepScale")
-                        
-                        Box(
-                            modifier = Modifier
-                                .height(44.dp)
-                                .widthIn(min = 44.dp)
-                                .animateContentSize()
-                                .graphicsLayer(scaleX = sleepScale, scaleY = sleepScale)
-                                .clip(CircleShape)
-                                .border(1.dp, if (sleepTimerEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else circleBorder, CircleShape)
-                                .background(if (sleepTimerEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else circleBg)
-                                .clickable(
-                                    interactionSource = sleepInteractionSource,
-                                    indication = LocalIndication.current
-                                ) {
-                                    if (sleepTimerEnabled) playerConnection.service.sleepTimer?.clear()
-                                    else showSleepTimerDialog = true
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center,
-                                modifier = Modifier.padding(horizontal = if (sleepTimerEnabled) 12.dp else 0.dp)
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.bedtime), 
-                                    contentDescription = "Sleep Timer", 
-                                    tint = if (sleepTimerEnabled) MaterialTheme.colorScheme.primary else iconTint, 
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                // Yahan aayega live countdown timer pill shape mein
-                                if (sleepTimerEnabled) {
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = makeTimeString(sleepTimerTimeLeft),
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        fontWeight = FontWeight.Bold,
-                                        maxLines = 1,
-                                        modifier = Modifier.basicMarquee()
+                                    Icon(
+                                        painter = painterResource(
+                                            if (isListenTogetherGuest) {
+                                                if (isMuted) R.drawable.volume_off else R.drawable.volume_up
+                                            } else if (isPlaying) {
+                                                R.drawable.pause
+                                            } else {
+                                                R.drawable.play
+                                            }
+                                        ),
+                                        contentDescription = "Play/Pause",
+                                        tint = iconTint,
+                                        modifier = Modifier.size(20.dp)
                                     )
+                                }
+
+                                // Next Button
+                                val nextInteractionSource = remember { MutableInteractionSource() }
+                                val isNextPressed by nextInteractionSource.collectIsPressedAsState()
+                                val nextScale by animateFloatAsState(if (isNextPressed) 0.7f else 1f, spring(0.6f, 500f), label = "nextScale")
+
+                                Box(
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .graphicsLayer(scaleX = nextScale, scaleY = nextScale)
+                                        .clip(CircleShape)
+                                        .border(1.dp, circleBorder, CircleShape)
+                                        .background(circleBg)
+                                        .clickable(
+                                            enabled = canSkipNext && !isListenTogetherGuest,
+                                            interactionSource = nextInteractionSource,
+                                            indication = LocalIndication.current
+                                        ) {
+                                            playerConnection.seekToNext()
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.skip_next),
+                                        contentDescription = "Next",
+                                        tint = if (canSkipNext && !isListenTogetherGuest) iconTint else iconTint.copy(alpha = 0.5f),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        } else {
+                            // WHEN LYRICS ARE CLOSED: Show Original Devices and Sleep Timer
+                            Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                                // Devices Button (Circle Box)
+                                val devicesInteractionSource = remember { MutableInteractionSource() }
+                                val isDevicesPressed by devicesInteractionSource.collectIsPressedAsState()
+                                val devicesScale by animateFloatAsState(if (isDevicesPressed) 0.7f else 1f, spring(0.6f, 500f), label = "devicesScale")
+                                
+                                Box(
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .graphicsLayer(scaleX = devicesScale, scaleY = devicesScale)
+                                        .clip(CircleShape)
+                                        .border(1.dp, circleBorder, CircleShape)
+                                        .background(circleBg)
+                                        .clickable(
+                                            interactionSource = devicesInteractionSource,
+                                            indication = LocalIndication.current
+                                        ) {
+                                            showAudioDeviceBottomSheet = true
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        painter = painterResource(
+                                            if (isHeadsetConnected) R.drawable.headset_applemusic else R.drawable.speaker_apple
+                                        ), 
+                                        contentDescription = "Audio Devices", 
+                                        tint = iconTint, 
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                
+                                // Sleep Timer Button (Circle to Pill Box)
+                                val sleepInteractionSource = remember { MutableInteractionSource() }
+                                val isSleepPressed by sleepInteractionSource.collectIsPressedAsState()
+                                val sleepScale by animateFloatAsState(if (isSleepPressed) 0.7f else 1f, spring(0.6f, 500f), label = "sleepScale")
+                                
+                                Box(
+                                    modifier = Modifier
+                                        .height(44.dp)
+                                        .widthIn(min = 44.dp)
+                                        .animateContentSize()
+                                        .graphicsLayer(scaleX = sleepScale, scaleY = sleepScale)
+                                        .clip(CircleShape)
+                                        .border(1.dp, if (sleepTimerEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else circleBorder, CircleShape)
+                                        .background(if (sleepTimerEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else circleBg)
+                                        .clickable(
+                                            interactionSource = sleepInteractionSource,
+                                            indication = LocalIndication.current
+                                        ) {
+                                            if (sleepTimerEnabled) playerConnection.service.sleepTimer?.clear()
+                                            else showSleepTimerDialog = true
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center,
+                                        modifier = Modifier.padding(horizontal = if (sleepTimerEnabled) 12.dp else 0.dp)
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.bedtime), 
+                                            contentDescription = "Sleep Timer", 
+                                            tint = if (sleepTimerEnabled) MaterialTheme.colorScheme.primary else iconTint, 
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        // Yahan aayega live countdown timer pill shape mein
+                                        if (sleepTimerEnabled) {
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = makeTimeString(sleepTimerTimeLeft),
+                                                style = MaterialTheme.typography.labelMedium,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                fontWeight = FontWeight.Bold,
+                                                maxLines = 1,
+                                                modifier = Modifier.basicMarquee()
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
