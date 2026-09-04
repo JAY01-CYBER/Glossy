@@ -93,6 +93,10 @@ import com.jay.glossy.utils.rememberEnumPreference
 import com.jay.glossy.utils.rememberPreference
 import kotlinx.coroutines.delay
 
+/**
+ * Pre-calculated thumbnail dimensions to avoid repeated calculations during recomposition.
+ * All values are computed once and cached.
+ */
 @Immutable
 data class ThumbnailDimensions(
     val itemWidth: Dp,
@@ -101,12 +105,19 @@ data class ThumbnailDimensions(
     val cornerRadius: Dp
 )
 
+/**
+ * Cached media items data to prevent recalculation on every recomposition.
+ */
 @Immutable
 data class MediaItemsData(
     val items: List<MediaItem>,
     val currentIndex: Int
 )
 
+/**
+ * Calculate thumbnail dimensions once based on container size.
+ * This function is marked as @Stable to indicate it produces stable results.
+ */
 @Stable
 private fun calculateThumbnailDimensions(
     containerWidth: Dp,
@@ -128,6 +139,10 @@ private fun calculateThumbnailDimensions(
     )
 }
 
+/**
+ * Get media items for the thumbnail carousel.
+ * Calculates previous, current, and next items based on shuffle mode.
+ */
 @Stable
 private fun getMediaItems(
     player: Player,
@@ -169,6 +184,10 @@ private fun getMediaItems(
     return MediaItemsData(items, currentMediaIndex)
 }
 
+/**
+ * Get text color based on player background style.
+ * Computed once per background style change.
+ */
 @Stable
 @Composable
 private fun getTextColor(playerBackground: PlayerBackgroundStyle): Color {
@@ -193,12 +212,14 @@ fun Thumbnail(
     val context = LocalContext.current
     val layoutDirection = LocalLayoutDirection.current
 
+    // Collect states
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
     val error by playerConnection.error.collectAsState()
     val queueTitle by playerConnection.queueTitle.collectAsStateWithLifecycle()
     val canSkipPrevious by playerConnection.canSkipPrevious.collectAsStateWithLifecycle()
     val canSkipNext by playerConnection.canSkipNext.collectAsStateWithLifecycle()
 
+    // Preferences - computed once
     val swipeThumbnailPref by rememberPreference(SwipeThumbnailKey, true)
     val swipeThumbnail = swipeThumbnailPref && !isListenTogetherGuest
     val hidePlayerThumbnail by rememberPreference(HidePlayerThumbnailKey, false)
@@ -213,9 +234,13 @@ fun Thumbnail(
         defaultValue = PlayerStyle.MODERN
     )
     
+    // Pre-calculate text color based on background style
     val textBackgroundColor = getTextColor(playerBackground)
+    
+    // Grid state
     val thumbnailLazyGridState = rememberLazyGridState()
     
+    // Calculate media items data - memoized
     val mediaItemsData by remember(
         playerConnection.player.currentMediaItemIndex,
         playerConnection.player.shuffleModeEnabled,
@@ -230,6 +255,7 @@ fun Thumbnail(
     val mediaItems = mediaItemsData.items
     val currentMediaIndex = mediaItemsData.currentIndex
 
+    // Snap behavior - created once per grid state
     val thumbnailSnapLayoutInfoProvider = remember(thumbnailLazyGridState) {
         ThumbnailSnapLayoutInfoProvider(
             lazyGridState = thumbnailLazyGridState,
@@ -240,9 +266,11 @@ fun Thumbnail(
         )
     }
 
+    // Current item tracking - derived state for efficiency
     val currentItem by remember { derivedStateOf { thumbnailLazyGridState.firstVisibleItemIndex } }
     val itemScrollOffset by remember { derivedStateOf { thumbnailLazyGridState.firstVisibleItemScrollOffset } }
 
+    // Handle swipe to change song
     LaunchedEffect(itemScrollOffset) {
         if (!thumbnailLazyGridState.isScrollInProgress || !swipeThumbnail || itemScrollOffset != 0 || currentMediaIndex < 0) return@LaunchedEffect
 
@@ -253,6 +281,7 @@ fun Thumbnail(
         }
     }
 
+    // Update position when song changes
     LaunchedEffect(mediaMetadata, canSkipPrevious, canSkipNext) {
         val index = maxOf(0, currentMediaIndex)
         if (index >= 0 && index < mediaItems.size) {
@@ -271,6 +300,7 @@ fun Thumbnail(
         }
     }
 
+    // Seek effect state
     var showSeekEffect by remember { mutableStateOf(false) }
     var seekDirection by remember { mutableStateOf("") }
 
@@ -280,6 +310,7 @@ fun Thumbnail(
                 compositingStrategy = CompositingStrategy.Offscreen
             }
     ) {
+        // Error view
         AnimatedVisibility(
             visible = error != null,
             enter = fadeIn(),
@@ -296,6 +327,7 @@ fun Thumbnail(
             }
         }
 
+        // Main thumbnail view
         AnimatedVisibility(
             visible = error == null,
             enter = fadeIn(),
@@ -309,18 +341,25 @@ fun Thumbnail(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = if (isLandscape) Arrangement.Center else Arrangement.Top
             ) {
+                // Now Playing header - hide in landscape mode
                 if (!isLandscape) {
+                    
+                    // Spacer ADDED ABOVE header for VIVI_NEW to push text down like Modern style
                     if (playerStyle.name == "VIVI_NEW") {
                         Spacer(modifier = Modifier.height(28.dp))
                     }
+                    
                     ThumbnailHeader(
                         queueTitle = queueTitle, 
                         albumTitle = mediaMetadata?.album?.title, 
                         textColor = textBackgroundColor,
                         playerStyleName = playerStyle.name
                     )
+                    
+                    // Spacer REMOVED from below header so Album art spacing matches Modern style
                 }
                 
+                // Thumbnail content
                 BoxWithConstraints(
                     contentAlignment = if (isLandscape) Alignment.Center else if (playerStyle.name == "VIVI_NEW") Alignment.TopCenter else Alignment.Center,
                     modifier = if (isLandscape) {
@@ -348,12 +387,14 @@ fun Thumbnail(
                         derivedStateOf { swipeThumbnail && isPlayerExpanded() }
                     }
                     
+                    // VIVI_NEW OVERRIDE
                     if (playerStyle.name == "VIVI_NEW" && !isLandscape) {
                         val currentMedia = mediaItems.getOrNull(currentMediaIndex)
                         val incrementalSeekSkipEnabled by rememberPreference(SeekExtraSeconds, defaultValue = false)
                         var skipMultiplier by remember { mutableIntStateOf(1) }
                         var lastTapTime by remember { mutableLongStateOf(0L) }
 
+                        // WRAPPER BOX forces Perfect centering of the square, perfectly replicating Modern style
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center 
@@ -362,7 +403,7 @@ fun Thumbnail(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = PlayerHorizontalPadding)
-                                    .aspectRatio(1f)
+                                    .aspectRatio(1f) // Perfect square aspect ratio
                                     .pointerInput(swipeThumbnail) {
                                         if (!swipeThumbnail) return@pointerInput
                                         var totalDrag = 0f
@@ -424,8 +465,7 @@ fun Thumbnail(
                                         ThumbnailImage(
                                             artworkUri = artworkUriToUse,
                                             cropArtwork = cropAlbumArt,
-                                            playerStyleName = playerStyle.name,
-                                            sharedModifier = Modifier.sharedAlbumArt(mediaMetadata?.id) 
+                                            playerStyleName = playerStyle.name
                                         )
                                     }
                                     
@@ -477,6 +517,7 @@ fun Thumbnail(
             }
         }
 
+        // Seek effect
         LaunchedEffect(showSeekEffect) {
             if (showSeekEffect) {
                 delay(1000)
@@ -495,6 +536,9 @@ fun Thumbnail(
     }
 }
 
+/**
+ * Header component showing "Now Playing" and queue/album title.
+ */
 @Composable
 private fun ThumbnailHeader(
     queueTitle: String?,
@@ -517,6 +561,7 @@ private fun ThumbnailHeader(
                 .align(Alignment.Center)
                 .padding(horizontal = 48.dp)
         ) {
+            // Listen Together indicator
             if (listenTogetherRoleState?.value != RoomRole.NONE) {
                 Text(
                     text = if (listenTogetherRoleState?.value == RoomRole.HOST) "Hosting Listen Together" else "Listening Together",
@@ -531,6 +576,7 @@ private fun ThumbnailHeader(
                 )
             }
             
+            // Subtitle - Hide only for VIVI_NEW
             val playingFrom = queueTitle ?: albumTitle
             if (playerStyleName != "VIVI_NEW" && !playingFrom.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(4.dp))
@@ -546,6 +592,9 @@ private fun ThumbnailHeader(
     }
 }
 
+/**
+ * Individual thumbnail item in the carousel for standard styles.
+ */
 @Composable
 private fun ThumbnailItem(
     item: MediaItem,
@@ -633,17 +682,14 @@ private fun ThumbnailItem(
                     item.mediaMetadata.artworkUri?.toString()
                 }
 
-                val isCurrent = item.mediaId == currentMediaId
-                val sharedMod = if (isCurrent) Modifier.sharedAlbumArt(currentMediaId) else Modifier 
-
                 ThumbnailImage(
                     artworkUri = artworkUriToUse,
                     cropArtwork = cropAlbumArt,
-                    playerStyleName = playerStyleName,
-                    sharedModifier = sharedMod
+                    playerStyleName = playerStyleName
                 )
             }
             
+            // Cast button at top-right corner of thumbnail
             CastButton(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -654,6 +700,9 @@ private fun ThumbnailItem(
     }
 }
 
+/**
+ * Placeholder shown when thumbnail is hidden.
+ */
 @Composable
 private fun HiddenThumbnailPlaceholder(
     textBackgroundColor: Color,
@@ -677,21 +726,25 @@ private fun HiddenThumbnailPlaceholder(
     }
 }
 
+/**
+ * Actual thumbnail image with caching and hardware layer rendering.
+ */
 @Composable
 private fun ThumbnailImage(
     artworkUri: String?,
     cropArtwork: Boolean,
     playerStyleName: String,
-    sharedModifier: Modifier = Modifier,
     modifier: Modifier = Modifier
 ) {
     Box(
         modifier = modifier
             .fillMaxSize()
             .graphicsLayer {
+                // Use offscreen compositing for hardware acceleration during animations
                 compositingStrategy = CompositingStrategy.Offscreen
             }
             .then(
+                // Remove surfaceVariant color (grey) for VIVI_NEW to avoid ugly borders
                 if (playerStyleName == "VIVI_NEW") Modifier 
                 else Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
             )
@@ -706,11 +759,14 @@ private fun ThumbnailImage(
                 .build(),
             contentDescription = null,
             contentScale = if (cropArtwork || playerStyleName == "VIVI_NEW") ContentScale.Crop else ContentScale.Fit,
-            modifier = Modifier.fillMaxSize().then(sharedModifier)
+            modifier = Modifier.fillMaxSize()
         )
     }
 }
 
+/**
+ * Seek effect overlay showing seek direction.
+ */
 @Composable
 private fun SeekEffectOverlay(
     seekDirection: String,
