@@ -1609,7 +1609,7 @@ fun BottomSheetPlayer(
                                             onClick = {
                                                 val intent =
                                                     Intent().apply {
-                                                        action = Intent.ACTION_SEND
+                                                        action = Intent.ACTIONSEND
                                                         type = "text/plain"
                                                         putExtra(
                                                             Intent.EXTRA_TEXT,
@@ -1804,89 +1804,166 @@ fun BottomSheetPlayer(
                             }
                         }
                         "WAVY" -> {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                AnimatedVisibility(visible = showInlineLyrics) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(40.dp)
-                                            .clip(RoundedCornerShape(24.dp))
-                                            .background(textButtonColor)
-                                            .clickable { isFullScreen = !isFullScreen }
-                                    ) {
-                                        Icon(
-                                            painterResource(R.drawable.fullscreen),
-                                            contentDescription = null,
-                                            tint = iconButtonColor,
-                                            modifier = Modifier
-                                                .align(Alignment.Center)
-                                                .size(24.dp)
-                                        )
-                                    }
-                                }
+                                Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    
+                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                                        
+                                        // Optimization: Smooth scale animations for Wavy controls
+                                        val prevInteractionSource = remember { MutableInteractionSource() }
+                                        val isPrevPressed by prevInteractionSource.collectIsPressedAsState()
+                                        val prevScale by animateFloatAsState(if (isPrevPressed) 0.85f else 1f, spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessLow), label = "prevScale")
 
-                                AnimatedContent(targetState = showInlineLyrics, label = "MoreButton") { showLyrics ->
-                                    if (showLyrics) {
-                                        val currentLyrics by playerConnection.currentLyrics.collectAsStateWithLifecycle(initialValue = null)
-                                        Box(
-                                            modifier = Modifier
-                                                .size(40.dp)
-                                                .clip(RoundedCornerShape(24.dp))
-                                                .background(textButtonColor)
-                                                .clickable {
-                                                    menuState.show {
-                                                        com.jay.glossy.ui.menu.LyricsMenu(
-                                                            lyricsProvider = { currentLyrics },
-                                                            songProvider = { currentSong?.song },
-                                                            mediaMetadataProvider = { mediaMetadata },
-                                                            onDismiss = menuState::dismiss,
-                                                            onShowOffsetDialog = {
-                                                                bottomSheetPageState.show {
-                                                                    ShowOffsetDialog(songProvider = { currentSong?.song })
-                                                                }
-                                                            },
-                                                        )
-                                                    }
-                                                }
+                                        FilledIconButton(
+                                            onClick = playerConnection::seekToPrevious,
+                                            enabled = canSkipPrevious && !isListenTogetherGuest,
+                                            shape = RoundedCornerShape(24.dp),
+                                            colors = IconButtonDefaults.filledIconButtonColors(containerColor = sideButtonContainerColor, contentColor = sideButtonContentColor),
+                                            interactionSource = prevInteractionSource,
+                                            modifier = Modifier.height(72.dp).width(80.dp).graphicsLayer(scaleX = prevScale, scaleY = prevScale)
+                                        ) {
+                                            Icon(painter = painterResource(R.drawable.skip_previous), contentDescription = null, modifier = Modifier.size(32.dp))
+                                        }
+
+                                        Spacer(modifier = Modifier.width(16.dp))
+
+                                        val playInteractionSource = remember { MutableInteractionSource() }
+                                        val isPlayPressed by playInteractionSource.collectIsPressedAsState()
+                                        val playScale by animateFloatAsState(if (isPlayPressed) 0.88f else 1f, spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessLow), label = "playScale")
+
+                                        FilledIconButton(
+                                            onClick = onPlayPauseLogic,
+                                            shape = RoundedCornerShape(24.dp),
+                                            colors = IconButtonDefaults.filledIconButtonColors(containerColor = textButtonColor, contentColor = iconButtonColor),
+                                            interactionSource = playInteractionSource,
+                                            modifier = Modifier.height(72.dp).width(112.dp).focusRequester(focusRequester).graphicsLayer(scaleX = playScale, scaleY = playScale)
                                         ) {
                                             Icon(
-                                                painterResource(R.drawable.more_horiz), 
-                                                contentDescription = null, 
-                                                tint = iconButtonColor, 
-                                                modifier = Modifier.align(Alignment.Center).size(24.dp)
+                                                painter = painterResource(
+                                                    if (isListenTogetherGuest) {
+                                                        if (isMuted) R.drawable.volume_off else R.drawable.volume_up
+                                                    } else {
+                                                        if (effectiveIsPlaying) R.drawable.pause else R.drawable.play
+                                                    }
+                                                ),
+                                                contentDescription = null,
+                                                modifier = Modifier.size(40.dp)
                                             )
                                         }
-                                    } else {
-                                        androidx.compose.material3.IconButton(
-                                            onClick = {
-                                                menuState.show {
-                                                    PlayerMenu(
-                                                        mediaMetadata = mediaMetadata,
-                                                        playerBottomSheetState = state,
-                                                        onShowDetailsDialog = {
-                                                            mediaMetadata.id.let {
-                                                                bottomSheetPageState.show { ShowMediaInfo(it) }
-                                                            }
-                                                        },
-                                                        onDismiss = menuState::dismiss,
-                                                    )
-                                                }
-                                            },
-                                            modifier = Modifier.size(40.dp)
+
+                                        Spacer(modifier = Modifier.width(16.dp))
+
+                                        val nextInteractionSource = remember { MutableInteractionSource() }
+                                        val isNextPressed by nextInteractionSource.collectIsPressedAsState()
+                                        val nextScale by animateFloatAsState(if (isNextPressed) 0.85f else 1f, spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessLow), label = "nextScale")
+
+                                        FilledIconButton(
+                                            onClick = playerConnection::seekToNext,
+                                            enabled = canSkipNext && !isListenTogetherGuest,
+                                            shape = RoundedCornerShape(24.dp),
+                                            colors = IconButtonDefaults.filledIconButtonColors(containerColor = sideButtonContainerColor, contentColor = sideButtonContentColor),
+                                            interactionSource = nextInteractionSource,
+                                            modifier = Modifier.height(72.dp).width(80.dp).graphicsLayer(scaleX = nextScale, scaleY = nextScale)
                                         ) {
-                                            Icon(
-                                                painterResource(R.drawable.more_horiz),
-                                                contentDescription = null,
-                                                tint = TextBackgroundColor,
-                                                modifier = Modifier.size(24.dp)
-                                            )
+                                            Icon(painter = painterResource(R.drawable.skip_next), contentDescription = null, modifier = Modifier.size(32.dp))
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(32.dp))
+
+                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                        val isEpisode = currentSong?.song?.isEpisode == true
+                                        val isFavorite = if (isEpisode) currentSong?.song?.inLibrary != null else currentSong?.song?.liked == true
+                                        
+                                        Surface(
+                                            shape = RoundedCornerShape(50),
+                                            color = if (isFavorite) textButtonColor else sideButtonContainerColor, // Active Background
+                                            contentColor = if (isFavorite) MaterialTheme.colorScheme.error else sideButtonContentColor, // Red Icon when active
+                                            modifier = Modifier.height(52.dp).weight(0.8f),
+                                            onClick = { playerConnection.toggleLike() }
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(painterResource(if (isFavorite) R.drawable.favorite else R.drawable.favorite_border), null, modifier = Modifier.size(22.dp))
+                                            }
+                                        }
+                                        
+                                        val isDownloaded = download != null
+                                        Surface(
+                                            shape = RoundedCornerShape(50),
+                                            color = if (isDownloaded) textButtonColor else sideButtonContainerColor, // Active Background
+                                            contentColor = if (isDownloaded) iconButtonColor else sideButtonContentColor, // Dark Icon when active
+                                            modifier = Modifier.height(52.dp).weight(1.5f),
+                                            onClick = { /* Add Download Action logic here */ }
+                                        ) {
+                                            Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(painterResource(R.drawable.offline), null, modifier = Modifier.size(20.dp))
+                                                Spacer(Modifier.width(6.dp))
+                                                Text(
+                                                    text = if (isDownloaded) "Downloaded" else "Download", 
+                                                    style = MaterialTheme.typography.labelMedium, 
+                                                    maxLines = 1
+                                                )
+                                            }
+                                        }
+
+                                        val isRepeatActive = repeatMode != Player.REPEAT_MODE_OFF
+                                        Surface(
+                                            shape = RoundedCornerShape(50),
+                                            color = if (isRepeatActive) textButtonColor else sideButtonContainerColor, // Active Background
+                                            contentColor = if (isRepeatActive) iconButtonColor else sideButtonContentColor, // Dark Icon when active
+                                            modifier = Modifier.height(52.dp).weight(1.5f),
+                                            onClick = { playerConnection.player.toggleRepeatMode() }
+                                        ) {
+                                            Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(painterResource(
+                                                    when (repeatMode) {
+                                                        Player.REPEAT_MODE_ONE -> R.drawable.repeat_one
+                                                        else -> R.drawable.repeat
+                                                    }
+                                                ), null, modifier = Modifier.size(20.dp))
+                                                Spacer(Modifier.width(6.dp))
+                                                Text("Repeat", style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                                            }
+                                        }
+                                    }
+                                    
+                                    Spacer(modifier = Modifier.height(16.dp))
+
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                    ) {
+                                        Surface(
+                                            shape = RoundedCornerShape(50),
+                                            color = if (showInlineLyrics) textButtonColor else sideButtonContainerColor, // Active Background
+                                            contentColor = if (showInlineLyrics) iconButtonColor else sideButtonContentColor, // Dark Icon when active
+                                            modifier = Modifier.height(40.dp).weight(1f),
+                                            onClick = { showInlineLyrics = !showInlineLyrics }
+                                        ) {
+                                            Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(painterResource(R.drawable.lyrics), null, modifier = Modifier.size(18.dp))
+                                                Spacer(Modifier.width(6.dp))
+                                                Text("Lyrics", style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                                            }
+                                        }
+
+                                        Surface(
+                                            shape = RoundedCornerShape(50),
+                                            color = sideButtonContainerColor, // Queue opens sheet, active state not persistent on button
+                                            contentColor = sideButtonContentColor,
+                                            modifier = Modifier.height(40.dp).weight(1f),
+                                            onClick = { scope.launch { queueSheetState.expandSoft() } }
+                                        ) {
+                                            Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(painterResource(R.drawable.queue_music), null, modifier = Modifier.size(18.dp))
+                                                Spacer(Modifier.width(6.dp))
+                                                Text("Queue", style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
                     }
                 }
 
@@ -2298,8 +2375,8 @@ fun BottomSheetPlayer(
                                         
                                         Surface(
                                             shape = RoundedCornerShape(50),
-                                            color = sideButtonContainerColor,
-                                            contentColor = if (isFavorite) MaterialTheme.colorScheme.error else sideButtonContentColor,
+                                            color = if (isFavorite) textButtonColor else sideButtonContainerColor, // Active Background
+                                            contentColor = if (isFavorite) MaterialTheme.colorScheme.error else sideButtonContentColor, // Red Icon when active
                                             modifier = Modifier.height(52.dp).weight(0.8f),
                                             onClick = { playerConnection.toggleLike() }
                                         ) {
@@ -2308,12 +2385,11 @@ fun BottomSheetPlayer(
                                             }
                                         }
                                         
-                                        // ⬇️ DOWNLOAD BUTTON FIX HERE ⬇️
                                         val isDownloaded = download != null
                                         Surface(
                                             shape = RoundedCornerShape(50),
-                                            color = if (isDownloaded) textButtonColor else sideButtonContainerColor,
-                                            contentColor = if (isDownloaded) iconButtonColor else sideButtonContentColor,
+                                            color = if (isDownloaded) textButtonColor else sideButtonContainerColor, // Active Background
+                                            contentColor = if (isDownloaded) iconButtonColor else sideButtonContentColor, // Dark Icon when active
                                             modifier = Modifier.height(52.dp).weight(1.5f),
                                             onClick = { /* Add Download Action logic here */ }
                                         ) {
@@ -2328,10 +2404,11 @@ fun BottomSheetPlayer(
                                             }
                                         }
 
+                                        val isRepeatActive = repeatMode != Player.REPEAT_MODE_OFF
                                         Surface(
                                             shape = RoundedCornerShape(50),
-                                            color = sideButtonContainerColor,
-                                            contentColor = if (repeatMode != Player.REPEAT_MODE_OFF) textButtonColor else sideButtonContentColor,
+                                            color = if (isRepeatActive) textButtonColor else sideButtonContainerColor, // Active Background
+                                            contentColor = if (isRepeatActive) iconButtonColor else sideButtonContentColor, // Dark Icon when active
                                             modifier = Modifier.height(52.dp).weight(1.5f),
                                             onClick = { playerConnection.player.toggleRepeatMode() }
                                         ) {
@@ -2358,8 +2435,8 @@ fun BottomSheetPlayer(
                                     ) {
                                         Surface(
                                             shape = RoundedCornerShape(50),
-                                            color = sideButtonContainerColor,
-                                            contentColor = sideButtonContentColor,
+                                            color = if (showInlineLyrics) textButtonColor else sideButtonContainerColor, // Active Background
+                                            contentColor = if (showInlineLyrics) iconButtonColor else sideButtonContentColor, // Dark Icon when active
                                             modifier = Modifier.height(40.dp).weight(1f),
                                             onClick = { showInlineLyrics = !showInlineLyrics }
                                         ) {
@@ -2372,7 +2449,7 @@ fun BottomSheetPlayer(
 
                                         Surface(
                                             shape = RoundedCornerShape(50),
-                                            color = sideButtonContainerColor,
+                                            color = sideButtonContainerColor, // Queue opens sheet, active state not persistent on button
                                             contentColor = sideButtonContentColor,
                                             modifier = Modifier.height(40.dp).weight(1f),
                                             onClick = { scope.launch { queueSheetState.expandSoft() } }
