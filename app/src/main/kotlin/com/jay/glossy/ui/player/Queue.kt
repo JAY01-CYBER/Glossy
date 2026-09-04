@@ -360,7 +360,7 @@ fun Queue(
                     androidx.compose.material3.IconButton(
                         onClick = { state.expandSoft() },
                         interactionSource = queueInteractionSource,
-                        modifier = Modifier.size(48.dp).graphicsLayer(scaleX = queueScale, scaleY = queueScale)
+                        modifier = Modifier.size(48.dp).graphicsLayer { scaleX = queueScale; scaleY = queueScale }
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.queue_music), 
@@ -376,7 +376,7 @@ fun Queue(
                         label = "ViviNewBottomBarControls"
                     ) { showingLyrics ->
                         if (showingLyrics) {
-                            // 🎵 LYRICS MODE: Play/Pause and Next 🎵
+                            // 七 LYRICS MODE: Play/Pause and Next 七
                             Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                                 // Play/Pause Button
                                 val playInteractionSource = remember { MutableInteractionSource() }
@@ -387,7 +387,7 @@ fun Queue(
                                 Box(
                                     modifier = Modifier
                                         .size(44.dp)
-                                        .graphicsLayer(scaleX = playScale, scaleY = playScale)
+                                        .graphicsLayer { scaleX = playScale; scaleY = playScale }
                                         .clip(CircleShape)
                                         .border(1.dp, circleBorder, CircleShape)
                                         .background(circleBg)
@@ -434,7 +434,7 @@ fun Queue(
                                 Box(
                                     modifier = Modifier
                                         .size(44.dp)
-                                        .graphicsLayer(scaleX = nextScale, scaleY = nextScale)
+                                        .graphicsLayer { scaleX = nextScale; scaleY = nextScale }
                                         .clip(CircleShape)
                                         .border(1.dp, circleBorder, CircleShape)
                                         .background(circleBg)
@@ -456,7 +456,7 @@ fun Queue(
                                 }
                             }
                         } else {
-                            // 🎧 NORMAL MODE: Audio Devices and Sleep Timer 🎧
+                            // 而 NORMAL MODE: Audio Devices and Sleep Timer 而
                             Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                                 // Devices Button
                                 val devicesInteractionSource = remember { MutableInteractionSource() }
@@ -466,7 +466,7 @@ fun Queue(
                                 Box(
                                     modifier = Modifier
                                         .size(44.dp)
-                                        .graphicsLayer(scaleX = devicesScale, scaleY = devicesScale)
+                                        .graphicsLayer { scaleX = devicesScale; scaleY = devicesScale }
                                         .clip(CircleShape)
                                         .border(1.dp, circleBorder, CircleShape)
                                         .background(circleBg)
@@ -498,7 +498,7 @@ fun Queue(
                                         .height(44.dp)
                                         .widthIn(min = 44.dp)
                                         .animateContentSize()
-                                        .graphicsLayer(scaleX = sleepScale, scaleY = sleepScale)
+                                        .graphicsLayer { scaleX = sleepScale; scaleY = sleepScale }
                                         .clip(CircleShape)
                                         .border(1.dp, if (sleepTimerEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else circleBorder, CircleShape)
                                         .background(if (sleepTimerEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else circleBg)
@@ -546,7 +546,7 @@ fun Queue(
                     androidx.compose.material3.IconButton(
                         onClick = onToggleLyrics,
                         interactionSource = lyricsInteractionSource,
-                        modifier = Modifier.size(48.dp).graphicsLayer(scaleX = lyricsScale, scaleY = lyricsScale)
+                        modifier = Modifier.size(48.dp).graphicsLayer { scaleX = lyricsScale; scaleY = lyricsScale }
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.lyrics), 
@@ -1149,8 +1149,9 @@ fun Queue(
                         Spacer(modifier = Modifier.animateContentSize().height(if (inSelectMode) 48.dp else 0.dp))
                     }
 
-                    itemsIndexed(items = mutableQueueWindows, key = { _, item -> item.uid.hashCode() }) { index, window ->
-                        ReorderableItem(state = reorderableState, key = window.uid.hashCode()) {
+                    // Key Change for Drag and Drop Performance
+                    itemsIndexed(items = mutableQueueWindows, key = { _, item -> "${item.mediaItem.mediaId}_${item.uid}" }) { index, window ->
+                        ReorderableItem(state = reorderableState, key = "${window.mediaItem.mediaId}_${window.uid}") {
                             val currentItem by rememberUpdatedState(window)
                             val isActive = window.uid == currentPlayingUid
                             val dismissBoxState = rememberSwipeToDismissBoxState(positionalThreshold = { totalDistance -> totalDistance })
