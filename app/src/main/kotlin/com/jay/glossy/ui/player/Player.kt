@@ -83,6 +83,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -2291,8 +2292,8 @@ fun BottomSheetPlayer(
                                         
                                         Surface(
                                             shape = RoundedCornerShape(50),
-                                            color = sideButtonContainerColor,
-                                            contentColor = sideButtonContentColor,
+                                            color = if (isFavorite) textButtonColor else sideButtonContainerColor,
+                                            contentColor = if (isFavorite) MaterialTheme.colorScheme.error else sideButtonContentColor,
                                             modifier = Modifier.height(52.dp).weight(0.8f),
                                             onClick = { playerConnection.toggleLike() }
                                         ) {
@@ -2300,16 +2301,15 @@ fun BottomSheetPlayer(
                                                 Icon(
                                                     painterResource(if (isFavorite) R.drawable.favorite else R.drawable.favorite_border), 
                                                     contentDescription = null, 
-                                                    modifier = Modifier.size(22.dp),
-                                                    tint = if (isFavorite) Color.White else sideButtonContentColor
+                                                    modifier = Modifier.size(22.dp)
                                                 )
                                             }
                                         }
                                         
                                         Surface(
                                             shape = RoundedCornerShape(50),
-                                            color = sideButtonContainerColor,
-                                            contentColor = sideButtonContentColor,
+                                            color = if (sleepTimerEnabled) textButtonColor else sideButtonContainerColor,
+                                            contentColor = if (sleepTimerEnabled) iconButtonColor else sideButtonContentColor,
                                             modifier = Modifier.height(52.dp).weight(1.5f),
                                             onClick = { 
                                                 if (sleepTimerEnabled) {
@@ -2323,24 +2323,22 @@ fun BottomSheetPlayer(
                                                 Icon(
                                                     painterResource(R.drawable.bedtime), 
                                                     contentDescription = null, 
-                                                    modifier = Modifier.size(20.dp),
-                                                    tint = if (sleepTimerEnabled) Color.White else sideButtonContentColor
+                                                    modifier = Modifier.size(20.dp)
                                                 )
                                                 Spacer(Modifier.width(6.dp))
                                                 Text(
                                                     text = if (sleepTimerEnabled) makeTimeString(sleepTimerTimeLeft) else stringResource(R.string.sleep_timer), 
                                                     style = MaterialTheme.typography.labelMedium, 
                                                     maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis,
-                                                    color = if (sleepTimerEnabled) Color.White else sideButtonContentColor
+                                                    overflow = TextOverflow.Ellipsis
                                                 )
                                             }
                                         }
 
                                         Surface(
                                             shape = RoundedCornerShape(50),
-                                            color = sideButtonContainerColor,
-                                            contentColor = sideButtonContentColor,
+                                            color = if (repeatMode != Player.REPEAT_MODE_OFF) textButtonColor else sideButtonContainerColor,
+                                            contentColor = if (repeatMode != Player.REPEAT_MODE_OFF) iconButtonColor else sideButtonContentColor,
                                             modifier = Modifier.height(52.dp).weight(1.5f),
                                             onClick = { playerConnection.player.toggleRepeatMode() }
                                         ) {
@@ -2353,15 +2351,13 @@ fun BottomSheetPlayer(
                                                         }
                                                     ), 
                                                     contentDescription = null, 
-                                                    modifier = Modifier.size(20.dp),
-                                                    tint = if (repeatMode != Player.REPEAT_MODE_OFF) Color.White else sideButtonContentColor
+                                                    modifier = Modifier.size(20.dp)
                                                 )
                                                 Spacer(Modifier.width(6.dp))
                                                 Text(
                                                     "Repeat", 
                                                     style = MaterialTheme.typography.labelMedium, 
-                                                    maxLines = 1,
-                                                    color = if (repeatMode != Player.REPEAT_MODE_OFF) Color.White else sideButtonContentColor
+                                                    maxLines = 1
                                                 )
                                             }
                                         }
@@ -2377,8 +2373,8 @@ fun BottomSheetPlayer(
                                     ) {
                                         Surface(
                                             shape = RoundedCornerShape(50),
-                                            color = sideButtonContainerColor,
-                                            contentColor = sideButtonContentColor,
+                                            color = if (showInlineLyrics) textButtonColor else sideButtonContainerColor,
+                                            contentColor = if (showInlineLyrics) iconButtonColor else sideButtonContentColor,
                                             modifier = Modifier.height(40.dp).weight(1f),
                                             onClick = { showInlineLyrics = !showInlineLyrics }
                                         ) {
@@ -2386,15 +2382,13 @@ fun BottomSheetPlayer(
                                                 Icon(
                                                     painterResource(R.drawable.lyrics), 
                                                     contentDescription = null, 
-                                                    modifier = Modifier.size(18.dp),
-                                                    tint = if (showInlineLyrics) Color.White else sideButtonContentColor
+                                                    modifier = Modifier.size(18.dp)
                                                 )
                                                 Spacer(Modifier.width(6.dp))
                                                 Text(
                                                     "Lyrics", 
                                                     style = MaterialTheme.typography.labelMedium, 
-                                                    maxLines = 1,
-                                                    color = if (showInlineLyrics) Color.White else sideButtonContentColor
+                                                    maxLines = 1
                                                 )
                                             }
                                         }
@@ -2410,15 +2404,13 @@ fun BottomSheetPlayer(
                                                 Icon(
                                                     painterResource(R.drawable.queue_music), 
                                                     contentDescription = null, 
-                                                    modifier = Modifier.size(18.dp),
-                                                    tint = sideButtonContentColor
+                                                    modifier = Modifier.size(18.dp)
                                                 )
                                                 Spacer(Modifier.width(6.dp))
                                                 Text(
                                                     "Queue", 
                                                     style = MaterialTheme.typography.labelMedium, 
-                                                    maxLines = 1,
-                                                    color = sideButtonContentColor
+                                                    maxLines = 1
                                                 )
                                             }
                                         }
