@@ -8,7 +8,7 @@ import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
 import org.gradle.process.ExecOperations
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import java.net.URL
+import java.net.URI
 import java.util.Properties
 import javax.inject.Inject
 
@@ -64,7 +64,7 @@ abstract class GenerateProtoTask : DefaultTask() {
             val url = protocUrl.get()
             logger.lifecycle("Downloading protoc ${url.substringAfterLast('/')} from $url")
             protocFile.parentFile.mkdirs()
-            val connection = URL(url).openConnection() as java.net.HttpURLConnection
+            val connection = URI(url).toURL().openConnection() as java.net.HttpURLConnection
             connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
             val responseCode = connection.responseCode
             if (responseCode !in 200..299) {
@@ -281,7 +281,7 @@ val protoFile = protoDir.resolve("listentogether.proto")
 
 val generateProto = if (protoFile.exists()) {
     val protocUrl = getProtocUrl()
-    val protocFileName = URL(protocUrl).path.substringAfterLast('/')
+    val protocFileName = URI(protocUrl).toURL().path.substringAfterLast('/')
 
     tasks.register<GenerateProtoTask>("generateProto") {
         group = "build"
@@ -345,6 +345,7 @@ dependencies {
     
     implementation(libs.palette)
     implementation(libs.kmpalette.core)
+    implementation(libs.kmpalette.extensions.network)
     
     implementation(libs.materialKolor)
 

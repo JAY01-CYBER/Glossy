@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -28,6 +28,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -44,8 +47,13 @@ fun BoxScope.HideOnScrollFAB(
     onClick: () -> Unit,
     onRecognitionClick: (() -> Unit)? = null,
 ) {
+    val isScrollingUp = lazyListState.isScrollingUp()
+    val isFabVisible by remember(visible, isScrollingUp) {
+        derivedStateOf { visible && isScrollingUp }
+    }
+
     AnimatedVisibility(
-        visible = visible && lazyListState.isScrollingUp(),
+        visible = isFabVisible,
         enter = slideInVertically { it },
         exit = slideOutVertically { it },
         modifier =
@@ -95,8 +103,13 @@ fun BoxScope.HideOnScrollFAB(
     onClick: () -> Unit,
     onRecognitionClick: (() -> Unit)? = null,
 ) {
+    val isScrollingUp = lazyListState.isScrollingUp()
+    val isFabVisible by remember(visible, isScrollingUp) {
+        derivedStateOf { visible && isScrollingUp }
+    }
+
     AnimatedVisibility(
-        visible = visible && lazyListState.isScrollingUp(),
+        visible = isFabVisible,
         enter = slideInVertically { it },
         exit = slideOutVertically { it },
         modifier =
@@ -146,8 +159,13 @@ fun BoxScope.HideOnScrollFAB(
     onClick: () -> Unit,
     onRecognitionClick: (() -> Unit)? = null,
 ) {
+    val isScrollingUp = scrollState.isScrollingUp()
+    val isFabVisible by remember(visible, isScrollingUp) {
+        derivedStateOf { visible && isScrollingUp }
+    }
+
     AnimatedVisibility(
-        visible = visible && scrollState.isScrollingUp(),
+        visible = isFabVisible,
         enter = slideInVertically { it },
         exit = slideOutVertically { it },
         modifier =
