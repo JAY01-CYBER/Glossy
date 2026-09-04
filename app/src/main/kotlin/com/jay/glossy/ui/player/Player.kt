@@ -73,6 +73,8 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -80,6 +82,7 @@ import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Slider
@@ -704,7 +707,7 @@ fun BottomSheetPlayer(
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         if (isAtDefault) {
-                            FilledIconButton(
+                            Button(
                                 onClick = {
                                     scope.launch {
                                         context.safeDataStoreEdit { settings ->
@@ -717,7 +720,7 @@ fun BottomSheetPlayer(
                                         Toast.LENGTH_SHORT,
                                     ).show()
                                 },
-                                colors = IconButtonDefaults.filledIconButtonColors(
+                                colors = ButtonDefaults.buttonColors(
                                     containerColor = MaterialTheme.colorScheme.primary,
                                     contentColor = MaterialTheme.colorScheme.onPrimary,
                                 ),
@@ -725,7 +728,7 @@ fun BottomSheetPlayer(
                                 Text(stringResource(R.string.set_as_default))
                             }
                         } else {
-                            OutlinedIconButton(
+                            OutlinedButton(
                                 onClick = {
                                     scope.launch {
                                         context.safeDataStoreEdit { settings ->
@@ -743,7 +746,7 @@ fun BottomSheetPlayer(
                             }
                         }
 
-                        OutlinedIconButton(
+                        OutlinedButton(
                             onClick = {
                                 showSleepTimerDialog = false
                                 playerConnection.service.sleepTimer?.start(minute = -1)
@@ -2295,7 +2298,12 @@ fun BottomSheetPlayer(
                                             onClick = { playerConnection.toggleLike() }
                                         ) {
                                             Box(contentAlignment = Alignment.Center) {
-                                                Icon(painterResource(if (isFavorite) R.drawable.favorite else R.drawable.favorite_border), null, modifier = Modifier.size(22.dp))
+                                                Icon(
+                                                    painterResource(if (isFavorite) R.drawable.favorite else R.drawable.favorite_border), 
+                                                    null, 
+                                                    modifier = Modifier.size(22.dp),
+                                                    tint = if (isFavorite) Color.White else sideButtonContentColor
+                                                )
                                             }
                                         }
                                         
@@ -2313,13 +2321,19 @@ fun BottomSheetPlayer(
                                             }
                                         ) {
                                             Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                                                Icon(painterResource(R.drawable.bedtime), null, modifier = Modifier.size(20.dp))
+                                                Icon(
+                                                    painterResource(R.drawable.bedtime), 
+                                                    null, 
+                                                    modifier = Modifier.size(20.dp),
+                                                    tint = if (sleepTimerEnabled) Color.White else sideButtonContentColor
+                                                )
                                                 Spacer(Modifier.width(6.dp))
                                                 Text(
                                                     text = if (sleepTimerEnabled) makeTimeString(sleepTimerTimeLeft) else stringResource(R.string.sleep_timer), 
                                                     style = MaterialTheme.typography.labelMedium, 
                                                     maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    color = if (sleepTimerEnabled) Color.White else sideButtonContentColor
                                                 )
                                             }
                                         }
@@ -2332,14 +2346,24 @@ fun BottomSheetPlayer(
                                             onClick = { playerConnection.player.toggleRepeatMode() }
                                         ) {
                                             Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                                                Icon(painterResource(
-                                                    when (repeatMode) {
-                                                        Player.REPEAT_MODE_ONE -> R.drawable.repeat_one
-                                                        else -> R.drawable.repeat
-                                                    }
-                                                ), null, modifier = Modifier.size(20.dp))
+                                                Icon(
+                                                    painterResource(
+                                                        when (repeatMode) {
+                                                            Player.REPEAT_MODE_ONE -> R.drawable.repeat_one
+                                                            else -> R.drawable.repeat
+                                                        }
+                                                    ), 
+                                                    null, 
+                                                    modifier = Modifier.size(20.dp),
+                                                    tint = if (repeatMode != Player.REPEAT_MODE_OFF) Color.White else sideButtonContentColor
+                                                )
                                                 Spacer(Modifier.width(6.dp))
-                                                Text("Repeat", style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                                                Text(
+                                                    "Repeat", 
+                                                    style = MaterialTheme.typography.labelMedium, 
+                                                    maxLines = 1,
+                                                    color = if (repeatMode != Player.REPEAT_MODE_OFF) Color.White else sideButtonContentColor
+                                                )
                                             }
                                         }
                                     }
@@ -2360,9 +2384,19 @@ fun BottomSheetPlayer(
                                             onClick = { showInlineLyrics = !showInlineLyrics }
                                         ) {
                                             Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                                                Icon(painterResource(R.drawable.lyrics), null, modifier = Modifier.size(18.dp))
+                                                Icon(
+                                                    painterResource(R.drawable.lyrics), 
+                                                    null, 
+                                                    modifier = Modifier.size(18.dp),
+                                                    tint = if (showInlineLyrics) Color.White else sideButtonContentColor
+                                                )
                                                 Spacer(Modifier.width(6.dp))
-                                                Text("Lyrics", style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                                                Text(
+                                                    "Lyrics", 
+                                                    style = MaterialTheme.typography.labelMedium, 
+                                                    maxLines = 1,
+                                                    color = if (showInlineLyrics) Color.White else sideButtonContentColor
+                                                )
                                             }
                                         }
 
@@ -2374,9 +2408,19 @@ fun BottomSheetPlayer(
                                             onClick = { scope.launch { queueSheetState.expandSoft() } }
                                         ) {
                                             Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                                                Icon(painterResource(R.drawable.queue_music), null, modifier = Modifier.size(18.dp))
+                                                Icon(
+                                                    painterResource(R.drawable.queue_music), 
+                                                    null, 
+                                                    modifier = Modifier.size(18.dp),
+                                                    tint = sideButtonContentColor
+                                                )
                                                 Spacer(Modifier.width(6.dp))
-                                                Text("Queue", style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                                                Text(
+                                                    "Queue", 
+                                                    style = MaterialTheme.typography.labelMedium, 
+                                                    maxLines = 1,
+                                                    color = sideButtonContentColor
+                                                )
                                             }
                                         }
                                     }
