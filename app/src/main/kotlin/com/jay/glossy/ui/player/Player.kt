@@ -24,7 +24,6 @@ import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.animation.sharedBounds
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.LinearEasing
@@ -229,6 +228,20 @@ import com.jay.glossy.ui.component.Icon as MIcon
 @OptIn(ExperimentalSharedTransitionApi::class)
 val LocalSharedTransitionScope = compositionLocalOf<SharedTransitionScope?> { null }
 val LocalAnimatedVisibilityScope = compositionLocalOf<AnimatedVisibilityScope?> { null }
+
+// Helper wrapper to prevent implicit RowScope/ColumnScope compiler confusion
+@Composable
+fun FadeAnimatedVisibility(
+    visible: Boolean,
+    content: @Composable AnimatedVisibilityScope.() -> Unit
+) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(tween(300)),
+        exit = fadeOut(tween(300)),
+        content = content
+    )
+}
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -968,14 +981,10 @@ fun BottomSheetPlayer(
             collapsedContent = {
                 // Wrap to hold exact height so BottomSheet doesn't collapse to 0 height
                 Box(modifier = Modifier.fillMaxWidth().height(com.jay.glossy.constants.MiniPlayerHeight)) {
-                    AnimatedVisibility(
-                        visible = state.progress < 0.8f,
-                        enter = fadeIn(tween(300)),
-                        exit = fadeOut(tween(300))
-                    ) {
+                    FadeAnimatedVisibility(visible = state.progress < 0.8f) {
                         CompositionLocalProvider(
                             LocalSharedTransitionScope provides sharedTransitionScope,
-                            LocalAnimatedVisibilityScope provides this@AnimatedVisibility
+                            LocalAnimatedVisibilityScope provides this@FadeAnimatedVisibility
                         ) {
                             MiniPlayer(
                                 positionState = positionState,
@@ -1676,15 +1685,10 @@ fun BottomSheetPlayer(
                             val sliderPositionProvider = remember { { currentSliderPosition } }
                             val isExpandedProvider = remember(state) { { state.isExpanded } }
                             
-                            // Shared Transition Animation wrapper
-                            AnimatedVisibility(
-                                visible = state.progress >= 0.2f,
-                                enter = fadeIn(tween(300)),
-                                exit = fadeOut(tween(300))
-                            ) {
+                            FadeAnimatedVisibility(visible = state.progress >= 0.2f) {
                                 CompositionLocalProvider(
                                     LocalSharedTransitionScope provides sharedTransitionScope,
-                                    LocalAnimatedVisibilityScope provides this@AnimatedVisibility
+                                    LocalAnimatedVisibilityScope provides this@FadeAnimatedVisibility
                                 ) {
                                     AnimatedContent(
                                         targetState = showInlineLyrics,
@@ -1745,15 +1749,10 @@ fun BottomSheetPlayer(
                             val sliderPositionProvider = remember { { currentSliderPosition } }
                             val isExpandedProvider = remember(state) { { state.isExpanded } }
                             
-                            // Shared Transition Animation wrapper
-                            AnimatedVisibility(
-                                visible = state.progress >= 0.2f,
-                                enter = fadeIn(tween(300)),
-                                exit = fadeOut(tween(300))
-                            ) {
+                            FadeAnimatedVisibility(visible = state.progress >= 0.2f) {
                                 CompositionLocalProvider(
                                     LocalSharedTransitionScope provides sharedTransitionScope,
-                                    LocalAnimatedVisibilityScope provides this@AnimatedVisibility
+                                    LocalAnimatedVisibilityScope provides this@FadeAnimatedVisibility
                                 ) {
                                     AnimatedContent(
                                         targetState = showInlineLyrics,
