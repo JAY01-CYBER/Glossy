@@ -60,6 +60,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -107,7 +108,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -655,7 +655,7 @@ fun BottomSheetPlayer(
             onDismissRequest = { showSleepTimerDialog = false },
             icon = {
                 Icon(
-                    painter = painterResource(R.bedtime),
+                    painter = painterResource(R.drawable.bedtime),
                     contentDescription = null,
                 )
             },
@@ -1807,19 +1807,6 @@ fun BottomSheetPlayer(
                         "WAVY" -> {
                                 Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                     
-                                    val onPlayPauseLogic: () -> Unit = {
-                                        if (isListenTogetherGuest) {
-                                            playerConnection.toggleMute()
-                                        } else if (isCasting) {
-                                            if (castIsPlaying) castHandler?.pause() else castHandler?.play()
-                                        } else if (playbackState == STATE_ENDED) {
-                                            playerConnection.player.seekTo(0, 0)
-                                            playerConnection.player.playWhenReady = true
-                                        } else {
-                                            playerConnection.togglePlayPause()
-                                        }
-                                    }
-
                                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                                         
                                         // Optimization: Smooth scale animations for Wavy controls
@@ -1890,8 +1877,8 @@ fun BottomSheetPlayer(
                                         
                                         Surface(
                                             shape = RoundedCornerShape(50),
-                                            color = if (isFavorite) textButtonColor else sideButtonContainerColor, // Active Background
-                                            contentColor = if (isFavorite) MaterialTheme.colorScheme.error else sideButtonContentColor, // Red Icon when active
+                                            color = if (isFavorite) textButtonColor else sideButtonContainerColor, 
+                                            contentColor = if (isFavorite) MaterialTheme.colorScheme.error else sideButtonContentColor, 
                                             modifier = Modifier.height(52.dp).weight(0.8f),
                                             onClick = { playerConnection.toggleLike() }
                                         ) {
@@ -1901,8 +1888,8 @@ fun BottomSheetPlayer(
                                         }
                                         
                                         val downloadState = download?.state
-                                        val isDownloaded = downloadState == androidx.media3.exoplayer.offline.Download.STATE_COMPLETED
-                                        val isDownloading = downloadState == androidx.media3.exoplayer.offline.Download.STATE_DOWNLOADING || downloadState == androidx.media3.exoplayer.offline.Download.STATE_QUEUED || downloadState == androidx.media3.exoplayer.offline.Download.STATE_RESTARTING
+                                        val isDownloaded = downloadState == 3
+                                        val isDownloading = downloadState == 2 || downloadState == 0 || downloadState == 7
                                         
                                         val percent = download?.percentDownloaded ?: 0f
                                         val progressFactor = if (percent < 0f) 0f else percent / 100f
@@ -1916,8 +1903,8 @@ fun BottomSheetPlayer(
                                         
                                         Surface(
                                             shape = RoundedCornerShape(50),
-                                            color = if (isDownloaded) textButtonColor else sideButtonContainerColor, // Active Background
-                                            contentColor = if (isDownloaded) iconButtonColor else sideButtonContentColor, // Dark Icon when active
+                                            color = if (isDownloaded) textButtonColor else sideButtonContainerColor, 
+                                            contentColor = if (isDownloaded) iconButtonColor else sideButtonContentColor, 
                                             modifier = Modifier.height(52.dp).weight(1.5f),
                                             onClick = { 
                                                 mediaMetadata?.let { meta ->
@@ -1925,21 +1912,18 @@ fun BottomSheetPlayer(
                                                 }
                                             }
                                         ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .fillMaxSize()
-                                                    .drawBehind {
-                                                        if (!isDownloaded && animatedProgress > 0f) {
-                                                            drawRect(
-                                                                color = textButtonColor.copy(alpha = 0.35f),
-                                                                size = androidx.compose.ui.geometry.Size(size.width * animatedProgress, size.height)
-                                                            )
-                                                        }
-                                                    },
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                                                    Icon(painterResource(if (isDownloaded) R.drawable.offline else R.drawable.download), null, modifier = Modifier.size(20.dp))
+                                            Box(contentAlignment = Alignment.Center) {
+                                                if (!isDownloaded && animatedProgress > 0f) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .fillMaxHeight()
+                                                            .fillMaxWidth(animatedProgress)
+                                                            .background(textButtonColor.copy(alpha = 0.25f))
+                                                            .align(Alignment.CenterStart)
+                                                    )
+                                                }
+                                                Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 8.dp)) {
+                                                    Icon(painterResource(R.drawable.offline), null, modifier = Modifier.size(20.dp))
                                                     Spacer(Modifier.width(6.dp))
                                                     Text(
                                                         text = when {
@@ -1957,8 +1941,8 @@ fun BottomSheetPlayer(
                                         val isRepeatActive = repeatMode != Player.REPEAT_MODE_OFF
                                         Surface(
                                             shape = RoundedCornerShape(50),
-                                            color = if (isRepeatActive) textButtonColor else sideButtonContainerColor, // Active Background
-                                            contentColor = if (isRepeatActive) iconButtonColor else sideButtonContentColor, // Dark Icon when active
+                                            color = if (isRepeatActive) textButtonColor else sideButtonContainerColor, 
+                                            contentColor = if (isRepeatActive) iconButtonColor else sideButtonContentColor, 
                                             modifier = Modifier.height(52.dp).weight(1.5f),
                                             onClick = { playerConnection.player.toggleRepeatMode() }
                                         ) {
@@ -1985,8 +1969,8 @@ fun BottomSheetPlayer(
                                     ) {
                                         Surface(
                                             shape = RoundedCornerShape(50),
-                                            color = if (showInlineLyrics) textButtonColor else sideButtonContainerColor, // Active Background
-                                            contentColor = if (showInlineLyrics) iconButtonColor else sideButtonContentColor, // Dark Icon when active
+                                            color = if (showInlineLyrics) textButtonColor else sideButtonContainerColor, 
+                                            contentColor = if (showInlineLyrics) iconButtonColor else sideButtonContentColor, 
                                             modifier = Modifier.height(40.dp).weight(1f),
                                             onClick = { showInlineLyrics = !showInlineLyrics }
                                         ) {
@@ -1999,7 +1983,7 @@ fun BottomSheetPlayer(
 
                                         Surface(
                                             shape = RoundedCornerShape(50),
-                                            color = sideButtonContainerColor, // Queue opens sheet, active state not persistent on button
+                                            color = sideButtonContainerColor,
                                             contentColor = sideButtonContentColor,
                                             modifier = Modifier.height(40.dp).weight(1f),
                                             onClick = { scope.launch { queueSheetState.expandSoft() } }
