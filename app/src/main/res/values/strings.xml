@@ -345,5 +345,7 @@
     <string name="clear_translation_models">Clear translation models</string>
     <string name="credits_metrolist_dev">Metrolist Dev</string>
     <string name="mix">Mix</string>
+    <string name="credits_special_helpers">Special Helpers</string>
+    <string name="credits_special_helper">Special Helper</string>
     
 </resources>
