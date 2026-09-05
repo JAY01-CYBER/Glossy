@@ -53,6 +53,8 @@ jobs:
             else
               echo "Version unchanged: $NEW_VERSION"
               echo "version_changed=false" >> $GITHUB_OUTPUT
+              echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+              echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
             fi
           else
             echo "First version detected: $NEW_VERSION"
