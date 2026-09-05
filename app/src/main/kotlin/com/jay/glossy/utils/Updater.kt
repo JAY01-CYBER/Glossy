@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -196,28 +196,12 @@ object Updater {
 
     /**
      * Returns the newest KMP release that provides the migration APK.
+     * DISABLED for Glossy to prevent the unnecessary KMP migration popup.
      */
     suspend fun getLatestKmpRelease(): Result<ReleaseInfo?> =
         withContext(Dispatchers.IO) {
             runCatching {
-                val releases = JSONArray(client.get(KMP_RELEASES_URL).bodyAsText())
-
-                for (i in 0 until releases.length()) {
-                    val release = releases.getJSONObject(i)
-                    val assets = parseAssets(release.getJSONArray("assets"))
-                    if (assets.none { it.name == KMP_APK_NAME }) continue
-
-                    val tagName = release.getString("tag_name")
-                    return@runCatching ReleaseInfo(
-                        tagName = tagName,
-                        versionName = release.optString("name").takeIf { it.isNotBlank() } ?: tagName,
-                        description = release.optString("body"),
-                        releaseDate = release.getString("published_at"),
-                        assets = assets,
-                    )
-                }
-
-                null
+                null // Always returning null disables the popup entirely
             }
         }
 
