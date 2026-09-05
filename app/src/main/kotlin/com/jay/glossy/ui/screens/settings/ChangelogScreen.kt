@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -49,9 +49,8 @@ fun ChangelogScreen(
 
     LaunchedEffect(Unit) {
         Updater.getAllReleases().onSuccess { allReleases ->
-            releases = allReleases.filter { release ->
-                Updater.compareVersions(BuildConfig.VERSION_NAME, release.tagName) >= 0
-            }
+            // Filter hata diya hai taaki changelog.md ka text hamesha show ho
+            releases = allReleases
             isLoading = false
         }.onFailure {
             isLoading = false
@@ -136,7 +135,8 @@ fun ChangelogScreen(
                     .align(Alignment.BottomEnd)
                     .padding(16.dp)
             ) {
-                val githubReleasesUrl = stringResource(R.string.github_releases_url)
+                // Apna direct Glossy repository ka link yahan daal diya!
+                val githubReleasesUrl = "https://github.com/JAY01-CYBER/Glossy/releases"
                 ExtendedFloatingActionButton(
                     onClick = { uriHandler.openUri(githubReleasesUrl) },
                     icon = { Icon(painterResource(R.drawable.github), contentDescription = null, modifier = Modifier.size(24.dp)) },
