@@ -1,4 +1,5 @@
-# 🎉 Glossy v0.0.1 - Initial Release (Alpha)
+---v0.0.1
+# 🎉 Glossy v0.0.1 - Initial Release
 
 Welcome to the very first release of **Glossy**! 🎵 
 Glossy is a beautiful, highly customizable, and feature-rich open-source Android music player built with Kotlin, Jetpack Compose, and Material Design 3 Expressive. 
