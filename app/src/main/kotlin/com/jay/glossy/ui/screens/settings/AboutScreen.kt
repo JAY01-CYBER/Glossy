@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -118,8 +118,13 @@ private val collaborators = listOf(
     Contributor(name = "Nyx", roleRes = R.string.credits_collaborator, githubHandle = "nyxiereal", sponsorUrl = "https://github.com/sponsors/nyxiereal", polygon = MaterialShapes.Cookie12Sided, favoriteSongVideoId = "zselaN6zPXw"),
 )
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+private val specialHelpers = listOf(
+    Contributor(name = "M4TRX", roleRes = R.string.credits_special_helper, githubHandle = "m4trxx", polygon = MaterialShapes.Cookie12Sided)
+)
+
 private val communityLinks = listOf(
-    CommunityLink(R.string.credits_discord, R.drawable.discord, ""),
+    CommunityLink(R.string.credits_discord, R.drawable.discord, "https://discord.gg/wmS43GfkU"),
     CommunityLink(R.string.credits_telegram, R.drawable.telegram, "https://t.me/glossyplayer"),
     CommunityLink(R.string.credits_view_repo, R.drawable.github, "https://github.com/JAY01-CYBER/Glossy"),
     CommunityLink(R.string.credits_license_name, R.drawable.info, "https://github.com/JAY01-CYBER/Glossy/blob/main/LICENSE")
@@ -263,6 +268,7 @@ fun AboutScreen(
                     Image(
                         painter = painterResource(R.drawable.about_icon),
                         contentDescription = "Glossy",
+                        colorFilter = ColorFilter.tint(Color.White), // <-- Ider add kiya hai
                         modifier = Modifier.size(64.dp)
                     )
                 }
@@ -410,10 +416,75 @@ fun AboutScreen(
 
         Spacer(Modifier.height(32.dp))
         
-        // Collaborators section - back to Material3SettingsGroup
+        // Collaborators section
         Material3SettingsGroup(
             title = "Metrolist Devs",
             items = collaborators.map { contributor ->
+                Material3SettingsItem(
+                    leadingContent = {
+                        var clickCount by remember(contributor.name) { mutableIntStateOf(0) }
+                        ContributorAvatar(
+                            avatarUrl = contributor.avatarUrl,
+                            sizeDp = 48,
+                            shape = contributor.polygon?.toShape() ?: CircleShape,
+                            contentDescription = contributor.name,
+                            onClick = {
+                                handleEasterEggClick(
+                                    clickCount = clickCount,
+                                    favoriteSongVideoId = contributor.favoriteSongVideoId,
+                                    coroutineScope = coroutineScope,
+                                    snackbarHostState = snackbarHostState,
+                                    playerConnection = playerConnection,
+                                    wannaPlayStr = wannaPlayStr,
+                                    yeahStr = yeahStr,
+                                    onCountUpdate = { clickCount = it }
+                                )
+                            }
+                        )
+                    },
+                    title = { Text(text = contributor.name, fontWeight = FontWeight.SemiBold) },
+                    description = { Text(stringResource(contributor.roleRes)) },
+                    trailingContent = {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (contributor.sponsorUrl != null) {
+                                Surface(
+                                    onClick = { uriHandler.openUri(contributor.sponsorUrl) },
+                                    shape = CircleShape,
+                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.buymeacoffee),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                            Icon(
+                                painter = painterResource(R.drawable.github),
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
+                    onClick = { uriHandler.openUri(contributor.githubUrl) }
+                )
+            }
+        )
+        
+        Spacer(Modifier.height(32.dp))
+
+        // Special Helpers section
+        Material3SettingsGroup(
+            title = stringResource(R.string.credits_special_helpers),
+            items = specialHelpers.map { contributor ->
                 Material3SettingsItem(
                     leadingContent = {
                         var clickCount by remember(contributor.name) { mutableIntStateOf(0) }
