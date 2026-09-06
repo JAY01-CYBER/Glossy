@@ -120,10 +120,6 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Restore Persistent Keystore
-        run: |
-          echo "${{ secrets.DEBUG_KEYSTORE }}" | base64 -d > ./app/persistent-debug.keystore
-
       - name: Build Debug APK and Run Lint
         run: ./gradlew --console=plain assemble${{ matrix.variantName }}Debug :app:lint${{ matrix.variantName }}Debug --warning-mode summary
         env:
@@ -134,8 +130,18 @@ jobs:
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
           LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
 
+      - name: Sign Debug APK
+        uses: ilharp/sign-android-release@v2.0.0
+        with:
+          releaseDir: app/build/outputs/apk/${{ matrix.variant }}/debug/
+          signingKey: ${{ secrets.KEYSTORE }}
+          keyAlias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+          buildToolsVersion: 35.0.0
+
       - name: Upload Debug APK
         uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.variant == 'gms' && 'app-debug-gms' || 'app-debug' }}
-          path: app/build/outputs/apk/${{ matrix.variant }}/debug/*.apk
+          path: app/build/outputs/apk/${{ matrix.variant }}/debug/*-signed.apk
