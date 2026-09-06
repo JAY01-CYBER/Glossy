@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -104,7 +105,9 @@ import com.jay.glossy.constants.HideExplicitKey
 import com.jay.glossy.constants.HideVideoSongsKey
 import com.jay.glossy.db.entities.Album
 import com.jay.glossy.db.entities.AlbumWithSongs
+import com.jay.glossy.extensions.toMediaItem
 import com.jay.glossy.playback.ExoDownloadService
+import com.jay.glossy.playback.queues.ListQueue
 import com.jay.glossy.playback.queues.LocalAlbumRadio
 import com.jay.glossy.ui.component.ClickableArtistText
 import com.jay.glossy.ui.component.DraggableScrollbar
@@ -238,8 +241,12 @@ fun AlbumScreen(
                                     playerConnection.playQueue(LocalAlbumRadio(currentAlbum))
                                 },
                                 onShuffleClick = {
-                                    playerConnection.service.getAutomix(playlistId)
-                                    playerConnection.playQueue(LocalAlbumRadio(currentAlbum).apply { shuffle() })
+                                    playerConnection.playQueue(
+                                        ListQueue(
+                                            title = currentAlbum.album.title,
+                                            items = currentAlbum.songs.shuffled().map { it.toMediaItem() }
+                                        )
+                                    )
                                 },
                                 onDownloadClick = {
                                     currentAlbum.songs.forEach { song ->
@@ -277,7 +284,8 @@ fun AlbumScreen(
                                     IconButton(
                                         onClick = {
                                             menuState.show { SongMenu(originalSong = song, onDismiss = menuState::dismiss) }
-                                        }
+                                        },
+                                        onLongClick = {}
                                     ) {
                                         Icon(painterResource(R.drawable.more_vert), contentDescription = null, tint = MaterialTheme.colorScheme.onBackground)
                                     }
@@ -516,10 +524,13 @@ private fun AlbumHeader(
 
                 ClickableArtistText(
                     artists = albumWithSongs.artists,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Normal),
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Normal,
+                        textAlign = TextAlign.Center
+                    ),
                     color = MaterialTheme.colorScheme.onBackground,
-                    textAlign = TextAlign.Center,
                     maxLines = Int.MAX_VALUE,
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
