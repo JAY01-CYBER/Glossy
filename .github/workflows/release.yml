@@ -63,14 +63,6 @@ jobs:
             echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
           fi
 
-      - name: Debug output
-        run: |
-          echo "Debug Information:"
-          echo "  - version_changed: ${{ steps.check_version.outputs.version_changed }}"
-          echo "  - new_version: ${{ steps.check_version.outputs.new_version }}"
-          echo "  - version_code: ${{ steps.check_version.outputs.version_code }}"
-          echo "  - event_name: ${{ github.event_name }}"
-
   build:
     needs: check-version
     if: needs.check-version.outputs.version_changed == 'true' || github.event_name == 'workflow_dispatch'
@@ -175,11 +167,7 @@ jobs:
         run: |
           echo "Organizing APK files..."
           mkdir -p release_files
-
           find downloaded_artifacts -name "*.apk" -exec cp {} release_files/ \;
-
-          echo "APKs ready for release:"
-          ls -la release_files/
 
       - name: VirusTotal Scan
         uses: crazy-max/ghaction-virustotal@v4
@@ -207,8 +195,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          echo "Creating release v${{ needs.check-version.outputs.new_version }}"
-
           {
             echo "Released by @${{ github.triggering_actor }}"
             echo ""
@@ -228,26 +214,47 @@ jobs:
             --latest \
             release_files/*.apk
 
-      - name: Send APKs to Telegram Topic
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Send APKs to Telegram (Python Stable Method)
         env:
           BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TOPIC_ID: ${{ secrets.TELEGRAM_TOPIC_ID }}
+          VERSION: ${{ needs.check-version.outputs.new_version }}
         run: |
-          echo "Uploading APKs to Telegram..."
-          for apk in release_files/*.apk; do
-            filename=$(basename "$apk")
-            echo "Sending $filename..."
-            
-            CAPTION=$(printf "🚀 New Release: v${{ needs.check-version.outputs.new_version }}\n📦 %s" "$filename")
-            
-            curl --http1.1 -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendDocument" \
-              -F chat_id="${CHAT_ID}" \
-              -F message_thread_id="${TOPIC_ID}" \
-              -F document="@$apk" \
-              -F caption="$CAPTION"
-          done
-          echo "Telegram upload complete!"
+          pip install requests
+          cat << 'EOF' > upload_telegram.py
+          import os, glob, requests
+          bot_token = os.environ['BOT_TOKEN']
+          chat_id = os.environ['CHAT_ID']
+          topic_id = os.environ['TOPIC_ID']
+          version = os.environ['VERSION']
+          
+          for apk in glob.glob('release_files/*.apk'):
+              filename = os.path.basename(apk)
+              print(f"Uploading {filename} to Telegram...")
+              
+              url = f"https://api.telegram.org/bot{bot_token}/sendDocument"
+              data = {
+                  "chat_id": chat_id,
+                  "message_thread_id": topic_id,
+                  "caption": f"🚀 New Release: v{version}\n📦 {filename}"
+              }
+              
+              with open(apk, 'rb') as f:
+                  response = requests.post(url, data=data, files={"document": (filename, f)})
+              
+              if response.status_code == 200:
+                  print(f"Successfully uploaded {filename}")
+              else:
+                  print(f"Failed to upload {filename}: {response.text}")
+                  exit(1)
+          EOF
+          python upload_telegram.py
 
       - name: Update release summary
         run: |
