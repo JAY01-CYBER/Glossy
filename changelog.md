@@ -1,3 +1,16 @@
+---v0.0.2
+# 🚀 Glossy v0.0.2 - Album Redesign, Crash Fixes & Automation
+
+### ✨ UI & Design Updates
+* **Immersive Album Screen:** Completely redesigned the album screen to feature a beautiful, immersive, and modern layout that perfectly complements your music.
+
+### 🐛 Bug Fixes
+* **Audio Playback:** Fixed a critical issue where the app would crash when playing certain Bhakti songs. 
+
+### ⚙️ Under the Hood
+* **Automated Security Scans:** Integrated VirusTotal into the release pipeline. Every new APK is now automatically scanned by 65+ antivirus engines, and the safe report link is attached directly to the release notes.
+* **Telegram Bot Integration:** Configured an automated CI/CD workflow to instantly deploy new releases and APKs to the `@glossyplayer` Telegram support group topic.
+
 ---v0.0.1
 # 🎉 Glossy v0.0.1 - Initial Release
 
