@@ -58,7 +58,15 @@ internal fun List<Track>.bestMatchingFor(
         return firstOrNull { it.syncedLyrics != null } ?: firstOrNull()
     }
 
-    // Use relaxed matching for duration-based search
+    // Filter by duration first, then check text similarity
+    val durationFiltered = filter { abs(it.duration.toInt() - duration) <= 5 }
+    
+    if (trackName != null && artistName != null && durationFiltered.isNotEmpty()) {
+        val textMatched = durationFiltered.findBestMatch(trackName, artistName)
+        if (textMatched != null) return textMatched
+    }
+
+    // Fallback
     return bestMatchingForRelaxed(duration)
 }
 
