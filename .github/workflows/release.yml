@@ -181,6 +181,12 @@ jobs:
           echo "APKs ready for release:"
           ls -la release_files/
 
+      - name: VirusTotal Scan
+        uses: crazy-max/ghaction-virustotal@v4
+        with:
+          vt_api_key: ${{ secrets.VT_API_KEY }}
+          files: release_files/*.apk
+
       - name: Parse release notes from changelog
         run: |
           VERSION="${{ needs.check-version.outputs.new_version }}"
@@ -188,18 +194,13 @@ jobs:
 
           if bash .github/scripts/parse_changelog.sh "$VERSION" changelog.md > release_notes.md; then
             echo "Release notes sourced from changelog.md for v$VERSION"
-            echo "--- Preview (first 20 lines) ---"
-            head -20 release_notes.md
           else
-            echo "::warning::v$VERSION not found in changelog.md — falling back to git log"
             {
               echo "Release of version $VERSION"
               echo ""
               git log "$(git describe --tags --abbrev=0 2>/dev/null || echo "HEAD~10")..HEAD" \
                 --pretty=format:"- %s" --no-merges | head -10 || echo "- Initial release"
             } > release_notes.md
-            echo "--- Fallback notes ---"
-            cat release_notes.md
           fi
 
       - name: Create Release
@@ -212,6 +213,13 @@ jobs:
             echo "Released by @${{ github.triggering_actor }}"
             echo ""
             cat release_notes.md
+            echo ""
+            echo "### 🛡️ VirusTotal Security Scans"
+            for apk in release_files/*.apk; do
+              filename=$(basename "$apk")
+              sha256=$(sha256sum "$apk" | awk '{print $1}')
+              echo "- [Scan Report for $filename](https://www.virustotal.com/gui/file/$sha256)"
+            done
           } > attributed_release_notes.md
 
           gh release create "v${{ needs.check-version.outputs.new_version }}" \
@@ -220,13 +228,26 @@ jobs:
             --latest \
             release_files/*.apk
 
-          echo "Release created successfully!"
+      - name: Send APKs to Telegram Topic
+        env:
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TOPIC_ID: ${{ secrets.TELEGRAM_TOPIC_ID }}
+        run: |
+          echo "Uploading APKs to Telegram..."
+          for apk in release_files/*.apk; do
+            filename=$(basename "$apk")
+            echo "Sending $filename..."
+            curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendDocument" \
+              -F chat_id="${CHAT_ID}" \
+              -F message_thread_id="${TOPIC_ID}" \
+              -F document="@$apk" \
+              -F caption="🚀 **New Release:** v${{ needs.check-version.outputs.new_version }} %0A📦 $filename"
+          done
 
       - name: Update release summary
         run: |
           echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
           echo "- **Version**: v${{ needs.check-version.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Version Code**: ${{ needs.check-version.outputs.version_code }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Released by**: @${{ github.triggering_actor }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **APKs Built**: $(ls release_files/*.apk | wc -l)" >> $GITHUB_STEP_SUMMARY
+          echo "- **APKs Built & Sent to TG**: $(ls release_files/*.apk | wc -l)" >> $GITHUB_STEP_SUMMARY
           echo "- **Release URL**: https://github.com/${{ github.repository }}/releases/tag/v${{ needs.check-version.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
