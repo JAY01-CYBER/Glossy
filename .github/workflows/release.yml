@@ -181,13 +181,11 @@ jobs:
           echo "APKs ready for release:"
           ls -la release_files/
 
-      # --- VIRUSTOTAL INTEGRATION ADDED HERE ---
       - name: VirusTotal Scan
         uses: crazy-max/ghaction-virustotal@v4
         with:
           vt_api_key: ${{ secrets.VT_API_KEY }}
           files: release_files/*.apk
-      # -----------------------------------------
 
       - name: Parse release notes from changelog
         run: |
@@ -220,6 +218,13 @@ jobs:
             echo "Released by @${{ github.triggering_actor }}"
             echo ""
             cat release_notes.md
+            echo ""
+            echo "### 🛡️ VirusTotal Security Scans"
+            for apk in release_files/*.apk; do
+              filename=$(basename "$apk")
+              sha256=$(sha256sum "$apk" | awk '{print $1}')
+              echo "- [Scan Report for $filename](https://www.virustotal.com/gui/file/$sha256)"
+            done
           } > attributed_release_notes.md
 
           gh release create "v${{ needs.check-version.outputs.new_version }}" \
