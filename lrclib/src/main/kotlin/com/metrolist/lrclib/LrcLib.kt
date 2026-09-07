@@ -145,19 +145,10 @@ object LrcLib {
         val cleanedTitle = cleanTitle(title)
         val cleanedArtist = cleanArtist(artist)
 
-        val res = when {
-            duration == -1 -> {
-                tracks.bestMatchingFor(duration, cleanedTitle, cleanedArtist)?.let { track ->
-                    track.syncedLyrics ?: track.plainLyrics
-                }?.let(LrcLib::Lyrics)
-            }
-            else -> {
-                // Try with relaxed duration matching (±5 seconds instead of ±2)
-                tracks.bestMatchingForRelaxed(duration)?.let { track ->
-                    track.syncedLyrics ?: track.plainLyrics
-                }?.let(LrcLib::Lyrics)
-            }
-        }
+        // matching call to always validate title/artist
+        val res = tracks.bestMatchingFor(duration, cleanedTitle, cleanedArtist)?.let { track ->
+            track.syncedLyrics ?: track.plainLyrics
+        }?.let(LrcLib::Lyrics)
 
         if (res != null) {
             return@runCatching res.text
@@ -194,7 +185,22 @@ object LrcLib {
                 }
             }
             else -> {
-                tracks.sortedBy { abs(it.duration.toInt() - duration) }
+                // sorting logic for duration searches
+                tracks.sortedByDescending { track ->
+                    var score = 0.0
+                    
+                    if (track.syncedLyrics != null) score += 1.0
+
+                    val titleSimilarity = calculateStringSimilarity(cleanedTitle, track.trackName)
+                    val artistSimilarity = calculateStringSimilarity(cleanedArtist, track.artistName)
+                    score += (titleSimilarity + artistSimilarity) / 2.0
+                    
+                    val durationDiff = abs(track.duration.toInt() - duration)
+                    if (durationDiff <= 5) score += 0.5 
+                    score -= (durationDiff * 0.02) 
+                    
+                    score
+                }
             }
         }
 
@@ -290,5 +296,3 @@ object LrcLib {
                 }.getOrNull()
     }
 }
-
-
