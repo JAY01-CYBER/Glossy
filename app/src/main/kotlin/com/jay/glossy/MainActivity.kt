@@ -590,10 +590,15 @@ class MainActivity : ComponentActivity() {
             }
 
             playerConnection.service.currentMediaMetadata
-                .distinctUntilChanged { old, new -> old?.id == new?.id }
+                .distinctUntilChanged { old, new -> 
+                    val oldId = old?.id ?: ""
+                    val newId = new?.id ?: ""
+                    oldId == newId 
+                }
                 .collectLatest { song ->
-                    if (song?.thumbnailUrl != null) {
-                        val cached = themeColorCache[song.thumbnailUrl]
+                    val thumbUrl = song?.thumbnailUrl
+                    if (!thumbUrl.isNullOrEmpty()) {
+                        val cached = themeColorCache[thumbUrl]
                         if (cached != null) {
                             withFrameNanos { }
                             themeColor = cached
@@ -605,7 +610,7 @@ class MainActivity : ComponentActivity() {
                                     imageLoader.execute(
                                         ImageRequest
                                             .Builder(this@MainActivity)
-                                            .data(song.thumbnailUrl)
+                                            .data(thumbUrl)
                                             .allowHardware(false)
                                             .memoryCachePolicy(CachePolicy.ENABLED)
                                             .diskCachePolicy(CachePolicy.ENABLED)
@@ -614,7 +619,7 @@ class MainActivity : ComponentActivity() {
                                             .build(),
                                     )
                                 val extractedColor = result.image?.toBitmap()?.extractThemeColor() ?: selectedThemeColor
-                                themeColorCache[song.thumbnailUrl] = extractedColor
+                                themeColorCache[thumbUrl] = extractedColor
                                 withFrameNanos { }
                                 themeColor = extractedColor
                             } catch (e: Exception) {
