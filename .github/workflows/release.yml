@@ -238,12 +238,16 @@ jobs:
           for apk in release_files/*.apk; do
             filename=$(basename "$apk")
             echo "Sending $filename..."
-            curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendDocument" \
+            
+            CAPTION=$(printf "🚀 New Release: v${{ needs.check-version.outputs.new_version }}\n📦 %s" "$filename")
+            
+            curl --http1.1 -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendDocument" \
               -F chat_id="${CHAT_ID}" \
               -F message_thread_id="${TOPIC_ID}" \
               -F document="@$apk" \
-              -F caption="🚀 **New Release:** v${{ needs.check-version.outputs.new_version }} %0A📦 $filename"
+              -F caption="$CAPTION"
           done
+          echo "Telegram upload complete!"
 
       - name: Update release summary
         run: |
