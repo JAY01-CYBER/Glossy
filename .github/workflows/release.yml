@@ -181,6 +181,14 @@ jobs:
           echo "APKs ready for release:"
           ls -la release_files/
 
+      # --- VIRUSTOTAL INTEGRATION ADDED HERE ---
+      - name: VirusTotal Scan
+        uses: crazy-max/ghaction-virustotal@v4
+        with:
+          vt_api_key: ${{ secrets.VT_API_KEY }}
+          files: release_files/*.apk
+      # -----------------------------------------
+
       - name: Parse release notes from changelog
         run: |
           VERSION="${{ needs.check-version.outputs.new_version }}"
