@@ -3,7 +3,7 @@ package com.jay.glossy.unison
 import com.jay.glossy.unison.models.LyricsData
 import com.jay.glossy.unison.models.LyricsResponse
 import com.jay.glossy.unison.models.SearchResponse
-import com.jay.glossy.betterlyrics.TTMLParser 
+import com.metrolist.music.betterlyrics.TTMLParser 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
