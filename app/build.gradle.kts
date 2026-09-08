@@ -389,6 +389,8 @@ dependencies {
     implementation(project(":shazamkit"))
     implementation(project(":paxsenix"))
     implementation(project(":musixmatch"))
+    implementation(project(":youlyplus"))
+
 
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.cio)
