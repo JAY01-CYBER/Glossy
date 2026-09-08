@@ -55,7 +55,7 @@ enum class DensityScale(
 
 val DefaultOpenTabKey = stringPreferencesKey("defaultOpenTab")
 val SlimNavBarKey = booleanPreferencesKey("slimNavBar")
-val UseFloatingNavBarKey = booleanPreferencesKey("useFloatingNavBar") // NEW FLOATING NAV BAR KEY
+val UseFloatingNavBarKey = booleanPreferencesKey("useFloatingNavBar") 
 val GridItemsSizeKey = stringPreferencesKey("gridItemSize")
 val SliderStyleKey = stringPreferencesKey("sliderStyle")
 val SquigglySliderKey = booleanPreferencesKey("squigglySlider")
@@ -104,7 +104,8 @@ val EnableBetterLyricsKey = booleanPreferencesKey("enableBetterLyrics")
 val EnablePaxsenixKey = booleanPreferencesKey("enablePaxsenix")
 val EnableLyricsPlus = booleanPreferencesKey("enableLyricsPlus")
 val EnableMusixmatchKey = booleanPreferencesKey("enableMusixmatch")
-val EnableYouLyPlusKey = booleanPreferencesKey("enableYouLyPlus") // Added YouLyPlus Key
+val EnableYouLyPlusKey = booleanPreferencesKey("enableYouLyPlus")
+val EnableUnisonKey = booleanPreferencesKey("enableUnison")
 val HideExplicitKey = booleanPreferencesKey("hideExplicit")
 val HideVideoSongsKey = booleanPreferencesKey("hideVideoSongs")
 val HideYoutubeShortsKey = booleanPreferencesKey("hideYoutubeShorts")
@@ -442,7 +443,8 @@ enum class PreferredLyricsProvider {
     PAXSENIX,
     LYRICSPLUS,
     MUSIXMATCH,
-    YOULYPLUS // Added YouLyPlus
+    YOULYPLUS,
+    UNISON
 }
 
 enum class PlayerButtonsStyle {
