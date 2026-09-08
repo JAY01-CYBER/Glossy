@@ -64,29 +64,81 @@ object KuGou {
         title: String, artist: String, duration: Int, album: String? = null, callback: (String) -> Unit
     ) {
         val keyword = generateKeyword(title, artist, album)
-        searchSongs(keyword).data.info.forEach {
-            if (duration == -1 || abs(it.duration - duration) <= DURATION_TOLERANCE) {
-                searchLyricsByHash(it.hash).candidates.firstOrNull()?.let { candidate ->
-                    Base64.Default.decode(downloadLyrics(candidate.id, candidate.accesskey).content).decodeToString()
-                        .normalize().let(callback)
+        val response = searchSongs(keyword)
+        val songs = response.data.info
+
+        // Sort songs by text similarity and duration
+        val sortedSongs = songs.sortedByDescending { song ->
+            var score = 0.0
+            val sName = song.songname.takeIf { it.isNotEmpty() } ?: song.filename
+            val sArtist = song.singername.takeIf { it.isNotEmpty() } ?: song.filename
+
+            score += calculateSimilarity(keyword.title, sName)
+            score += calculateSimilarity(keyword.artist, sArtist)
+
+            if (duration != -1) {
+                val diff = abs(song.duration - duration)
+                if (diff <= DURATION_TOLERANCE) score += 1.0
+                score -= (diff * 0.01)
+            }
+            score
+        }
+
+        var count = 0
+        sortedSongs.forEach { song ->
+            if (count >= 3) return@forEach // limit hash requests to top 3 best matches
+            if (duration == -1 || abs(song.duration - duration) <= DURATION_TOLERANCE) {
+                searchLyricsByHash(song.hash).candidates.firstOrNull()?.let { candidate ->
+                    val decoded = Base64.Default.decode(downloadLyrics(candidate.id, candidate.accesskey).content).decodeToString().normalize()
+                    if (decoded.isNotBlank()) {
+                        count++
+                        callback(decoded)
+                    }
                 }
             }
         }
+
+        // Fallback to keyword search if not enough found
         searchLyricsByKeyword(keyword, duration).candidates.forEach { candidate ->
-            Base64.Default.decode(downloadLyrics(candidate.id, candidate.accesskey).content).decodeToString()
-                .normalize().let(callback)
+            if (count >= 5) return@forEach
+            val decoded = Base64.Default.decode(downloadLyrics(candidate.id, candidate.accesskey).content).decodeToString().normalize()
+            if (decoded.isNotBlank()) {
+                count++
+                callback(decoded)
+            }
         }
     }
 
     suspend fun getLyricsCandidate(
         keyword: Keyword, duration: Int
     ): SearchLyricsResponse.Candidate? {
-        searchSongs(keyword).data.info.forEach { song ->
-            if (duration == -1 || abs(song.duration - duration) <= DURATION_TOLERANCE) { // if duration == -1, we don't care duration
-                val candidate = searchLyricsByHash(song.hash).candidates.firstOrNull()
+        val songs = searchSongs(keyword).data.info
+
+        // Select the absolute best match checking both Name and Duration
+        val bestSong = songs.maxByOrNull { song ->
+            var score = 0.0
+            val sName = song.songname.takeIf { it.isNotEmpty() } ?: song.filename
+            val sArtist = song.singername.takeIf { it.isNotEmpty() } ?: song.filename
+
+            score += calculateSimilarity(keyword.title, sName)
+            score += calculateSimilarity(keyword.artist, sArtist)
+
+            if (duration != -1) {
+                val diff = abs(song.duration - duration)
+                if (diff <= DURATION_TOLERANCE) score += 1.0 
+                score -= (diff * 0.01)
+            }
+            score
+        }
+
+        if (bestSong != null) {
+            val isDurationOk = duration == -1 || abs(bestSong.duration - duration) <= DURATION_TOLERANCE
+            if (isDurationOk) {
+                val candidate = searchLyricsByHash(bestSong.hash).candidates.firstOrNull()
                 if (candidate != null) return candidate
             }
         }
+
         return searchLyricsByKeyword(keyword, duration).candidates.firstOrNull()
     }
 
@@ -195,4 +247,44 @@ object KuGou {
     private val BANNED_REGEX = ".+].+[:：].+".toRegex()
 
     private const val DURATION_TOLERANCE = 8
+
+    // Similarity Logic Added
+    private fun calculateSimilarity(str1: String, str2: String): Double {
+        val s1 = str1.trim().lowercase()
+        val s2 = str2.trim().lowercase()
+        
+        if (s1 == s2) return 1.0
+        if (s1.isEmpty() || s2.isEmpty()) return 0.0
+        
+        return when {
+            s1.contains(s2) || s2.contains(s1) -> 0.8
+            else -> {
+                val maxLength = maxOf(s1.length, s2.length)
+                val distance = levenshteinDistance(s1, s2)
+                1.0 - (distance.toDouble() / maxLength)
+            }
+        }
+    }
+
+    private fun levenshteinDistance(str1: String, str2: String): Int {
+        val len1 = str1.length
+        val len2 = str2.length
+        val matrix = Array(len1 + 1) { IntArray(len2 + 1) }
+        
+        for (i in 0..len1) matrix[i][0] = i
+        for (j in 0..len2) matrix[0][j] = j
+        
+        for (i in 1..len1) {
+            for (j in 1..len2) {
+                val cost = if (str1[i - 1] == str2[j - 1]) 0 else 1
+                matrix[i][j] = minOf(
+                    matrix[i - 1][j] + 1,      
+                    matrix[i][j - 1] + 1,      
+                    matrix[i - 1][j - 1] + cost 
+                )
+            }
+        }
+        
+        return matrix[len1][len2]
+    }
 }
