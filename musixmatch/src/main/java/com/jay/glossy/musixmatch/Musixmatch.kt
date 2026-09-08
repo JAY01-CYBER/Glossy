@@ -437,9 +437,17 @@ object Musixmatch {
             val lineText = entry.x.trim()
             if (lineText.isEmpty()) continue
 
+            // Check if the line is enclosed in parentheses (Background Vocal)
+            val isBackground = lineText.startsWith("(") && lineText.endsWith(")")
+
             // Line header timestamp
             val lineTimeMs = (entry.ts * 1000).toLong()
             sb.append(formatTime(lineTimeMs, isSyllable = false))
+
+            // Inject {bg} tag if it's a background vocal
+            if (isBackground) {
+                sb.append("{bg}")
+            }
 
             // Build inline syllable timings
             for (word in entry.l) {
@@ -461,7 +469,18 @@ object Musixmatch {
             val entries = Json { ignoreUnknownKeys = true }.decodeFromString<List<SubtitleEntry>>(body)
             val sb = StringBuilder()
             entries.forEach { entry ->
+                val lineText = entry.text.trim()
+                
+                // Check if the line is enclosed in parentheses
+                val isBackground = lineText.startsWith("(") && lineText.endsWith(")")
+
                 sb.append(formatTime((entry.time.total * 1000).toLong(), isSyllable = false))
+                
+                // Inject {bg} tag if it's a background vocal
+                if (isBackground) {
+                    sb.append("{bg}")
+                }
+                
                 sb.append(entry.text)
                 sb.append("\n")
             }
