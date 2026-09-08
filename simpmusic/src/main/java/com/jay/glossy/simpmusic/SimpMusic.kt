@@ -8,6 +8,7 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.client.request.parameter
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
@@ -27,7 +28,7 @@ object SimpMusic {
                         isLenient = true
                         ignoreUnknownKeys = true
                         explicitNulls = false
-                    },
+                    }
                 )
             }
 
@@ -38,7 +39,6 @@ object SimpMusic {
             }
 
             defaultRequest {
-                url(BASE_URL)
                 header(HttpHeaders.Accept, "application/json")
                 header(HttpHeaders.UserAgent, "SimpMusicLyrics/1.0")
                 header(HttpHeaders.ContentType, "application/json")
@@ -54,7 +54,6 @@ object SimpMusic {
             if (match != null) {
                 val timeTag = match.value
                 val textPart = line.substringAfter(timeTag).trim()
-                // Convert (Uh-huh) into v2: Uh-huh
                 if (textPart.startsWith("(") && textPart.endsWith(")")) {
                     "$timeTag v2: " + textPart.removeSurrounding("(", ")")
                 } else line
@@ -62,75 +61,96 @@ object SimpMusic {
         }
     }
 
+    // Blank timestamp check
+    private fun hasMeaningfulText(lyrics: String?): Boolean {
+        if (lyrics.isNullOrBlank()) return false
+        val textOnly = lyrics.replace(Regex("\\[\\d{2}:\\d{2}\\.\\d{2,3}?\\]"), "")
+                             .replace(Regex("<\\d{2}:\\d{2}\\.\\d{2,3}?>"), "")
+        return textOnly.isNotBlank()
+    }
+
     private suspend fun getLyricsByVideoId(videoId: String): List<LyricsData> =
         runCatching {
             val response = client.get(BASE_URL + videoId)
-
             if (response.status == HttpStatusCode.OK) {
                 val apiResponse = response.body<SimpMusicApiResponse>()
-                if (apiResponse.success) {
-                    apiResponse.data
-                } else {
-                    emptyList()
-                }
-            } else {
-                emptyList()
+                if (apiResponse.success) apiResponse.data else emptyList()
+            } else emptyList()
+        }.getOrDefault(emptyList())
+
+    private suspend fun searchLyrics(q: String): List<LyricsData> =
+        runCatching {
+            val response = client.get(BASE_URL + "search") {
+                parameter("q", q)
             }
+            if (response.status == HttpStatusCode.OK) {
+                val apiResponse = response.body<SimpMusicApiResponse>()
+                if (apiResponse.success) apiResponse.data else emptyList()
+            } else emptyList()
         }.getOrDefault(emptyList())
 
     suspend fun getLyrics(
         videoId: String,
+        title: String,
+        artist: String,
         duration: Int = 0,
-    ): Result<String> =
-        runCatching {
-            val tracks = getLyricsByVideoId(videoId)
+    ): Result<String> = runCatching {
+        
+        var tracks = getLyricsByVideoId(videoId).filter { hasMeaningfulText(it.syncedLyrics) || hasMeaningfulText(it.plainLyrics) }
 
-            if (tracks.isEmpty()) {
-                throw IllegalStateException("Lyrics unavailable")
-            }
-
-            val bestMatch =
-                if (duration > 0 && tracks.size > 1) {
-                    tracks.minByOrNull { track ->
-                        abs((track.duration ?: 0) - duration)
-                    }
-                } else {
-                    tracks.firstOrNull()
-                }
-
-            val lyrics =
-                bestMatch?.syncedLyrics ?: bestMatch?.plainLyrics
-                    ?: throw IllegalStateException("Lyrics unavailable")
-
-            applyAppleMusicV2Format(lyrics)
+        if (tracks.isEmpty()) {
+            tracks = searchLyrics("$title $artist").filter { hasMeaningfulText(it.syncedLyrics) || hasMeaningfulText(it.plainLyrics) }
         }
+
+        if (tracks.isEmpty()) {
+            throw IllegalStateException("Lyrics unavailable")
+        }
+
+        val bestMatch = if (duration > 0 && tracks.size > 1) {
+            tracks.minByOrNull { abs((it.duration ?: 0) - duration) }
+        } else {
+            tracks.firstOrNull()
+        }
+
+        val lyrics = bestMatch?.syncedLyrics?.takeIf { hasMeaningfulText(it) }
+            ?: bestMatch?.plainLyrics?.takeIf { hasMeaningfulText(it) }
+            ?: throw IllegalStateException("Lyrics unavailable")
+
+        applyAppleMusicV2Format(lyrics)
+    }
 
     suspend fun getAllLyrics(
         videoId: String,
+        title: String,
+        artist: String,
         duration: Int = 0,
         callback: (String) -> Unit,
     ) {
-        val tracks = getLyricsByVideoId(videoId)
+        var tracks = getLyricsByVideoId(videoId).filter { hasMeaningfulText(it.syncedLyrics) || hasMeaningfulText(it.plainLyrics) }
+
+        if (tracks.isEmpty()) {
+            tracks = searchLyrics("$title $artist").filter { hasMeaningfulText(it.syncedLyrics) || hasMeaningfulText(it.plainLyrics) }
+        }
+
         var count = 0
         var plain = 0
 
-        val sortedTracks =
-            if (duration > 0) {
-                tracks.sortedBy { abs((it.duration ?: 0) - duration) }
-            } else {
-                tracks
-            }
+        val sortedTracks = if (duration > 0) {
+            tracks.sortedBy { abs((it.duration ?: 0) - duration) }
+        } else {
+            tracks
+        }
 
         sortedTracks.forEach { track ->
             if (count <= 4) {
-                if (track.syncedLyrics != null && abs((track.duration ?: 0) - duration) <= 5) {
+                if (hasMeaningfulText(track.syncedLyrics) && abs((track.duration ?: 0) - duration) <= 5) {
                     count++
-                    callback(applyAppleMusicV2Format(track.syncedLyrics))
+                    callback(applyAppleMusicV2Format(track.syncedLyrics!!))
                 }
-                if (track.plainLyrics != null && abs((track.duration ?: 0) - duration) <= 5 && plain == 0) {
+                if (hasMeaningfulText(track.plainLyrics) && abs((track.duration ?: 0) - duration) <= 5 && plain == 0) {
                     count++
                     plain++
-                    callback(applyAppleMusicV2Format(track.plainLyrics))
+                    callback(applyAppleMusicV2Format(track.plainLyrics!!))
                 }
             }
         }
