@@ -24,9 +24,6 @@ data class LyricsData(
 
 @Serializable
 data class SimpMusicApiResponse(
-    val type: String? = null,
-    val data: List<LyricsData> = emptyList(),
-) {
-    val success: Boolean
-        get() = type == "success"
-}
+    val success: Boolean = false, // Direct boolean as per API Docs
+    val data: List<LyricsData> = emptyList() // Direct array as per API Docs
+)
