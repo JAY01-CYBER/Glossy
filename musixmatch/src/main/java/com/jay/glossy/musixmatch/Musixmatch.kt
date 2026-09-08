@@ -179,6 +179,47 @@ object Musixmatch {
         }
     }
 
+    // --- PROPER DURATION MATCHING ALGORITHM ---
+    private fun findBestMatchingTrack(trackList: List<TrackContainer>, title: String, artist: String, duration: Int): Track {
+        val normalizedQueryTitle = cleanText(title)
+        val normalizedQueryArtist = cleanText(artist)
+        val tracks = trackList.map { it.track }
+
+        // 1. FILTER BY EXACT DURATION (±7 seconds tolerance) to fix out-of-sync lyrics
+        val durationFiltered = if (duration > 0) {
+            tracks.filter { track ->
+                val trackDur = track.trackLength ?: 0
+                trackDur > 0 && abs(trackDur - duration) <= 7
+            }
+        } else emptyList()
+
+        val candidates = if (durationFiltered.isNotEmpty()) durationFiltered else tracks
+
+        // 2. FIND BEST TEXT MATCH AMONG DURATION-VALID TRACKS
+        return candidates.minByOrNull { track ->
+            val trackTitleCleaned = cleanText(track.trackName)
+            val trackArtistCleaned = cleanText(track.artistName)
+
+            val titleScore = when {
+                trackTitleCleaned == normalizedQueryTitle -> 0
+                trackTitleCleaned.contains(normalizedQueryTitle) || normalizedQueryTitle.contains(trackTitleCleaned) -> 1
+                else -> 2
+            }
+
+            val artistScore = when {
+                trackArtistCleaned == normalizedQueryArtist -> 0
+                trackArtistCleaned.contains(normalizedQueryArtist) || normalizedQueryArtist.contains(trackArtistCleaned) -> 1
+                else -> 2
+            }
+
+            val trackDur = track.trackLength ?: 0
+            val durDelta = if (duration > 0 && trackDur > 0) abs(trackDur - duration) else 0
+
+            // Priority: Title Match > Artist Match > Duration Delta
+            (titleScore * 1000) + (artistScore * 100) + durDelta
+        } ?: tracks.first()
+    }
+
     suspend fun getLyrics(
         title: String,
         artist: String,
@@ -217,22 +258,7 @@ object Musixmatch {
                 throw IllegalStateException("Track not found on Musixmatch (status: $code)")
             }
 
-            val normalizedQueryTitle = cleanText(title)
-
-            val bestTrack = trackList.map { it.track }.minByOrNull { track ->
-                val trackTitleCleaned = cleanText(track.trackName)
-                val textScore = when {
-                    trackTitleCleaned == normalizedQueryTitle -> 0
-                    trackTitleCleaned.contains(normalizedQueryTitle) || normalizedQueryTitle.contains(trackTitleCleaned) -> 1
-                    else -> 2
-                }
-
-                val trackDur = track.trackLength ?: 0
-                val durDelta = if (duration > 0 && trackDur > 0) abs(trackDur - duration) else if (trackDur == 0) 999 else Int.MAX_VALUE
-                
-                (textScore.toLong() shl 32) + durDelta
-            } ?: trackList[0].track
-
+            val bestTrack = findBestMatchingTrack(trackList, title, artist, duration)
             val trackId = bestTrack.trackId
 
             val richsyncResult = getRichSyncLyrics(trackId, token, secret)
@@ -291,22 +317,7 @@ object Musixmatch {
 
                 if (trackList.isEmpty()) return@runWithTokenRetry
 
-                val normalizedQueryTitle = cleanText(title)
-
-                val bestTrack = trackList.map { it.track }.minByOrNull { track ->
-                    val trackTitleCleaned = cleanText(track.trackName)
-                    val textScore = when {
-                        trackTitleCleaned == normalizedQueryTitle -> 0
-                        trackTitleCleaned.contains(normalizedQueryTitle) || normalizedQueryTitle.contains(trackTitleCleaned) -> 1
-                        else -> 2
-                    }
-
-                    val trackDur = track.trackLength ?: 0
-                    val durDelta = if (duration > 0 && trackDur > 0) abs(trackDur - duration) else if (trackDur == 0) 999 else Int.MAX_VALUE
-                    
-                    (textScore.toLong() shl 32) + durDelta
-                } ?: trackList[0].track
-
+                val bestTrack = findBestMatchingTrack(trackList, title, artist, duration)
                 val trackId = bestTrack.trackId
 
                 kotlinx.coroutines.coroutineScope {
