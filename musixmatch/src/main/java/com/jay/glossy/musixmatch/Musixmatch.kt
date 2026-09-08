@@ -437,19 +437,19 @@ object Musixmatch {
             val lineText = entry.x.trim()
             if (lineText.isEmpty()) continue
 
-            // Check if the line is enclosed in parentheses (Background Vocal)
+            // 1. Detect if it's a background vocal (enclosed in parentheses)
             val isBackground = lineText.startsWith("(") && lineText.endsWith(")")
 
-            // Line header timestamp
+            // 2. Format line start time
             val lineTimeMs = (entry.ts * 1000).toLong()
             sb.append(formatTime(lineTimeMs, isSyllable = false))
 
-            // Inject {bg} tag if it's a background vocal
+            // 3. Inject Apple Music style 'v2' agent for background vocals
             if (isBackground) {
-                sb.append("{bg}")
+                sb.append("{agent:v2}")
             }
 
-            // Build inline syllable timings
+            // 4. Build inline syllable timings
             for (word in entry.l) {
                 if (word.c.isBlank()) {
                     sb.append(word.c)
@@ -471,14 +471,15 @@ object Musixmatch {
             entries.forEach { entry ->
                 val lineText = entry.text.trim()
                 
-                // Check if the line is enclosed in parentheses
+                // 1. Detect if it's a background vocal (enclosed in parentheses)
                 val isBackground = lineText.startsWith("(") && lineText.endsWith(")")
 
+                // 2. Format line start time
                 sb.append(formatTime((entry.time.total * 1000).toLong(), isSyllable = false))
                 
-                // Inject {bg} tag if it's a background vocal
+                // 3. Inject Apple Music style 'v2' agent for background vocals
                 if (isBackground) {
-                    sb.append("{bg}")
+                    sb.append("{agent:v2}")
                 }
                 
                 sb.append(entry.text)
