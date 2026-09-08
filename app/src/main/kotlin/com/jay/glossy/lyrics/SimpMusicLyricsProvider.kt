@@ -18,7 +18,12 @@ object SimpMusicLyricsProvider : LyricsProvider {
         artist: String,
         duration: Int,
         album: String?,
-    ): Result<String> = SimpMusic.getLyrics(videoId = id, duration = duration)
+    ): Result<String> = SimpMusic.getLyrics(
+        videoId = id, 
+        title = title, 
+        artist = artist, 
+        duration = duration
+    )
 
     override suspend fun getAllLyrics(
         context: Context,
@@ -29,6 +34,12 @@ object SimpMusicLyricsProvider : LyricsProvider {
         album: String?,
         callback: (String) -> Unit,
     ) {
-        SimpMusic.getAllLyrics(videoId = id, duration = duration, callback = callback)
+        SimpMusic.getAllLyrics(
+            videoId = id, 
+            title = title, 
+            artist = artist, 
+            duration = duration, 
+            callback = callback
+        )
     }
 }
