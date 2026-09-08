@@ -439,7 +439,7 @@ object Musixmatch {
         return String.format(Locale.US, "%s%02d:%02d.%03d%s", prefix, minutes, seconds, millis, suffix)
     }
 
-    // PAXSENIX EXACT FORMATTING [v1:/v2:]
+    // PAXSENIX EXACT FORMATTING [v1:/v2:] (SPACES FIXED)
     internal fun convertRichSyncToLrc(entries: List<RichSyncEntry>): String {
         val sb = StringBuilder()
         for (entry in entries) {
@@ -457,19 +457,22 @@ object Musixmatch {
 
             // 3. Build inline syllable timings
             for (word in entry.l) {
-                var wordText = word.c
-                
-                // Bracket ( ) ko hata do taki text ekdam clean (Uh-huh) dikhe
-                if (isBackground) {
-                    wordText = wordText.replace("(", "").replace(")", "")
-                }
-
-                if (wordText.isBlank() && word.c.isNotBlank()) {
-                    // Skip appending empty syllable if we completely stripped it
+                if (word.c.isBlank()) {
+                    // SPACE PRESERVATION! Agar space hai toh sidha jod do bina kisi time tag ke.
+                    sb.append(word.c)
                 } else {
-                    val wordTimeMs = ((entry.ts + word.o) * 1000).toLong()
-                    sb.append(formatTime(wordTimeMs, isSyllable = true))
-                    sb.append(wordText)
+                    var wordText = word.c
+                    
+                    // Bracket ( ) ko hata do taki text ekdam clean (Uh-huh) dikhe
+                    if (isBackground) {
+                        wordText = wordText.replace("(", "").replace(")", "")
+                    }
+
+                    if (wordText.isNotBlank()) {
+                        val wordTimeMs = ((entry.ts + word.o) * 1000).toLong()
+                        sb.append(formatTime(wordTimeMs, isSyllable = true))
+                        sb.append(wordText)
+                    }
                 }
             }
             sb.append("\n")
