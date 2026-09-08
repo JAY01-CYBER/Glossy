@@ -185,7 +185,6 @@ object Musixmatch {
         val normalizedQueryArtist = cleanText(artist)
         val tracks = trackList.map { it.track }
 
-        // 1. FILTER BY EXACT DURATION (±7 seconds tolerance) to fix out-of-sync lyrics
         val durationFiltered = if (duration > 0) {
             tracks.filter { track ->
                 val trackDur = track.trackLength ?: 0
@@ -195,7 +194,6 @@ object Musixmatch {
 
         val candidates = if (durationFiltered.isNotEmpty()) durationFiltered else tracks
 
-        // 2. FIND BEST TEXT MATCH AMONG DURATION-VALID TRACKS
         return candidates.minByOrNull { track ->
             val trackTitleCleaned = cleanText(track.trackName)
             val trackArtistCleaned = cleanText(track.artistName)
@@ -215,7 +213,6 @@ object Musixmatch {
             val trackDur = track.trackLength ?: 0
             val durDelta = if (duration > 0 && trackDur > 0) abs(trackDur - duration) else 0
 
-            // Priority: Title Match > Artist Match > Duration Delta
             (titleScore * 1000) + (artistScore * 100) + durDelta
         } ?: tracks.first()
     }
@@ -442,32 +439,37 @@ object Musixmatch {
         return String.format(Locale.US, "%s%02d:%02d.%03d%s", prefix, minutes, seconds, millis, suffix)
     }
 
+    // PAXSENIX EXACT FORMATTING [v1:/v2:]
     internal fun convertRichSyncToLrc(entries: List<RichSyncEntry>): String {
         val sb = StringBuilder()
         for (entry in entries) {
             val lineText = entry.x.trim()
             if (lineText.isEmpty()) continue
 
-            // 1. Detect if it's a background vocal (enclosed in parentheses)
+            // 1. Paxsenix jesa Background Vocal check (Apple Music v2 Style)
             val isBackground = lineText.startsWith("(") && lineText.endsWith(")")
+            val agentLabel = if (isBackground) "v2:" else "v1:"
 
-            // 2. Format line start time
+            // 2. Format line start time WITH Paxsenix Agent Label (e.g. [01:40.000]v2: )
             val lineTimeMs = (entry.ts * 1000).toLong()
-            sb.append(formatTime(lineTimeMs, isSyllable = false))
+            val timeString = formatTime(lineTimeMs, isSyllable = false)
+            sb.append(timeString).append(agentLabel).append(" ")
 
-            // 3. Inject Apple Music style 'v2' agent for background vocals
-            if (isBackground) {
-                sb.append("{agent:v2}")
-            }
-
-            // 4. Build inline syllable timings
+            // 3. Build inline syllable timings
             for (word in entry.l) {
-                if (word.c.isBlank()) {
-                    sb.append(word.c)
+                var wordText = word.c
+                
+                // Bracket ( ) ko hata do taki text ekdam clean (Uh-huh) dikhe
+                if (isBackground) {
+                    wordText = wordText.replace("(", "").replace(")", "")
+                }
+
+                if (wordText.isBlank() && word.c.isNotBlank()) {
+                    // Skip appending empty syllable if we completely stripped it
                 } else {
                     val wordTimeMs = ((entry.ts + word.o) * 1000).toLong()
                     sb.append(formatTime(wordTimeMs, isSyllable = true))
-                    sb.append(word.c)
+                    sb.append(wordText)
                 }
             }
             sb.append("\n")
@@ -482,18 +484,20 @@ object Musixmatch {
             entries.forEach { entry ->
                 val lineText = entry.text.trim()
                 
-                // 1. Detect if it's a background vocal (enclosed in parentheses)
+                // 1. Paxsenix jesa Background Vocal check (Apple Music v2 Style)
                 val isBackground = lineText.startsWith("(") && lineText.endsWith(")")
+                val agentLabel = if (isBackground) "v2:" else "v1:"
 
-                // 2. Format line start time
+                // 2. Format line start time WITH Paxsenix Agent Label (e.g. [01:40.000]v2: )
                 sb.append(formatTime((entry.time.total * 1000).toLong(), isSyllable = false))
+                sb.append(agentLabel).append(" ")
                 
-                // 3. Inject Apple Music style 'v2' agent for background vocals
+                // 3. Remove brackets for clean text
                 if (isBackground) {
-                    sb.append("{agent:v2}")
+                    sb.append(lineText.removeSurrounding("(", ")").trim())
+                } else {
+                    sb.append(entry.text)
                 }
-                
-                sb.append(entry.text)
                 sb.append("\n")
             }
             sb.toString()
