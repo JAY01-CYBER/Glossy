@@ -11,12 +11,15 @@ data class SearchSongResponse(
 ) {
     @Serializable
     data class Data(
-        val info: List<Info>,
+        val info: List<Info> = emptyList(),
     ) {
         @Serializable
         data class Info(
             val duration: Int,
             val hash: String,
+            val songname: String = "",
+            val singername: String = "",
+            val filename: String = ""
         )
     }
 }
