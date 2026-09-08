@@ -391,6 +391,7 @@ dependencies {
     implementation(project(":musixmatch"))
     implementation(project(":youlyplus"))
     implementation(project(":unison"))
+    implementation(project(":simpmusic"))
 
 
     implementation(libs.ktor.client.core)
