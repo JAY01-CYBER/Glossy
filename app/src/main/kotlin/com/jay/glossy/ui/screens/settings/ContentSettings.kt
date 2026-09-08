@@ -69,6 +69,7 @@ import com.jay.glossy.constants.EnableMusixmatchKey
 import com.jay.glossy.constants.EnableYouLyPlusKey
 import com.jay.glossy.constants.EnableUnisonKey
 import com.jay.glossy.constants.EnableBiniLyricsKey
+import com.jay.glossy.constants.EnableSimpMusicKey
 import com.jay.glossy.constants.HideExplicitKey
 import com.jay.glossy.constants.HideVideoSongsKey
 import com.jay.glossy.constants.HideYoutubeShortsKey
@@ -135,6 +136,7 @@ fun ContentSettings(
     val (enableYouLyPlus, onEnableYouLyPlusChange) = rememberPreference(key = EnableYouLyPlusKey, defaultValue = true)
     val (enableUnison, onEnableUnisonChange) = rememberPreference(key = EnableUnisonKey, defaultValue = true)
     val (enableBiniLyrics, onEnableBiniLyricsChange) = rememberPreference(key = EnableBiniLyricsKey, defaultValue = true)
+    val (enableSimpMusic, onEnableSimpMusicChange) = rememberPreference(key = EnableSimpMusicKey, defaultValue = true)
 
     val (lyricsProviderOrder, onLyricsProviderOrderChange) = rememberPreference(
         key = LyricsProviderOrderKey,
@@ -182,6 +184,7 @@ fun ContentSettings(
             "YouLyPlus" to "YouLyPlus",
             "Unison" to "Unison",
             "BiniLyrics" to "Bini Lyrics",
+            "SimpMusic" to "SimpMusic",
             "YouTubeSubtitle" to "YouTube Subtitles",
             "YouTube" to "YouTube",
         )
@@ -508,6 +511,35 @@ fun ContentSettings(
                         Column(
                             modifier = Modifier.weight(1f)
                         ) {
+                            Text("Enable SimpMusic")
+                            Text(
+                                text = "Fetch lyrics from api-lyrics.simpmusic.org",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = enableSimpMusic,
+                            onCheckedChange = onEnableSimpMusicChange,
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (enableSimpMusic) R.drawable.check else R.drawable.close
+                                    ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                )
+                            }
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(
+                            modifier = Modifier.weight(1f)
+                        ) {
                             Text(stringResource(R.string.enable_lrclib))
                             Text(
                                 text = stringResource(R.string.enable_lrclib_desc),
@@ -744,12 +776,13 @@ fun ContentSettings(
             "Musixmatch".takeIf { enableMusixmatch },
             "YouLyPlus".takeIf { enableYouLyPlus },
             "Unison".takeIf { enableUnison },
-            "BiniLyrics".takeIf { enableBiniLyrics } // Added BiniLyrics
+            "BiniLyrics".takeIf { enableBiniLyrics },
+            "SimpMusic".takeIf { enableSimpMusic } // Added SimpMusic
         ).filterNotNull().toSet()
         val lyricsIcon = painterResource(R.drawable.lyrics)
         val draggableItems = remember { mutableStateListOf<DraggableLyricsProviderItem>() }
 
-        LaunchedEffect(normalizedOrder, enableLrclib, enableKugou, enableBetterLyrics, enablePaxsenix, enableLyricsPlus, enableMusixmatch, enableYouLyPlus, enableUnison, enableBiniLyrics) {
+        LaunchedEffect(normalizedOrder, enableLrclib, enableKugou, enableBetterLyrics, enablePaxsenix, enableLyricsPlus, enableMusixmatch, enableYouLyPlus, enableUnison, enableBiniLyrics, enableSimpMusic) {
             val orderedEnabledProviders = normalizedOrder.filter { it in enabledProviders }
             draggableItems.clear()
             draggableItems.addAll(
