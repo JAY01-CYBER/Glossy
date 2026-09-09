@@ -55,7 +55,7 @@ enum class DensityScale(
 
 val DefaultOpenTabKey = stringPreferencesKey("defaultOpenTab")
 val SlimNavBarKey = booleanPreferencesKey("slimNavBar")
-val UseFloatingNavBarKey = booleanPreferencesKey("useFloatingNavBar") // NEW FLOATING NAV BAR KEY
+val UseFloatingNavBarKey = booleanPreferencesKey("useFloatingNavBar") 
 val GridItemsSizeKey = stringPreferencesKey("gridItemSize")
 val SliderStyleKey = stringPreferencesKey("sliderStyle")
 val SquigglySliderKey = booleanPreferencesKey("squigglySlider")
@@ -103,6 +103,13 @@ val EnableLrcLibKey = booleanPreferencesKey("enableLrclib")
 val EnableBetterLyricsKey = booleanPreferencesKey("enableBetterLyrics")
 val EnablePaxsenixKey = booleanPreferencesKey("enablePaxsenix")
 val EnableLyricsPlus = booleanPreferencesKey("enableLyricsPlus")
+val EnableMusixmatchKey = booleanPreferencesKey("enableMusixmatch")
+val EnableYouLyPlusKey = booleanPreferencesKey("enableYouLyPlus") 
+val EnableUnisonKey = booleanPreferencesKey("enableUnison")
+val EnableBiniLyricsKey = booleanPreferencesKey("enableBiniLyrics") 
+val EnableSimpMusicKey = booleanPreferencesKey("enableSimpMusic") 
+val EnableNetEaseKey = booleanPreferencesKey("enableNetEase") 
+val EnableMegalobizKey = booleanPreferencesKey("enableMegalobiz") 
 val HideExplicitKey = booleanPreferencesKey("hideExplicit")
 val HideVideoSongsKey = booleanPreferencesKey("hideVideoSongs")
 val HideYoutubeShortsKey = booleanPreferencesKey("hideYoutubeShorts")
@@ -438,7 +445,14 @@ enum class PreferredLyricsProvider {
     KUGOU,
     BETTER_LYRICS,
     PAXSENIX,
-    LYRICSPLUS
+    LYRICSPLUS,
+    MUSIXMATCH,
+    YOULYPLUS,
+    UNISON,
+    BINILYRICS,
+    SIMPMUSIC,
+    NETEASE,
+    MEGALOBIZ
 }
 
 enum class PlayerButtonsStyle {

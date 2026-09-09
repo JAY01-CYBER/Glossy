@@ -74,8 +74,6 @@ jobs:
             variantName: Foss
           - variant: gms
             variantName: Gms
-          - variant: izzy
-            variantName: Izzy
 
     steps:
       - uses: actions/checkout@v6
@@ -132,8 +130,6 @@ jobs:
 
           if [ "${{ matrix.variant }}" = "gms" ]; then
             TARGET_NAME="Glossy-with-Google-Cast.apk"
-          elif [ "${{ matrix.variant }}" = "izzy" ]; then
-            TARGET_NAME="Glossy-izzy.apk"
           else
             TARGET_NAME="Glossy.apk"
           fi
@@ -146,7 +142,7 @@ jobs:
       - name: Upload Signed APKs
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ matrix.variant == 'gms' && 'Glossy-with-Google-Cast' || matrix.variant == 'izzy' && 'Glossy-izzy' || 'Glossy' }}
+          name: ${{ matrix.variant == 'gms' && 'Glossy-with-Google-Cast' || 'Glossy' }}
           path: app/build/outputs/apk/${{ matrix.variant }}/release/out/*.apk
 
   create-release:
@@ -175,23 +171,29 @@ jobs:
           vt_api_key: ${{ secrets.VT_API_KEY }}
           files: release_files/*.apk
 
-      - name: Parse release notes from changelog
+      - name: Generate Smart Release Notes
         run: |
-          VERSION="${{ needs.check-version.outputs.new_version }}"
-          chmod +x .github/scripts/parse_changelog.sh
+          python3 -c "
+          import os, sys
+          version = '${{ needs.check-version.outputs.new_version }}'
+          
+          # Parse changelog.md directly using the '---vX.X.X' delimiter
+          if os.path.exists('changelog.md'):
+              with open('changelog.md', 'r', encoding='utf-8') as f:
+                  content = f.read()
+              target = f'---v{version}'
+              if target in content:
+                  # Extract text for current version
+                  block = content.split(target)[1].split('---v')[0].strip()
+                  with open('release_notes.md', 'w', encoding='utf-8') as f:
+                      f.write(block)
+                  sys.exit(0)
+          
+          # Fallback if specific version is not found in changelog
+          os.system('git log $(git describe --tags --abbrev=0 2>/dev/null || echo \"HEAD~10\")..HEAD --pretty=format:\"- %s\" --no-merges | head -10 > release_notes.md')
+          "
 
-          if bash .github/scripts/parse_changelog.sh "$VERSION" changelog.md > release_notes.md; then
-            echo "Release notes sourced from changelog.md for v$VERSION"
-          else
-            {
-              echo "Release of version $VERSION"
-              echo ""
-              git log "$(git describe --tags --abbrev=0 2>/dev/null || echo "HEAD~10")..HEAD" \
-                --pretty=format:"- %s" --no-merges | head -10 || echo "- Initial release"
-            } > release_notes.md
-          fi
-
-      - name: Create Release
+      - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -219,30 +221,91 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Send APKs to Telegram (Python Stable Method)
+      - name: Send APKs to Telegram (Premium Layout + Changelog)
         env:
           BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TOPIC_ID: ${{ secrets.TELEGRAM_TOPIC_ID }}
           VERSION: ${{ needs.check-version.outputs.new_version }}
+          COMMIT_SHA: ${{ github.sha }}
+          BRANCH_NAME: ${{ github.ref }}
         run: |
           pip install requests
           cat << 'EOF' > upload_telegram.py
-          import os, glob, requests
+          import os, glob, requests, re
+          
           bot_token = os.environ['BOT_TOKEN']
           chat_id = os.environ['CHAT_ID']
           topic_id = os.environ['TOPIC_ID']
           version = os.environ['VERSION']
+          commit_sha = os.environ['COMMIT_SHA'][:7] 
+          branch = os.environ['BRANCH_NAME'].replace('refs/heads/', '') 
+          
+          changelog_text = "No release notes provided."
+          if os.path.exists('release_notes.md'):
+              with open('release_notes.md', 'r', encoding='utf-8') as f:
+                  lines = []
+                  for line in f:
+                      line = line.strip()
+                      # Skip empty lines or the main Header title (e.g., # 🚀 Glossy v0.0.2)
+                      if not line or (line.startswith('#') and 'Glossy' in line):
+                          continue
+                      
+                      # Convert Markdown to Telegram HTML format
+                      if line.startswith('### '):
+                          line = f"<b>{line.replace('### ', '')}</b>"
+                      if line.startswith('* '):
+                          line = f"• {line[2:]}"
+                      elif line.startswith('- '):
+                          line = f"• {line[2:]}"
+                          
+                      # Convert bold **text** to <b>text</b>
+                      line = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', line)
+                      
+                      lines.append(line)
+                  
+                  if lines:
+                      changelog_text = "\n".join(lines)
+          
+          # Prevent Telegram caption overflow (Max 1024 chars)
+          if len(changelog_text) > 550:
+              changelog_text = changelog_text[:540] + "...\n(Read full changelog on GitHub)"
           
           for apk in glob.glob('release_files/*.apk'):
               filename = os.path.basename(apk)
+              
+              size_bytes = os.path.getsize(apk)
+              size_mb = size_bytes / (1024 * 1024)
+              size_str = f"{size_mb:.1f}M"
+              
+              if "Google-Cast" in filename:
+                  variant = "GMS Release"
+              else:
+                  variant = "FOSS Release"
+              
+              caption = (
+                  f"🎧 <b>Glossy Release v{version}</b>\n"
+                  f"───────────────────\n"
+                  f"📱 <b>Variant:</b> {variant}\n"
+                  f"🌿 <b>Branch:</b> <code>{branch}</code>\n"
+                  f"📦 <b>File Size:</b> {size_str}\n"
+                  f"🔗 <b>Commit:</b> <code>{commit_sha}</code>\n"
+                  f"───────────────────\n"
+                  f"📝 <b>Changelog:</b>\n"
+                  f"{changelog_text}\n"
+                  f"───────────────────\n"
+                  f"🚀 <i>Compiled automatically with the latest updates!</i>\n\n"
+                  f"apk provider by @JAY_HU_VAI"
+              )
+              
               print(f"Uploading {filename} to Telegram...")
               
               url = f"https://api.telegram.org/bot{bot_token}/sendDocument"
               data = {
                   "chat_id": chat_id,
                   "message_thread_id": topic_id,
-                  "caption": f"🚀 New Release: v{version}\n📦 {filename}"
+                  "caption": caption,
+                  "parse_mode": "HTML"
               }
               
               with open(apk, 'rb') as f:

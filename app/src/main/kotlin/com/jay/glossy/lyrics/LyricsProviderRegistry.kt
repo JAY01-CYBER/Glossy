@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -14,6 +14,13 @@ object LyricsProviderRegistry {
         "LrcLib" to LrcLibLyricsProvider,
         "KuGou" to KuGouLyricsProvider,
         "LyricsPlus" to LyricsPlusProvider,
+        "YouLyPlus" to YouLyPlusLyricsProvider,
+        "Musixmatch" to MusixmatchLyricsProvider,
+        "Unison" to UnisonLyricsProvider,
+        "BiniLyrics" to BiniLyricsProvider,
+        "SimpMusic" to SimpMusicLyricsProvider,
+        "NetEase" to NetEaseLyricsProvider,
+        "Megalobiz" to MegalobizLyricsProvider,
         "YouTubeSubtitle" to YouTubeSubtitleLyricsProvider,
         "YouTube" to YouTubeLyricsProvider,
     )
@@ -37,10 +44,17 @@ object LyricsProviderRegistry {
     }
 
     fun getDefaultProviderOrder(): List<String> = listOf(
+        "NetEase",
+        "Musixmatch",
+        "YouLyPlus",
+        "Unison",
+        "BiniLyrics",
+        "SimpMusic",
         "BetterLyrics",
         "LrcLib",
         "KuGou",
         "Paxsenix",
+        "Megalobiz",
         "LyricsPlus",
         "YouTubeSubtitle",
         "YouTube",

@@ -1,3 +1,17 @@
+---v0.0.3
+# 🚀 Glossy v0.0.3 - Ultimate Lyrics Overhaul & Fixes
+
+### 🎤 New Lyrics Providers Stack
+* **NetEase Music:** Integrated as a top-tier provider to fetch high-quality, word-by-word (YRC / Karaoke) synchronized lyrics directly without token hassles.
+* **Musixmatch:** Added for high-fidelity rich-synced lyrics support.
+* **SimpMusic:** Added for reliable community lyrics retrieval.
+* **YouLyPlus:** Integrated for extended community lyrics coverage.
+* **Unison:** Added for community-driven lyrics synchronization.
+* **Megalobiz:** Integrated as a robust fallback scraper for standard LRC files.
+
+### 🐛 Critical Bug Fixes
+* **Lyrics Mismatch Bug:** Completely resolved a persistent issue where LRCLIB and KuGou were accidentally fetching and displaying lyrics of completely wrong songs.
+
 ---v0.0.2
 # 🚀 Glossy v0.0.2 - Album Redesign, Crash Fixes & Automation
 

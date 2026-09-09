@@ -34,6 +34,12 @@ include(":lastfm")
 include(":betterlyrics")
 include(":shazamkit")
 include(":paxsenix")
+include(":musixmatch")
+include(":youlyplus")
+include(":unison")
+include(":simpmusic")
+include(":netease")
+
 
 // Use a local copy of NewPipe Extractor by uncommenting the lines below.
 // We assume, that Metrolist and NewPipe Extractor have the same parent directory.
