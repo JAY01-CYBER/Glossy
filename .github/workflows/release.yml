@@ -74,8 +74,6 @@ jobs:
             variantName: Foss
           - variant: gms
             variantName: Gms
-          - variant: izzy
-            variantName: Izzy
 
     steps:
       - uses: actions/checkout@v6
@@ -132,8 +130,6 @@ jobs:
 
           if [ "${{ matrix.variant }}" = "gms" ]; then
             TARGET_NAME="Glossy-with-Google-Cast.apk"
-          elif [ "${{ matrix.variant }}" = "izzy" ]; then
-            TARGET_NAME="Glossy-izzy.apk"
           else
             TARGET_NAME="Glossy.apk"
           fi
@@ -146,7 +142,7 @@ jobs:
       - name: Upload Signed APKs
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ matrix.variant == 'gms' && 'Glossy-with-Google-Cast' || matrix.variant == 'izzy' && 'Glossy-izzy' || 'Glossy' }}
+          name: ${{ matrix.variant == 'gms' && 'Glossy-with-Google-Cast' || 'Glossy' }}
           path: app/build/outputs/apk/${{ matrix.variant }}/release/out/*.apk
 
   create-release:
@@ -219,30 +215,74 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Send APKs to Telegram (Python Stable Method)
+      - name: Send APKs to Telegram (Premium ViviMusic Style)
         env:
           BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TOPIC_ID: ${{ secrets.TELEGRAM_TOPIC_ID }}
           VERSION: ${{ needs.check-version.outputs.new_version }}
+          COMMIT_SHA: ${{ github.sha }}
+          BRANCH_NAME: ${{ github.ref }}
         run: |
           pip install requests
           cat << 'EOF' > upload_telegram.py
           import os, glob, requests
+          
           bot_token = os.environ['BOT_TOKEN']
           chat_id = os.environ['CHAT_ID']
           topic_id = os.environ['TOPIC_ID']
           version = os.environ['VERSION']
+          commit_sha = os.environ['COMMIT_SHA'][:7] 
+          branch = os.environ['BRANCH_NAME'].replace('refs/heads/', '') 
+          
+          changelog_text = "No release notes provided."
+          if os.path.exists('release_notes.md'):
+              with open('release_notes.md', 'r', encoding='utf-8') as f:
+                  # Filter out standard git log headers or empty lines
+                  lines = [line.strip() for line in f.readlines() if line.strip() and not line.startswith('Release of')]
+                  if lines:
+                      changelog_text = "\n".join(lines)
+          
+          # Telegram Caption Limit is 1024 chars. Base caption is ~300 chars.
+          # Truncate changelog safely if it's too big to prevent upload failure.
+          if len(changelog_text) > 650:
+              changelog_text = changelog_text[:640] + "...\n(Read full changelog on GitHub)"
           
           for apk in glob.glob('release_files/*.apk'):
               filename = os.path.basename(apk)
+              
+              size_bytes = os.path.getsize(apk)
+              size_mb = size_bytes / (1024 * 1024)
+              size_str = f"{size_mb:.1f}M"
+              
+              if "Google-Cast" in filename:
+                  variant = "GMS Release"
+              else:
+                  variant = "FOSS Release"
+              
+              caption = (
+                  f"🎧 <b>Glossy Release v{version}</b>\n"
+                  f"───────────────────\n"
+                  f"📱 <b>Variant:</b> {variant}\n"
+                  f"🌿 <b>Branch:</b> <code>{branch}</code>\n"
+                  f"📦 <b>File Size:</b> {size_str}\n"
+                  f"🔗 <b>Commit:</b> <code>{commit_sha}</code>\n"
+                  f"───────────────────\n"
+                  f"📝 <b>Changelog:</b>\n"
+                  f"<i>{changelog_text}</i>\n"
+                  f"───────────────────\n"
+                  f"🚀 <i>Compiled automatically with the latest updates!</i>\n"
+                  f"apk provider by @JAY_HU_VAI"
+              )
+              
               print(f"Uploading {filename} to Telegram...")
               
               url = f"https://api.telegram.org/bot{bot_token}/sendDocument"
               data = {
                   "chat_id": chat_id,
                   "message_thread_id": topic_id,
-                  "caption": f"🚀 New Release: v{version}\n📦 {filename}"
+                  "caption": caption,
+                  "parse_mode": "HTML"
               }
               
               with open(apk, 'rb') as f:
