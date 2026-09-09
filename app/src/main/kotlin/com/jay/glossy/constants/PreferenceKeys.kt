@@ -108,7 +108,8 @@ val EnableYouLyPlusKey = booleanPreferencesKey("enableYouLyPlus")
 val EnableUnisonKey = booleanPreferencesKey("enableUnison")
 val EnableBiniLyricsKey = booleanPreferencesKey("enableBiniLyrics") 
 val EnableSimpMusicKey = booleanPreferencesKey("enableSimpMusic") 
-val EnableSyricsKey = booleanPreferencesKey("enableSyrics") 
+val EnableNetEaseKey = booleanPreferencesKey("enableNetEase") 
+val EnableMegalobizKey = booleanPreferencesKey("enableMegalobiz") 
 val HideExplicitKey = booleanPreferencesKey("hideExplicit")
 val HideVideoSongsKey = booleanPreferencesKey("hideVideoSongs")
 val HideYoutubeShortsKey = booleanPreferencesKey("hideYoutubeShorts")
@@ -450,7 +451,8 @@ enum class PreferredLyricsProvider {
     UNISON,
     BINILYRICS,
     SIMPMUSIC,
-    SYRICS // Added Syrics
+    NETEASE,
+    MEGALOBIZ
 }
 
 enum class PlayerButtonsStyle {
