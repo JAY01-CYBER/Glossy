@@ -70,6 +70,7 @@ import com.jay.glossy.constants.EnableYouLyPlusKey
 import com.jay.glossy.constants.EnableUnisonKey
 import com.jay.glossy.constants.EnableBiniLyricsKey
 import com.jay.glossy.constants.EnableSimpMusicKey
+import com.jay.glossy.constants.EnableSyricsKey
 import com.jay.glossy.constants.HideExplicitKey
 import com.jay.glossy.constants.HideVideoSongsKey
 import com.jay.glossy.constants.HideYoutubeShortsKey
@@ -137,6 +138,7 @@ fun ContentSettings(
     val (enableUnison, onEnableUnisonChange) = rememberPreference(key = EnableUnisonKey, defaultValue = true)
     val (enableBiniLyrics, onEnableBiniLyricsChange) = rememberPreference(key = EnableBiniLyricsKey, defaultValue = true)
     val (enableSimpMusic, onEnableSimpMusicChange) = rememberPreference(key = EnableSimpMusicKey, defaultValue = true)
+    val (enableSyrics, onEnableSyricsChange) = rememberPreference(key = EnableSyricsKey, defaultValue = true)
 
     val (lyricsProviderOrder, onLyricsProviderOrderChange) = rememberPreference(
         key = LyricsProviderOrderKey,
@@ -185,6 +187,7 @@ fun ContentSettings(
             "Unison" to "Unison",
             "BiniLyrics" to "Bini Lyrics",
             "SimpMusic" to "SimpMusic",
+            "Syrics" to "Syrics (Spotify)",
             "YouTubeSubtitle" to "YouTube Subtitles",
             "YouTube" to "YouTube",
         )
@@ -409,6 +412,35 @@ fun ContentSettings(
                                 Icon(
                                     painter = painterResource(
                                         id = if (enableMusixmatch) R.drawable.check else R.drawable.close
+                                    ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                )
+                            }
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Enable Syrics (Spotify)")
+                            Text(
+                                text = "Fetch word-by-word synced lyrics from Spotify via Syrics API",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = enableSyrics,
+                            onCheckedChange = onEnableSyricsChange,
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (enableSyrics) R.drawable.check else R.drawable.close
                                     ),
                                     contentDescription = null,
                                     modifier = Modifier.size(SwitchDefaults.IconSize)
@@ -774,15 +806,16 @@ fun ContentSettings(
             "Paxsenix".takeIf { enablePaxsenix },
             "LyricsPlus".takeIf { enableLyricsPlus },
             "Musixmatch".takeIf { enableMusixmatch },
+            "Syrics".takeIf { enableSyrics }, // Added Syrics
             "YouLyPlus".takeIf { enableYouLyPlus },
             "Unison".takeIf { enableUnison },
             "BiniLyrics".takeIf { enableBiniLyrics },
-            "SimpMusic".takeIf { enableSimpMusic } // Added SimpMusic
+            "SimpMusic".takeIf { enableSimpMusic } 
         ).filterNotNull().toSet()
         val lyricsIcon = painterResource(R.drawable.lyrics)
         val draggableItems = remember { mutableStateListOf<DraggableLyricsProviderItem>() }
 
-        LaunchedEffect(normalizedOrder, enableLrclib, enableKugou, enableBetterLyrics, enablePaxsenix, enableLyricsPlus, enableMusixmatch, enableYouLyPlus, enableUnison, enableBiniLyrics, enableSimpMusic) {
+        LaunchedEffect(normalizedOrder, enableLrclib, enableKugou, enableBetterLyrics, enablePaxsenix, enableLyricsPlus, enableMusixmatch, enableSyrics, enableYouLyPlus, enableUnison, enableBiniLyrics, enableSimpMusic) {
             val orderedEnabledProviders = normalizedOrder.filter { it in enabledProviders }
             draggableItems.clear()
             draggableItems.addAll(
