@@ -392,6 +392,7 @@ dependencies {
     implementation(project(":youlyplus"))
     implementation(project(":unison"))
     implementation(project(":simpmusic"))
+    implementation(project(":syrics"))
 
 
     implementation(libs.ktor.client.core)
