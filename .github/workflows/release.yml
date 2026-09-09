@@ -171,23 +171,29 @@ jobs:
           vt_api_key: ${{ secrets.VT_API_KEY }}
           files: release_files/*.apk
 
-      - name: Parse release notes from changelog
+      - name: Generate Smart Release Notes
         run: |
-          VERSION="${{ needs.check-version.outputs.new_version }}"
-          chmod +x .github/scripts/parse_changelog.sh
+          python3 -c "
+          import os, sys
+          version = '${{ needs.check-version.outputs.new_version }}'
+          
+          # Parse changelog.md directly using the '---vX.X.X' delimiter
+          if os.path.exists('changelog.md'):
+              with open('changelog.md', 'r', encoding='utf-8') as f:
+                  content = f.read()
+              target = f'---v{version}'
+              if target in content:
+                  # Extract text for current version
+                  block = content.split(target)[1].split('---v')[0].strip()
+                  with open('release_notes.md', 'w', encoding='utf-8') as f:
+                      f.write(block)
+                  sys.exit(0)
+          
+          # Fallback if specific version is not found in changelog
+          os.system('git log $(git describe --tags --abbrev=0 2>/dev/null || echo \"HEAD~10\")..HEAD --pretty=format:\"- %s\" --no-merges | head -10 > release_notes.md')
+          "
 
-          if bash .github/scripts/parse_changelog.sh "$VERSION" changelog.md > release_notes.md; then
-            echo "Release notes sourced from changelog.md for v$VERSION"
-          else
-            {
-              echo "Release of version $VERSION"
-              echo ""
-              git log "$(git describe --tags --abbrev=0 2>/dev/null || echo "HEAD~10")..HEAD" \
-                --pretty=format:"- %s" --no-merges | head -10 || echo "- Initial release"
-            } > release_notes.md
-          fi
-
-      - name: Create Release
+      - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -215,7 +221,7 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Send APKs to Telegram (Premium ViviMusic Style)
+      - name: Send APKs to Telegram (Premium Layout + Changelog)
         env:
           BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -226,7 +232,7 @@ jobs:
         run: |
           pip install requests
           cat << 'EOF' > upload_telegram.py
-          import os, glob, requests
+          import os, glob, requests, re
           
           bot_token = os.environ['BOT_TOKEN']
           chat_id = os.environ['CHAT_ID']
@@ -238,15 +244,32 @@ jobs:
           changelog_text = "No release notes provided."
           if os.path.exists('release_notes.md'):
               with open('release_notes.md', 'r', encoding='utf-8') as f:
-                  # Filter out standard git log headers or empty lines
-                  lines = [line.strip() for line in f.readlines() if line.strip() and not line.startswith('Release of')]
+                  lines = []
+                  for line in f:
+                      line = line.strip()
+                      # Skip empty lines or the main Header title (e.g., # 🚀 Glossy v0.0.2)
+                      if not line or (line.startswith('#') and 'Glossy' in line):
+                          continue
+                      
+                      # Convert Markdown to Telegram HTML format
+                      if line.startswith('### '):
+                          line = f"<b>{line.replace('### ', '')}</b>"
+                      if line.startswith('* '):
+                          line = f"• {line[2:]}"
+                      elif line.startswith('- '):
+                          line = f"• {line[2:]}"
+                          
+                      # Convert bold **text** to <b>text</b>
+                      line = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', line)
+                      
+                      lines.append(line)
+                  
                   if lines:
                       changelog_text = "\n".join(lines)
           
-          # Telegram Caption Limit is 1024 chars. Base caption is ~300 chars.
-          # Truncate changelog safely if it's too big to prevent upload failure.
-          if len(changelog_text) > 650:
-              changelog_text = changelog_text[:640] + "...\n(Read full changelog on GitHub)"
+          # Prevent Telegram caption overflow (Max 1024 chars)
+          if len(changelog_text) > 550:
+              changelog_text = changelog_text[:540] + "...\n(Read full changelog on GitHub)"
           
           for apk in glob.glob('release_files/*.apk'):
               filename = os.path.basename(apk)
@@ -269,9 +292,9 @@ jobs:
                   f"🔗 <b>Commit:</b> <code>{commit_sha}</code>\n"
                   f"───────────────────\n"
                   f"📝 <b>Changelog:</b>\n"
-                  f"<i>{changelog_text}</i>\n"
+                  f"{changelog_text}\n"
                   f"───────────────────\n"
-                  f"🚀 <i>Compiled automatically with the latest updates!</i>\n"
+                  f"🚀 <i>Compiled automatically with the latest updates!</i>\n\n"
                   f"apk provider by @JAY_HU_VAI"
               )
               
