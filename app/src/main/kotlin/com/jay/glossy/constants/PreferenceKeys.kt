@@ -108,6 +108,7 @@ val EnableYouLyPlusKey = booleanPreferencesKey("enableYouLyPlus")
 val EnableUnisonKey = booleanPreferencesKey("enableUnison")
 val EnableBiniLyricsKey = booleanPreferencesKey("enableBiniLyrics") 
 val EnableSimpMusicKey = booleanPreferencesKey("enableSimpMusic") 
+val EnableSyricsKey = booleanPreferencesKey("enableSyrics") 
 val HideExplicitKey = booleanPreferencesKey("hideExplicit")
 val HideVideoSongsKey = booleanPreferencesKey("hideVideoSongs")
 val HideYoutubeShortsKey = booleanPreferencesKey("hideYoutubeShorts")
@@ -448,7 +449,8 @@ enum class PreferredLyricsProvider {
     YOULYPLUS,
     UNISON,
     BINILYRICS,
-    SIMPMUSIC // Added SimpMusic
+    SIMPMUSIC,
+    SYRICS // Added Syrics
 }
 
 enum class PlayerButtonsStyle {
