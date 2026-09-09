@@ -44,11 +44,14 @@ object NetEase {
     }
 
     private suspend fun searchTrack(title: String, artist: String): Long? = runCatching {
-        val cleanTitle = title.replace(Regex("(?i)\\(.*video.*\\)|\\[.*\\]|- official.*"), "").trim()
+        // Clean title for better search accuracy
+        val cleanTitle = title.replace(Regex("(?i)\\s*\\(.*video.*\\)|\\s*\\[.*\\]|\\s*- official.*"), "").trim()
         val query = "$cleanTitle $artist"
         
-        val response = client.get("http://music.163.com/api/search/pc") {
+        // FIX: Changed http to https to bypass Android Cleartext block
+        val response = client.get("https://music.163.com/api/search/pc") {
             header(HttpHeaders.UserAgent, "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+            header(HttpHeaders.Cookie, "os=pc;") // Bypass geo-blocks
             parameter("s", query)
             parameter("type", 1)
             parameter("limit", 5)
@@ -96,7 +99,7 @@ object NetEase {
                         val wordStartMs = wMatch.groupValues[1].toLongOrNull() ?: 0L
                         val wordText = wMatch.groupValues[2]
                         if (wordText.isNotBlank()) {
-                            val wordTime = formatMsToLrcTime(lineStartMs + wordStartMs) // Sometimes NetEase uses relative word MS
+                            val wordTime = formatMsToLrcTime(lineStartMs + wordStartMs)
                             lrcBuilder.append("<$wordTime>$wordText")
                         }
                     }
@@ -129,12 +132,15 @@ object NetEase {
     ): Result<String> = runCatching {
         val trackId = searchTrack(title, artist) ?: throw IllegalStateException("Track not found on NetEase")
 
-        val response = client.get("http://music.163.com/api/song/lyric") {
+        // FIX: Changed http to https
+        val response = client.get("https://music.163.com/api/song/lyric") {
             header(HttpHeaders.UserAgent, "Mozilla/5.0")
+            header(HttpHeaders.Cookie, "os=pc;")
             parameter("id", trackId)
-            parameter("lv", 1)
-            parameter("kv", 1)
-            parameter("tv", -1)
+            parameter("lv", 1) // Normal LRC
+            parameter("kv", 1) // K-Lyric
+            parameter("tv", -1) // Translation
+            parameter("yv", 1) // FIX: Request YRC (Word-by-word) format
         }
 
         if (response.status != HttpStatusCode.OK) {
