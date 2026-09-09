@@ -18,7 +18,8 @@ object LyricsProviderRegistry {
         "Musixmatch" to MusixmatchLyricsProvider,
         "Unison" to UnisonLyricsProvider,
         "BiniLyrics" to BiniLyricsProvider,
-        "SimpMusic" to SimpMusicLyricsProvider, 
+        "SimpMusic" to SimpMusicLyricsProvider,
+        "Syrics" to SyricsLyricsProvider, 
         "YouTubeSubtitle" to YouTubeSubtitleLyricsProvider,
         "YouTube" to YouTubeLyricsProvider,
     )
@@ -43,10 +44,11 @@ object LyricsProviderRegistry {
 
     fun getDefaultProviderOrder(): List<String> = listOf(
         "Musixmatch",
+        "Syrics", 
         "YouLyPlus",
         "Unison",
         "BiniLyrics",
-        "SimpMusic", 
+        "SimpMusic",
         "BetterLyrics",
         "LrcLib",
         "KuGou",
