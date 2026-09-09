@@ -38,7 +38,7 @@ include(":musixmatch")
 include(":youlyplus")
 include(":unison")
 include(":simpmusic")
-include(":syrics")
+include(":netease")
 
 
 // Use a local copy of NewPipe Extractor by uncommenting the lines below.
