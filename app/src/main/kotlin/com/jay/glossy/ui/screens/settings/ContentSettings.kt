@@ -70,7 +70,8 @@ import com.jay.glossy.constants.EnableYouLyPlusKey
 import com.jay.glossy.constants.EnableUnisonKey
 import com.jay.glossy.constants.EnableBiniLyricsKey
 import com.jay.glossy.constants.EnableSimpMusicKey
-import com.jay.glossy.constants.EnableSyricsKey
+import com.jay.glossy.constants.EnableNetEaseKey
+import com.jay.glossy.constants.EnableMegalobizKey
 import com.jay.glossy.constants.HideExplicitKey
 import com.jay.glossy.constants.HideVideoSongsKey
 import com.jay.glossy.constants.HideYoutubeShortsKey
@@ -138,7 +139,8 @@ fun ContentSettings(
     val (enableUnison, onEnableUnisonChange) = rememberPreference(key = EnableUnisonKey, defaultValue = true)
     val (enableBiniLyrics, onEnableBiniLyricsChange) = rememberPreference(key = EnableBiniLyricsKey, defaultValue = true)
     val (enableSimpMusic, onEnableSimpMusicChange) = rememberPreference(key = EnableSimpMusicKey, defaultValue = true)
-    val (enableSyrics, onEnableSyricsChange) = rememberPreference(key = EnableSyricsKey, defaultValue = true)
+    val (enableNetEase, onEnableNetEaseChange) = rememberPreference(key = EnableNetEaseKey, defaultValue = true)
+    val (enableMegalobiz, onEnableMegalobizChange) = rememberPreference(key = EnableMegalobizKey, defaultValue = true)
 
     val (lyricsProviderOrder, onLyricsProviderOrderChange) = rememberPreference(
         key = LyricsProviderOrderKey,
@@ -187,7 +189,8 @@ fun ContentSettings(
             "Unison" to "Unison",
             "BiniLyrics" to "Bini Lyrics",
             "SimpMusic" to "SimpMusic",
-            "Syrics" to "Syrics (Spotify)",
+            "NetEase" to "NetEase Music",
+            "Megalobiz" to "Megalobiz",
             "YouTubeSubtitle" to "YouTube Subtitles",
             "YouTube" to "YouTube",
         )
@@ -398,20 +401,20 @@ fun ContentSettings(
                         Column(
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text("Enable Musixmatch")
+                            Text("Enable NetEase Music")
                             Text(
-                                text = "Fetch high quality rich synced lyrics from Musixmatch API",
+                                text = "Fetch word-by-word synced YRC lyrics from NetEase",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         Switch(
-                            checked = enableMusixmatch,
-                            onCheckedChange = onEnableMusixmatchChange,
+                            checked = enableNetEase,
+                            onCheckedChange = onEnableNetEaseChange,
                             thumbContent = {
                                 Icon(
                                     painter = painterResource(
-                                        id = if (enableMusixmatch) R.drawable.check else R.drawable.close
+                                        id = if (enableNetEase) R.drawable.check else R.drawable.close
                                     ),
                                     contentDescription = null,
                                     modifier = Modifier.size(SwitchDefaults.IconSize)
@@ -427,20 +430,49 @@ fun ContentSettings(
                         Column(
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text("Enable Syrics (Spotify)")
+                            Text("Enable Megalobiz")
                             Text(
-                                text = "Fetch word-by-word synced lyrics from Spotify via Syrics API",
+                                text = "Fetch community lyrics from Megalobiz scraper",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         Switch(
-                            checked = enableSyrics,
-                            onCheckedChange = onEnableSyricsChange,
+                            checked = enableMegalobiz,
+                            onCheckedChange = onEnableMegalobizChange,
                             thumbContent = {
                                 Icon(
                                     painter = painterResource(
-                                        id = if (enableSyrics) R.drawable.check else R.drawable.close
+                                        id = if (enableMegalobiz) R.drawable.check else R.drawable.close
+                                    ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                )
+                            }
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Enable Musixmatch")
+                            Text(
+                                text = "Fetch high quality rich synced lyrics from Musixmatch API",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = enableMusixmatch,
+                            onCheckedChange = onEnableMusixmatchChange,
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (enableMusixmatch) R.drawable.check else R.drawable.close
                                     ),
                                     contentDescription = null,
                                     modifier = Modifier.size(SwitchDefaults.IconSize)
@@ -806,7 +838,8 @@ fun ContentSettings(
             "Paxsenix".takeIf { enablePaxsenix },
             "LyricsPlus".takeIf { enableLyricsPlus },
             "Musixmatch".takeIf { enableMusixmatch },
-            "Syrics".takeIf { enableSyrics }, // Added Syrics
+            "NetEase".takeIf { enableNetEase },
+            "Megalobiz".takeIf { enableMegalobiz },
             "YouLyPlus".takeIf { enableYouLyPlus },
             "Unison".takeIf { enableUnison },
             "BiniLyrics".takeIf { enableBiniLyrics },
@@ -815,7 +848,7 @@ fun ContentSettings(
         val lyricsIcon = painterResource(R.drawable.lyrics)
         val draggableItems = remember { mutableStateListOf<DraggableLyricsProviderItem>() }
 
-        LaunchedEffect(normalizedOrder, enableLrclib, enableKugou, enableBetterLyrics, enablePaxsenix, enableLyricsPlus, enableMusixmatch, enableSyrics, enableYouLyPlus, enableUnison, enableBiniLyrics, enableSimpMusic) {
+        LaunchedEffect(normalizedOrder, enableLrclib, enableKugou, enableBetterLyrics, enablePaxsenix, enableLyricsPlus, enableMusixmatch, enableNetEase, enableMegalobiz, enableYouLyPlus, enableUnison, enableBiniLyrics, enableSimpMusic) {
             val orderedEnabledProviders = normalizedOrder.filter { it in enabledProviders }
             draggableItems.clear()
             draggableItems.addAll(
