@@ -141,7 +141,8 @@ import com.jay.glossy.constants.PureBlackMiniPlayerKey
 import com.jay.glossy.constants.SwipeSensitivityKey
 import com.jay.glossy.constants.SwipeThumbnailKey
 import com.jay.glossy.constants.ThumbnailCornerRadius
-import com.jay.glossy.constants.UseNewMiniPlayerDesignKey
+import com.jay.glossy.constants.MiniPlayerStyle
+import com.jay.glossy.constants.MiniPlayerStyleKey
 import com.jay.glossy.db.entities.ArtistEntity
 import com.jay.glossy.listentogether.ListenTogetherManager
 import com.metrolist.models.MediaMetadata
@@ -158,10 +159,6 @@ import com.jay.glossy.ui.theme.PlayerColorExtractor
 import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.menu.AddToPlaylistDialog
 
-/**
- * Stable wrapper for progress state - reads values only during draw phase
- * This prevents recomposition when position/duration change
- */
 @Stable
 class ProgressState(
     private val positionState: MutableLongState,
@@ -181,34 +178,36 @@ fun MiniPlayer(
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {},
 ) {
-    val useNewMiniPlayerDesign by rememberPreference(UseNewMiniPlayerDesignKey, true)
-    val useAppleMusicStyle by rememberPreference(booleanPreferencesKey("use_apple_music_style"), false)
+    val miniPlayerStyle by rememberEnumPreference(MiniPlayerStyleKey, defaultValue = MiniPlayerStyle.MODERN)
     val pureBlack by rememberPreference(PureBlackMiniPlayerKey, defaultValue = false)
 
-    // Create stable progress state - doesn't cause recomposition on position changes
     val progressState = remember { ProgressState(positionState, durationState) }
 
-    if (useAppleMusicStyle) {
-        AppleMusicMiniPlayer(
-            progressState = progressState,
-            modifier = modifier,
-            pureBlack = pureBlack,
-            expandProgress = 0f,
-            onClick = onClick
-        )
-    } else if (useNewMiniPlayerDesign) {
-        NewMiniPlayer(
-            progressState = progressState,
-            modifier = modifier,
-            onClick = onClick,
-        )
-    } else {
-        Box(modifier = modifier.fillMaxWidth()) {
-            LegacyMiniPlayer(
+    when (miniPlayerStyle) {
+        MiniPlayerStyle.GLOSSY_SPECIAL -> {
+            GlossySpecialEditionMiniPlayer(
                 progressState = progressState,
-                modifier = Modifier.align(Alignment.Center),
+                modifier = modifier,
+                pureBlack = pureBlack,
+                expandProgress = 0f,
+                onClick = onClick
+            )
+        }
+        MiniPlayerStyle.MODERN -> {
+            NewMiniPlayer(
+                progressState = progressState,
+                modifier = modifier,
                 onClick = onClick,
             )
+        }
+        MiniPlayerStyle.LEGACY -> {
+            Box(modifier = modifier.fillMaxWidth()) {
+                LegacyMiniPlayer(
+                    progressState = progressState,
+                    modifier = Modifier.align(Alignment.Center),
+                    onClick = onClick,
+                )
+            }
         }
     }
 }
@@ -401,7 +400,7 @@ fun MiniPlayerColorExtractor(
 }
 
 @Composable
-private fun AppleMusicMiniPlayer(
+private fun GlossySpecialEditionMiniPlayer(
     progressState: ProgressState,
     modifier: Modifier = Modifier,
     pureBlack: Boolean,
@@ -474,7 +473,6 @@ private fun AppleMusicMiniPlayer(
         label = "progressAnim"
     )
 
-    // Player Box Bounce Animation
     val boxInteractionSource = remember { MutableInteractionSource() }
     val isBoxPressed by boxInteractionSource.collectIsPressedAsState()
     val boxScale by animateFloatAsState(
@@ -724,7 +722,6 @@ private fun AppleMusicMiniPlayer(
     }
 }
 
-
 // ============================================================================
 // NEW MINI PLAYER DESIGN (GLOSSY ORIGINAL)
 // ============================================================================
@@ -738,7 +735,6 @@ private fun NewMiniPlayer(
     val playerConnection = LocalPlayerConnection.current ?: return
     val menuState = LocalMenuState.current
 
-    // Theme settings - these rarely change
     val miniPlayerBackground by rememberEnumPreference(
         MiniPlayerBackgroundStyleKey,
         defaultValue = MiniPlayerBackgroundStyle.DEFAULT,
@@ -752,13 +748,11 @@ private fun NewMiniPlayer(
             if (darkTheme == DarkMode.AUTO) isSystemInDarkTheme else darkTheme == DarkMode.ON
         }
 
-    // Player states - only collect what's needed at this level
     val playbackState by playerConnection.playbackState.collectAsState()
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
     val canSkipNext by playerConnection.canSkipNext.collectAsStateWithLifecycle()
     val canSkipPrevious by playerConnection.canSkipPrevious.collectAsStateWithLifecycle()
 
-    // Cast state - safely access castConnectionHandler to prevent crashes during service lifecycle changes
     val castHandler =
         remember(playerConnection) {
             try {
@@ -769,11 +763,9 @@ private fun NewMiniPlayer(
         }
     val isCasting by castHandler?.isCasting?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(false) }
 
-    // Swipe settings
     val swipeSensitivity by rememberPreference(SwipeSensitivityKey, 0.73f)
     val swipeThumbnailPref by rememberPreference(SwipeThumbnailKey, true)
 
-    // Disable swipe for Listen Together guests
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
     val swipeThumbnail = swipeThumbnailPref && !isListenTogetherGuest
@@ -789,7 +781,6 @@ private fun NewMiniPlayer(
             (windowInfo.containerSize.width / density.density) >= 600f && configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         }
 
-    // Swipe animation state
     val offsetXAnimatable = remember { Animatable(0f) }
     var dragStartTime by remember { mutableLongStateOf(0L) }
     var totalDragDistance by remember { mutableFloatStateOf(0f) }
@@ -806,7 +797,6 @@ private fun NewMiniPlayer(
 
     LaunchedEffect(mediaMetadata?.id, miniPlayerBackground) {
         gradientColors = emptyList()
-        // GRADIENT aur ANIMATED_MESH dono ko palette ki zaroorat hoti hai
         if (miniPlayerBackground == MiniPlayerBackgroundStyle.GRADIENT || 
             miniPlayerBackground == MiniPlayerBackgroundStyle.ANIMATED_MESH) {
             val url = mediaMetadata?.thumbnailUrl
@@ -845,7 +835,6 @@ private fun NewMiniPlayer(
         }
     }
 
-    // Memoize colors
     val backgroundColor = when (miniPlayerBackground) {
         MiniPlayerBackgroundStyle.DEFAULT    -> MaterialTheme.colorScheme.surfaceContainer
         MiniPlayerBackgroundStyle.TRANSPARENT -> Color.Black.copy(alpha = 0.25f)
@@ -994,7 +983,6 @@ private fun NewMiniPlayer(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 8.dp),
             ) {
-                // Play button with progress - isolated composable
                 NewMiniPlayerPlayButton(
                     progressState = progressState,
                     playbackState = playbackState,
@@ -1009,7 +997,6 @@ private fun NewMiniPlayer(
 
                 Spacer(modifier = Modifier.width(16.dp))
 
-                // Song info - isolated composable
                 NewMiniPlayerSongInfo(
                     mediaMetadata = mediaMetadata,
                     onSurfaceColor = onSurfaceColor,
@@ -1019,7 +1006,6 @@ private fun NewMiniPlayer(
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                // Cast indicator
                 if (isCasting) {
                     Icon(
                         painter = painterResource(R.drawable.cast_connected),
@@ -1030,7 +1016,6 @@ private fun NewMiniPlayer(
                     Spacer(modifier = Modifier.width(12.dp))
                 }
 
-                // Subscribe button - isolated composable
                 mediaMetadata?.artists?.firstOrNull()?.id?.let { artistId ->
                     SubscribeButton(
                         artistId = artistId,
@@ -1043,7 +1028,6 @@ private fun NewMiniPlayer(
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                // Add to playlist button - isolated composable
                 mediaMetadata?.let { metadata ->
                     AddToPlaylistButton(
                         onClick = {
@@ -1062,7 +1046,6 @@ private fun NewMiniPlayer(
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                // Favorite button - isolated composable
                 mediaMetadata?.let { FavoriteButton(
                     songId = it.id,
                     errorColor = errorColor,
@@ -1075,10 +1058,6 @@ private fun NewMiniPlayer(
     }
 }
 
-/**
- * Play button with circular progress indicator
- * Uses drawWithContent to update progress without recomposition
- */
 @Composable
 private fun NewMiniPlayerPlayButton(
     progressState: ProgressState,
@@ -1107,7 +1086,6 @@ private fun NewMiniPlayerPlayButton(
                 .size(48.dp)
                 .drawWithContent {
                     drawContent()
-                    // Draw progress arc - this reads progressState.progress during draw phase only
                     val progress = progressState.progress
                     val stroke = Stroke(width = strokeWidth.toPx(), cap = StrokeCap.Round)
                     val startAngle = -90f
@@ -1115,7 +1093,6 @@ private fun NewMiniPlayerPlayButton(
                     val diameter = size.minDimension
                     val topLeft = Offset((size.width - diameter) / 2, (size.height - diameter) / 2)
 
-                    // Draw track
                     drawArc(
                         color = trackColor,
                         startAngle = 0f,
@@ -1125,7 +1102,6 @@ private fun NewMiniPlayerPlayButton(
                         size = Size(diameter, diameter),
                         style = stroke,
                     )
-                    // Draw progress
                     drawArc(
                         color = primaryColor,
                         startAngle = startAngle,
@@ -1137,7 +1113,6 @@ private fun NewMiniPlayerPlayButton(
                     )
                 },
     ) {
-        // Thumbnail with play/pause overlay
         Box(
             contentAlignment = Alignment.Center,
             modifier =
@@ -1173,7 +1148,6 @@ private fun NewMiniPlayerPlayButton(
                 )
             }
 
-            // Overlay for paused state or muted (guest)
             if (isListenTogetherGuest && isMuted ||
                 (!isListenTogetherGuest && (!effectiveIsPlaying || playbackState == Player.STATE_ENDED))
             ) {
@@ -1203,9 +1177,6 @@ private fun NewMiniPlayerPlayButton(
     }
 }
 
-/**
- * Song info display - title and artist
- */
 @Composable
 private fun NewMiniPlayerSongInfo(
     mediaMetadata: MediaMetadata?,
@@ -1290,7 +1261,6 @@ private fun LegacyMiniPlayer(
     val swipeSensitivity by rememberPreference(SwipeSensitivityKey, 0.73f)
     val swipeThumbnailPref by rememberPreference(SwipeThumbnailKey, true)
 
-    // Disable swipe for Listen Together guests
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
     val swipeThumbnail = swipeThumbnailPref && !isListenTogetherGuest
@@ -1401,7 +1371,6 @@ private fun LegacyMiniPlayer(
                     }
                 },
     ) {
-        // Progress bar - uses drawWithContent to avoid recomposition
         Box(
             modifier =
                 Modifier
@@ -1449,7 +1418,6 @@ private fun LegacyMiniPlayer(
             }
         }
 
-        // Swipe indicator
         if (offsetXAnimatable.value.absoluteValue > 50f) {
             Box(
                 modifier =
@@ -1608,10 +1576,6 @@ private fun LegacyMiniMediaInfo(
     }
 }
 
-// ============================================================================
-// ISOLATED BUTTON COMPOSABLES - Prevent parent recomposition
-// ============================================================================
-
 @Composable
 private fun SubscribeButton(
     artistId: String,
@@ -1623,7 +1587,6 @@ private fun SubscribeButton(
     val database = LocalDatabase.current
     val libraryArtist by database.artist(artistId).collectAsStateWithLifecycle(initialValue = null)
     val isSubscribed = libraryArtist?.artist?.bookmarkedAt != null
-
 
     Box(
         contentAlignment = Alignment.Center,
@@ -1672,9 +1635,7 @@ private fun AddToPlaylistButton(
     onClick: () -> Unit,
     outlineColor: Color,
     onSurfaceColor: Color,
-)
-
-{
+) {
     val contentDescription = stringResource(R.string.add_to_playlist_desc)
 
     Box(
@@ -1712,7 +1673,6 @@ private fun FavoriteButton(
     val database = LocalDatabase.current
     val playerConnection = LocalPlayerConnection.current ?: return
     val librarySong by database.song(songId).collectAsStateWithLifecycle(initialValue = null)
-    // For episodes, show saved state (inLibrary); for songs, show liked state
     val isEpisode = librarySong?.song?.isEpisode == true
     val isLiked = if (isEpisode) librarySong?.song?.inLibrary != null else librarySong?.song?.liked == true
 
