@@ -347,5 +347,8 @@
     <string name="mix">Mix</string>
     <string name="credits_special_helpers">Special Helpers</string>
     <string name="credits_special_helper">Special Helper</string>
+    <string name="smart_trimmer">Smart Trimmer</string>
+    <string name="smart_trimmer_description">Automatically clear cache when limit is reached</string>
+
     
 </resources>
