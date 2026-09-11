@@ -176,6 +176,7 @@ val CrossfadeGaplessKey = booleanPreferencesKey("crossfadeGapless")
 val MaxImageCacheSizeKey = intPreferencesKey("maxImageCacheSize")
 val MaxSongCacheSizeKey = intPreferencesKey("maxSongCacheSize")
 val EnableSongCacheKey = booleanPreferencesKey("enableSongCache")
+val SmartTrimmerKey = booleanPreferencesKey("smart_trimmer")
 
 val PauseListenHistoryKey = booleanPreferencesKey("pauseListenHistory")
 val PauseSearchHistoryKey = booleanPreferencesKey("pauseSearchHistory")
