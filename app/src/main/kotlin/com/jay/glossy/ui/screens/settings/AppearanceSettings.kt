@@ -106,6 +106,7 @@ import com.jay.glossy.constants.SwipeThumbnailKey
 import com.jay.glossy.constants.SwipeToRemoveSongKey
 import com.jay.glossy.constants.SwipeToSongKey
 import com.jay.glossy.constants.UseNewMiniPlayerDesignKey
+import com.jay.glossy.constants.UseAppleMusicStyleKey
 import com.jay.glossy.constants.QuickPickShape
 import com.jay.glossy.constants.QuickPickShapeKey
 import com.jay.glossy.constants.QuickPicksStyle
@@ -198,6 +199,13 @@ fun AppearanceSettings(
             UseNewMiniPlayerDesignKey,
             defaultValue = true,
         )
+        
+    val (useAppleMusicStyle, onUseAppleMusicStyleChange) =
+        rememberPreference(
+            UseAppleMusicStyleKey,
+            defaultValue = false,
+        )
+        
     val (hidePlayerThumbnail, onHidePlayerThumbnailChange) =
         rememberPreference(
             HidePlayerThumbnailKey,
@@ -1231,12 +1239,36 @@ fun AppearanceSettings(
                     )
                     add(
                         Material3SettingsItem(
+                            icon = painterResource(R.drawable.nav_bar),
+                            title = { Text("Apple Music Style") },
+                            description = { Text("Use the glossy animated Apple Music mini player") },
+                            trailingContent = {
+                                Switch(
+                                    checked = useAppleMusicStyle,
+                                    onCheckedChange = onUseAppleMusicStyleChange,
+                                    thumbContent = {
+                                        Icon(
+                                            painter =
+                                                painterResource(
+                                                    id = if (useAppleMusicStyle) R.drawable.check else R.drawable.close,
+                                                ),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(SwitchDefaults.IconSize),
+                                        )
+                                    },
+                                )
+                            },
+                            onClick = { onUseAppleMusicStyleChange(!useAppleMusicStyle) },
+                        ),
+                    )
+                    add(
+                        Material3SettingsItem(
                             icon = painterResource(R.drawable.gradient),
                             title = {
                                 Text(
                                     text = stringResource(R.string.mini_player_background_style),
                                     color =
-                                        if (!useNewMiniPlayerDesign) {
+                                        if (!useNewMiniPlayerDesign && !useAppleMusicStyle) {
                                             MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                                         } else {
                                             MaterialTheme.colorScheme.onSurface
@@ -1246,7 +1278,7 @@ fun AppearanceSettings(
                             description = {
                                 Text(
                                     text =
-                                        if (!useNewMiniPlayerDesign) {
+                                        if (!useNewMiniPlayerDesign && !useAppleMusicStyle) {
                                             stringResource(R.string.mini_player_background_not_available)
                                         } else {
                                             when (miniPlayerBackground) {
@@ -1259,14 +1291,14 @@ fun AppearanceSettings(
                                             }
                                         },
                                     color =
-                                        if (!useNewMiniPlayerDesign) {
+                                        if (!useNewMiniPlayerDesign && !useAppleMusicStyle) {
                                             MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                                         } else {
                                             MaterialTheme.colorScheme.onSurfaceVariant
                                         },
                                 )
                             },
-                            onClick = { if (useNewMiniPlayerDesign) showMiniPlayerBackgroundDialog = true },
+                            onClick = { if (useNewMiniPlayerDesign || useAppleMusicStyle) showMiniPlayerBackgroundDialog = true },
                         ),
                     )
                 },
