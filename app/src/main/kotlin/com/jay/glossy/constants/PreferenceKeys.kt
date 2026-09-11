@@ -72,8 +72,15 @@ enum class PlayerStyle {
     VIVI_NEW
 }
 
+val MiniPlayerStyleKey = stringPreferencesKey("miniPlayerStyle")
+
+enum class MiniPlayerStyle {
+    LEGACY,
+    MODERN,
+    GLOSSY_SPECIAL
+}
+
 val UseNewMiniPlayerDesignKey = booleanPreferencesKey("useNewMiniPlayerDesign")
-val UseAppleMusicStyleKey = booleanPreferencesKey("use_apple_music_style")
 val HidePlayerThumbnailKey = booleanPreferencesKey("hidePlayerThumbnail")
 val CropAlbumArtKey = booleanPreferencesKey("cropAlbumArt")
 val SeekExtraSeconds = booleanPreferencesKey("seekExtraSeconds")
@@ -806,3 +813,4 @@ enum class AppFont(val value: String, val displayName: String, val description: 
         fun fromValue(value: String): AppFont = entries.find { it.value == value } ?: SYSTEM
     }
 }
+q
