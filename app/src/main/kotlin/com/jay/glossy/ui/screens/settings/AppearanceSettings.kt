@@ -85,6 +85,8 @@ import com.jay.glossy.constants.LyricsTextPositionKey
 import com.jay.glossy.constants.LyricsTextSizeKey
 import com.jay.glossy.constants.MiniPlayerBackgroundStyle
 import com.jay.glossy.constants.MiniPlayerBackgroundStyleKey
+import com.jay.glossy.constants.MiniPlayerStyle
+import com.jay.glossy.constants.MiniPlayerStyleKey
 import com.jay.glossy.constants.PlayerBackgroundStyle
 import com.jay.glossy.constants.PlayerBackgroundStyleKey
 import com.jay.glossy.constants.PlayerButtonsStyle
@@ -106,7 +108,6 @@ import com.jay.glossy.constants.SwipeThumbnailKey
 import com.jay.glossy.constants.SwipeToRemoveSongKey
 import com.jay.glossy.constants.SwipeToSongKey
 import com.jay.glossy.constants.UseNewMiniPlayerDesignKey
-import com.jay.glossy.constants.UseAppleMusicStyleKey
 import com.jay.glossy.constants.QuickPickShape
 import com.jay.glossy.constants.QuickPickShapeKey
 import com.jay.glossy.constants.QuickPicksStyle
@@ -194,17 +195,11 @@ fun AppearanceSettings(
 
     var showMiniPlayerBackgroundDialog by rememberSaveable { mutableStateOf(false) }
 
-    val (useNewMiniPlayerDesign, onUseNewMiniPlayerDesignChange) =
-        rememberPreference(
-            UseNewMiniPlayerDesignKey,
-            defaultValue = true,
-        )
-        
-    val (useAppleMusicStyle, onUseAppleMusicStyleChange) =
-        rememberPreference(
-            UseAppleMusicStyleKey,
-            defaultValue = false,
-        )
+    val (miniPlayerStyle, onMiniPlayerStyleChange) = rememberEnumPreference(
+        MiniPlayerStyleKey,
+        defaultValue = MiniPlayerStyle.MODERN
+    )
+    var showMiniPlayerStyleDialog by rememberSaveable { mutableStateOf(false) }
         
     val (hidePlayerThumbnail, onHidePlayerThumbnailChange) =
         rememberPreference(
@@ -408,6 +403,26 @@ fun AppearanceSettings(
                     com.jay.glossy.constants.PlayerStyle.MODERN -> "Modern (Animated Style)"
                     com.jay.glossy.constants.PlayerStyle.WAVY -> "Glossy Wavy (New!)"
                     com.jay.glossy.constants.PlayerStyle.VIVI_NEW -> "Vivi Old Design"
+                }
+            },
+        )
+    }
+    
+    if (showMiniPlayerStyleDialog) {
+        EnumDialog(
+            onDismiss = { showMiniPlayerStyleDialog = false },
+            onSelect = {
+                onMiniPlayerStyleChange(it)
+                showMiniPlayerStyleDialog = false
+            },
+            title = "Mini Player Design Style",
+            current = miniPlayerStyle,
+            values = MiniPlayerStyle.values().toList(),
+            valueText = {
+                when (it) {
+                    MiniPlayerStyle.LEGACY -> "Legacy (Old Style)"
+                    MiniPlayerStyle.MODERN -> "Modern (Default)"
+                    MiniPlayerStyle.GLOSSY_SPECIAL -> "Glossy Special Edition"
                 }
             },
         )
@@ -1190,7 +1205,6 @@ fun AppearanceSettings(
                         ),
                     )
                     
-                    // NAYI SCREEN NAVIGATE KARNE WALA FONT OPTION
                     add(
                         Material3SettingsItem(
                             icon = painterResource(R.drawable.palette),
@@ -1212,96 +1226,61 @@ fun AppearanceSettings(
 
         Material3SettingsGroup(
             title = stringResource(id = R.string.mini_player),
-            items =
-                buildList {
-                    add(
-                        Material3SettingsItem(
-                            icon = painterResource(R.drawable.nav_bar),
-                            title = { Text(stringResource(R.string.new_mini_player_design)) },
-                            trailingContent = {
-                                Switch(
-                                    checked = useNewMiniPlayerDesign,
-                                    onCheckedChange = onUseNewMiniPlayerDesignChange,
-                                    thumbContent = {
-                                        Icon(
-                                            painter =
-                                                painterResource(
-                                                    id = if (useNewMiniPlayerDesign) R.drawable.check else R.drawable.close,
-                                                ),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(SwitchDefaults.IconSize),
-                                        )
-                                    },
-                                )
-                            },
-                            onClick = { onUseNewMiniPlayerDesignChange(!useNewMiniPlayerDesign) },
-                        ),
-                    )
-                    add(
-                        Material3SettingsItem(
-                            icon = painterResource(R.drawable.nav_bar),
-                            title = { Text("Apple Music Style") },
-                            description = { Text("Use the glossy animated Apple Music mini player") },
-                            trailingContent = {
-                                Switch(
-                                    checked = useAppleMusicStyle,
-                                    onCheckedChange = onUseAppleMusicStyleChange,
-                                    thumbContent = {
-                                        Icon(
-                                            painter =
-                                                painterResource(
-                                                    id = if (useAppleMusicStyle) R.drawable.check else R.drawable.close,
-                                                ),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(SwitchDefaults.IconSize),
-                                        )
-                                    },
-                                )
-                            },
-                            onClick = { onUseAppleMusicStyleChange(!useAppleMusicStyle) },
-                        ),
-                    )
-                    add(
-                        Material3SettingsItem(
-                            icon = painterResource(R.drawable.gradient),
-                            title = {
-                                Text(
-                                    text = stringResource(R.string.mini_player_background_style),
-                                    color =
-                                        if (!useNewMiniPlayerDesign && !useAppleMusicStyle) {
-                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurface
-                                        },
-                                )
-                            },
-                            description = {
-                                Text(
-                                    text =
-                                        if (!useNewMiniPlayerDesign && !useAppleMusicStyle) {
-                                            stringResource(R.string.mini_player_background_not_available)
-                                        } else {
-                                            when (miniPlayerBackground) {
-                                                MiniPlayerBackgroundStyle.DEFAULT -> stringResource(R.string.follow_theme)
-                                                MiniPlayerBackgroundStyle.TRANSPARENT -> stringResource(R.string.transparent)
-                                                MiniPlayerBackgroundStyle.BLUR -> stringResource(R.string.player_background_blur)
-                                                MiniPlayerBackgroundStyle.GRADIENT -> stringResource(R.string.gradient)
-                                                MiniPlayerBackgroundStyle.PURE_BLACK -> stringResource(R.string.pure_black)
-                                                MiniPlayerBackgroundStyle.ANIMATED_MESH -> "Animated Mesh"
-                                            }
-                                        },
-                                    color =
-                                        if (!useNewMiniPlayerDesign && !useAppleMusicStyle) {
-                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant
-                                        },
-                                )
-                            },
-                            onClick = { if (useNewMiniPlayerDesign || useAppleMusicStyle) showMiniPlayerBackgroundDialog = true },
-                        ),
-                    )
-                },
+            items = buildList {
+                add(
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.nav_bar),
+                        title = { Text("Mini Player Design Style") },
+                        description = {
+                            Text(
+                                when (miniPlayerStyle) {
+                                    MiniPlayerStyle.LEGACY -> "Legacy (Old Style)"
+                                    MiniPlayerStyle.MODERN -> "Modern (Default)"
+                                    MiniPlayerStyle.GLOSSY_SPECIAL -> "Glossy Special Edition"
+                                }
+                            )
+                        },
+                        onClick = { showMiniPlayerStyleDialog = true },
+                    ),
+                )
+                add(
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.gradient),
+                        title = {
+                            Text(
+                                text = stringResource(R.string.mini_player_background_style),
+                                color = if (miniPlayerStyle == MiniPlayerStyle.LEGACY) {
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                }
+                            )
+                        },
+                        description = {
+                            Text(
+                                text = if (miniPlayerStyle == MiniPlayerStyle.LEGACY) {
+                                    stringResource(R.string.mini_player_background_not_available)
+                                } else {
+                                    when (miniPlayerBackground) {
+                                        MiniPlayerBackgroundStyle.DEFAULT -> stringResource(R.string.follow_theme)
+                                        MiniPlayerBackgroundStyle.TRANSPARENT -> stringResource(R.string.transparent)
+                                        MiniPlayerBackgroundStyle.BLUR -> stringResource(R.string.player_background_blur)
+                                        MiniPlayerBackgroundStyle.GRADIENT -> stringResource(R.string.gradient)
+                                        MiniPlayerBackgroundStyle.PURE_BLACK -> stringResource(R.string.pure_black)
+                                        MiniPlayerBackgroundStyle.ANIMATED_MESH -> "Animated Mesh"
+                                    }
+                                },
+                                color = if (miniPlayerStyle == MiniPlayerStyle.LEGACY) {
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                }
+                            )
+                        },
+                        onClick = { if (miniPlayerStyle != MiniPlayerStyle.LEGACY) showMiniPlayerBackgroundDialog = true },
+                    ),
+                )
+            },
         )
 
         Spacer(modifier = Modifier.height(27.dp))
