@@ -26,6 +26,8 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
@@ -86,8 +88,10 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -189,7 +193,8 @@ fun MiniPlayer(
             progressState = progressState,
             modifier = modifier,
             pureBlack = pureBlack,
-            expandProgress = 0f
+            expandProgress = 0f,
+            onClick = onClick
         )
     } else if (useNewMiniPlayerDesign) {
         NewMiniPlayer(
@@ -335,7 +340,7 @@ fun SwipeableMiniPlayerBox(
             ) {
                 Icon(
                     painter = painterResource(
-                        if (offsetXAnimatable.value > 0) R.drawable.skip_previous else R.drawable.skip_next
+                        if (offsetXAnimatable.value > 0) R.drawable.skip_previous else R.drawable.apple_skip_next
                     ),
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary.copy(
@@ -400,7 +405,8 @@ private fun AppleMusicMiniPlayer(
     progressState: ProgressState,
     modifier: Modifier = Modifier,
     pureBlack: Boolean,
-    expandProgress: Float
+    expandProgress: Float,
+    onClick: () -> Unit = {}
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val layoutDirection = LocalLayoutDirection.current
@@ -439,7 +445,6 @@ private fun AppleMusicMiniPlayer(
 
     val dominantColor = gradientColors.firstOrNull() ?: MaterialTheme.colorScheme.surfaceVariant
 
-    // Text color logic based on background style
     val isDarkBg = miniPlayerBackground != MiniPlayerBackgroundStyle.DEFAULT || pureBlack
     val textColor = if (isDarkBg) Color.White else Color.Black
     val secondaryTextColor = if (isDarkBg) Color.White.copy(alpha = 0.8f) else Color.Black.copy(alpha = 0.7f)
@@ -458,7 +463,7 @@ private fun AppleMusicMiniPlayer(
     val playInteractionSource = remember { MutableInteractionSource() }
     val isPlayPressed by playInteractionSource.collectIsPressedAsState()
     val playScale by animateFloatAsState(
-        targetValue = if (isPlayPressed) 0.90f else 1f,
+        targetValue = if (isPlayPressed) 0.85f else 1f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
         label = "playScaleAnim"
     )
@@ -467,6 +472,15 @@ private fun AppleMusicMiniPlayer(
         targetValue = progressState.progress,
         animationSpec = tween(500, easing = LinearEasing),
         label = "progressAnim"
+    )
+
+    // Player Box Bounce Animation
+    val boxInteractionSource = remember { MutableInteractionSource() }
+    val isBoxPressed by boxInteractionSource.collectIsPressedAsState()
+    val boxScale by animateFloatAsState(
+        targetValue = if (isBoxPressed) 0.97f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "boxScaleAnim"
     )
 
     SwipeableMiniPlayerBox(
@@ -497,9 +511,15 @@ private fun AppleMusicMiniPlayer(
                     shape = RoundedCornerShape(32.dp)
                 )
                 .graphicsLayer {
-                    // Background fade out on drag
                     alpha = 1f - (expandProgress * 2f).coerceIn(0f, 1f)
+                    scaleX = boxScale
+                    scaleY = boxScale
                 }
+                .clickable(
+                    interactionSource = boxInteractionSource,
+                    indication = null,
+                    onClick = onClick
+                )
         ) {
             // BACKGROUND LAYER
             Box(modifier = Modifier.matchParentSize()) {
@@ -543,7 +563,7 @@ private fun AppleMusicMiniPlayer(
                 )
             }
 
-            // FOREGROUND LAYER - Hardware Accelerated Animation (No lag)
+            // FOREGROUND LAYER
             Box(modifier = Modifier.fillMaxSize().graphicsLayer {
                 translationY = expandProgress * 50.dp.toPx()
                 alpha = 1f - (expandProgress * 3f).coerceIn(0f, 1f)
@@ -588,7 +608,24 @@ private fun AppleMusicMiniPlayer(
                         modifier = Modifier.weight(1f),
                         label = "trackInfoAnimation"
                     ) { metadata ->
-                        Column(verticalArrangement = Arrangement.Center) {
+                        Column(
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                                .drawWithContent {
+                                    drawContent()
+                                    drawRect(
+                                        brush = Brush.horizontalGradient(
+                                            0f to Color.Transparent,
+                                            0.05f to Color.Black,
+                                            0.95f to Color.Black,
+                                            1f to Color.Transparent
+                                        ),
+                                        blendMode = BlendMode.DstIn
+                                    )
+                                }
+                        ) {
                             Text(
                                 text = metadata?.title ?: "Unknown",
                                 color = textColor,
@@ -597,8 +634,9 @@ private fun AppleMusicMiniPlayer(
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.basicMarquee()
                             )
+                            val artistText = metadata?.artists?.filter { it.name.isNotBlank() }?.joinToString(", ") { it.name } ?: "Unknown Artist"
                             Text(
-                                text = metadata?.artists?.joinToString { it.name } ?: "Unknown Artist",
+                                text = artistText,
                                 color = secondaryTextColor,
                                 style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp, fontWeight = FontWeight.Medium),
                                 maxLines = 1,
@@ -640,16 +678,27 @@ private fun AppleMusicMiniPlayer(
                                 } else if (playbackState == Player.STATE_ENDED) {
                                     R.drawable.replay
                                 } else if (effectiveIsPlaying) {
-                                    R.drawable.pause
+                                    R.drawable.pause_applemusic
                                 } else {
-                                    R.drawable.play
+                                    R.drawable.play_applemusic
                                 }
-                                Icon(
-                                    painter = painterResource(iconRes),
-                                    contentDescription = "Play/Pause",
-                                    tint = textColor,
-                                    modifier = Modifier.size(32.dp)
-                                )
+
+                                AnimatedContent(
+                                    targetState = iconRes,
+                                    transitionSpec = {
+                                        (scaleIn(initialScale = 0.7f) + fadeIn(tween(150))).togetherWith(
+                                            scaleOut(targetScale = 0.7f) + fadeOut(tween(150))
+                                        )
+                                    },
+                                    label = "playPauseAnimation"
+                                ) { targetIcon ->
+                                    Icon(
+                                        painter = painterResource(targetIcon),
+                                        contentDescription = "Play/Pause",
+                                        tint = textColor,
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -663,7 +712,7 @@ private fun AppleMusicMiniPlayer(
                         modifier = Modifier.size(42.dp)
                     ) {
                         Icon(
-                            painter = painterResource(R.drawable.skip_next),
+                            painter = painterResource(R.drawable.apple_skip_next),
                             contentDescription = "Next",
                             tint = textColor.copy(alpha = if (canSkipNext && !isListenTogetherGuest) 1f else 0.4f),
                             modifier = Modifier.size(28.dp)
