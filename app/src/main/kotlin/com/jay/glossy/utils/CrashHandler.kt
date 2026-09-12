@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -52,7 +52,7 @@ class CrashHandler private constructor(
         }.toString()
 
         return buildString {
-            appendLine("Metrolist Crash Report")
+            appendLine("Glossy Crash Report")
             appendLine("=".repeat(50))
             appendLine()
             appendLine("Manufacturer: ${Build.MANUFACTURER}")
