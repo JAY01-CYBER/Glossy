@@ -813,4 +813,3 @@ enum class AppFont(val value: String, val displayName: String, val description: 
         fun fromValue(value: String): AppFont = entries.find { it.value == value } ?: SYSTEM
     }
 }
-q
