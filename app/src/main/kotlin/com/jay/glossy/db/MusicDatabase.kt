@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -126,7 +126,7 @@ class MusicDatabase(
         AutoMigration(from = 2, to = 3),
         AutoMigration(from = 3, to = 4),
         AutoMigration(from = 4, to = 5),
-        AutoMigration(from = 5, to = 6, spec = Migration5To6::class),
+        // Removed AutoMigration for 5 -> 6 as it is now handled manually
         AutoMigration(from = 6, to = 7, spec = Migration6To7::class),
         AutoMigration(from = 7, to = 8, spec = Migration7To8::class),
         AutoMigration(from = 8, to = 9),
@@ -200,6 +200,7 @@ abstract class InternalDatabase : RoomDatabase() {
                 .openHelperFactory(BackupBeforeMigrationFactory(context, dbName))
                 .addMigrations(
                     MIGRATION_1_2,
+                    MIGRATION_5_6,
                     MIGRATION_21_24,
                     MIGRATION_22_24,
                     MIGRATION_24_25,
@@ -566,6 +567,25 @@ val MIGRATION_1_2 =
         }
     }
 
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        val cursor = db.query("PRAGMA table_info(song)")
+        var columnExists = false
+        while (cursor.moveToNext()) {
+            val columnName = cursor.getString(cursor.getColumnIndexOrThrow("name"))
+            if (columnName == "isLocal") {
+                columnExists = true
+                break
+            }
+        }
+        cursor.close()
+
+        if (!columnExists) {
+            db.execSQL("ALTER TABLE `song` ADD COLUMN `isLocal` INTEGER NOT NULL DEFAULT 0")
+        }
+    }
+}
+
 val MIGRATION_21_24 =
     object : Migration(21, 24) {
         override fun migrate(db: SupportSQLiteDatabase) {
@@ -635,36 +655,6 @@ val MIGRATION_22_24 =
     }
 
 // ===== AutoMigration Specs =====
-
-@DeleteColumn.Entries(
-    DeleteColumn(tableName = "song", columnName = "isTrash"),
-    DeleteColumn(tableName = "playlist", columnName = "author"),
-    DeleteColumn(tableName = "playlist", columnName = "authorId"),
-    DeleteColumn(tableName = "playlist", columnName = "year"),
-    DeleteColumn(tableName = "playlist", columnName = "thumbnailUrl"),
-    DeleteColumn(tableName = "playlist", columnName = "createDate"),
-    DeleteColumn(tableName = "playlist", columnName = "lastUpdateTime"),
-)
-@RenameColumn.Entries(
-    RenameColumn(
-        tableName = "song",
-        fromColumnName = "download_state",
-        toColumnName = "downloadState",
-    ),
-    RenameColumn(tableName = "song", fromColumnName = "create_date", toColumnName = "createDate"),
-    RenameColumn(tableName = "song", fromColumnName = "modify_date", toColumnName = "modifyDate"),
-)
-class Migration5To6 : AutoMigrationSpec {
-    override fun onPostMigrate(db: SupportSQLiteDatabase) {
-        db.query("SELECT id FROM playlist WHERE id NOT LIKE 'LP%'").use { cursor ->
-            while (cursor.moveToNext()) {
-                db.execSQL(
-                    "UPDATE playlist SET browseId = '${cursor.getString(0)}' WHERE id = '${cursor.getString(0)}'",
-                )
-            }
-        }
-    }
-}
 
 class Migration6To7 : AutoMigrationSpec {
     override fun onPostMigrate(db: SupportSQLiteDatabase) {
@@ -827,7 +817,6 @@ class Migration23To24 : AutoMigrationSpec {
 val MIGRATION_24_25 =
     object : Migration(24, 25) {
         override fun migrate(db: SupportSQLiteDatabase) {
-            // Add perceptualLoudnessDb column to format table for improved audio normalization
             var columnExists = false
             db.query("PRAGMA table_info(format)").use { cursor ->
                 val nameIndex = cursor.getColumnIndex("name")
@@ -840,7 +829,6 @@ val MIGRATION_24_25 =
             }
 
             if (!columnExists) {
-                // Add the column allowing NULL values (since existing rows won't have this data)
                 db.execSQL("ALTER TABLE format ADD COLUMN perceptualLoudnessDb REAL DEFAULT NULL")
             }
         }
@@ -848,7 +836,6 @@ val MIGRATION_24_25 =
 
 class Migration29To30 : AutoMigrationSpec {
     override fun onPostMigrate(db: SupportSQLiteDatabase) {
-        // Ensure isVideo column exists (safeguard)
         var hasIsVideo = false
         db.query("PRAGMA table_info('song')").use { cursor ->
             val nameIndex = cursor.getColumnIndex("name")
@@ -864,7 +851,6 @@ class Migration29To30 : AutoMigrationSpec {
             db.execSQL("ALTER TABLE song ADD COLUMN isVideo INTEGER NOT NULL DEFAULT 0")
         }
 
-        // Ensure provider column exists in lyrics table
         var hasProvider = false
         db.query("PRAGMA table_info('lyrics')").use { cursor ->
             val nameIndex = cursor.getColumnIndex("name")

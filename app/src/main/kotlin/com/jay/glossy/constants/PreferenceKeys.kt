@@ -72,6 +72,14 @@ enum class PlayerStyle {
     VIVI_NEW
 }
 
+val MiniPlayerStyleKey = stringPreferencesKey("miniPlayerStyle")
+
+enum class MiniPlayerStyle {
+    LEGACY,
+    MODERN,
+    GLOSSY_SPECIAL
+}
+
 val UseNewMiniPlayerDesignKey = booleanPreferencesKey("useNewMiniPlayerDesign")
 val HidePlayerThumbnailKey = booleanPreferencesKey("hidePlayerThumbnail")
 val CropAlbumArtKey = booleanPreferencesKey("cropAlbumArt")
