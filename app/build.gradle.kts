@@ -393,6 +393,8 @@ dependencies {
     implementation(project(":unison"))
     implementation(project(":simpmusic"))
     implementation(project(":netease"))
+    implementation(project(":canvas"))
+    implementation(project(":applecanvas"))
 
 
     implementation(libs.ktor.client.core)
