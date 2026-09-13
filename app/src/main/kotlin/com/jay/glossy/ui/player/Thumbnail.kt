@@ -68,7 +68,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -81,6 +80,7 @@ import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.applecanvas.AppleMusicCanvasProvider
 import com.jay.glossy.canvas.CanvasArtwork
 import com.jay.glossy.canvas.TidalCanvasProvider
+import com.jay.glossy.constants.CanvasThumbnailAnimationKey
 import com.jay.glossy.constants.CropAlbumArtKey
 import com.jay.glossy.constants.HidePlayerThumbnailKey
 import com.jay.glossy.constants.PlayerBackgroundStyle
@@ -212,6 +212,12 @@ object CanvasArtworkPlaybackCache {
                 it.remove()
             }
         }
+    }
+
+    // YEH RAHI CLEAR METHOD JO MISSING THI
+    @Synchronized
+    fun clear() {
+        map.clear()
     }
 }
 
@@ -464,7 +470,8 @@ fun Thumbnail(
                                         )
                                     }
 
-                                    val canvasThumbnailAnimation by rememberPreference(booleanPreferencesKey("canvas_thumbnail_animation"), defaultValue = true)
+                                    // CANVAS PREFERENCE READ KAREGA
+                                    val (canvasThumbnailAnimation) = rememberPreference(CanvasThumbnailAnimationKey, defaultValue = false)
                                     val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
 
                                     if (canvasThumbnailAnimation && currentMedia?.mediaId == mediaMetadata?.id && currentMedia != null) {
@@ -754,7 +761,7 @@ private fun ThumbnailItem(
                 )
             }
             
-            val canvasThumbnailAnimation by rememberPreference(booleanPreferencesKey("canvas_thumbnail_animation"), defaultValue = true)
+            val (canvasThumbnailAnimation) = rememberPreference(CanvasThumbnailAnimationKey, defaultValue = false)
             val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
 
             if (canvasThumbnailAnimation && item.mediaId == currentMediaId) {
