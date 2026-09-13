@@ -58,7 +58,6 @@ object CanvasPlayerManager {
                     videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
                     volume = 0f
                     repeatMode = Player.REPEAT_MODE_ONE
-                    // No playWhenReady here, handled in Composable to save battery when app minimized
                 }
         }
         return exoPlayer!!
@@ -95,19 +94,17 @@ fun CanvasArtworkPlayer(
 
     val exoPlayer = remember { CanvasPlayerManager.getPlayer(context) }
 
-    // Load new video url when song changes
     LaunchedEffect(initialUrl) {
         if (CanvasPlayerManager.currentUrl != initialUrl) {
-            isVideoReady = false // Reset for fade animation
+            isVideoReady = false 
         }
         CanvasPlayerManager.play(context, initialUrl)
     }
 
-    // THIS ENSURES CANVAS ALWAYS PLAYS INDEPENDENTLY OF SONG PAUSE
     DisposableEffect(exoPlayer) {
         exoPlayer.playWhenReady = true
         onDispose {
-            exoPlayer.playWhenReady = false // Pause when mini player is active to save battery
+            exoPlayer.playWhenReady = false 
         }
     }
 
@@ -128,7 +125,6 @@ fun CanvasArtworkPlayer(
         }
         exoPlayer.addListener(listener)
         
-        // Instant resum
         if (exoPlayer.videoSize.width > 0 && CanvasPlayerManager.currentUrl == initialUrl) {
             isVideoReady = true
             videoAspectRatio = exoPlayer.videoSize.width.toFloat() / exoPlayer.videoSize.height
@@ -161,10 +157,6 @@ fun CanvasArtworkPlayer(
         },
         update = { view -> 
             view.setAspectRatio(videoAspectRatio)
-            val textureView = view.getChildAt(0) as? TextureView
-            if (textureView != null && exoPlayer.videoSurfaceView != textureView) {
-                exoPlayer.setVideoTextureView(textureView)
-            }
         },
         onRelease = { view ->
             val textureView = view.getChildAt(0) as? TextureView
