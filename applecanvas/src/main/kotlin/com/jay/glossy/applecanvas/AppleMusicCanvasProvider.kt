@@ -22,6 +22,7 @@ import java.util.concurrent.ConcurrentHashMap
 object AppleMusicCanvasProvider {
     private const val AMP_BASE_URL = "https://amp-api.music.apple.com"
     private val json = Json { ignoreUnknownKeys = true; isLenient = true; explicitNulls = false }
+    
     private val client by lazy {
         HttpClient(OkHttp) {
             install(ContentNegotiation) {
@@ -38,16 +39,25 @@ object AppleMusicCanvasProvider {
     private val cache = ConcurrentHashMap<String, Pair<CanvasArtwork?, Long>>()
     private const val CACHE_TTL_MS = 1000L * 60 * 60 * 24
 
-    suspend fun getBySongArtist(song: String, artist: String, album: String? = null, storefront: String = "us"): CanvasArtwork? {
-        val key = "$song|$artist|${album ?: ""}|$storefront".lowercase(Locale.ROOT)
+    suspend fun getByAlbumArtist(album: String, artist: String, storefront: String = "us"): CanvasArtwork? {
+        val key = "$album|$artist|$storefront".lowercase(Locale.ROOT)
         cache[key]?.takeIf { it.second > System.currentTimeMillis() }?.let { return it.first }
 
-        val result = searchAndFetchMotion(song, artist, storefront, "songs")
+        val result = searchAndFetchMotion(album, artist, album, storefront, "albums")
         if (result != null) cache[key] = result to (System.currentTimeMillis() + CACHE_TTL_MS)
         return result
     }
 
-    private suspend fun searchAndFetchMotion(term: String, artist: String, storefront: String, type: String): CanvasArtwork? {
+    suspend fun getBySongArtist(song: String, artist: String, album: String? = null, storefront: String = "us"): CanvasArtwork? {
+        val key = "$song|$artist|${album ?: ""}|$storefront".lowercase(Locale.ROOT)
+        cache[key]?.takeIf { it.second > System.currentTimeMillis() }?.let { return it.first }
+
+        val result = searchAndFetchMotion(song, artist, album, storefront, "songs")
+        if (result != null) cache[key] = result to (System.currentTimeMillis() + CACHE_TTL_MS)
+        return result
+    }
+
+    private suspend fun searchAndFetchMotion(term: String, artist: String, album: String?, storefront: String, type: String): CanvasArtwork? {
         return runCatching {
             val query = if (term.contains(artist, true)) term else "$artist $term"
             val token = AppleMusicTokenProvider.getToken()
