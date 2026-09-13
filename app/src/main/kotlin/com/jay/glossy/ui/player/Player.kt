@@ -47,6 +47,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -61,6 +64,8 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -93,6 +98,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.produceState
@@ -113,10 +119,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -141,7 +150,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.view.WindowCompat
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.datastore.preferences.core.edit
@@ -434,7 +442,7 @@ fun BottomSheetPlayer(
     val fallbackColor = MaterialTheme.colorScheme.surface.toArgb()
 
     LaunchedEffect(mediaMetadata?.id, playerBackground) {
-        if (playerBackground == PlayerBackgroundStyle.GRADIENT || playerBackground == PlayerBackgroundStyle.ANIMATED_MESH) {
+        if (playerBackground == PlayerBackgroundStyle.GRADIENT || playerBackground == PlayerBackgroundStyle.ANIMATED_MESH || playerStyle.name == "APPLE_MUSIC") {
             val currentMetadata = mediaMetadata
             if (currentMetadata != null && currentMetadata.thumbnailUrl != null) {
                 val cachedColors = gradientColorsCache[currentMetadata.id]
@@ -844,105 +852,107 @@ fun BottomSheetPlayer(
         state = state,
         modifier = modifier,
         background = {
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .background(bottomSheetBackgroundColor),
-            ) {
-                when (playerBackground) {
-                    PlayerBackgroundStyle.BLUR -> {
-                        AnimatedContent(
-                            targetState = mediaMetadata?.thumbnailUrl,
-                            transitionSpec = {
-                                fadeIn(tween(800)).togetherWith(fadeOut(tween(800)))
-                            },
-                            label = "blurBackground",
-                        ) { thumbnailUrl ->
-                            if (thumbnailUrl != null) {
-                                Box(modifier = Modifier.alpha(backgroundAlpha)) {
-                                    AsyncImage(
-                                        model =
-                                            ImageRequest
-                                                .Builder(context)
-                                                .data(thumbnailUrl)
-                                                .size(100, 100)
-                                                .allowHardware(false)
-                                                .build(),
-                                        contentDescription = null,
-                                        contentScale = ContentScale.Crop,
-                                        modifier =
-                                            Modifier
-                                                .fillMaxSize()
-                                                .blur(if (useDarkTheme) 150.dp else 100.dp),
-                                    )
+            if (playerStyle.name != "APPLE_MUSIC") {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .background(bottomSheetBackgroundColor),
+                ) {
+                    when (playerBackground) {
+                        PlayerBackgroundStyle.BLUR -> {
+                            AnimatedContent(
+                                targetState = mediaMetadata?.thumbnailUrl,
+                                transitionSpec = {
+                                    fadeIn(tween(800)).togetherWith(fadeOut(tween(800)))
+                                },
+                                label = "blurBackground",
+                            ) { thumbnailUrl ->
+                                if (thumbnailUrl != null) {
+                                    Box(modifier = Modifier.alpha(backgroundAlpha)) {
+                                        AsyncImage(
+                                            model =
+                                                ImageRequest
+                                                    .Builder(context)
+                                                    .data(thumbnailUrl)
+                                                    .size(100, 100)
+                                                    .allowHardware(false)
+                                                    .build(),
+                                            contentDescription = null,
+                                            contentScale = ContentScale.Crop,
+                                            modifier =
+                                                Modifier
+                                                    .fillMaxSize()
+                                                    .blur(if (useDarkTheme) 150.dp else 100.dp),
+                                        )
+                                        Box(
+                                            modifier =
+                                                Modifier
+                                                    .fillMaxSize()
+                                                    .background(Color.Black.copy(alpha = 0.3f)),
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        PlayerBackgroundStyle.GRADIENT -> {
+                            AnimatedContent(
+                                targetState = gradientColors,
+                                transitionSpec = {
+                                    fadeIn(tween(800)).togetherWith(fadeOut(tween(800)))
+                                },
+                                label = "gradientBackground",
+                            ) { colors ->
+                                if (colors.isNotEmpty()) {
+                                    val gradientColorStops =
+                                        if (colors.size >= 3) {
+                                            arrayOf(
+                                                0.0f to colors[0],
+                                                0.5f to colors[1],
+                                                1.0f to colors[2],
+                                            )
+                                        } else {
+                                            arrayOf(
+                                                0.0f to colors[0],
+                                                0.6f to colors[0].copy(alpha = 0.7f),
+                                                1.0f to Color.Black,
+                                            )
+                                        }
                                     Box(
-                                        modifier =
-                                            Modifier
-                                                .fillMaxSize()
-                                                .background(Color.Black.copy(alpha = 0.3f)),
+                                        Modifier
+                                            .fillMaxSize()
+                                            .alpha(backgroundAlpha)
+                                            .background(Brush.verticalGradient(colorStops = gradientColorStops))
+                                            .background(Color.Black.copy(alpha = 0.2f)),
                                     )
                                 }
                             }
                         }
-                    }
 
-                    PlayerBackgroundStyle.GRADIENT -> {
-                        AnimatedContent(
-                            targetState = gradientColors,
-                            transitionSpec = {
-                                fadeIn(tween(800)).togetherWith(fadeOut(tween(800)))
-                            },
-                            label = "gradientBackground",
-                        ) { colors ->
-                            if (colors.isNotEmpty()) {
-                                val gradientColorStops =
-                                    if (colors.size >= 3) {
-                                        arrayOf(
-                                            0.0f to colors[0],
-                                            0.5f to colors[1],
-                                            1.0f to colors[2],
-                                        )
-                                    } else {
-                                        arrayOf(
-                                            0.0f to colors[0],
-                                            0.6f to colors[0].copy(alpha = 0.7f),
-                                            1.0f to Color.Black,
-                                        )
-                                    }
-                                Box(
-                                    Modifier
-                                        .fillMaxSize()
-                                        .alpha(backgroundAlpha)
-                                        .background(Brush.verticalGradient(colorStops = gradientColorStops))
-                                        .background(Color.Black.copy(alpha = 0.2f)),
-                                )
+                        PlayerBackgroundStyle.ANIMATED_MESH -> {
+                            AnimatedContent(
+                                targetState = gradientColors,
+                                transitionSpec = {
+                                    fadeIn(tween(800)).togetherWith(fadeOut(tween(800)))
+                                },
+                                label = "meshBackground",
+                            ) { colors ->
+                                if (colors.isNotEmpty()) {
+                                    AnimatedMeshBackground(
+                                        colors = colors,
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .alpha(backgroundAlpha)
+                                            .background(Color.Black.copy(alpha = 0.2f))
+                                    )
+                                }
                             }
                         }
-                    }
 
-                    PlayerBackgroundStyle.ANIMATED_MESH -> {
-                        AnimatedContent(
-                            targetState = gradientColors,
-                            transitionSpec = {
-                                fadeIn(tween(800)).togetherWith(fadeOut(tween(800)))
-                            },
-                            label = "meshBackground",
-                        ) { colors ->
-                            if (colors.isNotEmpty()) {
-                                AnimatedMeshBackground(
-                                    colors = colors,
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .alpha(backgroundAlpha)
-                                        .background(Color.Black.copy(alpha = 0.2f))
-                                )
-                            }
+                        else -> {
+                            PlayerBackgroundStyle.DEFAULT
                         }
-                    }
-
-                    else -> {
-                        PlayerBackgroundStyle.DEFAULT
                     }
                 }
             }
@@ -1005,7 +1015,7 @@ fun BottomSheetPlayer(
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(0.dp) // GAP KAM KIYA HAI YAHAN PE
+                        horizontalArrangement = Arrangement.spacedBy(0.dp)
                     ) {
                         // FULLSCREEN BUTTON FOR LYRICS
                         AnimatedVisibility(visible = showInlineLyrics) {
@@ -1015,7 +1025,7 @@ fun BottomSheetPlayer(
                             
                             Box(
                                 modifier = Modifier
-                                    .size(40.dp) // SIZE CHOTI KI HAI (48dp se 40dp)
+                                    .size(40.dp)
                                     .graphicsLayer(scaleX = fsScale, scaleY = fsScale)
                                     .clip(CircleShape)
                                     .clickable(
@@ -1044,7 +1054,7 @@ fun BottomSheetPlayer(
                             
                             Box(
                                 modifier = Modifier
-                                    .size(40.dp) // SIZE CHOTI KI HAI
+                                    .size(40.dp)
                                     .graphicsLayer(scaleX = likeScale, scaleY = likeScale)
                                     .clip(CircleShape)
                                     .clickable(
@@ -1069,7 +1079,7 @@ fun BottomSheetPlayer(
 
                         Box(
                             modifier = Modifier
-                                .size(40.dp) // SIZE CHOTI KI HAI
+                                .size(40.dp)
                                 .graphicsLayer(scaleX = moreScale, scaleY = moreScale)
                                 .clip(CircleShape)
                                 .clickable(
@@ -2433,6 +2443,7 @@ fun BottomSheetPlayer(
                     mediaMetadata = metadata,
                     position = effectivePosition,
                     duration = duration,
+                    gradientColors = gradientColors,
                     onClose = { state.collapseSoft() }
                 )
             }
@@ -2885,8 +2896,104 @@ fun AnimatedMeshBackground(colors: List<Color>, modifier: Modifier = Modifier) {
 }
 
 // ----------------------------------------------------------------------
-// APPLE MUSIC STYLE WRAPPERS
+// APPLE MUSIC STYLE WRAPPERS & UTILS
 // ----------------------------------------------------------------------
+
+fun appleMusicGradientColorAt(seedColor: Color, fraction: Float): Color {
+    val top = androidx.compose.ui.graphics.lerp(seedColor, Color.Black, 0.05f)
+    val mid = androidx.compose.ui.graphics.lerp(seedColor, Color.Black, 0.32f)
+    val bottom = androidx.compose.ui.graphics.lerp(seedColor, Color.Black, 0.78f)
+    return if (fraction <= 0.48f) {
+        androidx.compose.ui.graphics.lerp(top, mid, (fraction / 0.48f).coerceIn(0f, 1f))
+    } else {
+        androidx.compose.ui.graphics.lerp(mid, bottom, ((fraction - 0.48f) / 0.52f).coerceIn(0f, 1f))
+    }
+}
+
+fun Modifier.appleMusicVerticalFadeEdges(topFade: androidx.compose.ui.unit.Dp, bottomFade: androidx.compose.ui.unit.Dp): Modifier =
+    graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+        .drawWithContent {
+            drawContent()
+            val topPx = topFade.toPx().coerceAtMost(size.height / 2f)
+            val bottomPx = bottomFade.toPx().coerceAtMost(size.height / 2f)
+            val topStop = if (size.height > 0f) topPx / size.height else 0f
+            val bottomStop = if (size.height > 0f) 1f - bottomPx / size.height else 1f
+            drawRect(
+                brush = Brush.verticalGradient(
+                    0f to Color.Transparent,
+                    topStop to Color.Black,
+                    bottomStop to Color.Black,
+                    1f to Color.Transparent
+                ),
+                blendMode = BlendMode.DstIn
+            )
+        }
+
+@Composable
+fun Modifier.appleMusicPressInflate(pressedScale: Float = 1.35f): Modifier {
+    var pressed by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) pressedScale else 1f,
+        animationSpec = spring(dampingRatio = 0.45f, stiffness = 380f),
+        label = "appleMusicPressInflate"
+    )
+    return this
+        .graphicsLayer { scaleX = scale; scaleY = scale }
+        .pointerInput(Unit) {
+            awaitEachGesture {
+                awaitFirstDown(requireUnconsumed = false)
+                pressed = true
+                waitForUpOrCancellation()
+                pressed = false
+            }
+        }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AppleMusicThinSlider(
+    value: Float,
+    activeColor: Color,
+    onValueChange: (Float) -> Unit,
+    modifier: Modifier = Modifier,
+    onValueChangeFinished: (() -> Unit)? = null
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val dragged by interactionSource.collectIsDraggedAsState()
+    val trackHeight by animateDpAsState(
+        targetValue = if (pressed || dragged) 14.dp else 7.dp,
+        animationSpec = spring(dampingRatio = 0.5f, stiffness = 300f),
+        label = "sliderInflate"
+    )
+    CompositionLocalProvider(androidx.compose.material3.LocalMinimumInteractiveComponentSize provides 0.dp) {
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            onValueChangeFinished = onValueChangeFinished,
+            modifier = modifier,
+            interactionSource = interactionSource,
+            track = {
+                val fraction = value.coerceIn(0f, 1f)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(trackHeight)
+                        .clip(RoundedCornerShape(50))
+                        .background(Color.White.copy(alpha = 0.26f))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(fraction)
+                            .background(activeColor)
+                    )
+                }
+            },
+            thumb = { Spacer(Modifier.size(0.dp)) }
+        )
+    }
+}
 
 enum class AppleMusicView { MAIN, LYRICS, QUEUE }
 
@@ -2895,6 +3002,7 @@ fun AppleMusicPlayerLayout(
     mediaMetadata: MediaMetadata,
     position: Long,
     duration: Long,
+    gradientColors: List<Color>,
     onClose: () -> Unit
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
@@ -2905,8 +3013,15 @@ fun AppleMusicPlayerLayout(
     var sliderPosition by remember { mutableStateOf<Long?>(null) }
     val currentPosition = sliderPosition ?: position
 
+    val seedColor = gradientColors.firstOrNull() ?: Color(0xFF121212)
+    val backdropBrush = Brush.verticalGradient(
+        0f to appleMusicGradientColorAt(seedColor, 0f),
+        0.48f to appleMusicGradientColorAt(seedColor, 0.48f),
+        1f to appleMusicGradientColorAt(seedColor, 1f)
+    )
+
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-        // Frosted Background
+        // Frosted Background Image (SimpMusic Style 1:1)
         AsyncImage(
             model = mediaMetadata.thumbnailUrl,
             contentDescription = null,
@@ -2914,70 +3029,85 @@ fun AppleMusicPlayerLayout(
             modifier = Modifier
                 .fillMaxSize()
                 .blur(80.dp)
-                .alpha(0.5f) 
         )
+        // Tint
+        Box(modifier = Modifier.fillMaxSize().alpha(0.62f).background(backdropBrush))
 
-        Crossfade(targetState = viewState, label = "AppleMusicTabs") { view ->
+        Crossfade(targetState = viewState, label = "AppleMusicTabs", modifier = Modifier.fillMaxSize()) { view ->
             when (view) {
                 AppleMusicView.MAIN -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 24.dp)
-                    ) {
-                        Spacer(modifier = Modifier.height(WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 20.dp))
-                        
-                        // Top Drag Handle
-                        Box(modifier = Modifier.fillMaxWidth().clickable(onClick = onClose), contentAlignment = Alignment.Center) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        // Grabber
+                        Spacer(modifier = Modifier.height(WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 10.dp))
+                        Box(modifier = Modifier.fillMaxWidth().height(28.dp).clickable { onClose() }, contentAlignment = Alignment.Center) {
                             Box(modifier = Modifier.size(36.dp, 5.dp).clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.35f)))
                         }
                         
-                        Spacer(modifier = Modifier.height(32.dp))
-                        
-                        // Artwork
-                        AsyncImage(
-                            model = mediaMetadata.thumbnailUrl,
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .aspectRatio(1f)
-                                .clip(RoundedCornerShape(8.dp))
-                        )
-                        
-                        Spacer(modifier = Modifier.weight(1f))
-                        
+                        // Fading Artwork
+                        Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                            AsyncImage(
+                                model = mediaMetadata.thumbnailUrl,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .align(Alignment.TopCenter)
+                                    .fillMaxWidth()
+                                    .fillMaxHeight(0.85f)
+                                    .appleMusicVerticalFadeEdges(0.dp, 300.dp)
+                            )
+                        }
+
                         // Title & Actions Row
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = mediaMetadata.title,
-                                    style = MaterialTheme.typography.titleLarge,
+                                    style = MaterialTheme.typography.titleLarge.copy(fontSize = 22.sp),
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
+                                Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = mediaMetadata.artists.joinToString(", ") { it.name },
                                     style = MaterialTheme.typography.bodyLarge,
-                                    color = Color.White.copy(alpha = 0.7f),
+                                    color = Color.White.copy(alpha = 0.72f),
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
                             }
                             
                             val isFavorite = currentSong?.song?.liked == true
-                            androidx.compose.material3.IconButton(onClick = { playerConnection.toggleLike() }) {
-                                Icon(
-                                    painter = painterResource(if (isFavorite) R.drawable.favorite else R.drawable.favorite_border),
-                                    contentDescription = "Like",
-                                    tint = if (isFavorite) MaterialTheme.colorScheme.error else Color.White
-                                )
-                            }
+                            Icon(
+                                painter = painterResource(if (isFavorite) R.drawable.favorite else R.drawable.favorite_border),
+                                contentDescription = "Like",
+                                tint = if (isFavorite) MaterialTheme.colorScheme.error else Color.White,
+                                modifier = Modifier.appleMusicPressInflate().size(32.dp).clickable { playerConnection.toggleLike() }
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            val menuState = com.jay.glossy.ui.component.LocalMenuState.current
+                            val bottomSheetState = com.jay.glossy.ui.component.LocalBottomSheetPageState.current as? com.jay.glossy.ui.component.BottomSheetState
+                            Icon(
+                                painter = painterResource(R.drawable.more_vert),
+                                contentDescription = "More",
+                                tint = Color.White,
+                                modifier = Modifier.appleMusicPressInflate().size(24.dp).clickable {
+                                    if(bottomSheetState != null) {
+                                        menuState.show {
+                                            com.jay.glossy.ui.menu.PlayerMenu(
+                                                mediaMetadata = mediaMetadata,
+                                                playerBottomSheetState = bottomSheetState,
+                                                onShowDetailsDialog = {},
+                                                onDismiss = menuState::dismiss
+                                            )
+                                        }
+                                    }
+                                }
+                            )
                         }
                         
                         Spacer(modifier = Modifier.height(24.dp))
@@ -3037,7 +3167,7 @@ fun AppleMusicPlayerLayout(
                         AppleMusicCompactHeader(mediaMetadata = mediaMetadata, onClose = { viewState = AppleMusicView.MAIN })
                         
                         Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                            Text("Queue (Tap out of bottom sheet to use Glossy's Queue)", color = Color.White.copy(0.7f))
+                            Text("Queue (Tap out of bottom sheet to use Glossy's Queue)", color = Color.White.copy(alpha = 0.7f))
                         }
                         
                         AppleMusicBottomClusterGlossy(
@@ -3061,10 +3191,8 @@ fun AppleMusicPlayerLayout(
             }
         }
     }
-
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppleMusicBottomClusterGlossy(
     position: Long,
@@ -3079,80 +3207,84 @@ fun AppleMusicBottomClusterGlossy(
     onTabSelect: (AppleMusicView) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        // Slim Slider
-        Slider(
-            value = position.toFloat(),
-            valueRange = 0f..(if (duration <= 0) 0f else duration.toFloat()),
-            onValueChange = { onSeek(it.toLong()) },
-            onValueChangeFinished = onSeekFinished,
-            thumb = { Spacer(modifier = Modifier.size(0.dp)) },
-            track = { sliderState ->
-                PlayerSliderTrack(
-                    sliderState = sliderState,
-                    colors = SliderDefaults.colors(
-                        activeTrackColor = Color.White.copy(alpha = 0.9f),
-                        inactiveTrackColor = Color.White.copy(alpha = 0.2f)
-                    ),
-                    trackHeight = 7.dp
-                )
-            },
-            modifier = Modifier.height(24.dp)
-        )
-        
+    Column(modifier = modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
+        // Slider
+        Box(modifier = Modifier.fillMaxWidth().height(18.dp), contentAlignment = Alignment.Center) {
+            val safeDuration = if (duration > 0) duration.toFloat() else 1f
+            AppleMusicThinSlider(
+                value = (position.toFloat() / safeDuration).coerceIn(0f, 1f),
+                activeColor = Color.White.copy(alpha = 0.92f),
+                onValueChange = { onSeek((it * safeDuration).toLong()) },
+                onValueChangeFinished = onSeekFinished,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+
         // Times Row
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(makeTimeString(position), color = Color.White.copy(0.7f), style = MaterialTheme.typography.labelMedium)
-            Text(makeTimeString(duration), color = Color.White.copy(0.7f), style = MaterialTheme.typography.labelMedium)
+            Text(makeTimeString(position), color = Color.White.copy(alpha = 0.72f), style = MaterialTheme.typography.labelMedium)
+            Text("-${makeTimeString(kotlin.math.max(0L, duration - position))}", color = Color.White.copy(alpha = 0.72f), style = MaterialTheme.typography.labelMedium)
         }
-        
+
         Spacer(modifier = Modifier.height(16.dp))
-        
+
         // Transport Row
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
+            horizontalArrangement = Arrangement.spacedBy(58.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            androidx.compose.material3.IconButton(onClick = onPrev, modifier = Modifier.size(56.dp)) {
-                Icon(painterResource(R.drawable.skip_previous), contentDescription = null, tint = Color.White, modifier = Modifier.size(36.dp))
-            }
+            Icon(
+                painter = painterResource(R.drawable.skip_previous),
+                contentDescription = "Previous",
+                tint = Color.White,
+                modifier = Modifier.appleMusicPressInflate().size(46.dp).clickable { onPrev() }
+            )
             Box(
                 modifier = Modifier
+                    .appleMusicPressInflate()
                     .size(76.dp)
                     .clip(CircleShape)
-                    .background(Color.Transparent)
                     .clickable { onPlayPause() },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    painterResource(if (isPlaying) R.drawable.pause else R.drawable.play),
-                    contentDescription = null,
+                    painter = painterResource(if (isPlaying) R.drawable.pause else R.drawable.play),
+                    contentDescription = "Play/Pause",
                     tint = Color.White,
                     modifier = Modifier.size(66.dp)
                 )
             }
-            androidx.compose.material3.IconButton(onClick = onNext, modifier = Modifier.size(56.dp)) {
-                Icon(painterResource(R.drawable.skip_next), contentDescription = null, tint = Color.White, modifier = Modifier.size(36.dp))
-            }
+            Icon(
+                painter = painterResource(R.drawable.skip_next),
+                contentDescription = "Next",
+                tint = Color.White,
+                modifier = Modifier.appleMusicPressInflate().size(46.dp).clickable { onNext() }
+            )
         }
-        
+
         Spacer(modifier = Modifier.height(24.dp))
-        
+
+        // Volume Row
+        AppleMusicVolumeRow()
+
+        Spacer(modifier = Modifier.height(24.dp))
+
         // Dock Row
         Row(
             modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            DockIcon(
+            AppleMusicDockButton(
                 icon = R.drawable.lyrics,
                 isActive = viewState == AppleMusicView.LYRICS,
                 onClick = { onTabSelect(if (viewState == AppleMusicView.LYRICS) AppleMusicView.MAIN else AppleMusicView.LYRICS) }
             )
-            DockIcon(
+            AppleMusicDockButton(
                 icon = R.drawable.queue_music,
                 isActive = viewState == AppleMusicView.QUEUE,
                 onClick = { onTabSelect(if (viewState == AppleMusicView.QUEUE) AppleMusicView.MAIN else AppleMusicView.QUEUE) }
@@ -3162,9 +3294,51 @@ fun AppleMusicBottomClusterGlossy(
 }
 
 @Composable
-fun DockIcon(icon: Int, isActive: Boolean, onClick: () -> Unit) {
+fun AppleMusicVolumeRow() {
+    val context = LocalContext.current
+    val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
+    val maxSystemVolume = remember { audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC).toFloat() }
+    
+    var dragVolume by remember { mutableStateOf<Float?>(null) }
+    val systemVolume by produceState(initialValue = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC).toFloat() / maxSystemVolume) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                if (intent.action == "android.media.VOLUME_CHANGED_ACTION") {
+                    value = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC).toFloat() / maxSystemVolume
+                }
+            }
+        }
+        context.registerReceiver(receiver, IntentFilter("android.media.VOLUME_CHANGED_ACTION"))
+        awaitDispose { context.unregisterReceiver(receiver) }
+    }
+
+    val volume = dragVolume ?: systemVolume
+
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Icon(painterResource(R.drawable.volume_mute), contentDescription = null, tint = Color.White.copy(alpha=0.72f), modifier = Modifier.size(18.dp))
+        Spacer(modifier = Modifier.width(12.dp))
+        Box(modifier = Modifier.weight(1f).height(18.dp), contentAlignment = Alignment.Center) {
+            AppleMusicThinSlider(
+                value = volume.coerceIn(0f, 1f),
+                activeColor = Color.White.copy(alpha=0.92f),
+                onValueChange = { 
+                    dragVolume = it
+                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, (it * maxSystemVolume).roundToInt(), 0)
+                },
+                onValueChangeFinished = { dragVolume = null },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Icon(painterResource(R.drawable.volume_up), contentDescription = null, tint = Color.White.copy(alpha=0.72f), modifier = Modifier.size(18.dp))
+    }
+}
+
+@Composable
+fun AppleMusicDockButton(icon: Int, isActive: Boolean, onClick: () -> Unit) {
     Box(
         modifier = Modifier
+            .appleMusicPressInflate()
             .size(40.dp)
             .clip(CircleShape)
             .background(if (isActive) Color.White.copy(alpha = 0.2f) else Color.Transparent)
@@ -3174,7 +3348,7 @@ fun DockIcon(icon: Int, isActive: Boolean, onClick: () -> Unit) {
         Icon(
             painter = painterResource(icon),
             contentDescription = null,
-            tint = if (isActive) Color.White else Color.White.copy(alpha = 0.6f),
+            tint = if (isActive) Color.White else Color.White.copy(alpha = 0.85f),
             modifier = Modifier.size(22.dp)
         )
     }
@@ -3193,7 +3367,7 @@ fun AppleMusicCompactHeader(mediaMetadata: MediaMetadata, onClose: () -> Unit) {
             modifier = Modifier.size(48.dp).clip(RoundedCornerShape(4.dp))
         )
         Spacer(modifier = Modifier.width(12.dp))
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = mediaMetadata.title,
                 style = MaterialTheme.typography.titleMedium,
@@ -3209,5 +3383,14 @@ fun AppleMusicCompactHeader(mediaMetadata: MediaMetadata, onClose: () -> Unit) {
                 overflow = TextOverflow.Ellipsis
             )
         }
+        Spacer(modifier = Modifier.width(12.dp))
+        Icon(
+            painter = painterResource(R.drawable.more_vert),
+            contentDescription = "More",
+            tint = Color.White,
+            modifier = Modifier.appleMusicPressInflate().size(24.dp).clickable {
+                // Future Implementation for compact header menu
+            }
+        )
     }
 }
