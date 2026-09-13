@@ -1,3 +1,8 @@
+/**
+ * Glossy Project (C) 2026
+ * Licensed under GPL-3.0 | See git history for contributors
+ */
+
 package com.jay.glossy.ui.player
 
 import android.view.TextureView
@@ -17,6 +22,7 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.AspectRatioFrameLayout
@@ -42,9 +48,22 @@ fun CanvasArtworkPlayer(
         DefaultMediaSourceFactory(DefaultDataSource.Factory(context, OkHttpDataSource.Factory(okHttpClient)))
     }
     
+    // FAST BUFFERING LOGIC
+    val loadControl = remember {
+        DefaultLoadControl.Builder()
+            .setBufferDurationsMs(
+                500,   // Min buffer before playback starts
+                5000,  // Max buffer limit
+                100,   // Playback starts immediately after 100ms of data is downloaded
+                500    // Buffer required after a rebuffer
+            )
+            .build()
+    }
+    
     val exoPlayer = remember {
         ExoPlayer.Builder(context)
             .setMediaSourceFactory(mediaSourceFactory)
+            .setLoadControl(loadControl) // Applied Fast Load Control
             .build()
             .apply {
                 trackSelectionParameters = trackSelectionParameters.buildUpon().setForceHighestSupportedBitrate(true).build()
