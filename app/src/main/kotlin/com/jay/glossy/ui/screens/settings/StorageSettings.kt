@@ -6,6 +6,7 @@
 package com.jay.glossy.ui.screens.settings
 
 import android.text.format.Formatter
+import android.widget.Toast
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -115,6 +116,7 @@ fun StorageSettings(
     var clearDownloads by remember { mutableStateOf(false) }
     var clearCacheDialog by remember { mutableStateOf(false) }
     var clearImageCacheDialog by remember { mutableStateOf(false) }
+    var clearCanvasCacheDialog by remember { mutableStateOf(false) } // NAYA CANVAS DIALOG STATE
 
     // State for the confirmation dialog
     var showCacheWarningDialog by remember { mutableStateOf(false) }
@@ -270,6 +272,23 @@ fun StorageSettings(
             onCancel = { clearImageCacheDialog = false },
             content = {
                 Text(text = stringResource(R.string.clear_image_cache_dialog))
+            },
+        )
+    }
+
+    // NAYA CANVAS CACHE DIALOG
+    if (clearCanvasCacheDialog) {
+        ActionPromptDialog(
+            title = "Clear Canvas Cache",
+            onDismiss = { clearCanvasCacheDialog = false },
+            onConfirm = {
+                com.jay.glossy.ui.player.CanvasArtworkPlaybackCache.clear()
+                Toast.makeText(context, "Canvas cache cleared", Toast.LENGTH_SHORT).show()
+                clearCanvasCacheDialog = false
+            },
+            onCancel = { clearCanvasCacheDialog = false },
+            content = {
+                Text(text = "This will remove all temporarily cached short video backgrounds. Next time you play the song, they will be downloaded again.")
             },
         )
     }
@@ -540,6 +559,23 @@ fun StorageSettings(
                             title = { Text(stringResource(R.string.clear_image_cache)) },
                             onClick = {
                                 clearImageCacheDialog = true
+                            },
+                        ),
+                    ),
+                )
+            }
+
+            // NAYA CANVAS VIDEO CACHE GROUP
+            item {
+                Material3SettingsGroup(
+                    title = "Canvas Video Cache",
+                    items = listOf(
+                        Material3SettingsItem(
+                            icon = painterResource(R.drawable.clear_all),
+                            title = { Text("Clear Canvas Video Cache") },
+                            description = { Text("Free up memory by clearing cached looping videos") },
+                            onClick = {
+                                clearCanvasCacheDialog = true
                             },
                         ),
                     ),
