@@ -20,6 +20,7 @@ import android.content.IntentFilter
 import android.media.AudioManager
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.LinearEasing
@@ -66,6 +67,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
@@ -86,6 +88,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -240,7 +243,7 @@ fun BottomSheetPlayer(
 
     // Syncing Classic vs Modern Queue bottom bar design
     LaunchedEffect(playerStyle) {
-        val shouldBeModern = playerStyle != PlayerStyle.CLASSIC && playerStyle.name != "VIVI_NEW"
+        val shouldBeModern = playerStyle != PlayerStyle.CLASSIC && playerStyle.name != "VIVI_NEW" && playerStyle.name != "APPLE_MUSIC"
         if (useNewPlayerDesignSetting != shouldBeModern) {
             setUseNewPlayerDesign(shouldBeModern)
         }
@@ -2423,154 +2426,164 @@ fun BottomSheetPlayer(
             }
         }
 
-        when (LocalConfiguration.current.orientation) {
-            Configuration.ORIENTATION_LANDSCAPE -> {
-                val density = LocalDensity.current
-                val verticalPadding =
-                    max(
-                        WindowInsets.systemBars.getTop(density),
-                        WindowInsets.systemBars.getBottom(density),
-                    )
-                val verticalPaddingDp = with(density) { verticalPadding.toDp() }
-                val verticalWindowInsets = WindowInsets(left = 0.dp, top = verticalPaddingDp, right = 0.dp, bottom = verticalPaddingDp)
+        if (playerStyle.name == "APPLE_MUSIC") {
+            mediaMetadata?.let { metadata ->
+                AppleMusicPlayerLayout(
+                    mediaMetadata = metadata,
+                    position = effectivePosition,
+                    duration = duration,
+                    onClose = { state.collapseSoft() }
+                )
+            }
+        } else {
+            when (LocalConfiguration.current.orientation) {
+                Configuration.ORIENTATION_LANDSCAPE -> {
+                    val density = LocalDensity.current
+                    val verticalPadding =
+                        max(
+                            WindowInsets.systemBars.getTop(density),
+                            WindowInsets.systemBars.getBottom(density),
+                        )
+                    val verticalPaddingDp = with(density) { verticalPadding.toDp() }
+                    val verticalWindowInsets = WindowInsets(left = 0.dp, top = verticalPaddingDp, right = 0.dp, bottom = verticalPaddingDp)
 
-                Row(
-                    modifier =
-                        Modifier
-                            .windowInsetsPadding(
-                                WindowInsets.systemBars.only(WindowInsetsSides.Horizontal).add(verticalWindowInsets),
-                            ).padding(bottom = 24.dp)
-                            .fillMaxSize(),
-                ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
+                    Row(
                         modifier =
                             Modifier
-                                .weight(1f)
-                                .nestedScroll(state.preUpPostDownNestedScrollConnection),
+                                .windowInsetsPadding(
+                                    WindowInsets.systemBars.only(WindowInsetsSides.Horizontal).add(verticalWindowInsets),
+                                ).padding(bottom = 24.dp)
+                                .fillMaxSize(),
                     ) {
-                        val currentSliderPosition by rememberUpdatedState(sliderPosition)
-                        val sliderPositionProvider = remember { { currentSliderPosition } }
-                        val isExpandedProvider = remember(state) { { state.isExpanded } }
-                        AnimatedContent(
-                            targetState = showInlineLyrics,
-                            label = "Lyrics",
-                            transitionSpec = { fadeIn() togetherWith fadeOut() },
-                        ) { showLyrics ->
-                            if (showLyrics) {
-                                InlineLyricsView(
-                                    mediaMetadata = mediaMetadata,
-                                    showLyrics = showLyrics,
-                                    positionProvider = { effectivePosition },
-                                )
-                            } else {
-                                Thumbnail(
-                                    sliderPositionProvider = sliderPositionProvider,
-                                    modifier = Modifier.animateContentSize(),
-                                    isPlayerExpanded = isExpandedProvider,
-                                    isLandscape = true,
-                                    isListenTogetherGuest = isListenTogetherGuest,
-                                )
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier =
+                                Modifier
+                                    .weight(1f)
+                                    .nestedScroll(state.preUpPostDownNestedScrollConnection),
+                        ) {
+                            val currentSliderPosition by rememberUpdatedState(sliderPosition)
+                            val sliderPositionProvider = remember { { currentSliderPosition } }
+                            val isExpandedProvider = remember(state) { { state.isExpanded } }
+                            AnimatedContent(
+                                targetState = showInlineLyrics,
+                                label = "Lyrics",
+                                transitionSpec = { fadeIn() togetherWith fadeOut() },
+                            ) { showLyrics ->
+                                if (showLyrics) {
+                                    InlineLyricsView(
+                                        mediaMetadata = mediaMetadata,
+                                        showLyrics = showLyrics,
+                                        positionProvider = { effectivePosition },
+                                    )
+                                } else {
+                                    Thumbnail(
+                                        sliderPositionProvider = sliderPositionProvider,
+                                        modifier = Modifier.animateContentSize(),
+                                        isPlayerExpanded = isExpandedProvider,
+                                        isLandscape = true,
+                                        isListenTogetherGuest = isListenTogetherGuest,
+                                    )
+                                }
                             }
                         }
-                    }
 
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier =
+                                Modifier
+                                    .weight(if (showInlineLyrics) 0.65f else 1f, false)
+                                    .animateContentSize()
+                                    .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top)),
+                        ) {
+                            Spacer(Modifier.weight(1f))
+
+                            mediaMetadata?.let {
+                                controlsContent(it)
+                            }
+
+                            Spacer(Modifier.weight(1f))
+                        }
+                    }
+                }
+
+                else -> {
+                    val bottomPadding by animateDpAsState(
+                        targetValue = if (isFullScreen) 0.dp else queueSheetState.collapsedBound,
+                        label = "bottomPadding",
+                    )
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier =
                             Modifier
-                                .weight(if (showInlineLyrics) 0.65f else 1f, false)
-                                .animateContentSize()
-                                .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top)),
+                                .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
+                                .padding(bottom = bottomPadding)
+                                .animateContentSize(),
                     ) {
-                        Spacer(Modifier.weight(1f))
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            val currentSliderPosition by rememberUpdatedState(sliderPosition)
+                            val sliderPositionProvider = remember { { currentSliderPosition } }
+                            val isExpandedProvider = remember(state) { { state.isExpanded } }
+                            AnimatedContent(
+                                targetState = showInlineLyrics,
+                                label = "Lyrics",
+                                transitionSpec = { fadeIn() togetherWith fadeOut() },
+                            ) { showLyrics ->
+                                if (showLyrics) {
+                                    InlineLyricsView(
+                                        mediaMetadata = mediaMetadata,
+                                        showLyrics = showLyrics,
+                                        positionProvider = { effectivePosition },
+                                    )
+                                } else {
+                                    Thumbnail(
+                                        sliderPositionProvider = sliderPositionProvider,
+                                        modifier = Modifier.nestedScroll(state.preUpPostDownNestedScrollConnection),
+                                        isPlayerExpanded = isExpandedProvider,
+                                        isListenTogetherGuest = isListenTogetherGuest,
+                                    )
+                                }
+                            }
+                        }
 
                         mediaMetadata?.let {
                             controlsContent(it)
                         }
 
-                        Spacer(Modifier.weight(1f))
+                        Spacer(Modifier.height(if (playerStyle.name == "WAVY") 8.dp else if (playerStyle.name == "VIVI_NEW") 0.dp else 30.dp))
                     }
                 }
             }
-
-            else -> {
-                val bottomPadding by animateDpAsState(
-                    targetValue = if (isFullScreen) 0.dp else queueSheetState.collapsedBound,
-                    label = "bottomPadding",
-                )
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier =
-                        Modifier
-                            .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
-                            .padding(bottom = bottomPadding)
-                            .animateContentSize(),
-                ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        val currentSliderPosition by rememberUpdatedState(sliderPosition)
-                        val sliderPositionProvider = remember { { currentSliderPosition } }
-                        val isExpandedProvider = remember(state) { { state.isExpanded } }
-                        AnimatedContent(
-                            targetState = showInlineLyrics,
-                            label = "Lyrics",
-                            transitionSpec = { fadeIn() togetherWith fadeOut() },
-                        ) { showLyrics ->
-                            if (showLyrics) {
-                                InlineLyricsView(
-                                    mediaMetadata = mediaMetadata,
-                                    showLyrics = showLyrics,
-                                    positionProvider = { effectivePosition },
-                                )
-                            } else {
-                                Thumbnail(
-                                    sliderPositionProvider = sliderPositionProvider,
-                                    modifier = Modifier.nestedScroll(state.preUpPostDownNestedScrollConnection),
-                                    isPlayerExpanded = isExpandedProvider,
-                                    isListenTogetherGuest = isListenTogetherGuest,
-                                )
-                            }
-                        }
-                    }
-
-                    mediaMetadata?.let {
-                        controlsContent(it)
-                    }
-
-                    // VIVI_NEW handles spacing internally, so we don't add extra padding for it here
-                    Spacer(Modifier.height(if (playerStyle.name == "WAVY") 8.dp else if (playerStyle.name == "VIVI_NEW") 0.dp else 30.dp))
-                }
-            }
-        }
-
-        AnimatedVisibility(
-            visible = !isFullScreen,
-            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-            exit = shrinkVertically(shrinkTowards = Alignment.Top) + slideOutVertically(targetOffsetY = { it }) + fadeOut(),
-        ) {
-            Queue(
-                state = queueSheetState,
-                playerBottomSheetState = state,
-                background =
-                    if (useBlackBackground) {
-                        Color.Black
-                    } else {
-                        MaterialTheme.colorScheme.surfaceContainer
+            
+            AnimatedVisibility(
+                visible = !isFullScreen,
+                enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                exit = shrinkVertically(shrinkTowards = Alignment.Top) + slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+            ) {
+                Queue(
+                    state = queueSheetState,
+                    playerBottomSheetState = state,
+                    background =
+                        if (useBlackBackground) {
+                            Color.Black
+                        } else {
+                            MaterialTheme.colorScheme.surfaceContainer
+                        },
+                    onBackgroundColor = onBackgroundColor,
+                    TextBackgroundColor = TextBackgroundColor,
+                    textButtonColor = textButtonColor,
+                    iconButtonColor = iconButtonColor,
+                    pureBlack = pureBlack,
+                    showInlineLyrics = showInlineLyrics,
+                    playerBackground = playerBackground,
+                    onToggleLyrics = {
+                        showInlineLyrics = !showInlineLyrics
                     },
-                onBackgroundColor = onBackgroundColor,
-                TextBackgroundColor = TextBackgroundColor,
-                textButtonColor = textButtonColor,
-                iconButtonColor = iconButtonColor,
-                pureBlack = pureBlack,
-                showInlineLyrics = showInlineLyrics,
-                playerBackground = playerBackground,
-                onToggleLyrics = {
-                    showInlineLyrics = !showInlineLyrics
-                },
-            )
+                )
+            }
         }
     }
 }
@@ -2865,6 +2878,334 @@ fun AnimatedMeshBackground(colors: List<Color>, modifier: Modifier = Modifier) {
                 ),
                 radius = w * 0.9f,
                 center = Offset(w * o3, h * o1)
+            )
+        }
+    }
+}
+
+// ----------------------------------------------------------------------
+// APPLE MUSIC STYLE WRAPPERS
+// ----------------------------------------------------------------------
+
+enum class AppleMusicView { MAIN, LYRICS, QUEUE }
+
+@Composable
+fun AppleMusicPlayerLayout(
+    mediaMetadata: MediaMetadata,
+    position: Long,
+    duration: Long,
+    onClose: () -> Unit
+) {
+    val playerConnection = LocalPlayerConnection.current ?: return
+    val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
+    val currentSong by playerConnection.currentSong.collectAsStateWithLifecycle(null)
+    
+    var viewState by remember { mutableStateOf(AppleMusicView.MAIN) }
+    var sliderPosition by remember { mutableStateOf<Long?>(null) }
+    val currentPosition = sliderPosition ?: position
+
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+        // Frosted Background
+        AsyncImage(
+            model = mediaMetadata.thumbnailUrl,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .fillMaxSize()
+                .blur(80.dp)
+                .alpha(0.5f) 
+        )
+
+        Crossfade(targetState = viewState, label = "AppleMusicTabs") { view ->
+            when (view) {
+                AppleMusicView.MAIN -> {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 24.dp)
+                    ) {
+                        Spacer(modifier = Modifier.height(WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 20.dp))
+                        
+                        // Top Drag Handle
+                        Box(modifier = Modifier.fillMaxWidth().clickable(onClick = onClose), contentAlignment = Alignment.Center) {
+                            Box(modifier = Modifier.size(36.dp, 5.dp).clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.35f)))
+                        }
+                        
+                        Spacer(modifier = Modifier.height(32.dp))
+                        
+                        // Artwork
+                        AsyncImage(
+                            model = mediaMetadata.thumbnailUrl,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(1f)
+                                .clip(RoundedCornerShape(8.dp))
+                        )
+                        
+                        Spacer(modifier = Modifier.weight(1f))
+                        
+                        // Title & Actions Row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = mediaMetadata.title,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = mediaMetadata.artists.joinToString(", ") { it.name },
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = Color.White.copy(alpha = 0.7f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            
+                            val isFavorite = currentSong?.song?.liked == true
+                            androidx.compose.material3.IconButton(onClick = { playerConnection.toggleLike() }) {
+                                Icon(
+                                    painter = painterResource(if (isFavorite) R.drawable.favorite else R.drawable.favorite_border),
+                                    contentDescription = "Like",
+                                    tint = if (isFavorite) MaterialTheme.colorScheme.error else Color.White
+                                )
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(24.dp))
+                        
+                        // Bottom Controls
+                        AppleMusicBottomClusterGlossy(
+                            position = currentPosition,
+                            duration = duration,
+                            isPlaying = isPlaying,
+                            onSeek = { sliderPosition = it },
+                            onSeekFinished = {
+                                sliderPosition?.let { playerConnection.player.seekTo(it) }
+                                sliderPosition = null
+                            },
+                            onPlayPause = { playerConnection.togglePlayPause() },
+                            onNext = { playerConnection.seekToNext() },
+                            onPrev = { playerConnection.seekToPrevious() },
+                            viewState = viewState,
+                            onTabSelect = { viewState = it }
+                        )
+                    }
+                }
+                AppleMusicView.LYRICS -> {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        Spacer(modifier = Modifier.height(WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 20.dp))
+                        AppleMusicCompactHeader(mediaMetadata = mediaMetadata, onClose = { viewState = AppleMusicView.MAIN })
+                        
+                        Box(modifier = Modifier.weight(1f).padding(horizontal = 16.dp)) {
+                            Lyrics(
+                                sliderPositionProvider = { currentPosition },
+                                modifier = Modifier.fillMaxSize(),
+                                showLyrics = true
+                            )
+                        }
+                        
+                        AppleMusicBottomClusterGlossy(
+                            position = currentPosition,
+                            duration = duration,
+                            isPlaying = isPlaying,
+                            onSeek = { sliderPosition = it },
+                            onSeekFinished = {
+                                sliderPosition?.let { playerConnection.player.seekTo(it) }
+                                sliderPosition = null
+                            },
+                            onPlayPause = { playerConnection.togglePlayPause() },
+                            onNext = { playerConnection.seekToNext() },
+                            onPrev = { playerConnection.seekToPrevious() },
+                            viewState = viewState,
+                            onTabSelect = { viewState = it },
+                            modifier = Modifier.padding(horizontal = 24.dp)
+                        )
+                    }
+                }
+                AppleMusicView.QUEUE -> {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        Spacer(modifier = Modifier.height(WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 20.dp))
+                        AppleMusicCompactHeader(mediaMetadata = mediaMetadata, onClose = { viewState = AppleMusicView.MAIN })
+                        
+                        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                            Text("Queue (Tap out of bottom sheet to use Glossy's Queue)", color = Color.White.copy(0.7f))
+                        }
+                        
+                        AppleMusicBottomClusterGlossy(
+                            position = currentPosition,
+                            duration = duration,
+                            isPlaying = isPlaying,
+                            onSeek = { sliderPosition = it },
+                            onSeekFinished = {
+                                sliderPosition?.let { playerConnection.player.seekTo(it) }
+                                sliderPosition = null
+                            },
+                            onPlayPause = { playerConnection.togglePlayPause() },
+                            onNext = { playerConnection.seekToNext() },
+                            onPrev = { playerConnection.seekToPrevious() },
+                            viewState = viewState,
+                            onTabSelect = { viewState = it },
+                            modifier = Modifier.padding(horizontal = 24.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AppleMusicBottomClusterGlossy(
+    position: Long,
+    duration: Long,
+    isPlaying: Boolean,
+    onSeek: (Long) -> Unit,
+    onSeekFinished: () -> Unit,
+    onPlayPause: () -> Unit,
+    onNext: () -> Unit,
+    onPrev: () -> Unit,
+    viewState: AppleMusicView,
+    onTabSelect: (AppleMusicView) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        // Slim Slider
+        Slider(
+            value = position.toFloat(),
+            valueRange = 0f..(if (duration <= 0) 0f else duration.toFloat()),
+            onValueChange = { onSeek(it.toLong()) },
+            onValueChangeFinished = onSeekFinished,
+            thumb = { Spacer(modifier = Modifier.size(0.dp)) },
+            track = { sliderState ->
+                PlayerSliderTrack(
+                    sliderState = sliderState,
+                    colors = SliderDefaults.colors(
+                        activeTrackColor = Color.White.copy(alpha = 0.9f),
+                        inactiveTrackColor = Color.White.copy(alpha = 0.2f)
+                    ),
+                    trackHeight = 7.dp
+                )
+            },
+            modifier = Modifier.height(24.dp)
+        )
+        
+        // Times Row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(makeTimeString(position), color = Color.White.copy(0.7f), style = MaterialTheme.typography.labelMedium)
+            Text(makeTimeString(duration), color = Color.White.copy(0.7f), style = MaterialTheme.typography.labelMedium)
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // Transport Row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            androidx.compose.material3.IconButton(onClick = onPrev, modifier = Modifier.size(56.dp)) {
+                Icon(painterResource(R.drawable.skip_previous), contentDescription = null, tint = Color.White, modifier = Modifier.size(36.dp))
+            }
+            Box(
+                modifier = Modifier
+                    .size(76.dp)
+                    .clip(CircleShape)
+                    .background(Color.Transparent)
+                    .clickable { onPlayPause() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painterResource(if (isPlaying) R.drawable.pause else R.drawable.play),
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(66.dp)
+                )
+            }
+            androidx.compose.material3.IconButton(onClick = onNext, modifier = Modifier.size(56.dp)) {
+                Icon(painterResource(R.drawable.skip_next), contentDescription = null, tint = Color.White, modifier = Modifier.size(36.dp))
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        // Dock Row
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            DockIcon(
+                icon = R.drawable.lyrics,
+                isActive = viewState == AppleMusicView.LYRICS,
+                onClick = { onTabSelect(if (viewState == AppleMusicView.LYRICS) AppleMusicView.MAIN else AppleMusicView.LYRICS) }
+            )
+            DockIcon(
+                icon = R.drawable.queue_music,
+                isActive = viewState == AppleMusicView.QUEUE,
+                onClick = { onTabSelect(if (viewState == AppleMusicView.QUEUE) AppleMusicView.MAIN else AppleMusicView.QUEUE) }
+            )
+        }
+    }
+}
+
+@Composable
+fun DockIcon(icon: Int, isActive: Boolean, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(if (isActive) Color.White.copy(alpha = 0.2f) else Color.Transparent)
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            painter = painterResource(icon),
+            contentDescription = null,
+            tint = if (isActive) Color.White else Color.White.copy(alpha = 0.6f),
+            modifier = Modifier.size(22.dp)
+        )
+    }
+}
+
+@Composable
+fun AppleMusicCompactHeader(mediaMetadata: MediaMetadata, onClose: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp).clickable { onClose() },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AsyncImage(
+            model = mediaMetadata.thumbnailUrl,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.size(48.dp).clip(RoundedCornerShape(4.dp))
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column {
+            Text(
+                text = mediaMetadata.title,
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = mediaMetadata.artists.joinToString(", ") { it.name },
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.7f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
