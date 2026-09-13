@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -214,7 +215,6 @@ object CanvasArtworkPlaybackCache {
         }
     }
 
-    // YEH RAHI CLEAR METHOD JO MISSING THI
     @Synchronized
     fun clear() {
         map.clear()
@@ -470,14 +470,11 @@ fun Thumbnail(
                                         )
                                     }
 
-                                    // CANVAS PREFERENCE READ KAREGA
                                     val (canvasThumbnailAnimation) = rememberPreference(CanvasThumbnailAnimationKey, defaultValue = false)
-                                    val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
 
                                     if (canvasThumbnailAnimation && currentMedia?.mediaId == mediaMetadata?.id && currentMedia != null) {
                                         CanvasLayer(
                                             item = currentMedia,
-                                            isPlaying = isPlaying,
                                             modifier = Modifier.fillMaxSize()
                                         )
                                     }
@@ -548,10 +545,10 @@ fun Thumbnail(
     }
 }
 
+// CANVAS IS NOW FULLY INDEPENDENT OF PLAYING STATE
 @Composable
 private fun CanvasLayer(
     item: MediaItem,
-    isPlaying: Boolean,
     modifier: Modifier = Modifier
 ) {
     var canvasArtwork by remember(item.mediaId) { mutableStateOf<CanvasArtwork?>(null) }
@@ -581,7 +578,6 @@ private fun CanvasLayer(
 
             if (songTitle.isBlank() || artistName.isBlank()) return@withContext null
 
-            // PARALLEL API CALLING FOR 2X SPEED
             val tidalDeferred = async {
                 TidalCanvasProvider.getBySongArtist(songTitle, artistName, albumName)
                     ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
@@ -597,7 +593,6 @@ private fun CanvasLayer(
                     ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
             }
 
-            // Return whoever finishes and finds a result first (or wait for both)
             tidalDeferred.await() ?: appleDeferred.await()
         }
         
@@ -612,7 +607,6 @@ private fun CanvasLayer(
         CanvasArtworkPlayer(
             primaryUrl = artwork.animated,
             fallbackUrl = artwork.videoUrl,
-            isPlaying = isPlaying,
             modifier = modifier
         )
     }
@@ -762,12 +756,10 @@ private fun ThumbnailItem(
             }
             
             val (canvasThumbnailAnimation) = rememberPreference(CanvasThumbnailAnimationKey, defaultValue = false)
-            val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
 
             if (canvasThumbnailAnimation && item.mediaId == currentMediaId) {
                 CanvasLayer(
                     item = item,
-                    isPlaying = isPlaying,
                     modifier = Modifier.fillMaxSize()
                 )
             }
