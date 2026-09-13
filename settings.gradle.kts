@@ -26,6 +26,8 @@ dependencyResolutionManagement {
 
 rootProject.name = "Glossy"
 include(":app")
+include(":canvas")
+include(":applecanvas")
 include(":innertube")
 include(":kugou")
 include(":lrclib")
