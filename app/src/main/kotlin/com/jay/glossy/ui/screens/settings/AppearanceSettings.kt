@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import androidx.navigation.NavController
 import com.jay.glossy.LocalPlayerAwareWindowInsets
+import com.jay.glossy.constants.CanvasThumbnailAnimationKey
 import com.jay.glossy.constants.ChipSortTypeKey
 import com.jay.glossy.constants.CropAlbumArtKey
 import com.jay.glossy.constants.DefaultOpenTabKey
@@ -215,6 +216,13 @@ fun AppearanceSettings(
         rememberEnumPreference(
             PlayerBackgroundStyleKey,
             defaultValue = PlayerBackgroundStyle.DEFAULT,
+        )
+
+    // NEW PREFERENCE STATE FOR CANVAS
+    val (canvasThumbnailAnimation, onCanvasThumbnailAnimationChange) =
+        rememberPreference(
+            CanvasThumbnailAnimationKey,
+            defaultValue = false, // DEFAULT OFF RAKHA HAI MANGI HUI TAZA
         )
 
     val (defaultOpenTab, onDefaultOpenTabChange) =
@@ -1406,6 +1414,28 @@ fun AppearanceSettings(
                             )
                         },
                         onClick = { showSliderOptionDialog = true },
+                    ),
+                    // YAHAN MERA CANVAS KA TOGGLE ADD KIYA HAI
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.play), 
+                        title = { Text("Canvas Background") },
+                        description = { Text("Play short looping videos on thumbnail like Apple Music") },
+                        trailingContent = {
+                            Switch(
+                                checked = canvasThumbnailAnimation,
+                                onCheckedChange = onCanvasThumbnailAnimationChange,
+                                thumbContent = {
+                                    Icon(
+                                        painter = painterResource(
+                                            id = if (canvasThumbnailAnimation) R.drawable.check else R.drawable.close
+                                        ),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize)
+                                    )
+                                }
+                            )
+                        },
+                        onClick = { onCanvasThumbnailAnimationChange(!canvasThumbnailAnimation) }
                     ),
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.swipe),
