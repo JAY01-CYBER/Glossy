@@ -3,7 +3,6 @@ package com.jay.glossy.echomusiccanvas
 import com.jay.glossy.canvas.CanvasArtwork
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
-import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.cache.HttpCache
 import io.ktor.client.plugins.compression.ContentEncoding
@@ -34,8 +33,9 @@ object echomusicCanvasProvider {
         explicitNulls = false
     }
 
+    // OkHttp engine hata diya gaya hai, ab yeh default available engine use karega
     private val client by lazy {
-        HttpClient(OkHttp) {
+        HttpClient {
             install(ContentNegotiation) { json(json) }
             install(HttpTimeout) {
                 connectTimeoutMillis = 12_000
