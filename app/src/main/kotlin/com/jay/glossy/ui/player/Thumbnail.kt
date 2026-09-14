@@ -564,6 +564,7 @@ fun Thumbnail(
     }
 }
 
+// STRICT NAME VALIDATION TO FIX WRONG CANVAS ISSUE
 @Composable
 private fun CanvasLayer(
     item: MediaItem,
@@ -578,7 +579,9 @@ private fun CanvasLayer(
 
     LaunchedEffect(item.mediaId) {
         CanvasArtworkPlaybackCache.get(item.mediaId)?.let { cached ->
-            canvasArtwork = cached
+            if (cached.animated.isNotBlank()) {
+                canvasArtwork = cached
+            }
             return@LaunchedEffect
         }
 
@@ -611,13 +614,37 @@ private fun CanvasLayer(
                     ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
             }
 
-            tidalDeferred.await() ?: appleDeferred.await()
+            val rawArtwork = tidalDeferred.await() ?: appleDeferred.await()
+            
+            // MATCHING LOGIC (Protects from wrong artist/song canvas)
+            rawArtwork?.takeIf { artwork ->
+                val canvasSong = artwork.name ?: ""
+                val canvasArtist = artwork.artist ?: ""
+                
+                val reqSongNorm = normalizeCanvasSongTitle(songTitleRaw)
+                val canvasSongNorm = normalizeCanvasSongTitle(canvasSong)
+                
+                val reqArtistNorm = normalizeCanvasArtistName(artistNameRaw)
+                val canvasArtistNorm = normalizeCanvasArtistName(canvasArtist)
+                
+                val isSongMatch = canvasSongNorm.contains(reqSongNorm, ignoreCase = true) ||
+                                  reqSongNorm.contains(canvasSongNorm, ignoreCase = true)
+                
+                val isArtistMatch = canvasArtistNorm.contains(reqArtistNorm, ignoreCase = true) ||
+                                    reqArtistNorm.contains(canvasArtistNorm, ignoreCase = true)
+                                    
+                isSongMatch && isArtistMatch
+            }
         }
         
-        canvasArtwork = fetched
-        if (fetched != null) {
-            CanvasArtworkPlaybackCache.put(item.mediaId, fetched)
+        // Agar gaana na mile tab bhi cache mein 'blank' save karenge taaki bar-bar API call na ho.
+        val artworkToCache = fetched ?: CanvasArtwork("", "", "", "")
+        
+        CanvasArtworkPlaybackCache.put(item.mediaId, artworkToCache)
+        if (artworkToCache.animated.isNotBlank()) {
+            canvasArtwork = artworkToCache
         }
+        
         canvasFetchInFlight = false
     }
 
