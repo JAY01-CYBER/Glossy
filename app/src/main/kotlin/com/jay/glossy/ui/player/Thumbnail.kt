@@ -68,7 +68,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -96,11 +95,11 @@ import com.jay.glossy.listentogether.RoomRole
 import com.jay.glossy.ui.component.CastButton
 import com.jay.glossy.utils.rememberEnumPreference
 import com.jay.glossy.utils.rememberPreference
+import com.jay.glossy.echomusiccanvas.echomusicCanvasProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.util.Locale
-import com.jay.glossy.echomusiccanvas.echomusicCanvasProvider
 
 @Immutable
 data class ThumbnailDimensions(
@@ -563,7 +562,6 @@ fun Thumbnail(
     }
 }
 
-// EXACT ECHO MUSIC FETCHING LOGIC (With original sequential fallback)
 @Composable
 private fun CanvasLayer(
     item: MediaItem,
