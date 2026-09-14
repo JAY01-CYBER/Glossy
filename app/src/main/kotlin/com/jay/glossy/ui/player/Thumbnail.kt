@@ -97,6 +97,8 @@ import com.jay.glossy.ui.component.CastButton
 import com.jay.glossy.utils.rememberEnumPreference
 import com.jay.glossy.utils.rememberPreference
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.util.Locale
@@ -562,7 +564,7 @@ fun Thumbnail(
     }
 }
 
-// FAST AND STRICT CANVAS FETCHING LOGIC
+// FAST AND STRICT CANVAS FETCHING LOGIC - FIXED FOR PARALLEL AND LOOSE MATCHING
 @Composable
 private fun CanvasLayer(
     item: MediaItem,
@@ -597,33 +599,44 @@ private fun CanvasLayer(
 
             if (songTitle.isBlank() || artistName.isBlank()) return@withContext null
 
-            // Pehle fast Apple API check karo
-            var artwork = runCatching {
-                if (albumName.isNotBlank()) {
-                    AppleMusicCanvasProvider.getByAlbumArtist(albumName, artistName, storefront)
-                } else null
-                ?: AppleMusicCanvasProvider.getBySongArtist(songTitle, artistName, albumName, storefront)
-            }.getOrNull()
+            // Parallel async fetch for Apple and Tidal
+            var artwork: CanvasArtwork? = null
+            coroutineScope {
+                val appleDeferred = async {
+                    runCatching {
+                        if (albumName.isNotBlank()) {
+                            AppleMusicCanvasProvider.getByAlbumArtist(albumName, artistName, storefront)
+                        } else null
+                        ?: AppleMusicCanvasProvider.getBySongArtist(songTitle, artistName, albumName, storefront)
+                    }.getOrNull()
+                }
 
-            // Agar nahi mila toh Tidal check karo
-            if (artwork?.animated.isNullOrBlank() && artwork?.videoUrl.isNullOrBlank()) {
-                artwork = runCatching {
-                    TidalCanvasProvider.getBySongArtist(songTitle, artistName, albumName)
-                }.getOrNull()
+                val tidalDeferred = async {
+                    runCatching {
+                        TidalCanvasProvider.getBySongArtist(songTitle, artistName, albumName)
+                    }.getOrNull()
+                }
+
+                artwork = appleDeferred.await()
+                if (artwork?.animated.isNullOrBlank() && artwork?.videoUrl.isNullOrBlank()) {
+                    artwork = tidalDeferred.await()
+                }
             }
 
-            // BUG 2 FIX: Strict Matching, agar galat gaane ka aya hai toh hata do
+            // BUG 2 FIX: Looser Matching - Don't drop instantly if slightly different
             artwork?.takeIf {
                 val canvasSong = normalizeCanvasSongTitle(it.name ?: "")
                 val canvasArtist = normalizeCanvasArtistName(it.artist ?: "")
                 
                 val isSongMatch = canvasSong.isEmpty() || songTitle.isEmpty() ||
                                   canvasSong.contains(songTitle, ignoreCase = true) ||
-                                  songTitle.contains(canvasSong, ignoreCase = true)
+                                  songTitle.contains(canvasSong, ignoreCase = true) ||
+                                  looseWordMatch(canvasSong, songTitle)
                 
                 val isArtistMatch = canvasArtist.isEmpty() || artistName.isEmpty() ||
                                     canvasArtist.contains(artistName, ignoreCase = true) ||
-                                    artistName.contains(canvasArtist, ignoreCase = true)
+                                    artistName.contains(canvasArtist, ignoreCase = true) ||
+                                    looseWordMatch(canvasArtist, artistName)
                                     
                 isSongMatch && isArtistMatch
             }
@@ -925,4 +938,12 @@ internal fun normalizeCanvasArtistName(raw: String): String {
             ).firstOrNull().orEmpty()
 
     return first.replace(Regex("\\s+"), " ").trim()
+}
+
+internal fun looseWordMatch(str1: String, str2: String): Boolean {
+    val words1 = str1.lowercase().split(Regex("\\s+")).filter { it.length > 1 }
+    val words2 = str2.lowercase().split(Regex("\\s+")).filter { it.length > 1 }
+    if (words1.isEmpty() || words2.isEmpty()) return false
+    val overlap = words1.intersect(words2.toSet()).size
+    return overlap >= minOf(words1.size, words2.size) / 2
 }
