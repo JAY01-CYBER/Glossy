@@ -97,7 +97,6 @@ import com.jay.glossy.ui.component.CastButton
 import com.jay.glossy.utils.rememberEnumPreference
 import com.jay.glossy.utils.rememberPreference
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.util.Locale
@@ -563,6 +562,7 @@ fun Thumbnail(
     }
 }
 
+// FAST AND STRICT CANVAS FETCHING LOGIC
 @Composable
 private fun CanvasLayer(
     item: MediaItem,
@@ -577,7 +577,7 @@ private fun CanvasLayer(
 
     LaunchedEffect(item.mediaId) {
         CanvasArtworkPlaybackCache.get(item.mediaId)?.let { cached ->
-            if (cached.animated?.isNotBlank() == true || cached.videoUrl?.isNotBlank() == true) {
+            if (!cached.animated.isNullOrBlank() || !cached.videoUrl.isNullOrBlank()) {
                 canvasArtwork = cached
             }
             return@LaunchedEffect
@@ -597,41 +597,41 @@ private fun CanvasLayer(
 
             if (songTitle.isBlank() || artistName.isBlank()) return@withContext null
 
-            val tidalDeferred = async {
-                runCatching {
+            // Pehle fast Apple API check karo
+            var artwork = runCatching {
+                if (albumName.isNotBlank()) {
+                    AppleMusicCanvasProvider.getByAlbumArtist(albumName, artistName, storefront)
+                } else null
+                ?: AppleMusicCanvasProvider.getBySongArtist(songTitle, artistName, albumName, storefront)
+            }.getOrNull()
+
+            // Agar nahi mila toh Tidal check karo
+            if (artwork?.animated.isNullOrBlank() && artwork?.videoUrl.isNullOrBlank()) {
+                artwork = runCatching {
                     TidalCanvasProvider.getBySongArtist(songTitle, artistName, albumName)
-                }.getOrNull()?.takeIf { it.animated?.isNotBlank() == true || it.videoUrl?.isNotBlank() == true }
-            }
-            
-            val appleDeferred = async {
-                runCatching {
-                    if (albumName.isNotBlank()) {
-                        AppleMusicCanvasProvider.getByAlbumArtist(albumName, artistName, storefront)
-                            ?.takeIf { it.animated?.isNotBlank() == true || it.videoUrl?.isNotBlank() == true }
-                    } else null
-                    ?: AppleMusicCanvasProvider.getBySongArtist(songTitle, artistName, albumName, storefront)
-                        ?.takeIf { it.animated?.isNotBlank() == true || it.videoUrl?.isNotBlank() == true }
                 }.getOrNull()
             }
 
-            val rawArtwork = tidalDeferred.await() ?: appleDeferred.await()
-            
-            // LIGHT MATCHING LOGIC (Protects from completely wrong canvas, but doesn't strictly fail)
-            rawArtwork?.takeIf { artwork ->
-                val canvasSong = normalizeCanvasSongTitle(artwork.name ?: "")
-                val reqSong = normalizeCanvasSongTitle(songTitleRaw)
+            // BUG 2 FIX: Strict Matching, agar galat gaane ka aya hai toh hata do
+            artwork?.takeIf {
+                val canvasSong = normalizeCanvasSongTitle(it.name ?: "")
+                val canvasArtist = normalizeCanvasArtistName(it.artist ?: "")
                 
-                if (canvasSong.isEmpty() || reqSong.isEmpty()) true
-                else canvasSong.contains(reqSong, ignoreCase = true) || reqSong.contains(canvasSong, ignoreCase = true)
+                val isSongMatch = canvasSong.isEmpty() || songTitle.isEmpty() ||
+                                  canvasSong.contains(songTitle, ignoreCase = true) ||
+                                  songTitle.contains(canvasSong, ignoreCase = true)
+                
+                val isArtistMatch = canvasArtist.isEmpty() || artistName.isEmpty() ||
+                                    canvasArtist.contains(artistName, ignoreCase = true) ||
+                                    artistName.contains(canvasArtist, ignoreCase = true)
+                                    
+                isSongMatch && isArtistMatch
             }
         }
         
-        // BUG FIX: Do NOT cache blank canvas permanently. Try again next time if failed.
-        if (fetched != null && (fetched.animated?.isNotBlank() == true || fetched.videoUrl?.isNotBlank() == true)) {
+        if (fetched != null && (!fetched.animated.isNullOrBlank() || !fetched.videoUrl.isNullOrBlank())) {
             canvasArtwork = fetched
             CanvasArtworkPlaybackCache.put(item.mediaId, fetched)
-        } else {
-            canvasArtwork = null
         }
         
         canvasFetchInFlight = false
