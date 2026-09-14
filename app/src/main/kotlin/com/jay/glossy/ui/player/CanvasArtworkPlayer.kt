@@ -187,10 +187,10 @@ fun CanvasArtworkPlayer(
         }
     }
 
-    // ANIMATION SNAP: Purana video 0ms mein hide hoga, naya 500ms fade-in se aayega
+    // ANIMATION SNAP: 200ms faster fade in so it doesn't feel slow
     val alpha by animateFloatAsState(
         targetValue = if (isVideoReady && activeUrl == initialUrl) 1f else 0f,
-        animationSpec = if (isVideoReady) tween(500) else snap(),
+        animationSpec = if (isVideoReady) tween(200) else snap(),
         label = "canvasAlpha"
     )
 
