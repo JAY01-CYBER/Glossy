@@ -117,7 +117,6 @@ fun StorageSettings(
         defaultValue = true
     )
 
-    // CANVAS CACHE PREFERENCES
     val (maxCanvasCacheSize, onMaxCanvasCacheSizeChange) = rememberPreference(
         key = MaxCanvasCacheSizeKey,
         defaultValue = 256
@@ -219,7 +218,6 @@ fun StorageSettings(
         }
     }
 
-    // Dialogs
     if (showCanvasCacheModeDialog) {
         EnumDialog(
             onDismiss = { showCanvasCacheModeDialog = false },
@@ -610,7 +608,7 @@ fun StorageSettings(
                     title = "Canvas Video Cache",
                     items = listOf(
                         Material3SettingsItem(
-                            icon = painterResource(R.drawable.save), 
+                            icon = painterResource(R.drawable.cached), 
                             title = { Text("Canvas Cache Mode") },
                             description = {
                                 Text(
