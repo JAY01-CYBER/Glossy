@@ -189,7 +189,6 @@ private fun getTextColor(playerBackground: PlayerBackgroundStyle): Color {
     }
 }
 
-// Canvas cache to prevent duplicate network calls
 object CanvasArtworkPlaybackCache {
     private const val defaultMaxSize = 256
     private val map = LinkedHashMap<String, CanvasArtwork>(defaultMaxSize, 0.75f, true)
@@ -578,7 +577,6 @@ private fun CanvasLayer(
 
     LaunchedEffect(item.mediaId) {
         CanvasArtworkPlaybackCache.get(item.mediaId)?.let { cached ->
-            // YAHAN NULL SAFE CHECK LAGAYA HAI
             if (cached.animated?.isNotBlank() == true || cached.videoUrl?.isNotBlank() == true) {
                 canvasArtwork = cached
             }
@@ -618,32 +616,22 @@ private fun CanvasLayer(
 
             val rawArtwork = tidalDeferred.await() ?: appleDeferred.await()
             
+            // LIGHT MATCHING LOGIC (Protects from completely wrong canvas, but doesn't strictly fail)
             rawArtwork?.takeIf { artwork ->
-                val canvasSong = artwork.name ?: ""
-                val canvasArtist = artwork.artist ?: ""
+                val canvasSong = normalizeCanvasSongTitle(artwork.name ?: "")
+                val reqSong = normalizeCanvasSongTitle(songTitleRaw)
                 
-                val reqSongNorm = normalizeCanvasSongTitle(songTitleRaw)
-                val canvasSongNorm = normalizeCanvasSongTitle(canvasSong)
-                
-                val reqArtistNorm = normalizeCanvasArtistName(artistNameRaw)
-                val canvasArtistNorm = normalizeCanvasArtistName(canvasArtist)
-                
-                val isSongMatch = canvasSongNorm.isEmpty() || reqSongNorm.isEmpty() ||
-                                  canvasSongNorm.contains(reqSongNorm, ignoreCase = true) ||
-                                  reqSongNorm.contains(canvasSongNorm, ignoreCase = true)
-                
-                val isArtistMatch = canvasArtistNorm.isEmpty() || reqArtistNorm.isEmpty() ||
-                                    canvasArtistNorm.contains(reqArtistNorm, ignoreCase = true) ||
-                                    reqArtistNorm.contains(canvasArtistNorm, ignoreCase = true)
-                                    
-                isSongMatch && isArtistMatch
+                if (canvasSong.isEmpty() || reqSong.isEmpty()) true
+                else canvasSong.contains(reqSong, ignoreCase = true) || reqSong.contains(canvasSong, ignoreCase = true)
             }
         }
         
-        // Agar result valid hai tabhi cache mein save karega
+        // BUG FIX: Do NOT cache blank canvas permanently. Try again next time if failed.
         if (fetched != null && (fetched.animated?.isNotBlank() == true || fetched.videoUrl?.isNotBlank() == true)) {
             canvasArtwork = fetched
             CanvasArtworkPlaybackCache.put(item.mediaId, fetched)
+        } else {
+            canvasArtwork = null
         }
         
         canvasFetchInFlight = false
