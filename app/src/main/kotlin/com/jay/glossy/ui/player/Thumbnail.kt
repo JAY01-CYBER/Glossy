@@ -189,7 +189,6 @@ private fun getTextColor(playerBackground: PlayerBackgroundStyle): Color {
     }
 }
 
-// CACHE UPDATE FOR SETTINGS SLIDER
 object CanvasArtworkPlaybackCache {
     private const val defaultMaxSize = 256
     private val map = LinkedHashMap<String, CanvasArtwork>(defaultMaxSize, 0.75f, true)
@@ -564,7 +563,6 @@ fun Thumbnail(
     }
 }
 
-// STRICT NAME VALIDATION TO FIX WRONG CANVAS ISSUE
 @Composable
 private fun CanvasLayer(
     item: MediaItem,
@@ -579,7 +577,7 @@ private fun CanvasLayer(
 
     LaunchedEffect(item.mediaId) {
         CanvasArtworkPlaybackCache.get(item.mediaId)?.let { cached ->
-            if (cached.animated.isNotBlank()) {
+            if (!cached.animated.isNullOrBlank()) {
                 canvasArtwork = cached
             }
             return@LaunchedEffect
@@ -616,7 +614,6 @@ private fun CanvasLayer(
 
             val rawArtwork = tidalDeferred.await() ?: appleDeferred.await()
             
-            // MATCHING LOGIC (Protects from wrong artist/song canvas)
             rawArtwork?.takeIf { artwork ->
                 val canvasSong = artwork.name ?: ""
                 val canvasArtist = artwork.artist ?: ""
@@ -637,11 +634,10 @@ private fun CanvasLayer(
             }
         }
         
-        // Agar gaana na mile tab bhi cache mein 'blank' save karenge taaki bar-bar API call na ho.
         val artworkToCache = fetched ?: CanvasArtwork("", "", "", "")
         
         CanvasArtworkPlaybackCache.put(item.mediaId, artworkToCache)
-        if (artworkToCache.animated.isNotBlank()) {
+        if (!artworkToCache.animated.isNullOrBlank()) {
             canvasArtwork = artworkToCache
         }
         
