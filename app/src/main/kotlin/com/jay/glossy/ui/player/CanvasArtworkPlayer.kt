@@ -82,7 +82,6 @@ object CanvasPlayerManager {
                 DefaultMediaSourceFactory(upstreamFactory)
             }
             
-            // FAST START BUFFERING
             val loadControl = DefaultLoadControl.Builder()
                 .setBufferDurationsMs(500, 5000, 100, 500)
                 .build()
@@ -116,7 +115,6 @@ object CanvasPlayerManager {
             MimeTypes.VIDEO_MP4
         }
 
-        // Just set the new media item. Do not call stop() or clearMediaItems() here to preserve fast start.
         player.setMediaItem(MediaItem.Builder().setUri(normalizedUrl).setMimeType(mimeType).build())
         player.prepare()
         currentUrl = normalizedUrl
@@ -134,16 +132,19 @@ fun CanvasArtworkPlayer(
     
     var isVideoReady by remember { mutableStateOf(false) }
     var videoAspectRatio by remember { mutableStateOf(1f) }
+    var activeUrl by remember { mutableStateOf<String?>(null) }
 
     val (canvasCacheMode) = rememberEnumPreference(CanvasCacheModeKey, defaultValue = CanvasCacheMode.VIDEO_AND_URL)
     val enableVideoCache = canvasCacheMode == CanvasCacheMode.VIDEO_AND_URL
 
     val exoPlayer = remember(enableVideoCache) { CanvasPlayerManager.getPlayer(context, enableVideoCache) }
 
+    // BUG 1 FIX (GHOSTING): Turant isVideoReady ko false karke hide karo
     LaunchedEffect(initialUrl, enableVideoCache) {
-        if (CanvasPlayerManager.currentUrl != initialUrl) {
-            isVideoReady = false // Instantly hide old video when song changes
+        if (activeUrl != initialUrl) {
+            isVideoReady = false 
         }
+        activeUrl = initialUrl
         CanvasPlayerManager.play(context, initialUrl, enableVideoCache)
     }
 
@@ -159,10 +160,15 @@ fun CanvasArtworkPlayer(
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                 if (CanvasPlayerManager.currentUrl == primaryUrl && !fallbackUrl.isNullOrBlank()) {
                     CanvasPlayerManager.play(context, fallbackUrl, enableVideoCache)
+                    activeUrl = fallbackUrl
                     isVideoReady = false 
                 }
             }
-            override fun onRenderedFirstFrame() { isVideoReady = true }
+            override fun onRenderedFirstFrame() { 
+                if (activeUrl == CanvasPlayerManager.currentUrl) {
+                    isVideoReady = true 
+                }
+            }
             override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
                 if (videoSize.width > 0 && videoSize.height > 0) {
                     videoAspectRatio = videoSize.width.toFloat() / videoSize.height
@@ -181,9 +187,9 @@ fun CanvasArtworkPlayer(
         }
     }
 
-    // GHOSTING FIX: Snap animation hides video instantly (0ms), then fades in (500ms) when ready
+    // ANIMATION SNAP: Purana video 0ms mein hide hoga, naya 500ms fade-in se aayega
     val alpha by animateFloatAsState(
-        targetValue = if (isVideoReady && CanvasPlayerManager.currentUrl == initialUrl) 1f else 0f,
+        targetValue = if (isVideoReady && activeUrl == initialUrl) 1f else 0f,
         animationSpec = if (isVideoReady) tween(500) else snap(),
         label = "canvasAlpha"
     )
