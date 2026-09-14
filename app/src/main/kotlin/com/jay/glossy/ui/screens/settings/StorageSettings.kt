@@ -34,6 +34,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,16 +56,21 @@ import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.R
 import com.jay.glossy.constants.EnableSongCacheKey
+import com.jay.glossy.constants.MaxCanvasCacheSizeKey
 import com.jay.glossy.constants.MaxImageCacheSizeKey
 import com.jay.glossy.constants.MaxSongCacheSizeKey
-import com.jay.glossy.constants.SmartTrimmerKey 
+import com.jay.glossy.constants.SmartTrimmerKey
+import com.jay.glossy.constants.CanvasCacheMode
+import com.jay.glossy.constants.CanvasCacheModeKey
 import com.jay.glossy.extensions.tryOrNull
 import com.jay.glossy.extensions.directorySizeBytes 
 import com.jay.glossy.ui.component.ActionPromptDialog
+import com.jay.glossy.ui.component.EnumDialog
 import com.jay.glossy.ui.component.IconButton
 import com.jay.glossy.ui.component.Material3SettingsGroup
 import com.jay.glossy.ui.component.Material3SettingsItem
 import com.jay.glossy.ui.utils.backToMain
+import com.jay.glossy.utils.rememberEnumPreference
 import com.jay.glossy.utils.rememberPreference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -87,7 +93,6 @@ fun StorageSettings(
     val playerCache = LocalPlayerConnection.current?.service?.playerCache ?: return
     val downloadCache = LocalPlayerConnection.current?.service?.downloadCache ?: return
     
-    // Fail-safe Directories from M3-Play
     val downloadCacheDir = remember { context.filesDir.resolve("download") }
     val playerCacheDir = remember { context.filesDir.resolve("exoplayer") }
 
@@ -95,7 +100,6 @@ fun StorageSettings(
     val songCacheString = stringResource(R.string.song_cache).lowercase()
     val imageCacheString = stringResource(R.string.image_cache).lowercase()
     
-    // Smart Trimmer Logic from M3-Play
     val (smartTrimmer, onSmartTrimmerChange) = rememberPreference(
         key = SmartTrimmerKey,
         defaultValue = false
@@ -113,12 +117,24 @@ fun StorageSettings(
         defaultValue = true
     )
 
+    // CANVAS CACHE PREFERENCES
+    val (maxCanvasCacheSize, onMaxCanvasCacheSizeChange) = rememberPreference(
+        key = MaxCanvasCacheSizeKey,
+        defaultValue = 256
+    )
+    var canvasCacheSize by remember { mutableIntStateOf(com.jay.glossy.ui.player.CanvasArtworkPlaybackCache.currentItemCount) }
+    
+    val (canvasCacheMode, onCanvasCacheModeChange) = rememberEnumPreference(
+        key = CanvasCacheModeKey,
+        defaultValue = CanvasCacheMode.VIDEO_AND_URL
+    )
+    var showCanvasCacheModeDialog by remember { mutableStateOf(false) }
+
     var clearDownloads by remember { mutableStateOf(false) }
     var clearCacheDialog by remember { mutableStateOf(false) }
     var clearImageCacheDialog by remember { mutableStateOf(false) }
-    var clearCanvasCacheDialog by remember { mutableStateOf(false) } // NAYA CANVAS DIALOG STATE
+    var clearCanvasCacheDialog by remember { mutableStateOf(false) }
 
-    // State for the confirmation dialog
     var showCacheWarningDialog by remember { mutableStateOf(false) }
     var cacheType by remember { mutableStateOf("") }
     var cacheUsage by remember { mutableLongStateOf(0L) }
@@ -129,23 +145,18 @@ fun StorageSettings(
     var downloadCacheSize by remember { mutableLongStateOf(0L) }
 
     val imageCacheProgress by animateFloatAsState(
-        targetValue =
-            (imageCacheSize.toFloat() / (maxImageCacheSize * 1024 * 1024L)).coerceIn(
-                0f,
-                1f,
-            ),
+        targetValue = (imageCacheSize.toFloat() / (maxImageCacheSize * 1024 * 1024L)).coerceIn(0f, 1f),
         label = "imageCacheProgress",
     )
     val playerCacheProgress by animateFloatAsState(
-        targetValue =
-            (playerCacheSize.toFloat() / (maxSongCacheSize * 1024 * 1024L)).coerceIn(
-                0f,
-                1f,
-            ),
+        targetValue = (playerCacheSize.toFloat() / (maxSongCacheSize * 1024 * 1024L)).coerceIn(0f, 1f),
         label = "playerCacheProgress",
     )
+    val canvasCacheProgress by animateFloatAsState(
+        targetValue = if (maxCanvasCacheSize > 0) (canvasCacheSize.toFloat() / maxCanvasCacheSize).coerceIn(0f, 1f) else 0f,
+        label = "canvasCacheProgress",
+    )
 
-    // Smart Trimmer Auto-Disable Check
     val isSmartTrimmerAvailable = maxImageCacheSize != 0 || maxSongCacheSize != 0
     LaunchedEffect(isSmartTrimmerAvailable) {
         if (!isSmartTrimmerAvailable && smartTrimmer) onSmartTrimmerChange(false)
@@ -168,6 +179,11 @@ fun StorageSettings(
             }
         }
     }
+    
+    LaunchedEffect(maxCanvasCacheSize) {
+        com.jay.glossy.ui.player.CanvasArtworkPlaybackCache.setMaxSize(maxCanvasCacheSize)
+        canvasCacheSize = com.jay.glossy.ui.player.CanvasArtworkPlaybackCache.currentItemCount
+    }
 
     LaunchedEffect(imageDiskCache) {
         while (isActive) {
@@ -176,7 +192,6 @@ fun StorageSettings(
         }
     }
     
-    // Fail-safe Size Check for Player Cache (M3-Play Logic + Glossy State)
     LaunchedEffect(playerCache, playerCacheDir) {
         while (isActive) {
             delay(500)
@@ -187,7 +202,6 @@ fun StorageSettings(
         }
     }
     
-    // Fail-safe Size Check for Download Cache (M3-Play Logic + Glossy State)
     LaunchedEffect(downloadCache, downloadCacheDir) {
         while (isActive) {
             delay(500)
@@ -198,7 +212,33 @@ fun StorageSettings(
         }
     }
 
+    LaunchedEffect(Unit) {
+        while (isActive) {
+            delay(1000)
+            canvasCacheSize = com.jay.glossy.ui.player.CanvasArtworkPlaybackCache.currentItemCount
+        }
+    }
+
     // Dialogs
+    if (showCanvasCacheModeDialog) {
+        EnumDialog(
+            onDismiss = { showCanvasCacheModeDialog = false },
+            onSelect = {
+                onCanvasCacheModeChange(it)
+                showCanvasCacheModeDialog = false
+            },
+            title = "Canvas Cache Mode",
+            current = canvasCacheMode,
+            values = CanvasCacheMode.entries.toList(),
+            valueText = {
+                when (it) {
+                    CanvasCacheMode.URL_ONLY -> "URLs Only (Saves Storage)"
+                    CanvasCacheMode.VIDEO_AND_URL -> "URLs & Videos (Saves Data, Faster)"
+                }
+            }
+        )
+    }
+
     if (clearDownloads) {
         ActionPromptDialog(
             title = stringResource(R.string.clear_all_downloads),
@@ -276,19 +316,20 @@ fun StorageSettings(
         )
     }
 
-    // NAYA CANVAS CACHE DIALOG
     if (clearCanvasCacheDialog) {
         ActionPromptDialog(
-            title = "Clear Canvas Cache",
+            title = "Clear Canvas Video Cache",
             onDismiss = { clearCanvasCacheDialog = false },
             onConfirm = {
                 com.jay.glossy.ui.player.CanvasArtworkPlaybackCache.clear()
+                canvasCacheSize = 0
+                com.jay.glossy.ui.player.CanvasPlayerManager.clearVideoCache(context)
                 Toast.makeText(context, "Canvas cache cleared", Toast.LENGTH_SHORT).show()
                 clearCanvasCacheDialog = false
             },
             onCancel = { clearCanvasCacheDialog = false },
             content = {
-                Text(text = "This will remove all temporarily cached short video backgrounds. Next time you play the song, they will be downloaded again.")
+                Text(text = "This will remove all temporarily cached API URLs and MP4 files. Next time you play the song, they will be downloaded again.")
             },
         )
     }
@@ -358,13 +399,12 @@ fun StorageSettings(
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
         ) {
             
-            // Smart Trimmer UI Group
             item {
                 Material3SettingsGroup(
                     title = stringResource(R.string.smart_trimmer),
                     items = listOf(
                         Material3SettingsItem(
-                            icon = painterResource(R.drawable.manage_search), // Adjust icon if needed
+                            icon = painterResource(R.drawable.manage_search),
                             title = { Text(stringResource(R.string.smart_trimmer)) },
                             description = { Text(stringResource(R.string.smart_trimmer_description)) },
                             trailingContent = {
@@ -565,11 +605,57 @@ fun StorageSettings(
                 )
             }
 
-            // NAYA CANVAS VIDEO CACHE GROUP
             item {
                 Material3SettingsGroup(
                     title = "Canvas Video Cache",
                     items = listOf(
+                        Material3SettingsItem(
+                            icon = painterResource(R.drawable.save), 
+                            title = { Text("Canvas Cache Mode") },
+                            description = {
+                                Text(
+                                    when (canvasCacheMode) {
+                                        CanvasCacheMode.URL_ONLY -> "URLs Only (Saves Storage)"
+                                        CanvasCacheMode.VIDEO_AND_URL -> "URLs & Videos (Saves Data, Faster)"
+                                    }
+                                )
+                            },
+                            onClick = { showCanvasCacheModeDialog = true }
+                        ),
+                        Material3SettingsItem(
+                            icon = painterResource(R.drawable.cached),
+                            title = { Text("Max Canvas Items to Remember") },
+                            description = {
+                                val canvasCacheValues = remember { listOf(0, 50, 100, 256, 512, 1024, 2048) }
+                                Column {
+                                    Text(
+                                        text = when (maxCanvasCacheSize) {
+                                            0 -> stringResource(R.string.disable)
+                                            else -> "$maxCanvasCacheSize Items"
+                                        }
+                                    )
+                                    Slider(
+                                        value = canvasCacheValues.indexOf(maxCanvasCacheSize).toFloat().coerceAtLeast(0f),
+                                        onValueChange = {
+                                            val newValue = canvasCacheValues[it.roundToInt()]
+                                            onMaxCanvasCacheSizeChange(newValue)
+                                        },
+                                        steps = canvasCacheValues.size - 2,
+                                        valueRange = 0f..(canvasCacheValues.size - 1).toFloat(),
+                                    )
+                                    LinearProgressIndicator(
+                                        progress = { canvasCacheProgress },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        strokeCap = StrokeCap.Round,
+                                    )
+                                    Spacer(modifier = Modifier.padding(2.dp))
+                                    Text(
+                                        text = "$canvasCacheSize / ${if (maxCanvasCacheSize == 0) 0 else maxCanvasCacheSize} Items",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                    )
+                                }
+                            },
+                        ),
                         Material3SettingsItem(
                             icon = painterResource(R.drawable.clear_all),
                             title = { Text("Clear Canvas Video Cache") },
