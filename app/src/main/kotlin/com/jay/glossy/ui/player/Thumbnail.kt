@@ -562,6 +562,7 @@ fun Thumbnail(
     }
 }
 
+// FAST AND STRICT CANVAS FETCHING LOGIC WITH RELAXED MATCHING
 @Composable
 private fun CanvasLayer(
     item: MediaItem,
@@ -593,17 +594,23 @@ private fun CanvasLayer(
             val a = normalizeCanvasArtistName(requestedArtist)
 
             val fetched = runCatching { echomusicCanvasProvider.getBySongArtist(s, a) }.getOrNull()
-                ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
+                ?.takeIf { !it.animated.isNullOrBlank() || !it.videoUrl.isNullOrBlank() }
                 ?: runCatching { TidalCanvasProvider.getBySongArtist(s, a, requestedAlbum) }.getOrNull()
-                    ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
+                    ?.takeIf { !it.animated.isNullOrBlank() || !it.videoUrl.isNullOrBlank() }
                 ?: runCatching { AppleMusicCanvasProvider.getBySongArtist(s, a, requestedAlbum, storefront) }.getOrNull()
-                    ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
+                    ?.takeIf { !it.animated.isNullOrBlank() || !it.videoUrl.isNullOrBlank() }
 
             val validated = fetched?.let { artwork ->
                 val localArtists = splitAndNormalizeArtists(requestedArtist)
                 val returnedArtists = splitAndNormalizeArtists(artwork.artist ?: "")
-                val artistMatches = localArtists.isNotEmpty() && returnedArtists.isNotEmpty() &&
-                        (localArtists.any { local -> returnedArtists.any { it.equals(local, ignoreCase = true) } })
+                
+                // Relaxed checking: Agar naam thoda sa bhi milta hai toh video pass kar do
+                val artistMatches = localArtists.isEmpty() || returnedArtists.isEmpty() ||
+                        localArtists.any { local -> 
+                            returnedArtists.any { returned -> 
+                                local.contains(returned, ignoreCase = true) || returned.contains(local, ignoreCase = true) 
+                            } 
+                        }
 
                 if (artistMatches) artwork else null
             }
