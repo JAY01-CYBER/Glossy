@@ -10,6 +10,7 @@ import android.view.TextureView
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -127,34 +128,44 @@ fun CanvasArtworkPlayer(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val primary = primaryUrl?.takeIf { it.isNotBlank() }
-    val fallback = fallbackUrl?.takeIf { it.isNotBlank() }
-    val initial = primary ?: fallback ?: return
+    val initialUrl = primaryUrl?.takeIf { it.isNotBlank() } ?: fallbackUrl?.takeIf { it.isNotBlank() } ?: return
     
-    var currentUrl by remember(initial) { mutableStateOf(initial) }
-    var isVideoReady by remember(initial) { mutableStateOf(false) }
-    var videoAspectRatio by remember(initial) { mutableStateOf(1f) }
+    var isVideoReady by remember { mutableStateOf(false) }
+    var videoAspectRatio by remember { mutableStateOf(1f) }
+    var activeUrl by remember { mutableStateOf<String?>(null) }
 
     val (canvasCacheMode) = rememberEnumPreference(CanvasCacheModeKey, defaultValue = CanvasCacheMode.VIDEO_AND_URL)
     val enableVideoCache = canvasCacheMode == CanvasCacheMode.VIDEO_AND_URL
 
     val exoPlayer = remember(enableVideoCache) { CanvasPlayerManager.getPlayer(context, enableVideoCache) }
 
-    DisposableEffect(exoPlayer, primary, fallback) {
+    LaunchedEffect(initialUrl, enableVideoCache) {
+        if (activeUrl != initialUrl) {
+            isVideoReady = false 
+        }
+        activeUrl = initialUrl
+        CanvasPlayerManager.play(context, initialUrl, enableVideoCache)
+    }
+
+    DisposableEffect(exoPlayer) {
+        exoPlayer.playWhenReady = true
+        onDispose {
+            exoPlayer.playWhenReady = false 
+        }
+    }
+
+    DisposableEffect(exoPlayer, initialUrl) {
         val listener = object : Player.Listener {
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                val next = when (currentUrl) {
-                    primary -> fallback
-                    else -> null
-                }
-                if (!next.isNullOrBlank()) {
-                    currentUrl = next
+                if (CanvasPlayerManager.currentUrl == primaryUrl && !fallbackUrl.isNullOrBlank()) {
+                    CanvasPlayerManager.play(context, fallbackUrl, enableVideoCache)
+                    activeUrl = fallbackUrl
                     isVideoReady = false 
                 }
             }
-            override fun onRenderedFirstFrame() {
-                if (currentUrl == CanvasPlayerManager.currentUrl) {
-                    isVideoReady = true
+            override fun onRenderedFirstFrame() { 
+                if (activeUrl == CanvasPlayerManager.currentUrl) {
+                    isVideoReady = true 
                 }
             }
             override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
@@ -165,32 +176,19 @@ fun CanvasArtworkPlayer(
         }
         exoPlayer.addListener(listener)
         
-        if (exoPlayer.videoSize.width > 0 && CanvasPlayerManager.currentUrl == currentUrl) {
+        if (exoPlayer.videoSize.width > 0 && CanvasPlayerManager.currentUrl == initialUrl) {
             isVideoReady = true
             videoAspectRatio = exoPlayer.videoSize.width.toFloat() / exoPlayer.videoSize.height
         }
 
-        onDispose { exoPlayer.removeListener(listener) }
-    }
-
-    LaunchedEffect(currentUrl, exoPlayer, enableVideoCache) {
-        val normalized = currentUrl.trim()
-        if (CanvasPlayerManager.currentUrl != normalized) {
-            isVideoReady = false
-        }
-        CanvasPlayerManager.play(context, normalized, enableVideoCache)
-    }
-
-    DisposableEffect(exoPlayer) {
-        exoPlayer.playWhenReady = true
-        onDispose {
-            exoPlayer.playWhenReady = false
+        onDispose { 
+            exoPlayer.removeListener(listener)
         }
     }
 
     val alpha by animateFloatAsState(
-        targetValue = if (isVideoReady) 1f else 0f,
-        animationSpec = tween(durationMillis = 300),
+        targetValue = if (isVideoReady && activeUrl == initialUrl) 1f else 0f,
+        animationSpec = if (isVideoReady) tween(500) else snap(),
         label = "canvasAlpha"
     )
 
@@ -208,7 +206,7 @@ fun CanvasArtworkPlayer(
                 setBackgroundColor(android.graphics.Color.TRANSPARENT)
             }
         },
-        update = { view ->
+        update = { view -> 
             view.setAspectRatio(videoAspectRatio)
         },
         onRelease = { view ->
