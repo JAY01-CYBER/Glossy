@@ -10,6 +10,7 @@ import android.view.TextureView
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -108,6 +109,11 @@ object CanvasPlayerManager {
         if (currentUrl == normalizedUrl && exoPlayer != null && currentCacheMode == enableVideoCache) return
         
         val player = getPlayer(context, enableVideoCache)
+        
+        // INSTANTLY CLEAR PREVIOUS FRAME TO PREVENT GHOSTING
+        player.stop()
+        player.clearMediaItems()
+        
         val mimeType = if (normalizedUrl.contains(".m3u8", true) || normalizedUrl.lowercase(Locale.ROOT).split('?').first().endsWith(".m3u8")) {
             MimeTypes.APPLICATION_M3U8
         } else {
@@ -137,9 +143,10 @@ fun CanvasArtworkPlayer(
 
     val exoPlayer = remember(enableVideoCache) { CanvasPlayerManager.getPlayer(context, enableVideoCache) }
 
+    // TRIGGER NEW SONG LOAD
     LaunchedEffect(initialUrl, enableVideoCache) {
         if (CanvasPlayerManager.currentUrl != initialUrl) {
-            isVideoReady = false 
+            isVideoReady = false // IMMEDIATELY HIDE
         }
         CanvasPlayerManager.play(context, initialUrl, enableVideoCache)
     }
@@ -178,9 +185,10 @@ fun CanvasArtworkPlayer(
         }
     }
 
+    //  Snap instant hide, smooth fade-in
     val alpha by animateFloatAsState(
-        targetValue = if (isVideoReady) 1f else 0f,
-        animationSpec = tween(300),
+        targetValue = if (isVideoReady && CanvasPlayerManager.currentUrl == initialUrl) 1f else 0f,
+        animationSpec = if (isVideoReady) tween(500) else snap(),
         label = "canvasAlpha"
     )
 
