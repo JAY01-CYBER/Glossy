@@ -10,7 +10,6 @@ import android.view.TextureView
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -39,16 +38,13 @@ import okhttp3.OkHttpClient
 import java.io.File
 import java.util.Locale
 
-object CanvasPlayerManager {
-    var exoPlayer: ExoPlayer? = null
-    var currentUrl: String? = null
-    private var videoCache: SimpleCache? = null 
-    private var currentCacheMode: Boolean? = null 
+object CanvasCacheManager {
+    private var videoCache: SimpleCache? = null
 
     fun getVideoCache(context: Context): SimpleCache {
         if (videoCache == null) {
             val cacheDir = File(context.filesDir, "canvas_video_cache")
-            val evictor = LeastRecentlyUsedCacheEvictor(256 * 1024 * 1024L) 
+            val evictor = LeastRecentlyUsedCacheEvictor(256 * 1024 * 1024L) // 256MB Limit
             val databaseProvider = StandaloneDatabaseProvider(context)
             videoCache = SimpleCache(cacheDir, evictor, databaseProvider)
         }
@@ -56,68 +52,9 @@ object CanvasPlayerManager {
     }
 
     fun clearVideoCache(context: Context) {
-        exoPlayer?.release()
-        exoPlayer = null
         videoCache?.release()
         videoCache = null
         File(context.filesDir, "canvas_video_cache").deleteRecursively()
-        currentUrl = null
-    }
-
-    fun getPlayer(context: Context, enableVideoCache: Boolean): ExoPlayer {
-        if (exoPlayer == null || currentCacheMode != enableVideoCache) {
-            exoPlayer?.release()
-            currentCacheMode = enableVideoCache
-
-            val okHttpClient = OkHttpClient.Builder().build()
-            val upstreamFactory = DefaultDataSource.Factory(context, OkHttpDataSource.Factory(okHttpClient))
-            
-            val mediaSourceFactory = if (enableVideoCache) {
-                val cacheDataSourceFactory = CacheDataSource.Factory()
-                    .setCache(getVideoCache(context))
-                    .setUpstreamDataSourceFactory(upstreamFactory)
-                    .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
-                DefaultMediaSourceFactory(cacheDataSourceFactory)
-            } else {
-                DefaultMediaSourceFactory(upstreamFactory)
-            }
-            
-            val loadControl = DefaultLoadControl.Builder()
-                .setBufferDurationsMs(500, 5000, 100, 500)
-                .build()
-            
-            exoPlayer = ExoPlayer.Builder(context)
-                .setMediaSourceFactory(mediaSourceFactory)
-                .setLoadControl(loadControl)
-                .build()
-                .apply {
-                    trackSelectionParameters = trackSelectionParameters.buildUpon().setForceHighestSupportedBitrate(true).build()
-                    setAudioAttributes(
-                        AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(),
-                        false
-                    )
-                    videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
-                    volume = 0f
-                    repeatMode = Player.REPEAT_MODE_ONE
-                }
-        }
-        return exoPlayer!!
-    }
-
-    fun play(context: Context, url: String, enableVideoCache: Boolean) {
-        val normalizedUrl = url.trim()
-        if (currentUrl == normalizedUrl && exoPlayer != null && currentCacheMode == enableVideoCache) return
-        
-        val player = getPlayer(context, enableVideoCache)
-        val mimeType = if (normalizedUrl.contains(".m3u8", true) || normalizedUrl.lowercase(Locale.ROOT).split('?').first().endsWith(".m3u8")) {
-            MimeTypes.APPLICATION_M3U8
-        } else {
-            MimeTypes.VIDEO_MP4
-        }
-
-        player.setMediaItem(MediaItem.Builder().setUri(normalizedUrl).setMimeType(mimeType).build())
-        player.prepare()
-        currentUrl = normalizedUrl
     }
 }
 
@@ -128,45 +65,60 @@ fun CanvasArtworkPlayer(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val initialUrl = primaryUrl?.takeIf { it.isNotBlank() } ?: fallbackUrl?.takeIf { it.isNotBlank() } ?: return
+    val primary = primaryUrl?.takeIf { it.isNotBlank() }
+    val fallback = fallbackUrl?.takeIf { it.isNotBlank() }
+    val initial = primary ?: fallback ?: return
     
-    var isVideoReady by remember { mutableStateOf(false) }
-    var videoAspectRatio by remember { mutableStateOf(1f) }
-    var activeUrl by remember { mutableStateOf<String?>(null) }
+    var currentUrl by remember(initial) { mutableStateOf(initial) }
+    var isVideoReady by remember(initial) { mutableStateOf(false) }
+    var videoAspectRatio by remember(initial) { mutableStateOf(1f) }
 
     val (canvasCacheMode) = rememberEnumPreference(CanvasCacheModeKey, defaultValue = CanvasCacheMode.VIDEO_AND_URL)
     val enableVideoCache = canvasCacheMode == CanvasCacheMode.VIDEO_AND_URL
 
-    val exoPlayer = remember(enableVideoCache) { CanvasPlayerManager.getPlayer(context, enableVideoCache) }
-
-    LaunchedEffect(initialUrl, enableVideoCache) {
-        if (activeUrl != initialUrl) {
-            isVideoReady = false 
+    val exoPlayer = remember(enableVideoCache) {
+        val okHttpClient = OkHttpClient.Builder().build()
+        val upstreamFactory = DefaultDataSource.Factory(context, OkHttpDataSource.Factory(okHttpClient))
+        
+        val mediaSourceFactory = if (enableVideoCache) {
+            val cacheDataSourceFactory = CacheDataSource.Factory()
+                .setCache(CanvasCacheManager.getVideoCache(context))
+                .setUpstreamDataSourceFactory(upstreamFactory)
+                .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+            DefaultMediaSourceFactory(cacheDataSourceFactory)
+        } else {
+            DefaultMediaSourceFactory(upstreamFactory)
         }
-        activeUrl = initialUrl
-        CanvasPlayerManager.play(context, initialUrl, enableVideoCache)
+        
+        ExoPlayer.Builder(context)
+            .setMediaSourceFactory(mediaSourceFactory)
+            .build()
+            .apply {
+                trackSelectionParameters = trackSelectionParameters.buildUpon().setForceHighestSupportedBitrate(true).build()
+                setAudioAttributes(
+                    AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(),
+                    false
+                )
+                videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+                volume = 0f
+                repeatMode = Player.REPEAT_MODE_ONE
+            }
     }
 
-    DisposableEffect(exoPlayer) {
-        exoPlayer.playWhenReady = true
-        onDispose {
-            exoPlayer.playWhenReady = false 
-        }
-    }
-
-    DisposableEffect(exoPlayer, initialUrl) {
+    DisposableEffect(exoPlayer, primary, fallback) {
         val listener = object : Player.Listener {
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                if (CanvasPlayerManager.currentUrl == primaryUrl && !fallbackUrl.isNullOrBlank()) {
-                    CanvasPlayerManager.play(context, fallbackUrl, enableVideoCache)
-                    activeUrl = fallbackUrl
+                val next = when (currentUrl) {
+                    primary -> fallback
+                    else -> null
+                }
+                if (!next.isNullOrBlank()) {
+                    currentUrl = next
                     isVideoReady = false 
                 }
             }
-            override fun onRenderedFirstFrame() { 
-                if (activeUrl == CanvasPlayerManager.currentUrl) {
-                    isVideoReady = true 
-                }
+            override fun onRenderedFirstFrame() {
+                isVideoReady = true
             }
             override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
                 if (videoSize.width > 0 && videoSize.height > 0) {
@@ -175,20 +127,38 @@ fun CanvasArtworkPlayer(
             }
         }
         exoPlayer.addListener(listener)
-        
-        if (exoPlayer.videoSize.width > 0 && CanvasPlayerManager.currentUrl == initialUrl) {
-            isVideoReady = true
-            videoAspectRatio = exoPlayer.videoSize.width.toFloat() / exoPlayer.videoSize.height
+        onDispose { exoPlayer.removeListener(listener) }
+    }
+
+    LaunchedEffect(currentUrl, exoPlayer) {
+        val normalized = currentUrl.trim()
+        val mimeType = when {
+            normalized.contains(".m3u8", ignoreCase = true) || 
+            normalized.lowercase(Locale.ROOT).split('?').first().endsWith(".m3u8") -> MimeTypes.APPLICATION_M3U8
+            else -> MimeTypes.VIDEO_MP4
         }
 
-        onDispose { 
-            exoPlayer.removeListener(listener)
+        val mediaItem = MediaItem.Builder()
+            .setUri(normalized)
+            .setMimeType(mimeType)
+            .build()
+
+        exoPlayer.stop()
+        isVideoReady = false
+        exoPlayer.setMediaItem(mediaItem)
+        exoPlayer.prepare()
+        exoPlayer.playWhenReady = true
+    }
+
+    DisposableEffect(exoPlayer) {
+        onDispose {
+            exoPlayer.release()
         }
     }
 
     val alpha by animateFloatAsState(
-        targetValue = if (isVideoReady && activeUrl == initialUrl) 1f else 0f,
-        animationSpec = if (isVideoReady) tween(500) else snap(),
+        targetValue = if (isVideoReady) 1f else 0f,
+        animationSpec = tween(durationMillis = 300),
         label = "canvasAlpha"
     )
 
@@ -206,14 +176,8 @@ fun CanvasArtworkPlayer(
                 setBackgroundColor(android.graphics.Color.TRANSPARENT)
             }
         },
-        update = { view -> 
+        update = { view ->
             view.setAspectRatio(videoAspectRatio)
-        },
-        onRelease = { view ->
-            val textureView = view.getChildAt(0) as? TextureView
-            if (textureView != null) {
-                exoPlayer.clearVideoTextureView(textureView)
-            }
         },
         modifier = modifier.alpha(alpha),
     )
