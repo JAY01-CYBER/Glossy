@@ -189,11 +189,14 @@ private fun getTextColor(playerBackground: PlayerBackgroundStyle): Color {
     }
 }
 
-// Canvas cache to prevent duplicate network calls
+// CACHE UPDATE FOR SETTINGS SLIDER
 object CanvasArtworkPlaybackCache {
     private const val defaultMaxSize = 256
     private val map = LinkedHashMap<String, CanvasArtwork>(defaultMaxSize, 0.75f, true)
     @Volatile private var maxSize = defaultMaxSize
+
+    val currentItemCount: Int
+        get() = map.size
 
     @Synchronized
     fun get(mediaId: String): CanvasArtwork? {
@@ -206,18 +209,34 @@ object CanvasArtworkPlaybackCache {
         val limit = maxSize
         if (limit <= 0 || mediaId.isBlank()) return
         map[mediaId] = artwork
-        while (map.size > limit) {
-            val it = map.entries.iterator()
-            if (it.hasNext()) {
-                it.next()
-                it.remove()
-            }
-        }
+        trimToSize()
     }
 
     @Synchronized
     fun clear() {
         map.clear()
+    }
+
+    @Synchronized
+    fun setMaxSize(newSize: Int) {
+        maxSize = newSize
+        if (newSize == 0) {
+            map.clear()
+        } else {
+            trimToSize()
+        }
+    }
+
+    private fun trimToSize() {
+        while (map.size > maxSize) {
+            val it = map.entries.iterator()
+            if (it.hasNext()) {
+                it.next()
+                it.remove()
+            } else {
+                break
+            }
+        }
     }
 }
 
@@ -545,7 +564,6 @@ fun Thumbnail(
     }
 }
 
-// CANVAS IS NOW FULLY INDEPENDENT OF PLAYING STATE
 @Composable
 private fun CanvasLayer(
     item: MediaItem,
