@@ -200,10 +200,6 @@ fun CanvasArtworkPlayer(
         },
         update = { view -> 
             view.setAspectRatio(videoAspectRatio)
-            val textureView = view.getChildAt(0) as? TextureView
-            if (textureView != null && exoPlayer.videoSurfaceView != textureView) {
-                exoPlayer.setVideoTextureView(textureView)
-            }
         },
         onRelease = { view ->
             val textureView = view.getChildAt(0) as? TextureView
