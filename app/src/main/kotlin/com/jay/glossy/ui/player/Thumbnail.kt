@@ -189,6 +189,7 @@ private fun getTextColor(playerBackground: PlayerBackgroundStyle): Color {
     }
 }
 
+// Canvas cache to prevent duplicate network calls
 object CanvasArtworkPlaybackCache {
     private const val defaultMaxSize = 256
     private val map = LinkedHashMap<String, CanvasArtwork>(defaultMaxSize, 0.75f, true)
@@ -577,7 +578,8 @@ private fun CanvasLayer(
 
     LaunchedEffect(item.mediaId) {
         CanvasArtworkPlaybackCache.get(item.mediaId)?.let { cached ->
-            if (!cached.animated.isNullOrBlank()) {
+            // YAHAN NULL SAFE CHECK LAGAYA HAI
+            if (cached.animated?.isNotBlank() == true || cached.videoUrl?.isNotBlank() == true) {
                 canvasArtwork = cached
             }
             return@LaunchedEffect
@@ -598,18 +600,20 @@ private fun CanvasLayer(
             if (songTitle.isBlank() || artistName.isBlank()) return@withContext null
 
             val tidalDeferred = async {
-                TidalCanvasProvider.getBySongArtist(songTitle, artistName, albumName)
-                    ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
+                runCatching {
+                    TidalCanvasProvider.getBySongArtist(songTitle, artistName, albumName)
+                }.getOrNull()?.takeIf { it.animated?.isNotBlank() == true || it.videoUrl?.isNotBlank() == true }
             }
             
             val appleDeferred = async {
-                if (albumName.isNotBlank()) {
-                    AppleMusicCanvasProvider.getByAlbumArtist(albumName, artistName, storefront)
-                        ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
-                } else {
-                    null
-                } ?: AppleMusicCanvasProvider.getBySongArtist(songTitle, artistName, albumName, storefront)
-                    ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
+                runCatching {
+                    if (albumName.isNotBlank()) {
+                        AppleMusicCanvasProvider.getByAlbumArtist(albumName, artistName, storefront)
+                            ?.takeIf { it.animated?.isNotBlank() == true || it.videoUrl?.isNotBlank() == true }
+                    } else null
+                    ?: AppleMusicCanvasProvider.getBySongArtist(songTitle, artistName, albumName, storefront)
+                        ?.takeIf { it.animated?.isNotBlank() == true || it.videoUrl?.isNotBlank() == true }
+                }.getOrNull()
             }
 
             val rawArtwork = tidalDeferred.await() ?: appleDeferred.await()
@@ -624,21 +628,22 @@ private fun CanvasLayer(
                 val reqArtistNorm = normalizeCanvasArtistName(artistNameRaw)
                 val canvasArtistNorm = normalizeCanvasArtistName(canvasArtist)
                 
-                val isSongMatch = canvasSongNorm.contains(reqSongNorm, ignoreCase = true) ||
+                val isSongMatch = canvasSongNorm.isEmpty() || reqSongNorm.isEmpty() ||
+                                  canvasSongNorm.contains(reqSongNorm, ignoreCase = true) ||
                                   reqSongNorm.contains(canvasSongNorm, ignoreCase = true)
                 
-                val isArtistMatch = canvasArtistNorm.contains(reqArtistNorm, ignoreCase = true) ||
+                val isArtistMatch = canvasArtistNorm.isEmpty() || reqArtistNorm.isEmpty() ||
+                                    canvasArtistNorm.contains(reqArtistNorm, ignoreCase = true) ||
                                     reqArtistNorm.contains(canvasArtistNorm, ignoreCase = true)
                                     
                 isSongMatch && isArtistMatch
             }
         }
         
-        val artworkToCache = fetched ?: CanvasArtwork("", "", "", "")
-        
-        CanvasArtworkPlaybackCache.put(item.mediaId, artworkToCache)
-        if (!artworkToCache.animated.isNullOrBlank()) {
-            canvasArtwork = artworkToCache
+        // Agar result valid hai tabhi cache mein save karega
+        if (fetched != null && (fetched.animated?.isNotBlank() == true || fetched.videoUrl?.isNotBlank() == true)) {
+            canvasArtwork = fetched
+            CanvasArtworkPlaybackCache.put(item.mediaId, fetched)
         }
         
         canvasFetchInFlight = false
