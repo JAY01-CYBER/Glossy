@@ -97,11 +97,10 @@ import com.jay.glossy.ui.component.CastButton
 import com.jay.glossy.utils.rememberEnumPreference
 import com.jay.glossy.utils.rememberPreference
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.util.Locale
+import com.jay.glossy.echomusiccanvas.echomusicCanvasProvider
 
 @Immutable
 data class ThumbnailDimensions(
@@ -564,7 +563,7 @@ fun Thumbnail(
     }
 }
 
-// FAST AND STRICT CANVAS FETCHING LOGIC - FIXED FOR PARALLEL AND LOOSE MATCHING
+// EXACT ECHO MUSIC FETCHING LOGIC (With original sequential fallback)
 @Composable
 private fun CanvasLayer(
     item: MediaItem,
@@ -579,75 +578,46 @@ private fun CanvasLayer(
 
     LaunchedEffect(item.mediaId) {
         CanvasArtworkPlaybackCache.get(item.mediaId)?.let { cached ->
-            if (!cached.animated.isNullOrBlank() || !cached.videoUrl.isNullOrBlank()) {
-                canvasArtwork = cached
-            }
+            canvasArtwork = cached
             return@LaunchedEffect
         }
 
         if (canvasFetchInFlight) return@LaunchedEffect
         canvasFetchInFlight = true
 
-        val fetched = withContext(Dispatchers.IO) {
+        withContext(Dispatchers.IO) {
             val metadata = item.mediaMetadata
-            val albumName = metadata.albumTitle?.toString() ?: ""
-            val songTitleRaw = metadata.title?.toString() ?: ""
-            val artistNameRaw = metadata.artist?.toString() ?: ""
-            
-            val songTitle = normalizeCanvasSongTitle(songTitleRaw)
-            val artistName = normalizeCanvasArtistName(artistNameRaw)
+            val requestedTitle = metadata.title?.toString() ?: ""
+            val requestedArtist = metadata.artist?.toString() ?: ""
+            val requestedAlbum = metadata.albumTitle?.toString() ?: ""
 
-            if (songTitle.isBlank() || artistName.isBlank()) return@withContext null
+            val s = normalizeCanvasSongTitle(requestedTitle)
+            val a = normalizeCanvasArtistName(requestedArtist)
 
-            // Parallel async fetch for Apple and Tidal
-            var artwork: CanvasArtwork? = null
-            coroutineScope {
-                val appleDeferred = async {
-                    runCatching {
-                        if (albumName.isNotBlank()) {
-                            AppleMusicCanvasProvider.getByAlbumArtist(albumName, artistName, storefront)
-                        } else null
-                        ?: AppleMusicCanvasProvider.getBySongArtist(songTitle, artistName, albumName, storefront)
-                    }.getOrNull()
-                }
+            val fetched = runCatching { echomusicCanvasProvider.getBySongArtist(s, a) }.getOrNull()
+                ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
+                ?: runCatching { TidalCanvasProvider.getBySongArtist(s, a, requestedAlbum) }.getOrNull()
+                    ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
+                ?: runCatching { AppleMusicCanvasProvider.getBySongArtist(s, a, requestedAlbum, storefront) }.getOrNull()
+                    ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
 
-                val tidalDeferred = async {
-                    runCatching {
-                        TidalCanvasProvider.getBySongArtist(songTitle, artistName, albumName)
-                    }.getOrNull()
-                }
+            val validated = fetched?.let { artwork ->
+                val localArtists = splitAndNormalizeArtists(requestedArtist)
+                val returnedArtists = splitAndNormalizeArtists(artwork.artist ?: "")
+                val artistMatches = localArtists.isNotEmpty() && returnedArtists.isNotEmpty() &&
+                        (localArtists.any { local -> returnedArtists.any { it.equals(local, ignoreCase = true) } })
 
-                artwork = appleDeferred.await()
-                if (artwork?.animated.isNullOrBlank() && artwork?.videoUrl.isNullOrBlank()) {
-                    artwork = tidalDeferred.await()
-                }
+                if (artistMatches) artwork else null
             }
 
-            // BUG 2 FIX: Looser Matching - Don't drop instantly if slightly different
-            artwork?.takeIf {
-                val canvasSong = normalizeCanvasSongTitle(it.name ?: "")
-                val canvasArtist = normalizeCanvasArtistName(it.artist ?: "")
-                
-                val isSongMatch = canvasSong.isEmpty() || songTitle.isEmpty() ||
-                                  canvasSong.contains(songTitle, ignoreCase = true) ||
-                                  songTitle.contains(canvasSong, ignoreCase = true) ||
-                                  looseWordMatch(canvasSong, songTitle)
-                
-                val isArtistMatch = canvasArtist.isEmpty() || artistName.isEmpty() ||
-                                    canvasArtist.contains(artistName, ignoreCase = true) ||
-                                    artistName.contains(canvasArtist, ignoreCase = true) ||
-                                    looseWordMatch(canvasArtist, artistName)
-                                    
-                isSongMatch && isArtistMatch
+            withContext(Dispatchers.Main) {
+                canvasArtwork = validated
+                if (validated != null) {
+                    CanvasArtworkPlaybackCache.put(item.mediaId, validated)
+                }
+                canvasFetchInFlight = false
             }
         }
-        
-        if (fetched != null && (!fetched.animated.isNullOrBlank() || !fetched.videoUrl.isNullOrBlank())) {
-            canvasArtwork = fetched
-            CanvasArtworkPlaybackCache.put(item.mediaId, fetched)
-        }
-        
-        canvasFetchInFlight = false
     }
 
     canvasArtwork?.let { artwork ->
@@ -940,10 +910,12 @@ internal fun normalizeCanvasArtistName(raw: String): String {
     return first.replace(Regex("\\s+"), " ").trim()
 }
 
-internal fun looseWordMatch(str1: String, str2: String): Boolean {
-    val words1 = str1.lowercase().split(Regex("\\s+")).filter { it.length > 1 }
-    val words2 = str2.lowercase().split(Regex("\\s+")).filter { it.length > 1 }
-    if (words1.isEmpty() || words2.isEmpty()) return false
-    val overlap = words1.intersect(words2.toSet()).size
-    return overlap >= minOf(words1.size, words2.size) / 2
+internal fun splitAndNormalizeArtists(raw: String): List<String> {
+    return raw.split(
+        Regex(
+            "(?:\\s*,\\s*|\\s*&\\s*|\\s+×\\s+|\\s+x\\s+|\\bfeat\\.?\\b|\\bft\\.?\\b|\\bfeaturing\\b|\\bwith\\b)",
+            RegexOption.IGNORE_CASE,
+        )
+    ).map { it.replace(Regex("\\s+"), " ").trim() }
+     .filter { it.isNotEmpty() }
 }
