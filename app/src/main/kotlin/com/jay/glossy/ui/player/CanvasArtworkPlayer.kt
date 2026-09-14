@@ -82,6 +82,7 @@ object CanvasPlayerManager {
                 DefaultMediaSourceFactory(upstreamFactory)
             }
             
+            // FAST START BUFFERING
             val loadControl = DefaultLoadControl.Builder()
                 .setBufferDurationsMs(500, 5000, 100, 500)
                 .build()
@@ -109,17 +110,13 @@ object CanvasPlayerManager {
         if (currentUrl == normalizedUrl && exoPlayer != null && currentCacheMode == enableVideoCache) return
         
         val player = getPlayer(context, enableVideoCache)
-        
-        // INSTANTLY CLEAR PREVIOUS FRAME TO PREVENT GHOSTING
-        player.stop()
-        player.clearMediaItems()
-        
         val mimeType = if (normalizedUrl.contains(".m3u8", true) || normalizedUrl.lowercase(Locale.ROOT).split('?').first().endsWith(".m3u8")) {
             MimeTypes.APPLICATION_M3U8
         } else {
             MimeTypes.VIDEO_MP4
         }
 
+        // Just set the new media item. Do not call stop() or clearMediaItems() here to preserve fast start.
         player.setMediaItem(MediaItem.Builder().setUri(normalizedUrl).setMimeType(mimeType).build())
         player.prepare()
         currentUrl = normalizedUrl
@@ -143,10 +140,9 @@ fun CanvasArtworkPlayer(
 
     val exoPlayer = remember(enableVideoCache) { CanvasPlayerManager.getPlayer(context, enableVideoCache) }
 
-    // TRIGGER NEW SONG LOAD
     LaunchedEffect(initialUrl, enableVideoCache) {
         if (CanvasPlayerManager.currentUrl != initialUrl) {
-            isVideoReady = false // IMMEDIATELY HIDE
+            isVideoReady = false // Instantly hide old video when song changes
         }
         CanvasPlayerManager.play(context, initialUrl, enableVideoCache)
     }
@@ -185,7 +181,7 @@ fun CanvasArtworkPlayer(
         }
     }
 
-    //  Snap instant hide, smooth fade-in
+    // GHOSTING FIX: Snap animation hides video instantly (0ms), then fades in (500ms) when ready
     val alpha by animateFloatAsState(
         targetValue = if (isVideoReady && CanvasPlayerManager.currentUrl == initialUrl) 1f else 0f,
         animationSpec = if (isVideoReady) tween(500) else snap(),
