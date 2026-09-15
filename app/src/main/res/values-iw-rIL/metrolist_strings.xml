@@ -70,6 +70,8 @@
     <string name="crop_album_art_desc">Force a square aspect ratio by cropping video thumbnails</string>
     <string name="already_in_playlist">Already in playlist: </string>
     <plurals name="n_time">
+        <item quantity="one">%d time</item>
+        <item quantity="two">%d times</item>
         <item quantity="other">%d times</item>
     </plurals>
     <string name="seek_forward_dynamic">+%1$d seconds forward</string>
@@ -240,6 +242,8 @@
     <string name="subscribe">Subscribe</string>
     <string name="subscribed">Subscribed</string>
     <plurals name="seconds">
+        <item quantity="one">1 second</item>
+        <item quantity="two">%d seconds</item>
         <item quantity="other">%d seconds</item>
     </plurals>
     <!-- Sleep timer -->
@@ -275,6 +279,8 @@
     <string name="alarm_select_playlist">Select playlist</string>
     <string name="alarm_no_playlists">No playlists found</string>
     <plurals name="alarm_playlist_song_count">
+        <item quantity="one">%d song</item>
+        <item quantity="two">%d songs</item>
         <item quantity="other">%d songs</item>
     </plurals>
     <string name="alarm_selected">Selected</string>
@@ -447,6 +453,8 @@
     <string name="wrapped_playlist_saved">Playlist saved</string>
     <!-- Equalizer UI -->
     <plurals name="profiles_count">
+        <item quantity="one">%d profile</item>
+        <item quantity="two">%d profiles</item>
         <item quantity="other">%d profiles</item>
     </plurals>
     <string name="equalizer_header">Equalizer</string>
@@ -461,6 +469,8 @@
     <string name="import_from_file">Import from file</string>
     <string name="add_profile">Add profile</string>
     <plurals name="band_count">
+        <item quantity="one">%d band</item>
+        <item quantity="two">%d bands</item>
         <item quantity="other">%d bands</item>
     </plurals>
     <string name="delete_profile_desc">Delete profile</string>
@@ -835,6 +845,8 @@
     <string name="remove_episode_from_saved">Remove from saved</string>
     <string name="subscribe_to_podcast">Save podcast to library</string>
     <plurals name="n_episode">
+        <item quantity="one">%d episode</item>
+        <item quantity="two">%d episodes</item>
         <item quantity="other">%d episodes</item>
     </plurals>
     <string name="filter_episodes">Episodes</string>
@@ -845,6 +857,8 @@
     <string name="no_subscribed_channels">No subscribed channels</string>
     <string name="no_downloaded_episodes">No downloaded episodes</string>
     <plurals name="n_channel">
+        <item quantity="one">%d channel</item>
+        <item quantity="two">%d channels</item>
         <item quantity="other">%d channels</item>
     </plurals>
     <!-- Restore confirmation dialog -->
