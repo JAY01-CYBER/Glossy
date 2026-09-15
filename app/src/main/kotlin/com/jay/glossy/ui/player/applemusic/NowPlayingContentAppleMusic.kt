@@ -39,15 +39,19 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.jay.glossy.R
 import com.jay.glossy.LocalPlayerConnection
+import com.jay.glossy.constants.CropAlbumArtKey
 import com.jay.glossy.ui.component.BottomSheetState
 import com.jay.glossy.ui.component.LocalBottomSheetPageState
 import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.menu.PlayerMenu
 import com.jay.glossy.ui.utils.ShowMediaInfo
+import com.jay.glossy.utils.rememberPreference
 
 @Composable
 fun NowPlayingContentAppleMusic(
     bottomSheetState: BottomSheetState,
+    position: Long,
+    duration: Long,
     modifier: Modifier = Modifier
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
@@ -91,14 +95,18 @@ fun NowPlayingContentAppleMusic(
                     activePillContainer = activePillContainer,
                     activePillContent = activePillContent,
                     typography = typography,
-                    bottomSheetState = bottomSheetState
+                    bottomSheetState = bottomSheetState,
+                    position = position,
+                    duration = duration
                 )
                 AppleMusicView.LYRICS -> AppleMusicLyricsView(
                     viewState = view,
                     onSelectView = { viewState = it },
                     activePillContainer = activePillContainer,
                     activePillContent = activePillContent,
-                    typography = typography
+                    typography = typography,
+                    position = position,
+                    duration = duration
                 )
                 AppleMusicView.QUEUE -> AppleMusicQueueView(
                     viewState = view,
@@ -106,7 +114,9 @@ fun NowPlayingContentAppleMusic(
                     activePillContainer = activePillContainer,
                     activePillContent = activePillContent,
                     typography = typography,
-                    bottomSheetState = bottomSheetState
+                    bottomSheetState = bottomSheetState,
+                    position = position,
+                    duration = duration
                 )
             }
         }
@@ -139,18 +149,22 @@ private fun AppleMusicMainView(
     activePillContainer: Color,
     activePillContent: Color,
     typography: AppleMusicTypography,
-    bottomSheetState: BottomSheetState
+    bottomSheetState: BottomSheetState,
+    position: Long,
+    duration: Long
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
+    val cropAlbumArt by rememberPreference(CropAlbumArtKey, false)
 
     Column(modifier = Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .padding(top = 60.dp),
-            contentAlignment = Alignment.TopCenter
+                .statusBarsPadding()
+                .padding(top = 32.dp, start = 32.dp, end = 32.dp),
+            contentAlignment = Alignment.Center
         ) {
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
@@ -158,10 +172,12 @@ private fun AppleMusicMainView(
                     .crossfade(550)
                     .build(),
                 contentDescription = null,
-                contentScale = ContentScale.Crop,
+                contentScale = if (cropAlbumArt) ContentScale.Crop else ContentScale.Fit,
                 modifier = Modifier
-                    .fillMaxSize()
-                    .appleMusicVerticalFadeEdges(topFade = 0.dp, bottomFade = 300.dp)
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .appleMusicVerticalFadeEdges(topFade = 0.dp, bottomFade = 30.dp)
             )
         }
 
@@ -174,7 +190,9 @@ private fun AppleMusicMainView(
                 onSelectView = onSelectView,
                 lyricsAvailable = true, 
                 activeColor = activePillContainer,
-                activeContentColor = activePillContent
+                activeContentColor = activePillContent,
+                position = position,
+                duration = duration
             )
         }
     }
@@ -199,7 +217,9 @@ private fun AppleMusicMainTitleRow(
                 style = typography.mainTitle,
                 maxLines = 1,
                 color = Color.White,
-                modifier = Modifier.fillMaxWidth().basicMarquee()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .basicMarquee()
             )
             Spacer(modifier = Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
