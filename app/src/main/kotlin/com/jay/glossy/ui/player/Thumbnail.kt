@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -77,6 +78,10 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.jay.glossy.LocalListenTogetherManager
 import com.jay.glossy.LocalPlayerConnection
+import com.jay.glossy.applecanvas.AppleMusicCanvasProvider
+import com.jay.glossy.canvas.CanvasArtwork
+import com.jay.glossy.canvas.TidalCanvasProvider
+import com.jay.glossy.constants.CanvasThumbnailAnimationKey
 import com.jay.glossy.constants.CropAlbumArtKey
 import com.jay.glossy.constants.HidePlayerThumbnailKey
 import com.jay.glossy.constants.PlayerBackgroundStyle
@@ -91,12 +96,12 @@ import com.jay.glossy.listentogether.RoomRole
 import com.jay.glossy.ui.component.CastButton
 import com.jay.glossy.utils.rememberEnumPreference
 import com.jay.glossy.utils.rememberPreference
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+import java.util.Locale
 
-/**
- * Pre-calculated thumbnail dimensions to avoid repeated calculations during recomposition.
- * All values are computed once and cached.
- */
 @Immutable
 data class ThumbnailDimensions(
     val itemWidth: Dp,
@@ -105,19 +110,12 @@ data class ThumbnailDimensions(
     val cornerRadius: Dp
 )
 
-/**
- * Cached media items data to prevent recalculation on every recomposition.
- */
 @Immutable
 data class MediaItemsData(
     val items: List<MediaItem>,
     val currentIndex: Int
 )
 
-/**
- * Calculate thumbnail dimensions once based on container size.
- * This function is marked as @Stable to indicate it produces stable results.
- */
 @Stable
 private fun calculateThumbnailDimensions(
     containerWidth: Dp,
@@ -139,10 +137,6 @@ private fun calculateThumbnailDimensions(
     )
 }
 
-/**
- * Get media items for the thumbnail carousel.
- * Calculates previous, current, and next items based on shuffle mode.
- */
 @Stable
 private fun getMediaItems(
     player: Player,
@@ -184,10 +178,6 @@ private fun getMediaItems(
     return MediaItemsData(items, currentMediaIndex)
 }
 
-/**
- * Get text color based on player background style.
- * Computed once per background style change.
- */
 @Stable
 @Composable
 private fun getTextColor(playerBackground: PlayerBackgroundStyle): Color {
@@ -196,6 +186,57 @@ private fun getTextColor(playerBackground: PlayerBackgroundStyle): Color {
         PlayerBackgroundStyle.BLUR,
         PlayerBackgroundStyle.GRADIENT,
         PlayerBackgroundStyle.ANIMATED_MESH -> Color.White
+    }
+}
+
+// CACHE UPDATE FOR SETTINGS SLIDER
+object CanvasArtworkPlaybackCache {
+    private const val defaultMaxSize = 256
+    private val map = LinkedHashMap<String, CanvasArtwork>(defaultMaxSize, 0.75f, true)
+    @Volatile private var maxSize = defaultMaxSize
+
+    val currentItemCount: Int
+        get() = map.size
+
+    @Synchronized
+    fun get(mediaId: String): CanvasArtwork? {
+        if (maxSize <= 0) return null
+        return map[mediaId]
+    }
+
+    @Synchronized
+    fun put(mediaId: String, artwork: CanvasArtwork) {
+        val limit = maxSize
+        if (limit <= 0 || mediaId.isBlank()) return
+        map[mediaId] = artwork
+        trimToSize()
+    }
+
+    @Synchronized
+    fun clear() {
+        map.clear()
+    }
+
+    @Synchronized
+    fun setMaxSize(newSize: Int) {
+        maxSize = newSize
+        if (newSize == 0) {
+            map.clear()
+        } else {
+            trimToSize()
+        }
+    }
+
+    private fun trimToSize() {
+        while (map.size > maxSize) {
+            val it = map.entries.iterator()
+            if (it.hasNext()) {
+                it.next()
+                it.remove()
+            } else {
+                break
+            }
+        }
     }
 }
 
@@ -212,14 +253,12 @@ fun Thumbnail(
     val context = LocalContext.current
     val layoutDirection = LocalLayoutDirection.current
 
-    // Collect states
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
     val error by playerConnection.error.collectAsState()
     val queueTitle by playerConnection.queueTitle.collectAsStateWithLifecycle()
     val canSkipPrevious by playerConnection.canSkipPrevious.collectAsStateWithLifecycle()
     val canSkipNext by playerConnection.canSkipNext.collectAsStateWithLifecycle()
 
-    // Preferences - computed once
     val swipeThumbnailPref by rememberPreference(SwipeThumbnailKey, true)
     val swipeThumbnail = swipeThumbnailPref && !isListenTogetherGuest
     val hidePlayerThumbnail by rememberPreference(HidePlayerThumbnailKey, false)
@@ -234,13 +273,9 @@ fun Thumbnail(
         defaultValue = PlayerStyle.MODERN
     )
     
-    // Pre-calculate text color based on background style
     val textBackgroundColor = getTextColor(playerBackground)
-    
-    // Grid state
     val thumbnailLazyGridState = rememberLazyGridState()
     
-    // Calculate media items data - memoized
     val mediaItemsData by remember(
         playerConnection.player.currentMediaItemIndex,
         playerConnection.player.shuffleModeEnabled,
@@ -255,7 +290,6 @@ fun Thumbnail(
     val mediaItems = mediaItemsData.items
     val currentMediaIndex = mediaItemsData.currentIndex
 
-    // Snap behavior - created once per grid state
     val thumbnailSnapLayoutInfoProvider = remember(thumbnailLazyGridState) {
         ThumbnailSnapLayoutInfoProvider(
             lazyGridState = thumbnailLazyGridState,
@@ -266,11 +300,9 @@ fun Thumbnail(
         )
     }
 
-    // Current item tracking - derived state for efficiency
     val currentItem by remember { derivedStateOf { thumbnailLazyGridState.firstVisibleItemIndex } }
     val itemScrollOffset by remember { derivedStateOf { thumbnailLazyGridState.firstVisibleItemScrollOffset } }
 
-    // Handle swipe to change song
     LaunchedEffect(itemScrollOffset) {
         if (!thumbnailLazyGridState.isScrollInProgress || !swipeThumbnail || itemScrollOffset != 0 || currentMediaIndex < 0) return@LaunchedEffect
 
@@ -281,7 +313,6 @@ fun Thumbnail(
         }
     }
 
-    // Update position when song changes
     LaunchedEffect(mediaMetadata, canSkipPrevious, canSkipNext) {
         val index = maxOf(0, currentMediaIndex)
         if (index >= 0 && index < mediaItems.size) {
@@ -300,7 +331,6 @@ fun Thumbnail(
         }
     }
 
-    // Seek effect state
     var showSeekEffect by remember { mutableStateOf(false) }
     var seekDirection by remember { mutableStateOf("") }
 
@@ -310,7 +340,6 @@ fun Thumbnail(
                 compositingStrategy = CompositingStrategy.Offscreen
             }
     ) {
-        // Error view
         AnimatedVisibility(
             visible = error != null,
             enter = fadeIn(),
@@ -327,7 +356,6 @@ fun Thumbnail(
             }
         }
 
-        // Main thumbnail view
         AnimatedVisibility(
             visible = error == null,
             enter = fadeIn(),
@@ -341,10 +369,7 @@ fun Thumbnail(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = if (isLandscape) Arrangement.Center else Arrangement.Top
             ) {
-                // Now Playing header - hide in landscape mode
                 if (!isLandscape) {
-                    
-                    // Spacer ADDED ABOVE header for VIVI_NEW to push text down like Modern style
                     if (playerStyle.name == "VIVI_NEW") {
                         Spacer(modifier = Modifier.height(28.dp))
                     }
@@ -355,11 +380,8 @@ fun Thumbnail(
                         textColor = textBackgroundColor,
                         playerStyleName = playerStyle.name
                     )
-                    
-                    // Spacer REMOVED from below header so Album art spacing matches Modern style
                 }
                 
-                // Thumbnail content
                 BoxWithConstraints(
                     contentAlignment = if (isLandscape) Alignment.Center else if (playerStyle.name == "VIVI_NEW") Alignment.TopCenter else Alignment.Center,
                     modifier = if (isLandscape) {
@@ -387,14 +409,12 @@ fun Thumbnail(
                         derivedStateOf { swipeThumbnail && isPlayerExpanded() }
                     }
                     
-                    // VIVI_NEW OVERRIDE
                     if (playerStyle.name == "VIVI_NEW" && !isLandscape) {
                         val currentMedia = mediaItems.getOrNull(currentMediaIndex)
                         val incrementalSeekSkipEnabled by rememberPreference(SeekExtraSeconds, defaultValue = false)
                         var skipMultiplier by remember { mutableIntStateOf(1) }
                         var lastTapTime by remember { mutableLongStateOf(0L) }
 
-                        // WRAPPER BOX forces Perfect centering of the square, perfectly replicating Modern style
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center 
@@ -403,7 +423,7 @@ fun Thumbnail(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = PlayerHorizontalPadding)
-                                    .aspectRatio(1f) // Perfect square aspect ratio
+                                    .aspectRatio(1f)
                                     .pointerInput(swipeThumbnail) {
                                         if (!swipeThumbnail) return@pointerInput
                                         var totalDrag = 0f
@@ -468,6 +488,15 @@ fun Thumbnail(
                                             playerStyleName = playerStyle.name
                                         )
                                     }
+
+                                    val (canvasThumbnailAnimation) = rememberPreference(CanvasThumbnailAnimationKey, defaultValue = false)
+
+                                    if (canvasThumbnailAnimation && currentMedia?.mediaId == mediaMetadata?.id && currentMedia != null) {
+                                        CanvasLayer(
+                                            item = currentMedia,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    }
                                     
                                     CastButton(
                                         modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
@@ -517,7 +546,6 @@ fun Thumbnail(
             }
         }
 
-        // Seek effect
         LaunchedEffect(showSeekEffect) {
             if (showSeekEffect) {
                 delay(1000)
@@ -536,9 +564,72 @@ fun Thumbnail(
     }
 }
 
-/**
- * Header component showing "Now Playing" and queue/album title.
- */
+@Composable
+private fun CanvasLayer(
+    item: MediaItem,
+    modifier: Modifier = Modifier
+) {
+    var canvasArtwork by remember(item.mediaId) { mutableStateOf<CanvasArtwork?>(null) }
+    var canvasFetchInFlight by remember(item.mediaId) { mutableStateOf(false) }
+    val storefront = remember {
+        val country = Locale.getDefault().country
+        if (country.length == 2) country.lowercase(Locale.ROOT) else "us"
+    }
+
+    LaunchedEffect(item.mediaId) {
+        CanvasArtworkPlaybackCache.get(item.mediaId)?.let { cached ->
+            canvasArtwork = cached
+            return@LaunchedEffect
+        }
+
+        if (canvasFetchInFlight) return@LaunchedEffect
+        canvasFetchInFlight = true
+
+        val fetched = withContext(Dispatchers.IO) {
+            val metadata = item.mediaMetadata
+            val albumName = metadata.albumTitle?.toString() ?: ""
+            val songTitleRaw = metadata.title?.toString() ?: ""
+            val artistNameRaw = metadata.artist?.toString() ?: ""
+            
+            val songTitle = normalizeCanvasSongTitle(songTitleRaw)
+            val artistName = normalizeCanvasArtistName(artistNameRaw)
+
+            if (songTitle.isBlank() || artistName.isBlank()) return@withContext null
+
+            val tidalDeferred = async {
+                TidalCanvasProvider.getBySongArtist(songTitle, artistName, albumName)
+                    ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
+            }
+            
+            val appleDeferred = async {
+                if (albumName.isNotBlank()) {
+                    AppleMusicCanvasProvider.getByAlbumArtist(albumName, artistName, storefront)
+                        ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
+                } else {
+                    null
+                } ?: AppleMusicCanvasProvider.getBySongArtist(songTitle, artistName, albumName, storefront)
+                    ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
+            }
+
+            tidalDeferred.await() ?: appleDeferred.await()
+        }
+        
+        canvasArtwork = fetched
+        if (fetched != null) {
+            CanvasArtworkPlaybackCache.put(item.mediaId, fetched)
+        }
+        canvasFetchInFlight = false
+    }
+
+    canvasArtwork?.let { artwork ->
+        CanvasArtworkPlayer(
+            primaryUrl = artwork.animated,
+            fallbackUrl = artwork.videoUrl,
+            modifier = modifier
+        )
+    }
+}
+
 @Composable
 private fun ThumbnailHeader(
     queueTitle: String?,
@@ -549,7 +640,6 @@ private fun ThumbnailHeader(
 ) {
     val listenTogetherManager = LocalListenTogetherManager.current
     val listenTogetherRoleState = listenTogetherManager?.role?.collectAsStateWithLifecycle(initialValue = RoomRole.NONE)
-    val isListenTogetherGuest = listenTogetherRoleState?.value == RoomRole.GUEST
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -561,7 +651,6 @@ private fun ThumbnailHeader(
                 .align(Alignment.Center)
                 .padding(horizontal = 48.dp)
         ) {
-            // Listen Together indicator
             if (listenTogetherRoleState?.value != RoomRole.NONE) {
                 Text(
                     text = if (listenTogetherRoleState?.value == RoomRole.HOST) "Hosting Listen Together" else "Listening Together",
@@ -576,7 +665,6 @@ private fun ThumbnailHeader(
                 )
             }
             
-            // Subtitle - Hide only for VIVI_NEW
             val playingFrom = queueTitle ?: albumTitle
             if (playerStyleName != "VIVI_NEW" && !playingFrom.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(4.dp))
@@ -592,9 +680,6 @@ private fun ThumbnailHeader(
     }
 }
 
-/**
- * Individual thumbnail item in the carousel for standard styles.
- */
 @Composable
 private fun ThumbnailItem(
     item: MediaItem,
@@ -639,8 +724,8 @@ private fun ThumbnailItem(
 
                         val currentPosition = playerConnection.player.currentPosition
                         val duration = playerConnection.player.duration
-
                         val now = System.currentTimeMillis()
+                        
                         if (incrementalSeekSkipEnabled && now - lastTapTime < 1000) {
                             skipMultiplier++
                         } else {
@@ -649,7 +734,6 @@ private fun ThumbnailItem(
                         lastTapTime = now
 
                         val skipAmount = 5000 * skipMultiplier
-
                         val isLeftSide = (layoutDirection == LayoutDirection.Ltr && offset.x < size.width / 2) ||
                                 (layoutDirection == LayoutDirection.Rtl && offset.x > size.width / 2)
 
@@ -689,7 +773,15 @@ private fun ThumbnailItem(
                 )
             }
             
-            // Cast button at top-right corner of thumbnail
+            val (canvasThumbnailAnimation) = rememberPreference(CanvasThumbnailAnimationKey, defaultValue = false)
+
+            if (canvasThumbnailAnimation && item.mediaId == currentMediaId) {
+                CanvasLayer(
+                    item = item,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+            
             CastButton(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -700,9 +792,6 @@ private fun ThumbnailItem(
     }
 }
 
-/**
- * Placeholder shown when thumbnail is hidden.
- */
 @Composable
 private fun HiddenThumbnailPlaceholder(
     textBackgroundColor: Color,
@@ -726,9 +815,6 @@ private fun HiddenThumbnailPlaceholder(
     }
 }
 
-/**
- * Actual thumbnail image with caching and hardware layer rendering.
- */
 @Composable
 private fun ThumbnailImage(
     artworkUri: String?,
@@ -739,12 +825,8 @@ private fun ThumbnailImage(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .graphicsLayer {
-                // Use offscreen compositing for hardware acceleration during animations
-                compositingStrategy = CompositingStrategy.Offscreen
-            }
+            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
             .then(
-                // Remove surfaceVariant color (grey) for VIVI_NEW to avoid ugly borders
                 if (playerStyleName == "VIVI_NEW") Modifier 
                 else Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
             )
@@ -764,9 +846,6 @@ private fun ThumbnailImage(
     }
 }
 
-/**
- * Seek effect overlay showing seek direction.
- */
 @Composable
 private fun SeekEffectOverlay(
     seekDirection: String,
@@ -782,4 +861,52 @@ private fun SeekEffectOverlay(
             .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(8.dp))
             .padding(8.dp)
     )
+}
+
+internal fun normalizeCanvasSongTitle(raw: String): String {
+    val stripped =
+        raw
+            .replace(Regex("\\s*\\[[^]]*]"), "")
+            .replace(
+                Regex(
+                    "\\s*\\((?:feat\\.?|ft\\.?|featuring|with)\\b[^)]*\\)",
+                    RegexOption.IGNORE_CASE,
+                ),
+                "",
+            )
+            .replace(
+                Regex(
+                    "\\s*\\((?:official\\s*)?(?:music\\s*)?(?:video|mv|lyrics?|audio|visualizer|live|remaster(?:ed)?|version|edit|mix|remix)[^)]*\\)",
+                    RegexOption.IGNORE_CASE,
+                ),
+                "",
+            )
+            .replace(
+                Regex(
+                    "\\s*-\\s*(?:official\\s*)?(?:music\\s*)?(?:video|mv|lyrics?|audio|visualizer|live|remaster(?:ed)?|version|edit|mix|remix)\\b.*$",
+                    RegexOption.IGNORE_CASE,
+                ),
+                "",
+            )
+            .replace(Regex("\\s+"), " ")
+            .trim()
+
+    return stripped
+        .trim('-')
+        .replace(Regex("\\s+"), " ")
+        .trim()
+}
+
+internal fun normalizeCanvasArtistName(raw: String): String {
+    val first =
+        raw
+            .split(
+                Regex(
+                    "(?:\\s*,\\s*|\\s*&\\s*|\\s+×\\s+|\\s+x\\s+|\\bfeat\\.?\\b|\\bft\\.?\\b|\\bfeaturing\\b|\\bwith\\b)",
+                    RegexOption.IGNORE_CASE,
+                ),
+                limit = 2,
+            ).firstOrNull().orEmpty()
+
+    return first.replace(Regex("\\s+"), " ").trim()
 }

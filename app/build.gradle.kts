@@ -362,6 +362,8 @@ dependencies {
     implementation(libs.media3)
     implementation(libs.media3.session)
     implementation(libs.media3.okhttp)
+    implementation(libs.media3.ui)
+    implementation(libs.media3.hls)
 
     // Google Cast - only included in GMS flavor (not available in F-Droid/FOSS builds)
     "gmsImplementation"(libs.media3.cast)
@@ -393,6 +395,8 @@ dependencies {
     implementation(project(":unison"))
     implementation(project(":simpmusic"))
     implementation(project(":netease"))
+    implementation(project(":canvas"))
+    implementation(project(":applecanvas"))
 
 
     implementation(libs.ktor.client.core)

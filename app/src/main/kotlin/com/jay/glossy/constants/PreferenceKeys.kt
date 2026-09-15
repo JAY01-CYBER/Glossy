@@ -95,6 +95,14 @@ val AlarmRandomSongKey = booleanPreferencesKey("alarmRandomSong")
 val AlarmNextTriggerAtKey = longPreferencesKey("alarmNextTriggerAt")
 val AlarmEntriesKey = stringPreferencesKey("alarmEntries")
 val DeveloperModeKey = booleanPreferencesKey("developerMode")
+val CanvasThumbnailAnimationKey = booleanPreferencesKey("canvasThumbnailAnimation")
+
+
+val CanvasCacheModeKey = stringPreferencesKey("canvasCacheMode")
+enum class CanvasCacheMode {
+    URL_ONLY,
+    VIDEO_AND_URL
+}
 
 enum class SliderStyle {
     DEFAULT,
@@ -183,6 +191,8 @@ val CrossfadeGaplessKey = booleanPreferencesKey("crossfadeGapless")
 
 val MaxImageCacheSizeKey = intPreferencesKey("maxImageCacheSize")
 val MaxSongCacheSizeKey = intPreferencesKey("maxSongCacheSize")
+val MaxCanvasCacheSizeKey = intPreferencesKey("maxCanvasCacheSize")
+
 val EnableSongCacheKey = booleanPreferencesKey("enableSongCache")
 val SmartTrimmerKey = booleanPreferencesKey("smart_trimmer")
 
