@@ -29,6 +29,7 @@ import androidx.media3.exoplayer.source.ShuffleOrder.DefaultShuffleOrder
 import com.jay.glossy.R
 import com.jay.glossy.LocalListenTogetherManager
 import com.jay.glossy.LocalPlayerConnection
+import com.jay.glossy.extensions.metadata
 import com.jay.glossy.extensions.move
 import com.jay.glossy.extensions.toggleRepeatMode
 import com.jay.glossy.listentogether.RoomRole
@@ -154,62 +155,65 @@ internal fun AppleMusicQueueView(
                             horizontalArrangement = Arrangement.Center,
                             modifier = Modifier.animateItem(),
                         ) {
-                            MediaMetadataListItem(
-                                mediaMetadata = window.mediaItem.metadata!!,
-                                isActive = isActive,
-                                isPlaying = isActive && playerConnection.player.isPlaying,
-                                trailingContent = {
-                                    if (!isListenTogetherGuest) {
-                                        IconButton(
-                                            onClick = {
-                                                menuState.show {
-                                                    com.jay.glossy.ui.menu.QueueMenu(
-                                                        mediaMetadata = window.mediaItem.metadata!!,
-                                                        playerBottomSheetState = bottomSheetState,
-                                                        onShowDetailsDialog = {
-                                                            window.mediaItem.metadata!!.id.let {
-                                                                bottomSheetPageState.show {
-                                                                    ShowMediaInfo(it)
+                            val trackMeta = window.mediaItem.metadata
+                            if (trackMeta != null) {
+                                MediaMetadataListItem(
+                                    mediaMetadata = trackMeta,
+                                    isActive = isActive,
+                                    isPlaying = isActive && playerConnection.player.isPlaying,
+                                    trailingContent = {
+                                        if (!isListenTogetherGuest) {
+                                            IconButton(
+                                                onClick = {
+                                                    menuState.show {
+                                                        com.jay.glossy.ui.menu.QueueMenu(
+                                                            mediaMetadata = trackMeta,
+                                                            playerBottomSheetState = bottomSheetState,
+                                                            onShowDetailsDialog = {
+                                                                trackMeta.id.let {
+                                                                    bottomSheetPageState.show {
+                                                                        ShowMediaInfo(it)
+                                                                    }
                                                                 }
-                                                            }
-                                                        },
-                                                        onDismiss = menuState::dismiss,
-                                                    )
+                                                            },
+                                                            onDismiss = menuState::dismiss,
+                                                        )
+                                                    }
+                                                }
+                                            ) {
+                                                Icon(
+                                                    painter = painterResource(R.drawable.more_vert),
+                                                    contentDescription = "More",
+                                                    tint = Color.White
+                                                )
+                                            }
+
+                                            IconButton(
+                                                onClick = { },
+                                                modifier = Modifier.draggableHandle()
+                                            ) {
+                                                Icon(
+                                                    painter = painterResource(R.drawable.drag_handle),
+                                                    contentDescription = "Drag",
+                                                    tint = Color.White
+                                                )
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            if (!isListenTogetherGuest) {
+                                                if (index != currentWindowIndex) {
+                                                    playerConnection.player.seekToDefaultPosition(window.firstPeriodIndex)
+                                                    playerConnection.player.playWhenReady = true
+                                                } else {
+                                                    playerConnection.togglePlayPause()
                                                 }
                                             }
-                                        ) {
-                                            Icon(
-                                                painter = painterResource(R.drawable.more_vert),
-                                                contentDescription = "More",
-                                                tint = Color.White
-                                            )
                                         }
-
-                                        IconButton(
-                                            onClick = { },
-                                            modifier = Modifier.draggableHandle()
-                                        ) {
-                                            Icon(
-                                                painter = painterResource(R.drawable.drag_handle),
-                                                contentDescription = "Drag",
-                                                tint = Color.White
-                                            )
-                                        }
-                                    }
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        if (!isListenTogetherGuest) {
-                                            if (index != currentWindowIndex) {
-                                                playerConnection.player.seekToDefaultPosition(window.firstPeriodIndex)
-                                                playerConnection.player.playWhenReady = true
-                                            } else {
-                                                playerConnection.togglePlayPause()
-                                            }
-                                        }
-                                    }
-                            )
+                                )
+                            }
                         }
                     }
                 }
