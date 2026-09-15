@@ -6,6 +6,7 @@
 package com.jay.glossy.ui.player.applemusic
 
 import android.content.Intent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -42,6 +43,9 @@ import com.jay.glossy.db.entities.LyricsEntity
 import com.jay.glossy.ui.component.LocalBottomSheetPageState
 import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.component.Lyrics
+import com.jay.glossy.ui.component.LyricsShareDialog
+import com.jay.glossy.ui.component.LyricsColorPickerDialog
+import com.jay.glossy.ui.screens.settings.LyricsPosition
 import com.jay.glossy.ui.utils.ShowOffsetDialog
 import kotlinx.coroutines.delay
 
@@ -53,6 +57,8 @@ internal fun AppleMusicLyricsView(
     activePillContainer: Color,
     activePillContent: Color,
     typography: AppleMusicTypography,
+    position: Long,
+    duration: Long,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -71,10 +77,25 @@ internal fun AppleMusicLyricsView(
     var showCluster by rememberSaveable { mutableStateOf(true) }
     var interactionTick by remember { mutableIntStateOf(0) }
     
+    var showShareDialog by rememberSaveable { mutableStateOf(false) }
+    var showColorPicker by rememberSaveable { mutableStateOf(false) }
+    
     LaunchedEffect(showCluster, interactionTick) {
         if (showCluster) {
             delay(8000L)
             showCluster = false
+        }
+    }
+
+    val scrollWakesControls = remember {
+        object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+            override fun onPreScroll(available: androidx.compose.ui.geometry.Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource): androidx.compose.ui.geometry.Offset {
+                if (available.y != 0f) {
+                    showCluster = true
+                    interactionTick++
+                }
+                return androidx.compose.ui.geometry.Offset.Zero
+            }
         }
     }
 
@@ -99,6 +120,7 @@ internal fun AppleMusicLyricsView(
         Box(
             modifier = Modifier
                 .weight(1f)
+                .androidx.compose.ui.input.nestedscroll.nestedScroll(scrollWakesControls)
                 .clickable(
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() }
@@ -110,7 +132,9 @@ internal fun AppleMusicLyricsView(
         ) {
             when {
                 lyrics == null -> {
-                    ContainedLoadingIndicator()
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        ContainedLoadingIndicator()
+                    }
                 }
 
                 lyrics == LyricsEntity.LYRICS_NOT_FOUND -> {
@@ -140,7 +164,6 @@ internal fun AppleMusicLyricsView(
                         )
                     }
 
-                    // Scope Error Fixed by Wrapping AnimatedVisibility in a clean Box
                     Box(modifier = Modifier.align(Alignment.BottomEnd)) {
                         androidx.compose.animation.AnimatedVisibility(
                             visible = showCluster,
@@ -172,17 +195,7 @@ internal fun AppleMusicLyricsView(
 
                                 AppleMusicFloatingCircleButton(
                                     icon = R.drawable.share,
-                                    onClick = {
-                                        val intent = Intent().apply {
-                                            action = Intent.ACTION_SEND
-                                            type = "text/plain"
-                                            putExtra(
-                                                Intent.EXTRA_TEXT,
-                                                "https://music.youtube.com/watch?v=${mediaMetadata?.id}"
-                                            )
-                                        }
-                                        context.startActivity(Intent.createChooser(intent, null))
-                                    }
+                                    onClick = { showShareDialog = true }
                                 )
                             }
                         }
@@ -201,9 +214,39 @@ internal fun AppleMusicLyricsView(
                 onSelectView = onSelectView,
                 lyricsAvailable = true,
                 activeColor = activePillContainer,
-                activeContentColor = activePillContent
+                activeContentColor = activePillContent,
+                position = position,
+                duration = duration
             )
         }
+    }
+
+    if (showShareDialog) {
+        LyricsShareDialog(
+            txt = lyrics ?: "",
+            title = mediaMetadata?.title ?: "",
+            arts = mediaMetadata?.artists?.joinToString { it.name } ?: "",
+            songId = mediaMetadata?.id ?: "",
+            onDismiss = { showShareDialog = false },
+            onShareAsImage = {
+                showShareDialog = false
+                showColorPicker = true
+            }
+        )
+    }
+
+    if (showColorPicker) {
+        LyricsColorPickerDialog(
+            txt = lyrics ?: "",
+            title = mediaMetadata?.title ?: "",
+            arts = mediaMetadata?.artists?.joinToString { it.name } ?: "",
+            thumbnailUrl = mediaMetadata?.thumbnailUrl,
+            lyricsTextPosition = LyricsPosition.CENTER,
+            onDismiss = { showColorPicker = false },
+            onShare = { backgroundColor, textColor, secondaryTextColor, style ->
+                showColorPicker = false
+            }
+        )
     }
 }
 
