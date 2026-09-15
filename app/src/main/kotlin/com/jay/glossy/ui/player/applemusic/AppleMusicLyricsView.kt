@@ -6,7 +6,6 @@
 package com.jay.glossy.ui.player.applemusic
 
 import android.content.Intent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -74,7 +73,7 @@ internal fun AppleMusicLyricsView(
     
     LaunchedEffect(showCluster, interactionTick) {
         if (showCluster) {
-            delay(8000L) 
+            delay(8000L)
             showCluster = false
         }
     }
@@ -141,56 +140,58 @@ internal fun AppleMusicLyricsView(
                         )
                     }
 
-                    AnimatedVisibility(
-                        visible = showCluster,
-                        enter = fadeIn(),
-                        exit = fadeOut(),
-                        modifier = Modifier.align(Alignment.BottomEnd),
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(end = 20.dp, bottom = 16.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                    // Scope Error Fixed by Wrapping AnimatedVisibility in a clean Box
+                    Box(modifier = Modifier.align(Alignment.BottomEnd)) {
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = showCluster,
+                            enter = fadeIn(),
+                            exit = fadeOut()
                         ) {
-                            AppleMusicFloatingCircleButton(
-                                icon = R.drawable.more_horiz,
-                                onClick = {
-                                    menuState.show {
-                                        com.jay.glossy.ui.menu.LyricsMenu(
-                                            lyricsProvider = { currentLyrics },
-                                            songProvider = { currentSong?.song },
-                                            mediaMetadataProvider = { mediaMetadata!! },
-                                            onDismiss = menuState::dismiss,
-                                            onShowOffsetDialog = {
-                                                bottomSheetPageState.show {
-                                                    ShowOffsetDialog(songProvider = { currentSong?.song })
-                                                }
-                                            },
-                                        )
+                            Column(
+                                modifier = Modifier.padding(end = 20.dp, bottom = 16.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp),
+                            ) {
+                                AppleMusicFloatingCircleButton(
+                                    icon = R.drawable.more_horiz,
+                                    onClick = {
+                                        menuState.show {
+                                            com.jay.glossy.ui.menu.LyricsMenu(
+                                                lyricsProvider = { currentLyrics },
+                                                songProvider = { currentSong?.song },
+                                                mediaMetadataProvider = { mediaMetadata!! },
+                                                onDismiss = menuState::dismiss,
+                                                onShowOffsetDialog = {
+                                                    bottomSheetPageState.show {
+                                                        ShowOffsetDialog(songProvider = { currentSong?.song })
+                                                    }
+                                                },
+                                            )
+                                        }
                                     }
-                                }
-                            )
+                                )
 
-                            AppleMusicFloatingCircleButton(
-                                icon = R.drawable.share,
-                                onClick = {
-                                    val intent = Intent().apply {
-                                        action = Intent.ACTION_SEND
-                                        type = "text/plain"
-                                        putExtra(
-                                            Intent.EXTRA_TEXT,
-                                            "https://music.youtube.com/watch?v=${mediaMetadata?.id}"
-                                        )
+                                AppleMusicFloatingCircleButton(
+                                    icon = R.drawable.share,
+                                    onClick = {
+                                        val intent = Intent().apply {
+                                            action = Intent.ACTION_SEND
+                                            type = "text/plain"
+                                            putExtra(
+                                                Intent.EXTRA_TEXT,
+                                                "https://music.youtube.com/watch?v=${mediaMetadata?.id}"
+                                            )
+                                        }
+                                        context.startActivity(Intent.createChooser(intent, null))
                                     }
-                                    context.startActivity(Intent.createChooser(intent, null))
-                                }
-                            )
+                                )
+                            }
                         }
                     }
                 }
             }
         }
 
-        AnimatedVisibility(
+        androidx.compose.animation.AnimatedVisibility(
             visible = showCluster,
             enter = expandVertically() + fadeIn(),
             exit = shrinkVertically() + fadeOut(),
