@@ -6,7 +6,6 @@
 package com.jay.glossy.ui.player.applemusic
 
 import android.content.Intent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -17,6 +16,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ContainedLoadingIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
@@ -44,6 +44,7 @@ import com.jay.glossy.ui.component.Lyrics
 import com.jay.glossy.ui.utils.ShowOffsetDialog
 import kotlinx.coroutines.delay
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun AppleMusicLyricsView(
     viewState: AppleMusicView,
@@ -71,7 +72,7 @@ internal fun AppleMusicLyricsView(
     
     LaunchedEffect(showCluster, interactionTick) {
         if (showCluster) {
-            delay(8000L) // 8 सेकंड बाद कंट्रोल्स छुप जाएंगे
+            delay(8000L)
             showCluster = false
         }
     }
@@ -138,7 +139,7 @@ internal fun AppleMusicLyricsView(
                         )
                     }
 
-                    AnimatedVisibility(
+                    androidx.compose.animation.AnimatedVisibility(
                         visible = showCluster,
                         enter = fadeIn(),
                         exit = fadeOut(),
@@ -155,7 +156,7 @@ internal fun AppleMusicLyricsView(
                                         com.jay.glossy.ui.menu.LyricsMenu(
                                             lyricsProvider = { currentLyrics },
                                             songProvider = { currentSong?.song },
-                                            mediaMetadataProvider = { mediaMetadata },
+                                            mediaMetadataProvider = { mediaMetadata!! },
                                             onDismiss = menuState::dismiss,
                                             onShowOffsetDialog = {
                                                 bottomSheetPageState.show {
@@ -187,7 +188,7 @@ internal fun AppleMusicLyricsView(
             }
         }
 
-        AnimatedVisibility(
+        androidx.compose.animation.AnimatedVisibility(
             visible = showCluster,
             enter = expandVertically() + fadeIn(),
             exit = shrinkVertically() + fadeOut(),
