@@ -29,12 +29,14 @@ import androidx.media3.exoplayer.source.ShuffleOrder.DefaultShuffleOrder
 import com.jay.glossy.R
 import com.jay.glossy.LocalListenTogetherManager
 import com.jay.glossy.LocalPlayerConnection
-import com.jay.glossy.extensions.metadata
 import com.jay.glossy.extensions.move
 import com.jay.glossy.extensions.toggleRepeatMode
 import com.jay.glossy.listentogether.RoomRole
 import com.jay.glossy.ui.component.BottomSheetState
+import com.jay.glossy.ui.component.LocalBottomSheetPageState
+import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.component.MediaMetadataListItem
+import com.jay.glossy.ui.utils.ShowMediaInfo
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -48,10 +50,14 @@ internal fun AppleMusicQueueView(
     activePillContent: Color,
     typography: AppleMusicTypography,
     bottomSheetState: BottomSheetState,
+    position: Long,
+    duration: Long,
     modifier: Modifier = Modifier
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val localDensity = LocalDensity.current
+    val menuState = LocalMenuState.current
+    val bottomSheetPageState = LocalBottomSheetPageState.current
 
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.role?.collectAsStateWithLifecycle(initialValue = RoomRole.NONE)?.value == RoomRole.GUEST
@@ -155,12 +161,37 @@ internal fun AppleMusicQueueView(
                                 trailingContent = {
                                     if (!isListenTogetherGuest) {
                                         IconButton(
+                                            onClick = {
+                                                menuState.show {
+                                                    com.jay.glossy.ui.menu.QueueMenu(
+                                                        mediaMetadata = window.mediaItem.metadata!!,
+                                                        playerBottomSheetState = bottomSheetState,
+                                                        onShowDetailsDialog = {
+                                                            window.mediaItem.metadata!!.id.let {
+                                                                bottomSheetPageState.show {
+                                                                    ShowMediaInfo(it)
+                                                                }
+                                                            }
+                                                        },
+                                                        onDismiss = menuState::dismiss,
+                                                    )
+                                                }
+                                            }
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(R.drawable.more_vert),
+                                                contentDescription = "More",
+                                                tint = Color.White
+                                            )
+                                        }
+
+                                        IconButton(
                                             onClick = { },
                                             modifier = Modifier.draggableHandle()
                                         ) {
                                             Icon(
                                                 painter = painterResource(R.drawable.drag_handle),
-                                                contentDescription = null,
+                                                contentDescription = "Drag",
                                                 tint = Color.White
                                             )
                                         }
@@ -190,7 +221,9 @@ internal fun AppleMusicQueueView(
             onSelectView = onSelectView,
             lyricsAvailable = true,
             activeColor = activePillContainer,
-            activeContentColor = activePillContent
+            activeContentColor = activePillContent,
+            position = position,
+            duration = duration
         )
     }
 }
