@@ -31,6 +31,9 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -172,16 +175,24 @@ fun AppleStylePlayer(
                         AppleMainControls(mediaMetadata = mediaMetadata)
                     }
                     ApplePlayerState.LYRICS -> {
-                        // TODO: Step 2 - We will inject InlineLyricsView here
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("Lyrics UI Coming in Next Step", color = Color.White)
+                        val positionProvider = remember { { playerConnection.player.currentPosition } }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp)
+                        ) {
+                            InlineLyricsView(
+                                mediaMetadata = mediaMetadata,
+                                showLyrics = true,
+                                positionProvider = positionProvider
+                            )
                         }
                     }
                     ApplePlayerState.QUEUE -> {
-                        // TODO: Step 3 - We will inject Apple-style Queue here
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("Queue UI Coming in Next Step", color = Color.White)
-                        }
+                        AppleQueueView(
+                            playerConnection = playerConnection,
+                            mediaMetadata = mediaMetadata
+                        )
                     }
                 }
             }
@@ -516,5 +527,154 @@ fun BottomNavButton(
             tint = tintColor,
             modifier = Modifier.size(24.dp)
         )
+    }
+}
+
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+fun AppleQueueView(
+    playerConnection: com.jay.glossy.playback.PlayerConnection,
+    mediaMetadata: MediaMetadata
+) {
+    val queueWindows by playerConnection.queueWindows.collectAsStateWithLifecycle()
+    val currentWindowIndex by playerConnection.currentWindowIndex.collectAsStateWithLifecycle()
+    val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
+    val shuffleModeEnabled by playerConnection.shuffleModeEnabled.collectAsStateWithLifecycle()
+    val repeatMode by playerConnection.repeatMode.collectAsStateWithLifecycle()
+
+    val lazyListState = rememberLazyListState()
+
+    // Auto-scroll to current playing song when Queue is opened
+    LaunchedEffect(currentWindowIndex) {
+        if (currentWindowIndex != -1 && currentWindowIndex < queueWindows.size) {
+            lazyListState.scrollToItem(currentWindowIndex)
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp)
+    ) {
+        // Queue Header & Controls (Shuffle / Repeat)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Playing Next",
+                color = Color.White,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Shuffle Toggle
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(if (shuffleModeEnabled) Color.White.copy(alpha = 0.3f) else Color.Transparent)
+                        .clickable { playerConnection.player.shuffleModeEnabled = !shuffleModeEnabled },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.shuffle),
+                        contentDescription = "Shuffle",
+                        tint = if (shuffleModeEnabled) Color.White else Color.White.copy(alpha = 0.5f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                // Repeat Toggle
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(if (repeatMode != Player.REPEAT_MODE_OFF) Color.White.copy(alpha = 0.3f) else Color.Transparent)
+                        .clickable { playerConnection.player.toggleRepeatMode() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(
+                            when (repeatMode) {
+                                Player.REPEAT_MODE_ONE -> R.drawable.repeat_one
+                                else -> R.drawable.repeat
+                            }
+                        ),
+                        contentDescription = "Repeat",
+                        tint = if (repeatMode != Player.REPEAT_MODE_OFF) Color.White else Color.White.copy(alpha = 0.5f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        }
+
+        // The Queue List
+        LazyColumn(
+            state = lazyListState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 100.dp)
+        ) {
+            itemsIndexed(
+                items = queueWindows,
+                key = { _, item -> item.uid.hashCode() }
+            ) { index, window ->
+                val isActive = index == currentWindowIndex
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .animateItemPlacement()
+                        .padding(vertical = 4.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (isActive) Color.White.copy(alpha = 0.2f) else Color.Transparent)
+                        .clickable {
+                            if (index == currentWindowIndex) {
+                                playerConnection.togglePlayPause()
+                            } else {
+                                playerConnection.player.seekToDefaultPosition(window.firstPeriodIndex)
+                                playerConnection.player.playWhenReady = true
+                            }
+                        }
+                        .padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Artwork
+                    AsyncImage(
+                        model = window.mediaItem.metadata?.thumbnailUrl,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                    )
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    // Song Info
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = window.mediaItem.metadata?.title ?: "Unknown",
+                            color = if (isActive) Color.White else Color.White.copy(alpha = 0.9f),
+                            fontSize = 16.sp,
+                            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = window.mediaItem.metadata?.artists?.joinToString { it.name } ?: "",
+                            color = Color.White.copy(alpha = 0.6f),
+                            fontSize = 14.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        }
     }
 }
