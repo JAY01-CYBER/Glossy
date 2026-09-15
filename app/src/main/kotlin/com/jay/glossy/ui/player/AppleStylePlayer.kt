@@ -4,7 +4,7 @@
  * Licensed under GPL-3.0 | See git history for contributors
  *
  * File: AppleStylePlayer.kt
- * Description: Premium 3-State Apple Music Style Player (Pixel Perfect Match)
+ * Description: Premium 3-State Apple Music Style Player (Pixel Perfect 1:1 Match)
  * Variant Support: GMS (Cast Enabled) & Normal/FOSS (Lyrics & Queue Only)
  * Lead Developer: Jay Chaudhary
  * ==============================================================================
@@ -75,7 +75,6 @@ import com.metrolist.models.MediaMetadata
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
-// 3 States for the Premium Player
 enum class ApplePlayerState {
     MAIN_CONTROLS,
     LYRICS,
@@ -92,17 +91,12 @@ fun AppleStylePlayer(
     val context = LocalContext.current
     var currentState by remember { mutableStateOf(ApplePlayerState.MAIN_CONTROLS) }
 
-    // GMS Variant Check
     val castHandler = remember(playerConnection) {
-        try {
-            playerConnection.service.castConnectionHandler
-        } catch (e: Exception) {
-            null
-        }
+        try { playerConnection.service.castConnectionHandler } catch (e: Exception) { null }
     }
     val isGmsVariant = castHandler != null
 
-    // 0 blur for Main screen to keep it crystal clear like Apple Music
+    // 0 blur for Main screen, 100 for Lyrics/Queue
     val blurRadius by animateDpAsState(
         targetValue = if (currentState == ApplePlayerState.MAIN_CONTROLS) 0.dp else 100.dp,
         animationSpec = tween(600),
@@ -118,14 +112,14 @@ fun AppleStylePlayer(
             .fillMaxSize()
             .background(Color.Black) // Base is always black
     ) {
-        // --- 1. BACKGROUND LAYER ---
+        // --- 1. FULL SCREEN ARTWORK BACKGROUND ---
         AsyncImage(
             model = ImageRequest.Builder(context)
                 .data(mediaMetadata.thumbnailUrl)
                 .crossfade(1000)
                 .build(),
-            contentDescription = "Full Screen Background",
-            contentScale = ContentScale.Crop, // Fill entire screen
+            contentDescription = "Full Screen Artwork",
+            contentScale = ContentScale.Crop, // Fills entire screen
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
@@ -134,17 +128,17 @@ fun AppleStylePlayer(
                 .blur(blurRadius)
         )
 
-        // 🎯 FIX 1: Gradient Overlay - Keep top 50% totally transparent!
+        // 🎯 EXACT APPLE MUSIC GRADIENT (Lets the background colors glow through!)
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
                         0.0f to Color.Transparent,
-                        0.55f to Color.Transparent, // Starts darkening much lower now
-                        0.75f to Color.Black.copy(alpha = 0.5f),
-                        0.95f to Color.Black.copy(alpha = 0.9f),
-                        1.0f to Color.Black
+                        0.50f to Color.Transparent, // Image is completely untouched till 50%
+                        0.75f to Color.Black.copy(alpha = 0.3f), // Very soft darkening starts
+                        0.85f to Color.Black.copy(alpha = 0.6f), // Lets album colors glow behind buttons
+                        1.0f to Color.Black.copy(alpha = 0.85f) // Bottom is dark enough for icons
                     )
                 )
         )
@@ -157,18 +151,17 @@ fun AppleStylePlayer(
                 .navigationBarsPadding(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            
-            // Top Drag Handle (Pill)
+            // Pill indicator at top
             Box(
                 modifier = Modifier
                     .padding(vertical = 12.dp)
                     .width(40.dp)
                     .height(5.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.5f))
+                    .background(Color.White.copy(alpha = 0.4f))
             )
 
-            // Mini Header for Lyrics/Queue State
+            // Mini Header for Lyrics/Queue
             AnimatedVisibility(
                 visible = currentState != ApplePlayerState.MAIN_CONTROLS,
                 enter = fadeIn() + expandVertically(),
@@ -177,7 +170,6 @@ fun AppleStylePlayer(
                 AppleTopHeader(mediaMetadata = mediaMetadata, playerConnection = playerConnection)
             }
 
-            // Animated Content Switcher
             AnimatedContent(
                 targetState = currentState,
                 transitionSpec = { fadeIn(tween(400)) togetherWith fadeOut(tween(400)) },
@@ -191,9 +183,7 @@ fun AppleStylePlayer(
                     ApplePlayerState.LYRICS -> {
                         val positionProvider = remember { { playerConnection.player.currentPosition } }
                         Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 16.dp)
+                            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)
                         ) {
                             InlineLyricsView(
                                 mediaMetadata = mediaMetadata,
@@ -211,7 +201,7 @@ fun AppleStylePlayer(
                 }
             }
 
-            // --- 3. BOTTOM NAVIGATION BAR ---
+            // Bottom Navigation
             AppleBottomNavigationBar(
                 currentState = currentState,
                 isGmsVariant = isGmsVariant,
@@ -292,12 +282,11 @@ fun AppleMainControls(mediaMetadata: MediaMetadata) {
         }
     }
 
-    // 🎯 FIX 2 & 3: Using Arrangement.Bottom to push everything perfectly to the bottom
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 24.dp),
-        verticalArrangement = Arrangement.Bottom // This pushes everything down correctly!
+            .padding(horizontal = 28.dp),
+        verticalArrangement = Arrangement.Bottom // Push controls to the very bottom
     ) {
         
         // --- TITLE, LIKE, AND MORE ROW ---
@@ -306,14 +295,14 @@ fun AppleMainControls(mediaMetadata: MediaMetadata) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).padding(end = 16.dp),
                 horizontalAlignment = Alignment.Start
             ) {
                 Text(
                     text = mediaMetadata.title,
                     color = Color.White,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.ExtraBold, // Exact Apple Boldness
+                    fontSize = 22.sp, // Exact Apple sizing
+                    fontWeight = FontWeight.ExtraBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.basicMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp)
@@ -323,7 +312,7 @@ fun AppleMainControls(mediaMetadata: MediaMetadata) {
                     Text(
                         text = mediaMetadata.artists.joinToString(", ") { it.name },
                         color = Color.White.copy(alpha = 0.7f),
-                        fontSize = 18.sp,
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.Medium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -332,14 +321,14 @@ fun AppleMainControls(mediaMetadata: MediaMetadata) {
                 }
             }
 
-            // 🎯 FIX 4: Circular Backgrounds for Like & More buttons
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            // Buttons on the right side
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 val isFavorite = currentSong?.song?.liked == true
                 
-                // Like Button
+                // Like Button (Star/Heart)
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(32.dp)
                         .clip(CircleShape)
                         .background(Color.White.copy(alpha = 0.15f))
                         .clickable { playerConnection.toggleLike() },
@@ -348,25 +337,25 @@ fun AppleMainControls(mediaMetadata: MediaMetadata) {
                     Icon(
                         painter = painterResource(if (isFavorite) R.drawable.favorite else R.drawable.favorite_border),
                         contentDescription = "Like",
-                        tint = if (isFavorite) Color.White else Color.White.copy(alpha = 0.9f),
-                        modifier = Modifier.size(20.dp)
+                        tint = if (isFavorite) MaterialTheme.colorScheme.error else Color.White.copy(alpha = 0.9f),
+                        modifier = Modifier.size(18.dp)
                     )
                 }
                 
                 // More Button
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(32.dp)
                         .clip(CircleShape)
                         .background(Color.White.copy(alpha = 0.15f))
-                        .clickable { /* Add your bottom sheet menu call here */ },
+                        .clickable { /* Add menu call here */ },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        painter = painterResource(R.drawable.more_vert),
+                        painter = painterResource(R.drawable.more_vert), 
                         contentDescription = "More",
                         tint = Color.White.copy(alpha = 0.9f),
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
@@ -374,16 +363,22 @@ fun AppleMainControls(mediaMetadata: MediaMetadata) {
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // --- APPLE STYLE SLIDER ---
+        // --- 🎯 EXACT APPLE MUSIC THIN SLIDER ---
         val trackInteractionSource = remember { MutableInteractionSource() }
         val isTrackDragged by trackInteractionSource.collectIsDraggedAsState()
         val isTrackPressed by trackInteractionSource.collectIsPressedAsState()
         val isTrackActive = isTrackDragged || isTrackPressed
 
         val trackHeight by animateDpAsState(
-            targetValue = if (isTrackActive) 10.dp else 4.dp,
+            targetValue = if (isTrackActive) 8.dp else 3.dp, // Very thin track
             animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
             label = "trackHeight"
+        )
+        
+        val thumbSize by animateDpAsState(
+            targetValue = if (isTrackActive) 14.dp else 8.dp, // Tiny thumb
+            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+            label = "thumbSize"
         )
 
         Slider(
@@ -405,15 +400,27 @@ fun AppleMainControls(mediaMetadata: MediaMetadata) {
             },
             enabled = !isListenTogetherGuest,
             interactionSource = trackInteractionSource,
-            thumb = { Spacer(modifier = Modifier.size(0.dp)) },
+            colors = SliderDefaults.colors(
+                thumbColor = Color.White,
+                activeTrackColor = Color.White.copy(alpha = 0.9f),
+                inactiveTrackColor = Color.White.copy(alpha = 0.25f)
+            ),
+            thumb = {
+                Box(
+                    modifier = Modifier
+                        .size(thumbSize)
+                        .clip(CircleShape)
+                        .background(Color.White)
+                )
+            },
             track = { sliderState ->
-                PlayerSliderTrack(
-                    sliderState = sliderState,
+                SliderDefaults.Track(
                     colors = SliderDefaults.colors(
                         activeTrackColor = Color.White.copy(alpha = 0.9f),
-                        inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+                        inactiveTrackColor = Color.White.copy(alpha = 0.25f)
                     ),
-                    trackHeight = trackHeight
+                    sliderState = sliderState,
+                    modifier = Modifier.height(trackHeight)
                 )
             },
             modifier = Modifier.fillMaxWidth()
@@ -421,70 +428,74 @@ fun AppleMainControls(mediaMetadata: MediaMetadata) {
 
         // Timestamps
         Row(
-            modifier = Modifier.fillMaxWidth().offset(y = (-8).dp),
+            modifier = Modifier.fillMaxWidth().offset(y = (-10).dp), // Pulled closer to slider
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
                 text = makeTimeString(sliderPosition ?: positionState.longValue),
-                color = Color.White.copy(alpha = 0.6f),
-                fontSize = 12.sp,
+                color = Color.White.copy(alpha = 0.5f),
+                fontSize = 11.sp, // Apple uses very small font for timestamps
                 fontWeight = FontWeight.Bold
             )
             Text(
                 text = if (durationState.longValue != C.TIME_UNSET) makeTimeString(durationState.longValue) else "",
-                color = Color.White.copy(alpha = 0.6f),
-                fontSize = 12.sp,
+                color = Color.White.copy(alpha = 0.5f),
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Bold
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(28.dp))
 
-        // --- PLAYBACK CONTROLS ---
+        // --- 🎯 EXACT APPLE MUSIC PLAYBACK CONTROLS ---
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
+            horizontalArrangement = Arrangement.Center, // Centered tightly
             verticalAlignment = Alignment.CenterVertically
         ) {
             val prevInteractionSource = remember { MutableInteractionSource() }
             val isPrevPressed by prevInteractionSource.collectIsPressedAsState()
             val prevScale by animateFloatAsState(if (isPrevPressed) 0.7f else 1f, spring(0.6f, 500f), label = "prevScale")
 
-            IconButton(
-                onClick = playerConnection::seekToPrevious,
-                enabled = canSkipPrevious && !isListenTogetherGuest,
-                interactionSource = prevInteractionSource,
+            Box(
                 modifier = Modifier
-                    .size(64.dp)
+                    .size(56.dp)
                     .graphicsLayer(scaleX = prevScale, scaleY = prevScale)
+                    .clickable(interactionSource = prevInteractionSource, indication = null) {
+                        if (canSkipPrevious && !isListenTogetherGuest) playerConnection.seekToPrevious()
+                    },
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
                     painter = painterResource(R.drawable.apple_skip_previous), 
                     contentDescription = "Previous",
                     tint = if (canSkipPrevious && !isListenTogetherGuest) Color.White else Color.White.copy(alpha = 0.4f),
-                    modifier = Modifier.size(42.dp)
+                    modifier = Modifier.size(36.dp)
                 )
             }
+
+            Spacer(modifier = Modifier.width(36.dp)) // Exact gap
 
             val playInteractionSource = remember { MutableInteractionSource() }
             val isPlayPressed by playInteractionSource.collectIsPressedAsState()
             val playScale by animateFloatAsState(if (isPlayPressed) 0.75f else 1f, spring(0.6f, 500f), label = "playScale")
 
-            IconButton(
-                onClick = {
-                    if (isListenTogetherGuest) {
-                        playerConnection.toggleMute()
-                    } else if (playbackState == Player.STATE_ENDED) {
-                        playerConnection.player.seekTo(0, 0)
-                        playerConnection.player.playWhenReady = true
-                    } else {
-                        playerConnection.togglePlayPause()
-                    }
-                },
-                interactionSource = playInteractionSource,
+            // 🎯 NO BACKGROUND CIRCLE, JUST THE ICON!
+            Box(
                 modifier = Modifier
-                    .size(88.dp)
+                    .size(64.dp)
                     .graphicsLayer(scaleX = playScale, scaleY = playScale)
+                    .clickable(interactionSource = playInteractionSource, indication = null) {
+                        if (isListenTogetherGuest) {
+                            playerConnection.toggleMute()
+                        } else if (playbackState == Player.STATE_ENDED) {
+                            playerConnection.player.seekTo(0, 0)
+                            playerConnection.player.playWhenReady = true
+                        } else {
+                            playerConnection.togglePlayPause()
+                        }
+                    },
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
                     painter = painterResource(
@@ -500,33 +511,35 @@ fun AppleMainControls(mediaMetadata: MediaMetadata) {
                     ),
                     contentDescription = "Play/Pause",
                     tint = Color.White,
-                    modifier = Modifier.size(80.dp) // Large play button
+                    modifier = Modifier.size(48.dp) // Large crisp icon
                 )
             }
+
+            Spacer(modifier = Modifier.width(36.dp)) // Exact gap
 
             val nextInteractionSource = remember { MutableInteractionSource() }
             val isNextPressed by nextInteractionSource.collectIsPressedAsState()
             val nextScale by animateFloatAsState(if (isNextPressed) 0.7f else 1f, spring(0.6f, 500f), label = "nextScale")
 
-            IconButton(
-                onClick = playerConnection::seekToNext,
-                enabled = canSkipNext && !isListenTogetherGuest,
-                interactionSource = nextInteractionSource,
+            Box(
                 modifier = Modifier
-                    .size(64.dp)
+                    .size(56.dp)
                     .graphicsLayer(scaleX = nextScale, scaleY = nextScale)
+                    .clickable(interactionSource = nextInteractionSource, indication = null) {
+                        if (canSkipNext && !isListenTogetherGuest) playerConnection.seekToNext()
+                    },
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
                     painter = painterResource(R.drawable.apple_skip_next), 
                     contentDescription = "Next",
                     tint = if (canSkipNext && !isListenTogetherGuest) Color.White else Color.White.copy(alpha = 0.4f),
-                    modifier = Modifier.size(42.dp)
+                    modifier = Modifier.size(36.dp)
                 )
             }
         }
         
-        // Exact Apple Music spacing from bottom nav bar
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
@@ -539,7 +552,7 @@ fun AppleBottomNavigationBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 48.dp, vertical = 16.dp), // Tighter vertical padding
+            .padding(horizontal = 48.dp, vertical = 12.dp), 
         horizontalArrangement = if (isGmsVariant) Arrangement.SpaceBetween else Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -586,7 +599,7 @@ fun BottomNavButton(
 
     Box(
         modifier = Modifier
-            .size(44.dp) // Slightly smaller exact Apple sizing
+            .size(44.dp) 
             .graphicsLayer(scaleX = scale, scaleY = scale)
             .clip(CircleShape)
             .background(bgColor)
