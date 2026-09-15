@@ -82,7 +82,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -139,7 +138,6 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.ProcessLifecycleOwner
@@ -180,7 +178,6 @@ import com.jay.glossy.constants.SquigglySliderKey
 import com.jay.glossy.constants.ThumbnailCornerRadius
 import com.jay.glossy.constants.UseNewPlayerDesignKey
 import com.jay.glossy.db.entities.LyricsEntity
-import com.jay.glossy.extensions.metadata
 import com.jay.glossy.extensions.togglePlayPause
 import com.jay.glossy.extensions.toggleRepeatMode
 import com.jay.glossy.listentogether.RoomRole
@@ -200,7 +197,6 @@ import com.jay.glossy.ui.theme.PlayerColorExtractor
 import com.jay.glossy.ui.theme.PlayerSliderColors
 import com.jay.glossy.ui.utils.ShowMediaInfo
 import com.jay.glossy.ui.utils.ShowOffsetDialog
-import com.jay.glossy.utils.dataStore
 import com.jay.glossy.utils.makeTimeString
 import com.jay.glossy.utils.rememberEnumPreference
 import com.jay.glossy.utils.rememberPreference
@@ -247,17 +243,12 @@ fun BottomSheetPlayer(
         }
     }
 
-    val (hidePlayerThumbnail, onHidePlayerThumbnailChange) = rememberPreference(HidePlayerThumbnailKey, false)
+    val (hidePlayerThumbnail) = rememberPreference(HidePlayerThumbnailKey, false)
     val (hideStatusBarOnFullscreen) = rememberPreference(HideStatusBarOnFullscreenKey, false)
     val cropAlbumArt by rememberPreference(CropAlbumArtKey, false)
 
-    var showInlineLyrics by rememberSaveable {
-        mutableStateOf(false)
-    }
-
-    var isFullScreen by rememberSaveable {
-        mutableStateOf(false)
-    }
+    var showInlineLyrics by rememberSaveable { mutableStateOf(false) }
+    var isFullScreen by rememberSaveable { mutableStateOf(false) }
 
     val playerBackground by rememberEnumPreference(
         key = PlayerBackgroundStyleKey,
@@ -270,18 +261,9 @@ fun BottomSheetPlayer(
 
     val isSystemInDarkTheme = isSystemInDarkTheme()
     val darkTheme by rememberEnumPreference(DarkModeKey, defaultValue = DarkMode.AUTO)
-    val useDarkTheme =
-        remember(darkTheme, isSystemInDarkTheme) {
-            if (darkTheme == DarkMode.AUTO) isSystemInDarkTheme else darkTheme == DarkMode.ON
-        }
-
-    val shouldUseDarkButtonColors =
-        remember(playerBackground, useDarkTheme) {
-            when (playerBackground) {
-                PlayerBackgroundStyle.BLUR, PlayerBackgroundStyle.GRADIENT, PlayerBackgroundStyle.ANIMATED_MESH -> true
-                PlayerBackgroundStyle.DEFAULT -> useDarkTheme
-            }
-        }
+    val useDarkTheme = remember(darkTheme, isSystemInDarkTheme) {
+        if (darkTheme == DarkMode.AUTO) isSystemInDarkTheme else darkTheme == DarkMode.ON
+    }
 
     val isPlaying by playerConnection.isPlaying.collectAsState()
     val isKeepScreenOn by rememberPreference(KeepScreenOn, false)
@@ -291,12 +273,10 @@ fun BottomSheetPlayer(
         val window = (context as? android.app.Activity)?.window
         if (window != null && state.isExpanded) {
             val insetsController = WindowCompat.getInsetsController(window, window.decorView)
-
             when (playerBackground) {
                 PlayerBackgroundStyle.BLUR, PlayerBackgroundStyle.GRADIENT, PlayerBackgroundStyle.ANIMATED_MESH -> {
                     insetsController.isAppearanceLightStatusBars = false
                 }
-
                 PlayerBackgroundStyle.DEFAULT -> {
                     insetsController.isAppearanceLightStatusBars = !useDarkTheme
                 }
@@ -330,17 +310,15 @@ fun BottomSheetPlayer(
         state.collapseSoft()
     }
 
-    val onBackgroundColor =
-        when (playerBackground) {
-            PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.secondary
-            else -> MaterialTheme.colorScheme.onSurface
-        }
-    val useBlackBackground =
-        remember(isSystemInDarkTheme, darkTheme, pureBlack) {
-            val useDarkTheme =
-                if (darkTheme == DarkMode.AUTO) isSystemInDarkTheme else darkTheme == DarkMode.ON
-            useDarkTheme && pureBlack
-        }
+    val onBackgroundColor = when (playerBackground) {
+        PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.secondary
+        else -> MaterialTheme.colorScheme.onSurface
+    }
+    
+    val useBlackBackground = remember(isSystemInDarkTheme, darkTheme, pureBlack) {
+        val dark = if (darkTheme == DarkMode.AUTO) isSystemInDarkTheme else darkTheme == DarkMode.ON
+        dark && pureBlack
+    }
 
     val playbackState by playerConnection.playbackState.collectAsState()
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
@@ -358,14 +336,9 @@ fun BottomSheetPlayer(
     val listenTogetherRoleState = listenTogetherManager?.role?.collectAsStateWithLifecycle(initialValue = RoomRole.NONE)
     val isListenTogetherGuest = listenTogetherRoleState?.value == RoomRole.GUEST
 
-    val castHandler =
-        remember(playerConnection) {
-            try {
-                playerConnection.service.castConnectionHandler
-            } catch (e: Exception) {
-                null
-            }
-        }
+    val castHandler = remember(playerConnection) {
+        try { playerConnection.service.castConnectionHandler } catch (e: Exception) { null }
+    }
     val isCasting by castHandler?.isCasting?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(false) }
     val castPosition by castHandler?.castPosition?.collectAsStateWithLifecycle() ?: remember { mutableLongStateOf(0L) }
     val castDuration by castHandler?.castDuration?.collectAsStateWithLifecycle() ?: remember { mutableLongStateOf(0L) }
@@ -376,10 +349,7 @@ fun BottomSheetPlayer(
     LaunchedEffect(state.isExpanded) {
         if (state.isExpanded) {
             delay(100)
-            try {
-                focusRequester.requestFocus()
-            } catch (e: Exception) {
-            }
+            try { focusRequester.requestFocus() } catch (e: Exception) {}
         }
     }
 
@@ -397,23 +367,13 @@ fun BottomSheetPlayer(
     var duration by durationState
 
     val effectivePosition by remember {
-        derivedStateOf {
-            if (isCasting) {
-                castPosition
-            } else {
-                position
-            }
-        }
+        derivedStateOf { if (isCasting) castPosition else position }
     }
 
-    var sliderPosition by remember {
-        mutableStateOf<Long?>(null)
-    }
+    var sliderPosition by remember { mutableStateOf<Long?>(null) }
     var lastManualSeekTime by remember { mutableLongStateOf(0L) }
 
-    var gradientColors by remember {
-        mutableStateOf<List<Color>>(emptyList())
-    }
+    var gradientColors by remember { mutableStateOf<List<Color>>(emptyList()) }
     val gradientColorsCache = remember { mutableMapOf<String, List<Color>>() }
 
     if (!canSkipNext && automix.isNotEmpty()) {
@@ -432,32 +392,21 @@ fun BottomSheetPlayer(
                     return@LaunchedEffect
                 }
                 withContext(Dispatchers.IO) {
-                    val request =
-                        ImageRequest
-                            .Builder(context)
-                            .data(currentMetadata.thumbnailUrl)
-                            .size(100, 100)
-                            .allowHardware(false)
-                            .memoryCacheKey("gradient_${currentMetadata.id}")
-                            .build()
+                    val request = ImageRequest.Builder(context)
+                        .data(currentMetadata.thumbnailUrl)
+                        .size(100, 100)
+                        .allowHardware(false)
+                        .memoryCacheKey("gradient_${currentMetadata.id}")
+                        .build()
 
                     val result = runCatching { context.imageLoader.execute(request) }.getOrNull()
                     if (result != null) {
                         val bitmap = result.image?.toBitmap()
                         if (bitmap != null) {
-                            val palette =
-                                withContext(Dispatchers.Default) {
-                                    Palette
-                                        .from(bitmap)
-                                        .maximumColorCount(8)
-                                        .resizeBitmapArea(100 * 100)
-                                        .generate()
-                                }
-                            val extractedColors =
-                                PlayerColorExtractor.extractGradientColors(
-                                    palette = palette,
-                                    fallbackColor = fallbackColor,
-                                )
+                            val palette = withContext(Dispatchers.Default) {
+                                Palette.from(bitmap).maximumColorCount(8).resizeBitmapArea(100 * 100).generate()
+                            }
+                            val extractedColors = PlayerColorExtractor.extractGradientColors(palette, fallbackColor)
                             gradientColorsCache[currentMetadata.id] = extractedColors
                             withContext(Dispatchers.Main) { gradientColors = extractedColors }
                         }
@@ -470,90 +419,65 @@ fun BottomSheetPlayer(
     }
 
     val TextBackgroundColor by animateColorAsState(
-        targetValue =
-            when (playerBackground) {
-                PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.onBackground
-                PlayerBackgroundStyle.BLUR -> Color.White
-                PlayerBackgroundStyle.GRADIENT -> Color.White
-                PlayerBackgroundStyle.ANIMATED_MESH -> Color.White
-            },
+        targetValue = when (playerBackground) {
+            PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.onBackground
+            else -> Color.White
+        },
         label = "TextBackgroundColor",
     )
 
-    val icBackgroundColor by animateColorAsState(
-        targetValue =
-            when (playerBackground) {
-                PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.surface
-                PlayerBackgroundStyle.BLUR -> Color.Black
-                PlayerBackgroundStyle.GRADIENT -> Color.Black
-                PlayerBackgroundStyle.ANIMATED_MESH -> Color.Black
-            },
-        label = "icBackgroundColor",
-    )
-
-    val (textButtonColor, iconButtonColor) =
-        when {
-            playerBackground == PlayerBackgroundStyle.BLUR ||
-                playerBackground == PlayerBackgroundStyle.GRADIENT ||
-                playerBackground == PlayerBackgroundStyle.ANIMATED_MESH -> {
-                when (playerButtonsStyle) {
-                    PlayerButtonsStyle.DEFAULT -> Pair(Color.White, Color.Black)
-                    PlayerButtonsStyle.PRIMARY -> Pair(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.onPrimary)
-                    PlayerButtonsStyle.TERTIARY -> Pair(MaterialTheme.colorScheme.tertiary, MaterialTheme.colorScheme.onTertiary)
-                }
-            }
-            else -> {
-                when (playerButtonsStyle) {
-                    PlayerButtonsStyle.DEFAULT -> if (useDarkTheme) Pair(Color.White, Color.Black) else Pair(Color.Black, Color.White)
-                    PlayerButtonsStyle.PRIMARY -> Pair(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.onPrimary)
-                    PlayerButtonsStyle.TERTIARY -> Pair(MaterialTheme.colorScheme.tertiary, MaterialTheme.colorScheme.onTertiary)
-                }
+    val (textButtonColor, iconButtonColor) = when {
+        playerBackground == PlayerBackgroundStyle.BLUR ||
+        playerBackground == PlayerBackgroundStyle.GRADIENT ||
+        playerBackground == PlayerBackgroundStyle.ANIMATED_MESH -> {
+            when (playerButtonsStyle) {
+                PlayerButtonsStyle.DEFAULT -> Pair(Color.White, Color.Black)
+                PlayerButtonsStyle.PRIMARY -> Pair(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.onPrimary)
+                PlayerButtonsStyle.TERTIARY -> Pair(MaterialTheme.colorScheme.tertiary, MaterialTheme.colorScheme.onTertiary)
             }
         }
-
-    val (sideButtonContainerColor, sideButtonContentColor) =
-        when {
-            playerBackground == PlayerBackgroundStyle.BLUR ||
-                playerBackground == PlayerBackgroundStyle.GRADIENT ||
-                playerBackground == PlayerBackgroundStyle.ANIMATED_MESH -> {
-                when (playerButtonsStyle) {
-                    PlayerButtonsStyle.DEFAULT -> Pair(Color.White.copy(alpha = 0.2f), Color.White)
-                    PlayerButtonsStyle.PRIMARY -> Pair(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer)
-                    PlayerButtonsStyle.TERTIARY -> Pair(MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.onTertiaryContainer)
-                }
-            }
-            else -> {
-                when (playerButtonsStyle) {
-                    PlayerButtonsStyle.DEFAULT -> Pair(MaterialTheme.colorScheme.surfaceContainerHighest, MaterialTheme.colorScheme.onSurface)
-                    PlayerButtonsStyle.PRIMARY -> Pair(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer)
-                    PlayerButtonsStyle.TERTIARY -> Pair(MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.onTertiaryContainer)
-                }
+        else -> {
+            when (playerButtonsStyle) {
+                PlayerButtonsStyle.DEFAULT -> if (useDarkTheme) Pair(Color.White, Color.Black) else Pair(Color.Black, Color.White)
+                PlayerButtonsStyle.PRIMARY -> Pair(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.onPrimary)
+                PlayerButtonsStyle.TERTIARY -> Pair(MaterialTheme.colorScheme.tertiary, MaterialTheme.colorScheme.onTertiary)
             }
         }
+    }
 
-    val download by LocalDownloadUtil.current
-        .getDownload(mediaMetadata?.id ?: "")
-        .collectAsStateWithLifecycle(initialValue = null)
-
-    val sleepTimerEnabled =
-        remember(
-            playerConnection.service.sleepTimer?.triggerTime,
-            playerConnection.service.sleepTimer?.pauseWhenSongEnd,
-        ) {
-            playerConnection.service.sleepTimer?.isActive ?: false
+    val (sideButtonContainerColor, sideButtonContentColor) = when {
+        playerBackground == PlayerBackgroundStyle.BLUR ||
+        playerBackground == PlayerBackgroundStyle.GRADIENT ||
+        playerBackground == PlayerBackgroundStyle.ANIMATED_MESH -> {
+            when (playerButtonsStyle) {
+                PlayerButtonsStyle.DEFAULT -> Pair(Color.White.copy(alpha = 0.2f), Color.White)
+                PlayerButtonsStyle.PRIMARY -> Pair(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer)
+                PlayerButtonsStyle.TERTIARY -> Pair(MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.onTertiaryContainer)
+            }
         }
+        else -> {
+            when (playerButtonsStyle) {
+                PlayerButtonsStyle.DEFAULT -> Pair(MaterialTheme.colorScheme.surfaceContainerHighest, MaterialTheme.colorScheme.onSurface)
+                PlayerButtonsStyle.PRIMARY -> Pair(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer)
+                PlayerButtonsStyle.TERTIARY -> Pair(MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.onTertiaryContainer)
+            }
+        }
+    }
+
+    val sleepTimerEnabled = remember(playerConnection.service.sleepTimer?.triggerTime, playerConnection.service.sleepTimer?.pauseWhenSongEnd) {
+        playerConnection.service.sleepTimer?.isActive ?: false
+    }
 
     var sleepTimerTimeLeft by remember { mutableLongStateOf(0L) }
 
     LaunchedEffect(sleepTimerEnabled) {
         if (sleepTimerEnabled) {
             while (isActive) {
-                sleepTimerTimeLeft =
-                    if (playerConnection.service.sleepTimer?.pauseWhenSongEnd == true) {
-                        playerConnection.player.duration - playerConnection.player.currentPosition
-                    } else {
-                        (playerConnection.service.sleepTimer?.triggerTime ?: 0L) - System.currentTimeMillis()
-                    }
+                sleepTimerTimeLeft = if (playerConnection.service.sleepTimer?.pauseWhenSongEnd == true) {
+                    playerConnection.player.duration - playerConnection.player.currentPosition
+                } else {
+                    (playerConnection.service.sleepTimer?.triggerTime ?: 0L) - System.currentTimeMillis()
+                }
                 delay(1000L)
             }
         }
@@ -572,33 +496,20 @@ fun BottomSheetPlayer(
         AlertDialog(
             properties = DialogProperties(usePlatformDefaultWidth = false),
             onDismissRequest = { showSleepTimerDialog = false },
-            icon = {
-                Icon(
-                    painter = painterResource(R.drawable.bedtime),
-                    contentDescription = null,
-                )
-            },
+            icon = { Icon(painter = painterResource(R.drawable.bedtime), contentDescription = null) },
             title = { Text(stringResource(R.string.sleep_timer)) },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        showSleepTimerDialog = false
-                        playerConnection.service.sleepTimer?.start(
-                            minute = sleepTimerValue.roundToInt(),
-                            stopAfterCurrentSong = sleepTimerStopAfterCurrentSong,
-                            fadeOut = sleepTimerFadeOut,
-                        )
-                    },
-                ) {
-                    Text(stringResource(android.R.string.ok))
-                }
+                TextButton(onClick = {
+                    showSleepTimerDialog = false
+                    playerConnection.service.sleepTimer?.start(
+                        minute = sleepTimerValue.roundToInt(),
+                        stopAfterCurrentSong = sleepTimerStopAfterCurrentSong,
+                        fadeOut = sleepTimerFadeOut,
+                    )
+                }) { Text(stringResource(android.R.string.ok)) }
             },
             dismissButton = {
-                TextButton(
-                    onClick = { showSleepTimerDialog = false },
-                ) {
-                    Text(stringResource(android.R.string.cancel))
-                }
+                TextButton(onClick = { showSleepTimerDialog = false }) { Text(stringResource(android.R.string.cancel)) }
             },
             text = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -620,41 +531,28 @@ fun BottomSheetPlayer(
                             Button(
                                 onClick = {
                                     scope.launch {
-                                        context.safeDataStoreEdit { settings ->
-                                            settings[SleepTimerDefaultKey] = sleepTimerValue
-                                        }
+                                        context.safeDataStoreEdit { settings -> settings[SleepTimerDefaultKey] = sleepTimerValue }
                                     }
                                     Toast.makeText(context, String.format(sleepTimerDefaultSetTemplate, sleepTimerValue.roundToInt()), Toast.LENGTH_SHORT).show()
                                 },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                                ),
-                            ) {
-                                Text(stringResource(R.string.set_as_default))
-                            }
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
+                            ) { Text(stringResource(R.string.set_as_default)) }
                         } else {
                             OutlinedButton(
                                 onClick = {
                                     scope.launch {
-                                        context.safeDataStoreEdit { settings ->
-                                            settings[SleepTimerDefaultKey] = sleepTimerValue
-                                        }
+                                        context.safeDataStoreEdit { settings -> settings[SleepTimerDefaultKey] = sleepTimerValue }
                                     }
                                     Toast.makeText(context, String.format(sleepTimerDefaultSetTemplate, sleepTimerValue.roundToInt()), Toast.LENGTH_SHORT).show()
                                 },
-                            ) {
-                                Text(stringResource(R.string.set_as_default))
-                            }
+                            ) { Text(stringResource(R.string.set_as_default)) }
                         }
                         OutlinedButton(
                             onClick = {
                                 showSleepTimerDialog = false
                                 playerConnection.service.sleepTimer?.start(minute = -1)
                             },
-                        ) {
-                            Text(stringResource(R.string.end_of_song))
-                        }
+                        ) { Text(stringResource(R.string.end_of_song)) }
                     }
                 }
             },
@@ -683,12 +581,7 @@ fun BottomSheetPlayer(
     var previousMediaId by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(playbackState, mediaMetadata?.id) {
         val currentId = mediaMetadata?.id
-        if (currentId != null &&
-            currentId != previousMediaId &&
-            previousMediaId != null &&
-            playbackState == Player.STATE_ENDED &&
-            repeatMode == Player.REPEAT_MODE_ONE &&
-            !isListenTogetherGuest) {
+        if (currentId != null && currentId != previousMediaId && previousMediaId != null && playbackState == Player.STATE_ENDED && repeatMode == Player.REPEAT_MODE_ONE && !isListenTogetherGuest) {
             playerConnection.player.setRepeatMode(Player.REPEAT_MODE_ALL)
         }
         previousMediaId = currentId
@@ -715,12 +608,8 @@ fun BottomSheetPlayer(
     )
 
     val bottomSheetBackgroundColor = when (playerBackground) {
-        PlayerBackgroundStyle.BLUR, PlayerBackgroundStyle.GRADIENT, PlayerBackgroundStyle.ANIMATED_MESH -> {
-            MaterialTheme.colorScheme.surfaceContainer
-        }
-        else -> {
-            if (useBlackBackground) Color.Black else MaterialTheme.colorScheme.surfaceContainer
-        }
+        PlayerBackgroundStyle.BLUR, PlayerBackgroundStyle.GRADIENT, PlayerBackgroundStyle.ANIMATED_MESH -> MaterialTheme.colorScheme.surfaceContainer
+        else -> if (useBlackBackground) Color.Black else MaterialTheme.colorScheme.surfaceContainer
     }
 
     val backgroundAlpha = state.progress.coerceIn(0f, 1f)
@@ -731,9 +620,7 @@ fun BottomSheetPlayer(
         background = {
             if (playerStyle.name != "APPLE_MUSIC") {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(bottomSheetBackgroundColor),
+                    modifier = Modifier.fillMaxSize().background(bottomSheetBackgroundColor),
                 ) {
                     when (playerBackground) {
                         PlayerBackgroundStyle.BLUR -> {
@@ -745,18 +632,12 @@ fun BottomSheetPlayer(
                                 if (thumbnailUrl != null) {
                                     Box(modifier = Modifier.alpha(backgroundAlpha)) {
                                         AsyncImage(
-                                            model = ImageRequest.Builder(context)
-                                                    .data(thumbnailUrl)
-                                                    .size(100, 100)
-                                                    .allowHardware(false)
-                                                    .build(),
+                                            model = ImageRequest.Builder(context).data(thumbnailUrl).size(100, 100).allowHardware(false).build(),
                                             contentDescription = null,
                                             contentScale = ContentScale.Crop,
                                             modifier = Modifier.fillMaxSize().blur(if (useDarkTheme) 150.dp else 100.dp),
                                         )
-                                        Box(
-                                            modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.3f)),
-                                        )
+                                        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.3f)))
                                     }
                                 }
                             }
@@ -933,7 +814,7 @@ fun BottomSheetPlayer(
                                                 com.jay.glossy.ui.menu.LyricsMenu(
                                                     lyricsProvider = { currentLyrics },
                                                     songProvider = { currentSong?.song },
-                                                    mediaMetadataProvider = { mediaMetadata },
+                                                    mediaMetadataProvider = { metadata },
                                                     onDismiss = menuState::dismiss,
                                                     onShowOffsetDialog = {
                                                         bottomSheetPageState.show { ShowOffsetDialog(songProvider = { currentSong?.song }) }
@@ -1460,7 +1341,7 @@ fun BottomSheetPlayer(
                                                         com.jay.glossy.ui.menu.LyricsMenu(
                                                             lyricsProvider = { currentLyrics },
                                                             songProvider = { currentSong?.song },
-                                                            mediaMetadataProvider = { mediaMetadata },
+                                                            mediaMetadataProvider = { metadata },
                                                             onDismiss = menuState::dismiss,
                                                             onShowOffsetDialog = {
                                                                 bottomSheetPageState.show {
@@ -1565,7 +1446,7 @@ fun BottomSheetPlayer(
                                                         com.jay.glossy.ui.menu.LyricsMenu(
                                                             lyricsProvider = { currentLyrics },
                                                             songProvider = { currentSong?.song },
-                                                            mediaMetadataProvider = { mediaMetadata },
+                                                            mediaMetadataProvider = { metadata },
                                                             onDismiss = menuState::dismiss,
                                                             onShowOffsetDialog = {
                                                                 bottomSheetPageState.show {
@@ -1636,7 +1517,7 @@ fun BottomSheetPlayer(
                                                             com.jay.glossy.ui.menu.LyricsMenu(
                                                                 lyricsProvider = { currentLyrics },
                                                                 songProvider = { currentSong?.song },
-                                                                mediaMetadataProvider = { mediaMetadata },
+                                                                mediaMetadataProvider = { metadata },
                                                                 onDismiss = menuState::dismiss,
                                                                 onShowOffsetDialog = {
                                                                     bottomSheetPageState.show {
@@ -1870,7 +1751,6 @@ fun InlineLyricsView(
                         upsert(LyricsEntity(mediaMetadata.id, fetchedLyricsWithProvider.lyrics, fetchedLyricsWithProvider.provider))
                     }
                 } catch (e: Exception) {
-                    // Handle error
                 }
             }
         }
