@@ -411,6 +411,7 @@ fun AppearanceSettings(
                     com.jay.glossy.constants.PlayerStyle.MODERN -> "Modern (Animated Style)"
                     com.jay.glossy.constants.PlayerStyle.WAVY -> "Glossy Wavy (New!)"
                     com.jay.glossy.constants.PlayerStyle.VIVI_NEW -> "Vivi Old Design"
+                    com.jay.glossy.constants.PlayerStyle.APPLE_MUSIC -> "Apple Music (Premium)"
                 }
             },
         )
@@ -1309,6 +1310,7 @@ fun AppearanceSettings(
                                     com.jay.glossy.constants.PlayerStyle.MODERN -> "Modern (Animated Style)"
                                     com.jay.glossy.constants.PlayerStyle.WAVY -> "Glossy Wavy (New!)"
                                     com.jay.glossy.constants.PlayerStyle.VIVI_NEW -> "Vivi Old Design"
+                                    com.jay.glossy.constants.PlayerStyle.APPLE_MUSIC -> "Apple Music (Premium)"
                                 }
                             )
                         },
