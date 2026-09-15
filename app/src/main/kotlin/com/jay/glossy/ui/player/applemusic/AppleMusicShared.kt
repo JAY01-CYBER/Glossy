@@ -43,7 +43,7 @@ import com.jay.glossy.LocalListenTogetherManager
 import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.listentogether.RoomRole
 import com.jay.glossy.ui.component.CastButton
-import com.jay.glossy.ui.theme.typo
+import com.jay.glossy.utils.makeTimeString
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -83,7 +83,7 @@ internal data class AppleMusicTypography(
 
 @Composable
 internal fun rememberAppleMusicTypography(): AppleMusicTypography {
-    val t = typo()
+    val t = MaterialTheme.typography
     return AppleMusicTypography(
         mainTitle = t.titleMedium,
         mainArtist = t.bodyMedium,
