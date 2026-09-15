@@ -274,7 +274,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import kotlin.math.max
@@ -1152,8 +1152,7 @@ fun InlineLyricsView(mediaMetadata: MediaMetadata?, showLyrics: Boolean, positio
         if (!showLyrics || !appInForeground || !isActive) return@LaunchedEffect
         withContext(Dispatchers.IO) {
             try {
-                import kotlinx.coroutines.flow.firstOrNull
-                val existing = database.lyrics(nextId).firstOrNull()
+                val existing = kotlinx.coroutines.flow.firstOrNull(database.lyrics(nextId))
                 if (existing != null) return@withContext
                 val entryPoint = EntryPointAccessors.fromApplication(context.applicationContext, com.jay.glossy.di.LyricsHelperEntryPoint::class.java)
                 val lyricsHelper = entryPoint.lyricsHelper()
@@ -1535,8 +1534,8 @@ fun AppleMusicBottomClusterGlossy(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(makeTimeString(position), color = Color.White.copy(alpha = 0.72f), style = MaterialTheme.typography.bodyMedium)
-            Text("-${makeTimeString(kotlin.math.max(0L, duration - position))}", color = Color.White.copy(alpha = 0.72f), style = MaterialTheme.typography.bodyMedium)
+            Text(makeTimeString(position), color = Color.White.copy(alpha = 0.72f), style = MaterialTheme.typography.labelMedium)
+            Text("-${makeTimeString(kotlin.math.max(0L, duration - position))}", color = Color.White.copy(alpha = 0.72f), style = MaterialTheme.typography.labelMedium)
         }
 
         Spacer(modifier = Modifier.height(16.dp))
