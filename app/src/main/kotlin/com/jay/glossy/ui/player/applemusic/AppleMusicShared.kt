@@ -417,22 +417,25 @@ internal fun AppleMusicBottomCluster(
     lyricsAvailable: Boolean,
     activeColor: Color,
     activeContentColor: Color,
+    position: Long,
+    duration: Long,
     modifier: Modifier = Modifier,
 ) {
     val localDensity = LocalDensity.current
     Column(modifier = modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 8.dp)) {
         
-        // Progress Slider
         val playerConnection = LocalPlayerConnection.current
         var sliderPosition by remember { mutableStateOf<Long?>(null) }
-        val position = playerConnection?.player?.currentPosition?.coerceAtLeast(0L) ?: 0L
-        val duration = playerConnection?.player?.duration?.coerceAtLeast(1L) ?: 1L
         
+        val displayPosition = sliderPosition ?: position
+        val safeDuration = if (duration > 0) duration else 1L
+        val sliderValue = (displayPosition.toFloat() / safeDuration.toFloat()).coerceIn(0f, 1f)
+
         Box(modifier = Modifier.fillMaxWidth().height(18.dp), contentAlignment = Alignment.Center) {
             AppleMusicThinSlider(
-                value = (sliderPosition ?: position).toFloat() / duration.toFloat(),
+                value = sliderValue,
                 activeColor = AppleMusicTrackActive,
-                onValueChange = { sliderPosition = (it * duration).toLong() },
+                onValueChange = { sliderPosition = (it * safeDuration).toLong() },
                 onValueChangeFinished = {
                     sliderPosition?.let { playerConnection?.player?.seekTo(it) }
                     sliderPosition = null
@@ -441,10 +444,9 @@ internal fun AppleMusicBottomCluster(
             )
         }
         
-        // Time Row
         Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(text = makeTimeString(sliderPosition ?: position), color = Color.White, style = MaterialTheme.typography.labelMedium)
-            Text(text = "-" + makeTimeString(duration - (sliderPosition ?: position)), color = Color.White, style = MaterialTheme.typography.labelMedium)
+            Text(text = makeTimeString(displayPosition), color = Color.White, style = MaterialTheme.typography.labelMedium)
+            Text(text = "-" + makeTimeString(safeDuration - displayPosition), color = Color.White, style = MaterialTheme.typography.labelMedium)
         }
         
         Spacer(modifier = Modifier.height(12.dp))
