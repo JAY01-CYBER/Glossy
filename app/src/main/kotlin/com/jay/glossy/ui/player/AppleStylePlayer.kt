@@ -24,6 +24,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
@@ -61,6 +62,9 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.jay.glossy.LocalListenTogetherManager
 import com.jay.glossy.LocalPlayerConnection
+import com.jay.glossy.extensions.metadata
+import com.jay.glossy.extensions.togglePlayPause
+import com.jay.glossy.extensions.toggleRepeatMode
 import com.jay.glossy.ui.component.BottomSheetState
 import com.jay.glossy.ui.component.PlayerSliderTrack
 import com.jay.glossy.utils.makeTimeString
@@ -215,7 +219,7 @@ fun AppleStylePlayer(
 fun AppleMainControls(mediaMetadata: MediaMetadata) {
     val playerConnection = LocalPlayerConnection.current ?: return
     
-    // Listen Together State for Mute logic (From VIVI_NEW logic)
+    // Listen Together State for Mute logic
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
     val isMuted by playerConnection.isMuted.collectAsStateWithLifecycle()
@@ -357,7 +361,7 @@ fun AppleMainControls(mediaMetadata: MediaMetadata) {
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Playback Controls (Using VIVI_NEW Icons)
+        // Playback Controls
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
@@ -460,11 +464,9 @@ fun AppleBottomNavigationBar(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 32.dp, vertical = 24.dp),
-        // Switch spacing based on the number of buttons
         horizontalArrangement = if (isGmsVariant) Arrangement.SpaceBetween else Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        
         // 1. Lyrics Button (Always visible)
         BottomNavButton(
             iconRes = R.drawable.lyrics, 
@@ -476,7 +478,7 @@ fun AppleBottomNavigationBar(
         if (isGmsVariant) {
             BottomNavButton(
                 iconRes = R.drawable.cast_connected,
-                isActive = false, // Connect to real cast state later
+                isActive = false, 
                 onClick = { /* Handle Cast Logic */ }
             )
         }
@@ -517,7 +519,7 @@ fun BottomNavButton(
             .background(bgColor)
             .clickable(
                 interactionSource = buttonInteractionSource,
-                indication = null // Hides default ripple for smoother iOS-like feel
+                indication = null
             ) { onClick() },
         contentAlignment = Alignment.Center
     ) {
@@ -530,7 +532,7 @@ fun BottomNavButton(
     }
 }
 
-@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AppleQueueView(
     playerConnection: com.jay.glossy.playback.PlayerConnection,
@@ -544,7 +546,6 @@ fun AppleQueueView(
 
     val lazyListState = rememberLazyListState()
 
-    // Auto-scroll to current playing song when Queue is opened
     LaunchedEffect(currentWindowIndex) {
         if (currentWindowIndex != -1 && currentWindowIndex < queueWindows.size) {
             lazyListState.scrollToItem(currentWindowIndex)
@@ -556,7 +557,6 @@ fun AppleQueueView(
             .fillMaxSize()
             .padding(horizontal = 24.dp)
     ) {
-        // Queue Header & Controls (Shuffle / Repeat)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -572,7 +572,6 @@ fun AppleQueueView(
             )
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                // Shuffle Toggle
                 Box(
                     modifier = Modifier
                         .size(36.dp)
@@ -589,7 +588,6 @@ fun AppleQueueView(
                     )
                 }
 
-                // Repeat Toggle
                 Box(
                     modifier = Modifier
                         .size(36.dp)
@@ -613,7 +611,6 @@ fun AppleQueueView(
             }
         }
 
-        // The Queue List
         LazyColumn(
             state = lazyListState,
             modifier = Modifier.fillMaxSize(),
@@ -628,7 +625,7 @@ fun AppleQueueView(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .animateItemPlacement()
+                        .animateItem() //  using animateItem() instead of animateItemPlacement()
                         .padding(vertical = 4.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(if (isActive) Color.White.copy(alpha = 0.2f) else Color.Transparent)
@@ -643,7 +640,6 @@ fun AppleQueueView(
                         .padding(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Artwork
                     AsyncImage(
                         model = window.mediaItem.metadata?.thumbnailUrl,
                         contentDescription = null,
@@ -655,7 +651,6 @@ fun AppleQueueView(
 
                     Spacer(modifier = Modifier.width(16.dp))
 
-                    // Song Info
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = window.mediaItem.metadata?.title ?: "Unknown",
@@ -665,6 +660,7 @@ fun AppleQueueView(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
+                        //  Using safe call correctly here
                         Text(
                             text = window.mediaItem.metadata?.artists?.joinToString { it.name } ?: "",
                             color = Color.White.copy(alpha = 0.6f),
