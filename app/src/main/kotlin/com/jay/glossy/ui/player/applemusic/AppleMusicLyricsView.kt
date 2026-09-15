@@ -16,19 +16,20 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -43,8 +44,9 @@ import com.jay.glossy.db.entities.LyricsEntity
 import com.jay.glossy.ui.component.LocalBottomSheetPageState
 import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.component.Lyrics
-import com.jay.glossy.ui.component.LyricsShareDialog
 import com.jay.glossy.ui.component.LyricsColorPickerDialog
+import com.jay.glossy.ui.component.LyricsShareDialog
+import com.jay.glossy.ui.component.PlayStoreRefreshIndicator
 import com.jay.glossy.ui.screens.settings.LyricsPosition
 import com.jay.glossy.ui.utils.ShowOffsetDialog
 import kotlinx.coroutines.delay
@@ -79,6 +81,9 @@ internal fun AppleMusicLyricsView(
     
     var showShareDialog by rememberSaveable { mutableStateOf(false) }
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
+    
+    // For PlayStoreRefreshIndicator
+    val refreshState = rememberPullToRefreshState()
     
     LaunchedEffect(showCluster, interactionTick) {
         if (showCluster) {
@@ -120,7 +125,7 @@ internal fun AppleMusicLyricsView(
         Box(
             modifier = Modifier
                 .weight(1f)
-                .androidx.compose.ui.input.nestedscroll.nestedScroll(scrollWakesControls)
+                .nestedScroll(scrollWakesControls)
                 .clickable(
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() }
@@ -132,8 +137,13 @@ internal fun AppleMusicLyricsView(
         ) {
             when {
                 lyrics == null -> {
+                    // NEW PLAY STORE REFRESH INDICATOR IN CENTER
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        ContainedLoadingIndicator()
+                        PlayStoreRefreshIndicator(
+                            isRefreshing = true,
+                            state = refreshState,
+                            modifier = Modifier.size(56.dp)
+                        )
                     }
                 }
 
@@ -165,7 +175,7 @@ internal fun AppleMusicLyricsView(
                     }
 
                     Box(modifier = Modifier.align(Alignment.BottomEnd)) {
-                        androidx.compose.animation.AnimatedVisibility(
+                        AnimatedVisibility(
                             visible = showCluster,
                             enter = fadeIn(),
                             exit = fadeOut()
@@ -204,7 +214,7 @@ internal fun AppleMusicLyricsView(
             }
         }
 
-        androidx.compose.animation.AnimatedVisibility(
+        AnimatedVisibility(
             visible = showCluster,
             enter = expandVertically() + fadeIn(),
             exit = shrinkVertically() + fadeOut(),
