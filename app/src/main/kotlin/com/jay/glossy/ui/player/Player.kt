@@ -274,7 +274,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.first
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import kotlin.math.max
@@ -1152,7 +1152,8 @@ fun InlineLyricsView(mediaMetadata: MediaMetadata?, showLyrics: Boolean, positio
         if (!showLyrics || !appInForeground || !isActive) return@LaunchedEffect
         withContext(Dispatchers.IO) {
             try {
-                val existing = kotlinx.coroutines.flow.firstOrNull(database.lyrics(nextId))
+                import kotlinx.coroutines.flow.first
+                val existing = database.lyrics(nextId).first()
                 if (existing != null) return@withContext
                 val entryPoint = EntryPointAccessors.fromApplication(context.applicationContext, com.jay.glossy.di.LyricsHelperEntryPoint::class.java)
                 val lyricsHelper = entryPoint.lyricsHelper()
@@ -1762,7 +1763,7 @@ fun AppleMusicQueueViewGlossy(
                     items = mutableQueueWindows,
                     key = { _, item -> item.uid.hashCode() },
                 ) { index, window ->
-                    ReorderableItem(
+                    sh.calvin.reorderable.ReorderableItem(
                         state = reorderableState,
                         key = window.uid.hashCode(),
                     ) {
@@ -1966,7 +1967,7 @@ fun QueueViewForNonApple(
                         items = mutableQueueWindows,
                         key = { _, item -> item.uid.hashCode() },
                     ) { index, window ->
-                        ReorderableItem(
+                        sh.calvin.reorderable.ReorderableItem(
                             state = reorderableState,
                             key = window.uid.hashCode(),
                         ) {
