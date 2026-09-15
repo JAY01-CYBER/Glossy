@@ -43,8 +43,13 @@ import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.component.Lyrics
 import com.jay.glossy.ui.utils.ShowOffsetDialog
 import kotlinx.coroutines.delay
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 
-@OptIn(ExperimentalMaterial3Api::class)
+@file:OptIn(
+    ExperimentalMaterial3Api::class,
+    ExperimentalMaterial3ExpressiveApi::class
+)
+
 @Composable
 internal fun AppleMusicLyricsView(
     viewState: AppleMusicView,
