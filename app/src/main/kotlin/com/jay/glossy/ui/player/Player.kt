@@ -1762,7 +1762,7 @@ fun AppleMusicQueueViewGlossy(
                     items = mutableQueueWindows,
                     key = { _, item -> item.uid.hashCode() },
                 ) { index, window ->
-                    sh.calvin.reorderable.ReorderableItem(
+                    ReorderableItem(
                         state = reorderableState,
                         key = window.uid.hashCode(),
                     ) {
@@ -1966,7 +1966,7 @@ fun QueueViewForNonApple(
                         items = mutableQueueWindows,
                         key = { _, item -> item.uid.hashCode() },
                     ) { index, window ->
-                        sh.calvin.reorderable.ReorderableItem(
+                        ReorderableItem(
                             state = reorderableState,
                             key = window.uid.hashCode(),
                         ) {
