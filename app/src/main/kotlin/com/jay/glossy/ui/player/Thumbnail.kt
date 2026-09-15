@@ -97,6 +97,7 @@ import com.jay.glossy.ui.component.CastButton
 import com.jay.glossy.utils.rememberEnumPreference
 import com.jay.glossy.utils.rememberPreference
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.util.Locale
@@ -188,6 +189,7 @@ private fun getTextColor(playerBackground: PlayerBackgroundStyle): Color {
     }
 }
 
+// CACHE UPDATE FOR SETTINGS SLIDER
 object CanvasArtworkPlaybackCache {
     private const val defaultMaxSize = 256
     private val map = LinkedHashMap<String, CanvasArtwork>(defaultMaxSize, 0.75f, true)
@@ -562,7 +564,6 @@ fun Thumbnail(
     }
 }
 
-// FAST AND STRICT CANVAS FETCHING LOGIC
 @Composable
 private fun CanvasLayer(
     item: MediaItem,
@@ -577,9 +578,7 @@ private fun CanvasLayer(
 
     LaunchedEffect(item.mediaId) {
         CanvasArtworkPlaybackCache.get(item.mediaId)?.let { cached ->
-            if (!cached.animated.isNullOrBlank() || !cached.videoUrl.isNullOrBlank()) {
-                canvasArtwork = cached
-            }
+            canvasArtwork = cached
             return@LaunchedEffect
         }
 
@@ -597,43 +596,28 @@ private fun CanvasLayer(
 
             if (songTitle.isBlank() || artistName.isBlank()) return@withContext null
 
-            // Pehle fast Apple API check karo
-            var artwork = runCatching {
+            val tidalDeferred = async {
+                TidalCanvasProvider.getBySongArtist(songTitle, artistName, albumName)
+                    ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
+            }
+            
+            val appleDeferred = async {
                 if (albumName.isNotBlank()) {
                     AppleMusicCanvasProvider.getByAlbumArtist(albumName, artistName, storefront)
-                } else null
-                ?: AppleMusicCanvasProvider.getBySongArtist(songTitle, artistName, albumName, storefront)
-            }.getOrNull()
-
-            // Agar nahi mila toh Tidal check karo
-            if (artwork?.animated.isNullOrBlank() && artwork?.videoUrl.isNullOrBlank()) {
-                artwork = runCatching {
-                    TidalCanvasProvider.getBySongArtist(songTitle, artistName, albumName)
-                }.getOrNull()
+                        ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
+                } else {
+                    null
+                } ?: AppleMusicCanvasProvider.getBySongArtist(songTitle, artistName, albumName, storefront)
+                    ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
             }
 
-            // BUG 2 FIX: Strict Matching, agar galat gaane ka aya hai toh hata do
-            artwork?.takeIf {
-                val canvasSong = normalizeCanvasSongTitle(it.name ?: "")
-                val canvasArtist = normalizeCanvasArtistName(it.artist ?: "")
-                
-                val isSongMatch = canvasSong.isEmpty() || songTitle.isEmpty() ||
-                                  canvasSong.contains(songTitle, ignoreCase = true) ||
-                                  songTitle.contains(canvasSong, ignoreCase = true)
-                
-                val isArtistMatch = canvasArtist.isEmpty() || artistName.isEmpty() ||
-                                    canvasArtist.contains(artistName, ignoreCase = true) ||
-                                    artistName.contains(canvasArtist, ignoreCase = true)
-                                    
-                isSongMatch && isArtistMatch
-            }
+            tidalDeferred.await() ?: appleDeferred.await()
         }
         
-        if (fetched != null && (!fetched.animated.isNullOrBlank() || !fetched.videoUrl.isNullOrBlank())) {
-            canvasArtwork = fetched
+        canvasArtwork = fetched
+        if (fetched != null) {
             CanvasArtworkPlaybackCache.put(item.mediaId, fetched)
         }
-        
         canvasFetchInFlight = false
     }
 
