@@ -4,7 +4,7 @@
  * Licensed under GPL-3.0 | See git history for contributors
  *
  * File: AppleStylePlayer.kt
- * Description: Premium 3-State Apple Music Style Player (Exact Full Screen Match)
+ * Description: Premium 3-State Apple Music Style Player (Pixel Perfect Match)
  * Variant Support: GMS (Cast Enabled) & Normal/FOSS (Lyrics & Queue Only)
  * Lead Developer: Jay Chaudhary
  * ==============================================================================
@@ -14,12 +14,19 @@ package com.jay.glossy.ui.player
 
 import com.jay.glossy.R
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.*
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
@@ -68,6 +75,7 @@ import com.metrolist.models.MediaMetadata
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
+// 3 States for the Premium Player
 enum class ApplePlayerState {
     MAIN_CONTROLS,
     LYRICS,
@@ -84,12 +92,17 @@ fun AppleStylePlayer(
     val context = LocalContext.current
     var currentState by remember { mutableStateOf(ApplePlayerState.MAIN_CONTROLS) }
 
+    // GMS Variant Check
     val castHandler = remember(playerConnection) {
-        try { playerConnection.service.castConnectionHandler } catch (e: Exception) { null }
+        try {
+            playerConnection.service.castConnectionHandler
+        } catch (e: Exception) {
+            null
+        }
     }
     val isGmsVariant = castHandler != null
 
-    // 🎯 FIX 1: 0 blur for MAIN state, Heavy blur for Lyrics/Queue
+    // 0 blur for Main screen to keep it crystal clear like Apple Music
     val blurRadius by animateDpAsState(
         targetValue = if (currentState == ApplePlayerState.MAIN_CONTROLS) 0.dp else 100.dp,
         animationSpec = tween(600),
@@ -103,45 +116,40 @@ fun AppleStylePlayer(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black) // Always black base for Apple Music
+            .background(Color.Black) // Base is always black
     ) {
-        // --- 1. FULL SCREEN ARTWORK BACKGROUND ---
+        // --- 1. BACKGROUND LAYER ---
         AsyncImage(
             model = ImageRequest.Builder(context)
                 .data(mediaMetadata.thumbnailUrl)
                 .crossfade(1000)
                 .build(),
-            contentDescription = "Full Screen Artwork",
-            contentScale = ContentScale.Crop, // 🎯 Fills the entire screen!
+            contentDescription = "Full Screen Background",
+            contentScale = ContentScale.Crop, // Fill entire screen
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
-                    // Full opacity for Main, dimmed for Lyrics/Queue
                     alpha = if (currentState == ApplePlayerState.MAIN_CONTROLS) 1f else 0.4f
                 }
                 .blur(blurRadius)
         )
 
-        // --- 2. DYNAMIC GRADIENT OVERLAY ---
-        // Top is transparent so art shines, bottom is dark for controls
+        // 🎯 FIX 1: Gradient Overlay - Keep top 50% totally transparent!
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color.Transparent,
-                            Color.Black.copy(alpha = 0.3f),
-                            Color.Black.copy(alpha = 0.8f),
-                            Color.Black.copy(alpha = 0.95f),
-                            Color.Black
-                        )
+                        0.0f to Color.Transparent,
+                        0.55f to Color.Transparent, // Starts darkening much lower now
+                        0.75f to Color.Black.copy(alpha = 0.5f),
+                        0.95f to Color.Black.copy(alpha = 0.9f),
+                        1.0f to Color.Black
                     )
                 )
         )
 
-        // --- 3. UI LAYER ---
+        // --- 2. FOREGROUND CONTENT LAYER ---
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -149,7 +157,8 @@ fun AppleStylePlayer(
                 .navigationBarsPadding(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Pill indicator at top
+            
+            // Top Drag Handle (Pill)
             Box(
                 modifier = Modifier
                     .padding(vertical = 12.dp)
@@ -159,7 +168,7 @@ fun AppleStylePlayer(
                     .background(Color.White.copy(alpha = 0.5f))
             )
 
-            // Mini Header (Only visible in Lyrics/Queue state)
+            // Mini Header for Lyrics/Queue State
             AnimatedVisibility(
                 visible = currentState != ApplePlayerState.MAIN_CONTROLS,
                 enter = fadeIn() + expandVertically(),
@@ -168,6 +177,7 @@ fun AppleStylePlayer(
                 AppleTopHeader(mediaMetadata = mediaMetadata, playerConnection = playerConnection)
             }
 
+            // Animated Content Switcher
             AnimatedContent(
                 targetState = currentState,
                 transitionSpec = { fadeIn(tween(400)) togetherWith fadeOut(tween(400)) },
@@ -181,7 +191,9 @@ fun AppleStylePlayer(
                     ApplePlayerState.LYRICS -> {
                         val positionProvider = remember { { playerConnection.player.currentPosition } }
                         Box(
-                            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp)
                         ) {
                             InlineLyricsView(
                                 mediaMetadata = mediaMetadata,
@@ -199,7 +211,7 @@ fun AppleStylePlayer(
                 }
             }
 
-            // Bottom Navigation
+            // --- 3. BOTTOM NAVIGATION BAR ---
             AppleBottomNavigationBar(
                 currentState = currentState,
                 isGmsVariant = isGmsVariant,
@@ -280,16 +292,14 @@ fun AppleMainControls(mediaMetadata: MediaMetadata) {
         }
     }
 
-    // 🎯 FIX 2: Removed Square Artwork completely. Pushed everything to bottom!
+    // 🎯 FIX 2 & 3: Using Arrangement.Bottom to push everything perfectly to the bottom
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        verticalArrangement = Arrangement.Bottom // This pushes everything down correctly!
     ) {
         
-        Spacer(modifier = Modifier.weight(1f)) // Pushes controls to the bottom
-
         // --- TITLE, LIKE, AND MORE ROW ---
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -303,7 +313,7 @@ fun AppleMainControls(mediaMetadata: MediaMetadata) {
                     text = mediaMetadata.title,
                     color = Color.White,
                     fontSize = 24.sp,
-                    fontWeight = FontWeight.ExtraBold,
+                    fontWeight = FontWeight.ExtraBold, // Exact Apple Boldness
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.basicMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp)
@@ -322,34 +332,47 @@ fun AppleMainControls(mediaMetadata: MediaMetadata) {
                 }
             }
 
-            // Like & Options buttons on the right side
-            val isFavorite = currentSong?.song?.liked == true
-            IconButton(
-                onClick = { playerConnection.toggleLike() },
-                modifier = Modifier.size(40.dp)
-            ) {
-                Icon(
-                    painter = painterResource(if (isFavorite) R.drawable.favorite else R.drawable.favorite_border),
-                    contentDescription = "Like",
-                    tint = if (isFavorite) MaterialTheme.colorScheme.error else Color.White,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-            
-            IconButton(
-                onClick = { /* Add your bottom sheet menu call here if needed */ },
-                modifier = Modifier.size(40.dp)
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.more_vert),
-                    contentDescription = "More",
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp)
-                )
+            // 🎯 FIX 4: Circular Backgrounds for Like & More buttons
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                val isFavorite = currentSong?.song?.liked == true
+                
+                // Like Button
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.15f))
+                        .clickable { playerConnection.toggleLike() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(if (isFavorite) R.drawable.favorite else R.drawable.favorite_border),
+                        contentDescription = "Like",
+                        tint = if (isFavorite) Color.White else Color.White.copy(alpha = 0.9f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                
+                // More Button
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.15f))
+                        .clickable { /* Add your bottom sheet menu call here */ },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.more_vert),
+                        contentDescription = "More",
+                        tint = Color.White.copy(alpha = 0.9f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         // --- APPLE STYLE SLIDER ---
         val trackInteractionSource = remember { MutableInteractionSource() }
@@ -415,7 +438,7 @@ fun AppleMainControls(mediaMetadata: MediaMetadata) {
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         // --- PLAYBACK CONTROLS ---
         Row(
@@ -477,7 +500,7 @@ fun AppleMainControls(mediaMetadata: MediaMetadata) {
                     ),
                     contentDescription = "Play/Pause",
                     tint = Color.White,
-                    modifier = Modifier.size(80.dp)
+                    modifier = Modifier.size(80.dp) // Large play button
                 )
             }
 
@@ -502,7 +525,8 @@ fun AppleMainControls(mediaMetadata: MediaMetadata) {
             }
         }
         
-        Spacer(modifier = Modifier.height(16.dp)) // Small padding before bottom bar
+        // Exact Apple Music spacing from bottom nav bar
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
@@ -515,7 +539,7 @@ fun AppleBottomNavigationBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 48.dp, vertical = 24.dp), 
+            .padding(horizontal = 48.dp, vertical = 16.dp), // Tighter vertical padding
         horizontalArrangement = if (isGmsVariant) Arrangement.SpaceBetween else Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -552,7 +576,7 @@ fun BottomNavButton(
     val scale by animateFloatAsState(if (isPressed) 0.8f else 1f, spring(0.6f, 500f), label = "navBtnScale")
 
     val bgColor by animateColorAsState(
-        targetValue = if (isActive) Color.White.copy(alpha = 0.2f) else Color.Transparent,
+        targetValue = if (isActive) Color.White.copy(alpha = 0.15f) else Color.Transparent,
         label = "navBgColor"
     )
     val tintColor by animateColorAsState(
@@ -562,7 +586,7 @@ fun BottomNavButton(
 
     Box(
         modifier = Modifier
-            .size(48.dp)
+            .size(44.dp) // Slightly smaller exact Apple sizing
             .graphicsLayer(scaleX = scale, scaleY = scale)
             .clip(CircleShape)
             .background(bgColor)
@@ -576,7 +600,7 @@ fun BottomNavButton(
             painter = painterResource(iconRes),
             contentDescription = null,
             tint = tintColor,
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier.size(22.dp)
         )
     }
 }
