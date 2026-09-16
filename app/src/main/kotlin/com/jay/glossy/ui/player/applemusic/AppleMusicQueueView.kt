@@ -38,8 +38,6 @@ import com.jay.glossy.ui.component.LocalBottomSheetPageState
 import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.component.MediaMetadataListItem
 import com.jay.glossy.ui.utils.ShowMediaInfo
-import kotlinx.coroutines.launch
-import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -146,7 +144,7 @@ internal fun AppleMusicQueueView(
                     items = mutableQueueWindows,
                     key = { _, item -> item.uid.hashCode() },
                 ) { index, window ->
-                    ReorderableItem(
+                    sh.calvin.reorderable.ReorderableItem(
                         state = reorderableState,
                         key = window.uid.hashCode(),
                     ) {
