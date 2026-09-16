@@ -1662,7 +1662,7 @@ fun BottomSheetPlayer(
                                 if (isAtDefault) {
                                     Button(
                                         onClick = {
-                                            coroutineScope.launch {
+                                            scope.launch {
                                                 context.safeDataStoreEdit { settings ->
                                                     settings[SleepTimerDefaultKey] = sleepTimerValue
                                                 }
@@ -1683,7 +1683,7 @@ fun BottomSheetPlayer(
                                 } else {
                                     OutlinedButton(
                                         onClick = {
-                                            coroutineScope.launch {
+                                            scope.launch {
                                                 context.safeDataStoreEdit { settings ->
                                                     settings[SleepTimerDefaultKey] = sleepTimerValue
                                                 }
