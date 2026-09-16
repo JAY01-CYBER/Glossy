@@ -2399,7 +2399,7 @@ fun BottomSheetPlayer(
                                             color = sideButtonContainerColor,
                                             contentColor = sideButtonContentColor,
                                             modifier = Modifier.height(40.dp).weight(1f),
-                                            onClick = { coroutineScope.launch { queueSheetState.expandSoft() } }
+                                            onClick = { scope.launch { queueSheetState.expandSoft() } }
                                         ) {
                                             Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                                                 Icon(
