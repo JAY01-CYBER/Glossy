@@ -1030,7 +1030,7 @@ fun BottomSheetPlayer(
                         .padding(bottom = 16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
-                ) {
+                ) }{
                     Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
                         Text(
                             text = mediaMetadata.title,
@@ -1041,6 +1041,7 @@ fun BottomSheetPlayer(
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.basicMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp)
                         )
+                    }
                         Spacer(modifier = Modifier.height(4.dp))
                         
                         if (mediaMetadata.artists.any { it.name.isNotBlank() }) {
@@ -1055,6 +1056,7 @@ fun BottomSheetPlayer(
                             )
                         }
                     }
+                
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
