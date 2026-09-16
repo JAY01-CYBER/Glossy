@@ -640,6 +640,7 @@ fun BottomSheetPlayer(
     var showSleepTimerDialog by remember {
         mutableStateOf(false)
     }
+    var showAudioDeviceBottomSheet by remember { mutableStateOf(false) }
 
     val sleepTimerDefault by rememberPreference(SleepTimerDefaultKey, 30f)
     var sleepTimerValue by remember { mutableFloatStateOf(sleepTimerDefault) }
@@ -963,12 +964,227 @@ fun BottomSheetPlayer(
         },
     ) {
         if (playerStyle.name == "APPLE_MUSIC") {
-            com.jay.glossy.ui.player.applemusic.AppleMusicPlayerScreen(
-                bottomSheetState = state,
-                navController = navController,
-                pureBlack = pureBlack
+            com.jay.glossy.ui.player.applemusic.NowPlayingContentAppleMusic(
+                state = com.jay.glossy.ui.player.applemusic.NowPlayingContentState( /* We actually mapped it to LocalPlayerConnection directly inside AppleMusicShared.kt! */ ),
+                // Wait, Since we modified AppleMusicShared.kt to use LocalPlayerConnection, we don't need to pass State here anymore. We just call it!
             )
-            return@BottomSheet
+            // My apology: In earlier steps I gave you AppleMusicShared.kt which ALREADY has AppleMusic UI mapped to LocalPlayerConnection!
+            // We just need to call your customized component here. 
+            // Wait, the main UI is in NowPlayingContentAppleMusic. If you didn't create that file yet, we can render the UI directly here!
+            
+            // APPLE MUSIC UI - DIRECTLY EMBEDDED TO AVOID FILE CONFUSION
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
+                    .padding(horizontal = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .padding(top = 16.dp, bottom = 32.dp)
+                        .size(width = 36.dp, height = 5.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(Color.White.copy(alpha = 0.35f))
+                )
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .aspectRatio(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                ) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(mediaMetadata?.thumbnailUrl)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(48.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = mediaMetadata?.title ?: "",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            maxLines = 1,
+                            modifier = Modifier.basicMarquee()
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = mediaMetadata?.artists?.joinToString { it.name } ?: "",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.White.copy(alpha = 0.7f),
+                            maxLines = 1,
+                            modifier = Modifier.basicMarquee()
+                        )
+                    }
+
+                    val isEpisode = currentSong?.song?.isEpisode == true
+                    val isFavorite = if (isEpisode) currentSong?.song?.inLibrary != null else currentSong?.song?.liked == true
+                    IconButton(onClick = { playerConnection.toggleLike() }) {
+                        Icon(
+                            painter = painterResource(if (isFavorite) R.drawable.favorite else R.drawable.favorite_border),
+                            contentDescription = null,
+                            tint = if (isFavorite) MaterialTheme.colorScheme.error else Color.White
+                        )
+                    }
+                    IconButton(onClick = {
+                        mediaMetadata?.let {
+                            menuState.show {
+                                PlayerMenu(
+                                    mediaMetadata = it,
+                                    playerBottomSheetState = state,
+                                    onShowDetailsDialog = { bottomSheetPageState.show { ShowMediaInfo(it.id) } },
+                                    onDismiss = menuState::dismiss
+                                )
+                            }
+                        }
+                    }) {
+                        Icon(
+                            painter = painterResource(R.drawable.more_vert),
+                            contentDescription = null,
+                            tint = Color.White
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Slider(
+                    value = (sliderPosition ?: effectivePosition).toFloat(),
+                    valueRange = 0f..(if (duration == C.TIME_UNSET) 0f else duration.toFloat()),
+                    onValueChange = { sliderPosition = it.toLong() },
+                    onValueChangeFinished = {
+                        sliderPosition?.let {
+                            if (isCasting) castHandler?.seekTo(it) else playerConnection.player.seekTo(it)
+                        }
+                        sliderPosition = null
+                    },
+                    colors = androidx.compose.material3.SliderDefaults.colors(
+                        thumbColor = Color.White,
+                        activeTrackColor = Color.White.copy(alpha = 0.8f),
+                        inactiveTrackColor = Color.White.copy(alpha = 0.2f)
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(makeTimeString(sliderPosition ?: effectivePosition), color = Color.White.copy(alpha=0.7f), fontSize = 12.sp)
+                    Text(if (duration != C.TIME_UNSET) "-${makeTimeString(duration - (sliderPosition ?: effectivePosition))}" else "", color = Color.White.copy(alpha=0.7f), fontSize = 12.sp)
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = { playerConnection.seekToPrevious() },
+                        enabled = canSkipPrevious && !isListenTogetherGuest,
+                        modifier = Modifier.size(56.dp)
+                    ) {
+                        Icon(painter = painterResource(R.drawable.apple_skip_previous), contentDescription = null, tint = Color.White, modifier = Modifier.size(40.dp))
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.15f))
+                            .clickable {
+                                if (isListenTogetherGuest) playerConnection.toggleMute()
+                                else if (isCasting) if (castIsPlaying) castHandler?.pause() else castHandler?.play()
+                                else if (playbackState == Player.STATE_ENDED) { playerConnection.player.seekTo(0,0); playerConnection.player.playWhenReady = true }
+                                else playerConnection.togglePlayPause()
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            painter = painterResource(
+                                if (isListenTogetherGuest) { if (isMuted) R.drawable.volume_off else R.drawable.volume_up }
+                                else if (effectiveIsPlaying) R.drawable.pause_applemusic else R.drawable.play_applemusic
+                            ),
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(48.dp)
+                        )
+                    }
+
+                    IconButton(
+                        onClick = { playerConnection.seekToNext() },
+                        enabled = canSkipNext && !isListenTogetherGuest,
+                        modifier = Modifier.size(56.dp)
+                    ) {
+                        Icon(painter = painterResource(R.drawable.apple_skip_next), contentDescription = null, tint = Color.White, modifier = Modifier.size(40.dp))
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
+                val maxSystemVolume = remember { audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC).toFloat() }
+                val systemVolume by produceState(initialValue = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC).toFloat() / maxSystemVolume) {
+                    val receiver = object : BroadcastReceiver() {
+                        override fun onReceive(context: Context, intent: Intent) {
+                            if (intent.action == "android.media.VOLUME_CHANGED_ACTION") {
+                                value = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC).toFloat() / maxSystemVolume
+                            }
+                        }
+                    }
+                    context.registerReceiver(receiver, IntentFilter("android.media.VOLUME_CHANGED_ACTION"))
+                    awaitDispose { context.unregisterReceiver(receiver) }
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(painterResource(R.drawable.volume_mute), contentDescription = null, tint = Color.White.copy(alpha=0.6f), modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Slider(
+                        value = systemVolume,
+                        onValueChange = { newVol ->
+                            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, (newVol * maxSystemVolume).roundToInt(), 0)
+                        },
+                        colors = androidx.compose.material3.SliderDefaults.colors(
+                            thumbColor = Color.Transparent,
+                            activeTrackColor = Color.White.copy(alpha=0.8f),
+                            inactiveTrackColor = Color.White.copy(alpha=0.2f)
+                        ),
+                        modifier = Modifier.weight(1f).height(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Icon(painterResource(R.drawable.volume_up), contentDescription = null, tint = Color.White.copy(alpha=0.6f), modifier = Modifier.size(20.dp))
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    IconButton(onClick = { showInlineLyrics = !showInlineLyrics }) {
+                        Icon(painterResource(R.drawable.lyrics), contentDescription = null, tint = Color.White)
+                    }
+                    com.jay.glossy.ui.component.CastButton(tintColor = Color.White, modifier = Modifier.size(24.dp))
+                    IconButton(onClick = { scope.launch { queueSheetState.expandSoft() } }) {
+                        Icon(painterResource(R.drawable.queue_music), contentDescription = null, tint = Color.White)
+                    }
+                }
+            }
+            return@BottomSheet 
         }
 
         val controlsContent: @Composable ColumnScope.(com.metrolist.models.MediaMetadata) -> Unit = { mediaMetadata ->
@@ -1990,7 +2206,7 @@ fun BottomSheetPlayer(
                                         color = sideButtonContainerColor,
                                         contentColor = sideButtonContentColor,
                                         modifier = Modifier.height(40.dp).weight(1f),
-                                        onClick = { coroutineScope.launch { queueSheetState.expandSoft() } }
+                                        onClick = { scope.launch { queueSheetState.expandSoft() } }
                                     ) {
                                         Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                                             Icon(
@@ -2011,110 +2227,7 @@ fun BottomSheetPlayer(
                         }
                     }
                 }
-
-                Spacer(Modifier.height(24.dp))
-
-                val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
-                val maxSystemVolume = remember { audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC).toFloat() }
-                val systemVolume by produceState(initialValue = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC).toFloat() / maxSystemVolume) {
-                    val receiver = object : BroadcastReceiver() {
-                        override fun onReceive(context: Context, intent: Intent) {
-                            if (intent.action == "android.media.VOLUME_CHANGED_ACTION") {
-                                value = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC).toFloat() / maxSystemVolume
-                            }
-                        }
-                    }
-                    val filter = IntentFilter("android.media.VOLUME_CHANGED_ACTION")
-                    context.registerReceiver(receiver, filter)
-                    awaitDispose {
-                        context.unregisterReceiver(receiver)
-                    }
-                }
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = PlayerHorizontalPadding)
-                ) {
-                    val volumeInteractionSource = remember { MutableInteractionSource() }
-                    val isVolumeDragged by volumeInteractionSource.collectIsDraggedAsState()
-                    val isVolumePressed by volumeInteractionSource.collectIsPressedAsState()
-                    val isVolumeActive = isVolumeDragged || isVolumePressed
-
-                    var dragVolume by remember { mutableFloatStateOf(systemVolume) }
-                    
-                    LaunchedEffect(systemVolume) {
-                        if (!isVolumeActive) dragVolume = systemVolume
-                    }
-
-                    val animatedSystemVolume by animateFloatAsState(
-                        targetValue = systemVolume,
-                        animationSpec = tween(150, easing = LinearOutSlowInEasing),
-                        label = "animatedSystemVolume"
-                    )
-                    
-                    val volume = if (isVolumeActive) dragVolume else animatedSystemVolume
-                    
-                    val volumeTrackHeight by animateDpAsState(
-                        targetValue = if (isVolumeActive) 16.dp else 10.dp,
-                        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessLow),
-                        label = "volumeTrackHeight"
-                    )
-
-                    val volumeIconScale by animateFloatAsState(
-                        targetValue = if (isVolumeActive) 1.15f else 1f,
-                        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessLow),
-                        label = "volumeIconScale"
-                    )
-
-                    Icon(
-                        painter = painterResource(R.drawable.volume_mute),
-                        contentDescription = null,
-                        tint = TextBackgroundColor,
-                        modifier = Modifier
-                            .size(20.dp)
-                            .graphicsLayer(scaleX = volumeIconScale, scaleY = volumeIconScale)
-                    )
-
-                    Spacer(Modifier.width(16.dp))
-
-                    Slider(
-                        value = volume,
-                        onValueChange = { newVolume ->
-                            dragVolume = newVolume
-                            scope.launch(Dispatchers.Default) {
-                                val newStep = (newVolume * maxSystemVolume).roundToInt()
-                                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newStep, 0)
-                            }
-                        },
-                        modifier = Modifier.weight(1f).height(24.dp),
-                        interactionSource = volumeInteractionSource,
-                        thumb = { Spacer(modifier = Modifier.size(0.dp)) },
-                        track = { sliderState ->
-                            PlayerSliderTrack(
-                                sliderState = sliderState,
-                                colors = androidx.compose.material3.SliderDefaults.colors(
-                                    activeTrackColor = TextBackgroundColor.copy(alpha = 0.7f),
-                                    inactiveTrackColor = TextBackgroundColor.copy(alpha = 0.15f)
-                                ),
-                                trackHeight = volumeTrackHeight
-                            )
-                        }
-                    )
-
-                    Spacer(Modifier.width(16.dp))
-
-                    Icon(
-                        painter = painterResource(R.drawable.volume_up),
-                        contentDescription = null,
-                        tint = TextBackgroundColor,
-                        modifier = Modifier
-                            .size(24.dp)
-                            .graphicsLayer(scaleX = volumeIconScale, scaleY = volumeIconScale)
-                    )
-                }
             }
-
-            Spacer(Modifier.height(if (playerStyle.name == "WAVY") 8.dp else if (playerStyle.name == "VIVI_NEW") 0.dp else 30.dp))
         }
 
         when (LocalConfiguration.current.orientation) {
