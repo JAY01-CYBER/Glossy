@@ -1917,7 +1917,7 @@ fun InlineLyricsView(
     val nextMetadata =
         remember(queueWindows, currentWindowIndex) {
             if (currentWindowIndex >= 0 && currentWindowIndex + 1 < queueWindows.size) {
-                queueWindows[currentWindowIndex + 1].mediaItem.mediaMetadata
+                queueWindows[currentWindowIndex + 1].mediaItem.metadata
             } else {
                 null
             }
