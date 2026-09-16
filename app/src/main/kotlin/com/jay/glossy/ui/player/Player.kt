@@ -747,6 +747,8 @@ fun BottomSheetPlayer(
     var showChoosePlaylistDialog by rememberSaveable {
         mutableStateOf(false)
     }
+    var showAudioDeviceBottomSheet by remember { mutableStateOf(false) }
+
 
     LaunchedEffect(isPlaying, isCasting) {
         if (!isCasting && isPlaying) {
