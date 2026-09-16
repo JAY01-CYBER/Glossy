@@ -5,7 +5,7 @@
 
 package com.jay.glossy.ui.player.applemusic
 
-import androidx.compose.animation.AnimatedVisibility
+import android.content.Intent
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -13,91 +13,92 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.material3.ContainedLoadingIndicator
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-
 import com.jay.glossy.R
+import com.jay.glossy.LocalPlayerConnection
+import com.jay.glossy.db.entities.LyricsEntity
+import com.jay.glossy.ui.component.LocalBottomSheetPageState
+import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.component.Lyrics
+import com.jay.glossy.ui.component.LyricsColorPickerDialog
+import com.jay.glossy.ui.component.LyricsShareDialog
+import com.jay.glossy.ui.component.PlayStoreRefreshIndicator
+import com.jay.glossy.ui.screens.settings.LyricsPosition
+import com.jay.glossy.ui.utils.ShowOffsetDialog
 import kotlinx.coroutines.delay
 
-// Note: Replace these import paths if NowPlayingContentState/Actions are in a different package in Glossy.
-import com.jay.glossy.ui.player.content.NowPlayingContentActions
-import com.jay.glossy.ui.player.content.NowPlayingContentState
-
-private const val CLUSTER_AUTO_HIDE_MS = 8_000L
-
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun AppleMusicLyricsView(
-    state: NowPlayingContentState,
-    actions: NowPlayingContentActions,
-    typography: AppleMusicTypography,
     viewState: AppleMusicView,
     onSelectView: (AppleMusicView) -> Unit,
     activePillContainer: Color,
     activePillContent: Color,
+    typography: AppleMusicTypography,
+    position: Long,
+    duration: Long,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
     val localDensity = LocalDensity.current
-    val lyricsData = state.screenData.lyricsData
-
-    // Apple hands the whole page to the lyrics once you stop touching it, and brings the transport
-    // back the moment you touch it again.
-    var showCluster by rememberSaveable { mutableStateOf(true) }
-    var showShareSheet by rememberSaveable { mutableStateOf(false) }
     
+    val playerConnection = LocalPlayerConnection.current ?: return
+    val menuState = LocalMenuState.current
+    val bottomSheetPageState = LocalBottomSheetPageState.current
+
+    val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
+    val currentSong by playerConnection.currentSong.collectAsStateWithLifecycle(initialValue = null)
+    val currentLyrics by playerConnection.currentLyrics.collectAsStateWithLifecycle(initialValue = null)
+    
+    val lyrics = remember(currentLyrics) { currentLyrics?.lyrics?.trim() }
+
+    var showCluster by rememberSaveable { mutableStateOf(true) }
     var interactionTick by remember { mutableIntStateOf(0) }
+    
+    var showShareDialog by rememberSaveable { mutableStateOf(false) }
+    var showColorPicker by rememberSaveable { mutableStateOf(false) }
+    
+    val refreshState = rememberPullToRefreshState()
+    
     LaunchedEffect(showCluster, interactionTick) {
         if (showCluster) {
-            delay(CLUSTER_AUTO_HIDE_MS)
+            delay(8000L)
             showCluster = false
         }
     }
 
     val scrollWakesControls = remember {
-        object : NestedScrollConnection {
-            override fun onPreScroll(
-                available: Offset,
-                source: NestedScrollSource,
-            ): Offset {
+        object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+            override fun onPreScroll(available: androidx.compose.ui.geometry.Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource): androidx.compose.ui.geometry.Offset {
                 if (available.y != 0f) {
                     showCluster = true
                     interactionTick++
                 }
-                return Offset.Zero
+                return androidx.compose.ui.geometry.Offset.Zero
             }
         }
     }
@@ -108,7 +109,17 @@ internal fun AppleMusicLyricsView(
                 with(localDensity) { WindowInsets.statusBars.getTop(localDensity).toDp() } + 20.dp,
             ),
         )
-        AppleMusicCompactHeader(state = state, actions = actions, typography = typography)
+        
+        AppleMusicCompactHeader(
+            typography = typography,
+            modifier = Modifier.clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }
+            ) {
+                showCluster = !showCluster
+                interactionTick++
+            }
+        )
 
         Box(
             modifier = Modifier
@@ -116,69 +127,134 @@ internal fun AppleMusicLyricsView(
                 .nestedScroll(scrollWakesControls)
                 .clickable(
                     indication = null,
-                    interactionSource = remember { MutableInteractionSource() },
+                    interactionSource = remember { MutableInteractionSource() }
                 ) {
                     showCluster = !showCluster
                     interactionTick++
                 },
+            contentAlignment = Alignment.Center
         ) {
-            if (lyricsData != null) {
-                // Assuming Glossy's Lyrics view requires sliderPositionProvider
-                Lyrics(
-                    sliderPositionProvider = { state.timelineState.current },
-                    showLyrics = true,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .appleMusicVerticalFadeEdges(topFade = 28.dp, bottomFade = 18.dp)
-                        .padding(horizontal = 20.dp),
-                )
-                
-                // FIX: Wrapped AnimatedVisibility inside a Box to prevent ColumnScope implicit receiver error
-                Box(modifier = Modifier.align(Alignment.BottomEnd)) {
-                    AnimatedVisibility(
-                        visible = showCluster,
-                        enter = fadeIn(),
-                        exit = fadeOut()
+            when {
+                lyrics == null -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        PlayStoreRefreshIndicator(
+                            isRefreshing = true,
+                            state = refreshState,
+                            modifier = Modifier.size(56.dp)
+                        )
+                    }
+                }
+
+                lyrics == LyricsEntity.LYRICS_NOT_FOUND -> {
+                    Text(
+                        text = stringResource(R.string.lyrics_not_found),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center,
+                    )
+                }
+
+                else -> {
+                    val positionProvider = remember { { playerConnection.player.currentPosition } }
+                    ProvideTextStyle(
+                        value = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = 14.sp,
+                            textAlign = TextAlign.Center,
+                        )
                     ) {
-                        Column(
-                            modifier = Modifier.padding(end = 20.dp, bottom = 16.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                        Lyrics(
+                            sliderPositionProvider = positionProvider,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 24.dp)
+                                .appleMusicVerticalFadeEdges(topFade = 28.dp, bottomFade = 18.dp),
+                            showLyrics = true,
+                        )
+                    }
+
+                    Box(modifier = Modifier.align(Alignment.BottomEnd)) {
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = showCluster,
+                            enter = fadeIn(),
+                            exit = fadeOut()
                         ) {
-                            AppleMusicFloatingCircleButton(
-                                icon = R.drawable.favorite, // Assuming you don't have thumbs_up_down, using favorite
-                                onClick = { actions.onShowVoteDialog() }
-                            )
-                            AppleMusicFloatingCircleButton(
-                                icon = R.drawable.share, 
-                                onClick = { showShareSheet = true }
-                            )
-                            AppleMusicFloatingCircleButton(
-                                icon = R.drawable.fullscreen, 
-                                onClick = { actions.onShowFullscreenLyrics() }
-                            )
+                            Column(
+                                modifier = Modifier.padding(end = 20.dp, bottom = 16.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp),
+                            ) {
+                                AppleMusicFloatingCircleButton(
+                                    icon = R.drawable.more_horiz,
+                                    onClick = {
+                                        menuState.show {
+                                            com.jay.glossy.ui.menu.LyricsMenu(
+                                                lyricsProvider = { currentLyrics },
+                                                songProvider = { currentSong?.song },
+                                                mediaMetadataProvider = { mediaMetadata!! },
+                                                onDismiss = menuState::dismiss,
+                                                onShowOffsetDialog = {
+                                                    bottomSheetPageState.show {
+                                                        ShowOffsetDialog(songProvider = { currentSong?.song })
+                                                    }
+                                                },
+                                            )
+                                        }
+                                    }
+                                )
+
+                                AppleMusicFloatingCircleButton(
+                                    icon = R.drawable.share,
+                                    onClick = { showShareDialog = true }
+                                )
+                            }
                         }
                     }
                 }
             }
         }
 
-        // AnimatedVisibility for the bottom cluster
-        AnimatedVisibility(
+        androidx.compose.animation.AnimatedVisibility(
             visible = showCluster,
             enter = expandVertically() + fadeIn(),
             exit = shrinkVertically() + fadeOut(),
         ) {
             AppleMusicBottomCluster(
-                state = state,
-                actions = actions,
-                typography = typography,
                 viewState = viewState,
                 onSelectView = onSelectView,
-                activePillContainer = activePillContainer,
-                activePillContent = activePillContent,
-                deviceVolumeController = null, 
+                lyricsAvailable = true,
+                activeColor = activePillContainer,
+                activeContentColor = activePillContent,
+                position = position,
+                duration = duration
             )
         }
+    }
+
+    if (showShareDialog) {
+        LyricsShareDialog(
+            txt = lyrics ?: "",
+            title = mediaMetadata?.title ?: "",
+            arts = mediaMetadata?.artists?.joinToString { it.name } ?: "",
+            songId = mediaMetadata?.id ?: "",
+            onDismiss = { showShareDialog = false },
+            onShareAsImage = {
+                showShareDialog = false
+                showColorPicker = true
+            }
+        )
+    }
+
+    if (showColorPicker) {
+        LyricsColorPickerDialog(
+            txt = lyrics ?: "",
+            title = mediaMetadata?.title ?: "",
+            arts = mediaMetadata?.artists?.joinToString { it.name } ?: "",
+            thumbnailUrl = mediaMetadata?.thumbnailUrl,
+            lyricsTextPosition = LyricsPosition.CENTER,
+            onDismiss = { showColorPicker = false },
+            onShare = { backgroundColor, textColor, secondaryTextColor, style ->
+                showColorPicker = false
+            }
+        )
     }
 }
 
@@ -197,9 +273,9 @@ private fun AppleMusicFloatingCircleButton(
         contentAlignment = Alignment.Center,
     ) {
         Icon(
-            painter = painterResource(icon), 
-            contentDescription = null, 
-            tint = Color.White, 
+            painter = painterResource(icon),
+            contentDescription = null,
+            tint = Color.White,
             modifier = Modifier.size(18.dp)
         )
     }
