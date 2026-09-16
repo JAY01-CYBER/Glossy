@@ -44,6 +44,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -1024,7 +1025,7 @@ fun BottomSheetPlayer(
                                         .clip(CircleShape)
                                         .clickable(
                                             interactionSource = fsInteractionSource,
-                                            indication = LocalIndication.current
+                                            indication = null
                                         ) { isFullScreen = !isFullScreen },
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -1052,7 +1053,7 @@ fun BottomSheetPlayer(
                                         .clip(CircleShape)
                                         .clickable(
                                             interactionSource = likeInteractionSource,
-                                            indication = LocalIndication.current
+                                            indication = null
                                         ) { playerConnection.toggleLike() },
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -1076,7 +1077,7 @@ fun BottomSheetPlayer(
                                     .clip(CircleShape)
                                     .clickable(
                                         interactionSource = moreInteractionSource,
-                                        indication = LocalIndication.current
+                                        indication = null
                                     ) {
                                         if (showInlineLyrics) {
                                             val currentLyrics = playerConnection.currentLyrics.value
@@ -2426,107 +2427,6 @@ fun BottomSheetPlayer(
                         }
                     }
                 }
-
-                Spacer(Modifier.height(24.dp))
-
-                val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
-                val maxSystemVolume = remember { audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC).toFloat() }
-                val systemVolume by produceState(initialValue = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC).toFloat() / maxSystemVolume) {
-                    val receiver = object : BroadcastReceiver() {
-                        override fun onReceive(context: Context, intent: Intent) {
-                            if (intent.action == "android.media.VOLUME_CHANGED_ACTION") {
-                                value = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC).toFloat() / maxSystemVolume
-                            }
-                        }
-                    }
-                    val filter = IntentFilter("android.media.VOLUME_CHANGED_ACTION")
-                    context.registerReceiver(receiver, filter)
-                    awaitDispose {
-                        context.unregisterReceiver(receiver)
-                    }
-                }
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = PlayerHorizontalPadding)
-                ) {
-                    val volumeInteractionSource = remember { MutableInteractionSource() }
-                    val isVolumeDragged by volumeInteractionSource.collectIsDraggedAsState()
-                    val isVolumePressed by volumeInteractionSource.collectIsPressedAsState()
-                    val isVolumeActive = isVolumeDragged || isVolumePressed
-
-                    var dragVolume by remember { mutableFloatStateOf(systemVolume) }
-                    
-                    LaunchedEffect(systemVolume) {
-                        if (!isVolumeActive) dragVolume = systemVolume
-                    }
-
-                    val animatedSystemVolume by animateFloatAsState(
-                        targetValue = systemVolume,
-                        animationSpec = tween(150, easing = LinearOutSlowInEasing),
-                        label = "animatedSystemVolume"
-                    )
-                    
-                    val volume = if (isVolumeActive) dragVolume else animatedSystemVolume
-                    
-                    val volumeTrackHeight by animateDpAsState(
-                        targetValue = if (isVolumeActive) 16.dp else 10.dp,
-                        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessLow),
-                        label = "volumeTrackHeight"
-                    )
-
-                    val volumeIconScale by animateFloatAsState(
-                        targetValue = if (isVolumeActive) 1.15f else 1f,
-                        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessLow),
-                        label = "volumeIconScale"
-                    )
-
-                    Icon(
-                        painter = painterResource(R.drawable.volume_mute),
-                        contentDescription = null,
-                        tint = TextBackgroundColor,
-                        modifier = Modifier
-                            .size(20.dp)
-                            .graphicsLayer(scaleX = volumeIconScale, scaleY = volumeIconScale)
-                    )
-
-                    Spacer(Modifier.width(16.dp))
-
-                    Slider(
-                        value = volume,
-                        onValueChange = { newVolume ->
-                            dragVolume = newVolume
-                            scope.launch(Dispatchers.Default) {
-                                val newStep = (newVolume * maxSystemVolume).roundToInt()
-                                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newStep, 0)
-                            }
-                        },
-                        modifier = Modifier.weight(1f).height(24.dp),
-                        interactionSource = volumeInteractionSource,
-                        thumb = { Spacer(modifier = Modifier.size(0.dp)) },
-                        track = { sliderState ->
-                            PlayerSliderTrack(
-                                sliderState = sliderState,
-                                colors = androidx.compose.material3.SliderDefaults.colors(
-                                    activeTrackColor = TextBackgroundColor.copy(alpha = 0.7f),
-                                    inactiveTrackColor = TextBackgroundColor.copy(alpha = 0.15f)
-                                ),
-                                trackHeight = volumeTrackHeight
-                            )
-                        }
-                    )
-
-                    Spacer(Modifier.width(16.dp))
-
-                    Icon(
-                        painter = painterResource(R.drawable.volume_up),
-                        contentDescription = null,
-                        tint = TextBackgroundColor,
-                        modifier = Modifier
-                            .size(24.dp)
-                            .graphicsLayer(scaleX = volumeIconScale, scaleY = volumeIconScale)
-                    )
-                }
             }
 
             when (LocalConfiguration.current.orientation) {
@@ -2565,7 +2465,7 @@ fun BottomSheetPlayer(
                             ) { showLyrics ->
                                 if (showLyrics) {
                                     InlineLyricsView(
-                                        mediaMetadata = mediaMetadata,
+                                        mediaMetadata = mediaMeta,
                                         showLyrics = showLyrics,
                                         positionProvider = { effectivePosition },
                                     )
@@ -2591,10 +2491,7 @@ fun BottomSheetPlayer(
                         ) {
                             Spacer(Modifier.weight(1f))
 
-                            val meta = mediaMetadata
-                            if (meta != null) {
-                                controlsContent(meta)
-                            }
+                            controlsContent(mediaMeta)
 
                             Spacer(Modifier.weight(1f))
                         }
@@ -2628,7 +2525,7 @@ fun BottomSheetPlayer(
                             ) { showLyrics ->
                                 if (showLyrics) {
                                     InlineLyricsView(
-                                        mediaMetadata = mediaMetadata,
+                                        mediaMetadata = mediaMeta,
                                         showLyrics = showLyrics,
                                         positionProvider = { effectivePosition },
                                     )
@@ -2643,10 +2540,7 @@ fun BottomSheetPlayer(
                             }
                         }
 
-                        val meta = mediaMetadata
-                        if (meta != null) {
-                            controlsContent(meta)
-                        }
+                        controlsContent(mediaMeta)
 
                         // VIVI_NEW handles spacing internally, so we don't add extra padding for it here
                         Spacer(Modifier.height(if (playerStyle.name == "WAVY") 8.dp else if (playerStyle.name == "VIVI_NEW") 0.dp else 30.dp))
@@ -2680,6 +2574,10 @@ fun BottomSheetPlayer(
                     },
                 )
             }
+        }
+
+        if (mediaMetadata != null) {
+            controlsContent(mediaMetadata!!)
         }
     }
 }
