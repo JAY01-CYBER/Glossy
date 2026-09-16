@@ -44,6 +44,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -2240,7 +2241,7 @@ fun BottomSheetPlayer(
         }
 
         AnimatedVisibility(
-            visible = !isFullScreen,
+            visible = !isFullScreen && playerStyle.name != "APPLE_MUSIC",
             enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
             exit = shrinkVertically(shrinkTowards = Alignment.Top) + slideOutVertically(targetOffsetY = { it }) + fadeOut(),
         ) {
