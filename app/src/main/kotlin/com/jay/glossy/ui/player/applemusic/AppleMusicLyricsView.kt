@@ -5,7 +5,6 @@
 
 package com.jay.glossy.ui.player.applemusic
 
-import android.content.Intent
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -21,7 +20,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
-import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -30,7 +28,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -63,7 +60,6 @@ internal fun AppleMusicLyricsView(
     duration: Long,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
     val localDensity = LocalDensity.current
     
     val playerConnection = LocalPlayerConnection.current ?: return
@@ -251,7 +247,7 @@ internal fun AppleMusicLyricsView(
             thumbnailUrl = mediaMetadata?.thumbnailUrl,
             lyricsTextPosition = LyricsPosition.CENTER,
             onDismiss = { showColorPicker = false },
-            onShare = { backgroundColor, textColor, secondaryTextColor, style ->
+            onShare = { _, _, _, _ ->
                 showColorPicker = false
             }
         )
