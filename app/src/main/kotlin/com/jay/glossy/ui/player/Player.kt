@@ -1545,7 +1545,7 @@ fun BottomSheetPlayer(
                                         positionProvider = { effectivePosition },
                                     )
                                 } else {
-                                    com.jay.glossy.ui.component.Thumbnail(
+                                        Thumbnail(
                                         sliderPositionProvider = sliderPositionProvider,
                                         modifier = Modifier.animateContentSize(),
                                         isPlayerExpanded = isExpandedProvider,
@@ -1615,7 +1615,7 @@ fun BottomSheetPlayer(
                                         positionProvider = { effectivePosition },
                                     )
                                 } else {
-                                    com.jay.glossy.ui.component.Thumbnail(
+                                        Thumbnail(
                                         sliderPositionProvider = sliderPositionProvider,
                                         modifier = Modifier.nestedScroll(state.preUpPostDownNestedScrollConnection),
                                         isPlayerExpanded = isExpandedProvider,
