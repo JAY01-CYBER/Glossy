@@ -175,25 +175,8 @@ fun NowPlayingContentAppleMusic(
                 )
             }
         }
-
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = with(localDensity) { WindowInsets.statusBars.getTop(localDensity).toDp() })
-                .size(width = 64.dp, height = 28.dp)
-                .clickable(
-                    indication = null,
-                    interactionSource = remember { MutableInteractionSource() }
-                ) { bottomSheetState.collapseSoft() },
-            contentAlignment = Alignment.Center,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(width = 36.dp, height = 5.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(Color.White.copy(alpha = 0.35f)),
-            )
-        }
+        
+        // Removed the top indicator handle (pill) from here as per request
     }
 }
 
@@ -224,16 +207,10 @@ private fun AppleMusicMainView(
     var hasActiveCanvas by remember { mutableStateOf(false) }
     var showControlLayout by rememberSaveable { mutableStateOf(true) }
 
+    // If canvas is turned off or missing, always show controls
     LaunchedEffect(hasActiveCanvas) {
         if (!hasActiveCanvas) {
             showControlLayout = true
-        }
-    }
-
-    LaunchedEffect(showControlLayout, hasActiveCanvas) {
-        if (showControlLayout && hasActiveCanvas) {
-            delay(4000)
-            showControlLayout = false
         }
     }
 
@@ -245,9 +222,10 @@ private fun AppleMusicMainView(
         pageCount = { safeQueueSize }
     )
 
+    // Snap to correct page instantly without animation to prevent square glitch on mini-player return
     LaunchedEffect(safeCurrentIndex) {
-        if (safeCurrentIndex != pagerState.currentPage && safeCurrentIndex < safeQueueSize) {
-            pagerState.animateScrollToPage(safeCurrentIndex)
+        if (pagerState.currentPage != safeCurrentIndex && safeCurrentIndex < safeQueueSize) {
+            pagerState.scrollToPage(safeCurrentIndex)
         }
     }
 
@@ -262,10 +240,12 @@ private fun AppleMusicMainView(
         HorizontalPager(
             state = pagerState,
             modifier = Modifier.fillMaxSize(),
-            beyondViewportPageCount = 1
+            beyondViewportPageCount = 1,
+            key = { idx -> queueWindows.getOrNull(idx)?.uid?.hashCode() ?: idx }
         ) { page ->
             val track = queueWindows.getOrNull(page)?.mediaItem
-            val isCurrentPage = page == safeCurrentIndex
+            // ⭐️ FIX: Use pagerState.currentPage instead of safeCurrentIndex so the centered item is ALWAYS full screen
+            val isCurrentPage = page == pagerState.currentPage
             
             AppleMusicArtworkPage(
                 track = track,
@@ -274,11 +254,14 @@ private fun AppleMusicMainView(
                 artworkZoneHeightDp = artworkZoneHeightDp,
                 onToggleControls = { showControlLayout = !showControlLayout },
                 onCanvasReady = { isReady ->
-                    if (isCurrentPage) hasActiveCanvas = isReady
+                    if (isCurrentPage && track?.mediaId == mediaMetadata?.id) {
+                        hasActiveCanvas = isReady
+                    }
                 }
             )
         }
 
+        // BOTTOM CONTROLS LAYER
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -311,6 +294,7 @@ private fun AppleMusicMainView(
                 )
             }
 
+            // COMPACT HEADER OVERLAY (Shown only when Canvas is active and controls are hidden)
             if (hasActiveCanvas) {
                 AnimatedVisibility(
                     visible = !showControlLayout,
@@ -358,7 +342,8 @@ private fun AppleMusicArtworkPage(
     onCanvasReady: (Boolean) -> Unit
 ) {
     val (canvasThumbnailAnimation) = rememberPreference(CanvasThumbnailAnimationKey, defaultValue = false)
-    val tryShowCanvas = canvasThumbnailAnimation && isCurrentPage && mediaMetadata != null
+    // Only attempt canvas if it is the current page AND the track matches the playing metadata
+    val tryShowCanvas = canvasThumbnailAnimation && isCurrentPage && track?.mediaId == mediaMetadata?.id
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (isCurrentPage) {
@@ -372,15 +357,20 @@ private fun AppleMusicArtworkPage(
                         interactionSource = remember { MutableInteractionSource() }
                     ) { onToggleControls() }
             ) {
-                // STATIC IMAGE LAYER - Always render! 
-                // It acts as a perfect placeholder until the video renders its first frame.
+                // STATIC IMAGE LAYER
+                val currentArtworkUrl = if (track?.mediaId == mediaMetadata?.id) {
+                    mediaMetadata?.thumbnailUrl ?: track?.mediaMetadata?.artworkUri
+                } else {
+                    track?.mediaMetadata?.artworkUri ?: mediaMetadata?.thumbnailUrl
+                }
+
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
-                        .data(track?.mediaMetadata?.artworkUri ?: mediaMetadata?.thumbnailUrl)
+                        .data(currentArtworkUrl)
                         .crossfade(550)
                         .build(),
                     contentDescription = null,
-                    contentScale = ContentScale.Crop,
+                    contentScale = ContentScale.Crop, // Edge to Edge!
                     modifier = Modifier
                         .fillMaxSize()
                         .appleMusicVerticalFadeEdges(topFade = 0.dp, bottomFade = 300.dp)
@@ -403,12 +393,13 @@ private fun AppleMusicArtworkPage(
                 }
             }
         } else if (track != null) {
+            // ADJACENT PAGES: SQUARE CARD
             Box(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
                     .height(artworkZoneHeightDp.dp)
-                    .padding(24.dp),
+                    .padding(24.dp), 
                 contentAlignment = Alignment.Center
             ) {
                 AsyncImage(
