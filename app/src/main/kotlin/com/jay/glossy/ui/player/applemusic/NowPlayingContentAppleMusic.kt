@@ -224,7 +224,6 @@ private fun AppleMusicMainView(
     var hasActiveCanvas by remember { mutableStateOf(false) }
     var showControlLayout by rememberSaveable { mutableStateOf(true) }
 
-    // Auto-hide controls ONLY if a Canvas is actively playing
     LaunchedEffect(hasActiveCanvas) {
         if (!hasActiveCanvas) {
             showControlLayout = true
@@ -260,7 +259,6 @@ private fun AppleMusicMainView(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // PAGER FOR ARTWORKS (Full screen edge-to-edge for all pages)
         HorizontalPager(
             state = pagerState,
             modifier = Modifier.fillMaxSize(),
@@ -281,7 +279,6 @@ private fun AppleMusicMainView(
             )
         }
 
-        // BOTTOM CONTROLS LAYER
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -314,7 +311,6 @@ private fun AppleMusicMainView(
                 )
             }
 
-            // COMPACT HEADER OVERLAY (Shown only when Canvas is active and controls are hidden)
             if (hasActiveCanvas) {
                 AnimatedVisibility(
                     visible = !showControlLayout,
@@ -365,43 +361,68 @@ private fun AppleMusicArtworkPage(
     val tryShowCanvas = canvasThumbnailAnimation && isCurrentPage && mediaMetadata != null
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // ALWAYS Edge-to-Edge Artwork for both current and adjacent pages (like SimpMusic)
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth()
-                .height(artworkZoneHeightDp.dp)
-                .clickable(
-                    indication = null,
-                    interactionSource = remember { MutableInteractionSource() }
-                ) { onToggleControls() }
-        ) {
-            // STATIC IMAGE LAYER
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(track?.mediaMetadata?.artworkUri ?: mediaMetadata?.thumbnailUrl)
-                    .crossfade(550)
-                    .build(),
-                contentDescription = null,
-                contentScale = ContentScale.Crop, // Fills width and height perfectly
+        if (isCurrentPage) {
+            Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .alpha(if (tryShowCanvas) 0f else 1f)
-                    .appleMusicVerticalFadeEdges(topFade = 0.dp, bottomFade = 300.dp)
-            )
-
-            // CANVAS VIDEO LAYER
-            if (tryShowCanvas && track != null) {
-                AppleMusicCanvasLayer(
-                    track = track,
-                    mediaMetadata = mediaMetadata,
-                    onCanvasReady = onCanvasReady,
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .height(artworkZoneHeightDp.dp)
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() }
+                    ) { onToggleControls() }
+            ) {
+                // STATIC IMAGE LAYER - Always render! 
+                // It acts as a perfect placeholder until the video renders its first frame.
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(track?.mediaMetadata?.artworkUri ?: mediaMetadata?.thumbnailUrl)
+                        .crossfade(550)
+                        .build(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .fillMaxSize()
                         .appleMusicVerticalFadeEdges(topFade = 0.dp, bottomFade = 300.dp)
                 )
-            } else if (isCurrentPage) {
-                LaunchedEffect(Unit) { onCanvasReady(false) }
+
+                // CANVAS VIDEO LAYER
+                if (tryShowCanvas && track != null) {
+                    AppleMusicCanvasLayer(
+                        track = track,
+                        mediaMetadata = mediaMetadata,
+                        onCanvasReady = onCanvasReady,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .appleMusicVerticalFadeEdges(topFade = 0.dp, bottomFade = 300.dp)
+                    )
+                } else {
+                    LaunchedEffect(Unit) {
+                        onCanvasReady(false)
+                    }
+                }
+            }
+        } else if (track != null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .height(artworkZoneHeightDp.dp)
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(track.mediaMetadata.artworkUri)
+                        .crossfade(300)
+                        .build(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .aspectRatio(1f)
+                        .clip(RoundedCornerShape(8.dp))
+                )
             }
         }
     }
