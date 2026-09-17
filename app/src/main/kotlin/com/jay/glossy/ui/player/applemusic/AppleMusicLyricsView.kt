@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
@@ -29,6 +30,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -45,10 +48,7 @@ import com.jay.glossy.db.entities.LyricsEntity
 import com.jay.glossy.ui.component.LocalBottomSheetPageState
 import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.component.Lyrics
-import com.jay.glossy.ui.component.LyricsColorPickerDialog
-import com.jay.glossy.ui.component.LyricsShareDialog
 import com.jay.glossy.ui.component.PlayStoreRefreshIndicator
-import com.jay.glossy.ui.screens.settings.LyricsPosition
 import com.jay.glossy.ui.utils.ShowOffsetDialog
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.Dispatchers
@@ -85,14 +85,12 @@ internal fun AppleMusicLyricsView(
     var showCluster by rememberSaveable { mutableStateOf(true) }
     var interactionTick by remember { mutableIntStateOf(0) }
     
-    var showShareDialog by rememberSaveable { mutableStateOf(false) }
-    var showColorPicker by rememberSaveable { mutableStateOf(false) }
-    
     val refreshState = rememberPullToRefreshState()
     
+    // Auto-hide after 5 seconds
     LaunchedEffect(showCluster, interactionTick) {
         if (showCluster) {
-            delay(8000L)
+            delay(5000L)
             showCluster = false
         }
     }
@@ -119,10 +117,13 @@ internal fun AppleMusicLyricsView(
         }
     }
 
+    // Scroll direction: scroll down -> hide controls, swipe up -> show controls
     val scrollWakesControls = remember {
-        object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
-            override fun onPreScroll(available: androidx.compose.ui.geometry.Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource): androidx.compose.ui.geometry.Offset {
-                if (available.y != 0f) {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: androidx.compose.ui.geometry.Offset, source: NestedScrollSource): androidx.compose.ui.geometry.Offset {
+                if (available.y < 0f) {
+                    showCluster = false
+                } else if (available.y > 0f) {
                     showCluster = true
                     interactionTick++
                 }
@@ -138,8 +139,35 @@ internal fun AppleMusicLyricsView(
             ),
         )
         
+        // Compact header with the three dots menu button on the right
         AppleMusicCompactHeader(
             typography = typography,
+            trailingContent = {
+                IconButton(
+                    onClick = {
+                        menuState.show {
+                            com.jay.glossy.ui.menu.LyricsMenu(
+                                lyricsProvider = { currentLyrics },
+                                songProvider = { currentSong?.song },
+                                mediaMetadataProvider = { mediaMetadata!! },
+                                onDismiss = menuState::dismiss,
+                                onShowOffsetDialog = {
+                                    bottomSheetPageState.show {
+                                        ShowOffsetDialog(songProvider = { currentSong?.song })
+                                    }
+                                },
+                            )
+                        }
+                    },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.more_horiz),
+                        contentDescription = "Lyrics Menu",
+                        tint = Color.White
+                    )
+                }
+            },
             modifier = Modifier.clickable(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() }
@@ -202,43 +230,6 @@ internal fun AppleMusicLyricsView(
                             showLyrics = true,
                         )
                     }
-
-                    Box(modifier = Modifier.align(Alignment.BottomEnd)) {
-                        androidx.compose.animation.AnimatedVisibility(
-                            visible = showCluster,
-                            enter = fadeIn(),
-                            exit = fadeOut()
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(end = 20.dp, bottom = 16.dp),
-                                verticalArrangement = Arrangement.spacedBy(10.dp),
-                            ) {
-                                AppleMusicFloatingCircleButton(
-                                    icon = R.drawable.more_horiz,
-                                    onClick = {
-                                        menuState.show {
-                                            com.jay.glossy.ui.menu.LyricsMenu(
-                                                lyricsProvider = { currentLyrics },
-                                                songProvider = { currentSong?.song },
-                                                mediaMetadataProvider = { mediaMetadata!! },
-                                                onDismiss = menuState::dismiss,
-                                                onShowOffsetDialog = {
-                                                    bottomSheetPageState.show {
-                                                        ShowOffsetDialog(songProvider = { currentSong?.song })
-                                                    }
-                                                },
-                                            )
-                                        }
-                                    }
-                                )
-
-                                AppleMusicFloatingCircleButton(
-                                    icon = R.drawable.share,
-                                    onClick = { showShareDialog = true }
-                                )
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -258,56 +249,5 @@ internal fun AppleMusicLyricsView(
                 duration = duration
             )
         }
-    }
-
-    if (showShareDialog) {
-        LyricsShareDialog(
-            txt = lyrics ?: "",
-            title = mediaMetadata?.title ?: "",
-            arts = mediaMetadata?.artists?.joinToString { it.name } ?: "",
-            songId = mediaMetadata?.id ?: "",
-            onDismiss = { showShareDialog = false },
-            onShareAsImage = {
-                showShareDialog = false
-                showColorPicker = true
-            }
-        )
-    }
-
-    if (showColorPicker) {
-        LyricsColorPickerDialog(
-            txt = lyrics ?: "",
-            title = mediaMetadata?.title ?: "",
-            arts = mediaMetadata?.artists?.joinToString { it.name } ?: "",
-            thumbnailUrl = mediaMetadata?.thumbnailUrl,
-            lyricsTextPosition = LyricsPosition.CENTER,
-            onDismiss = { showColorPicker = false },
-            onShare = { _, _, _, _ ->
-                showColorPicker = false
-            }
-        )
-    }
-}
-
-@Composable
-private fun AppleMusicFloatingCircleButton(
-    icon: Int,
-    onClick: () -> Unit,
-) {
-    Box(
-        modifier = Modifier
-            .appleMusicPressInflate()
-            .size(38.dp)
-            .clip(CircleShape)
-            .background(Color.White.copy(alpha = 0.24f))
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            painter = painterResource(icon),
-            contentDescription = null,
-            tint = Color.White,
-            modifier = Modifier.size(18.dp)
-        )
     }
 }
