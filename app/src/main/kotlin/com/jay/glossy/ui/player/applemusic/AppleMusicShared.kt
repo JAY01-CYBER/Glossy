@@ -11,7 +11,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.media.AudioManager
 import androidx.compose.animation.Crossfade
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -32,18 +31,29 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.jay.glossy.R
 import com.jay.glossy.LocalListenTogetherManager
 import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.listentogether.RoomRole
+import com.jay.glossy.ui.component.BottomSheetState
 import com.jay.glossy.ui.component.CastButton
+import com.jay.glossy.ui.component.LocalBottomSheetPageState
+import com.jay.glossy.ui.component.LocalMenuState
+import com.jay.glossy.ui.menu.PlayerMenu
+import com.jay.glossy.ui.utils.ShowMediaInfo
+import com.jay.glossy.ui.utils.ShowOffsetDialog
 import com.jay.glossy.utils.makeTimeString
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -469,5 +479,134 @@ internal fun AppleMusicBottomCluster(
                 with(localDensity) { WindowInsets.systemBars.getBottom(localDensity).toDp() } + 12.dp,
             ),
         )
+    }
+}
+
+@Composable
+internal fun AppleMusicHeaderActions(
+    viewState: AppleMusicView,
+    bottomSheetState: BottomSheetState,
+    modifier: Modifier = Modifier,
+) {
+    val playerConnection = LocalPlayerConnection.current ?: return
+    val menuState = LocalMenuState.current
+    val bottomSheetPageState = LocalBottomSheetPageState.current
+    val currentSong by playerConnection.currentSong.collectAsStateWithLifecycle(initialValue = null)
+    val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
+    val currentLyrics by playerConnection.currentLyrics.collectAsStateWithLifecycle(initialValue = null)
+    
+    val isEpisode = currentSong?.song?.isEpisode == true
+    val isFavorite = if (isEpisode) currentSong?.song?.inLibrary != null else currentSong?.song?.liked == true
+    
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .appleMusicPressInflate()
+                .size(32.dp)
+                .clip(CircleShape)
+                .clickable { playerConnection.toggleLike() },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painter = painterResource(if (isFavorite) R.drawable.favorite else R.drawable.favorite_border),
+                contentDescription = null,
+                tint = if (isFavorite) MaterialTheme.colorScheme.error else Color.White,
+                modifier = Modifier.size(24.dp),
+            )
+        }
+        
+        AppleMusicGlyphButton(
+            icon = R.drawable.more_vert, 
+            onClick = {
+                if (viewState == AppleMusicView.LYRICS) {
+                    menuState.show {
+                        com.jay.glossy.ui.menu.LyricsMenu(
+                            lyricsProvider = { currentLyrics },
+                            songProvider = { currentSong?.song },
+                            mediaMetadataProvider = { mediaMetadata!! },
+                            onDismiss = menuState::dismiss,
+                            onShowOffsetDialog = {
+                                bottomSheetPageState.show { ShowOffsetDialog(songProvider = { currentSong?.song }) }
+                            }
+                        )
+                    }
+                } else {
+                    menuState.show {
+                        PlayerMenu(
+                            mediaMetadata = mediaMetadata,
+                            playerBottomSheetState = bottomSheetState,
+                            onShowDetailsDialog = {
+                                mediaMetadata?.id?.let {
+                                    bottomSheetPageState.show { ShowMediaInfo(it) }
+                                }
+                            },
+                            onDismiss = menuState::dismiss
+                        )
+                    }
+                }
+            }
+        )
+    }
+}
+
+@Composable
+internal fun AppleMusicCompactHeader(
+    typography: AppleMusicTypography,
+    modifier: Modifier = Modifier,
+    trailingContent: (@Composable () -> Unit)? = null,
+) {
+    val playerConnection = LocalPlayerConnection.current ?: return
+    val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
+
+    Row(
+        modifier = modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        AsyncImage(
+            model = ImageRequest.Builder(LocalContext.current)
+                .data(mediaMetadata?.thumbnailUrl)
+                .crossfade(300)
+                .build(),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.size(55.dp).clip(RoundedCornerShape(4.dp)),
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = mediaMetadata?.title ?: "",
+                style = typography.compactTitle,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (mediaMetadata?.explicit == true) {
+                    Icon(
+                        painter = painterResource(R.drawable.explicit), 
+                        contentDescription = null, 
+                        tint = Color.White, 
+                        modifier = Modifier.size(16.dp).padding(end = 4.dp)
+                    )
+                }
+                Text(
+                    text = mediaMetadata?.artists?.joinToString { it.name } ?: "",
+                    style = typography.compactArtist,
+                    color = AppleMusicTextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        if (trailingContent != null) {
+            Spacer(modifier = Modifier.width(12.dp))
+            trailingContent()
+        }
     }
 }
