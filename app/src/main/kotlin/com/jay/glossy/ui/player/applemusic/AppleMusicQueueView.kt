@@ -29,6 +29,7 @@ import androidx.media3.exoplayer.source.ShuffleOrder.DefaultShuffleOrder
 import com.jay.glossy.R
 import com.jay.glossy.LocalListenTogetherManager
 import com.jay.glossy.LocalPlayerConnection
+import com.jay.glossy.extensions.metadata
 import com.jay.glossy.extensions.move
 import com.jay.glossy.extensions.toggleRepeatMode
 import com.jay.glossy.listentogether.RoomRole
@@ -65,7 +66,6 @@ internal fun AppleMusicQueueView(
     val queueWindows by playerConnection.queueWindows.collectAsStateWithLifecycle()
     val currentWindowIndex by playerConnection.currentWindowIndex.collectAsStateWithLifecycle()
     
-    // सिर्फ "Up Next" गानों की लिस्ट बनाएंगे
     val safeCurrentIndex = maxOf(0, currentWindowIndex)
     val mutableQueueWindows = remember { mutableStateListOf<Timeline.Window>() }
     
@@ -89,7 +89,6 @@ internal fun AppleMusicQueueView(
     LaunchedEffect(reorderableState.isAnyItemDragging) {
         if (!reorderableState.isAnyItemDragging) {
             dragInfo?.let { (from, to) ->
-                // असली Queue में ड्रैग की जगह एडजस्ट करने के लिए offset जोड़ेंगे
                 val actualFrom = (from + safeCurrentIndex).coerceIn(0, queueWindows.lastIndex)
                 val actualTo = (to + safeCurrentIndex).coerceIn(0, queueWindows.lastIndex)
 
@@ -111,7 +110,6 @@ internal fun AppleMusicQueueView(
         }
     }
 
-    // Up-Next का डेटा रिफ्रेश करें (पिछले गानों को छोड़ कर)
     LaunchedEffect(queueWindows, safeCurrentIndex) {
         mutableQueueWindows.apply {
             clear()
@@ -148,7 +146,6 @@ internal fun AppleMusicQueueView(
                         state = reorderableState,
                         key = window.uid.hashCode(),
                     ) {
-                        // पहला आइटम ही करेंट गाना होगा (क्यूंकि हमने पिछले गानों को ड्रॉप कर दिया है)
                         val isActive = window.uid == queueWindows.getOrNull(currentWindowIndex)?.uid
                         
                         Row(
