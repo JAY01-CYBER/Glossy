@@ -29,7 +29,6 @@ import androidx.media3.exoplayer.source.ShuffleOrder.DefaultShuffleOrder
 import com.jay.glossy.R
 import com.jay.glossy.LocalListenTogetherManager
 import com.jay.glossy.LocalPlayerConnection
-import com.jay.glossy.extensions.metadata
 import com.jay.glossy.extensions.move
 import com.jay.glossy.extensions.toggleRepeatMode
 import com.jay.glossy.listentogether.RoomRole
@@ -38,6 +37,8 @@ import com.jay.glossy.ui.component.LocalBottomSheetPageState
 import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.component.MediaMetadataListItem
 import com.jay.glossy.ui.utils.ShowMediaInfo
+import kotlinx.coroutines.launch
+import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -63,6 +64,9 @@ internal fun AppleMusicQueueView(
 
     val queueWindows by playerConnection.queueWindows.collectAsStateWithLifecycle()
     val currentWindowIndex by playerConnection.currentWindowIndex.collectAsStateWithLifecycle()
+    
+    // सिर्फ "Up Next" गानों की लिस्ट बनाएंगे
+    val safeCurrentIndex = maxOf(0, currentWindowIndex)
     val mutableQueueWindows = remember { mutableStateListOf<Timeline.Window>() }
     
     val lazyListState = rememberLazyListState()
@@ -85,17 +89,18 @@ internal fun AppleMusicQueueView(
     LaunchedEffect(reorderableState.isAnyItemDragging) {
         if (!reorderableState.isAnyItemDragging) {
             dragInfo?.let { (from, to) ->
-                val safeFrom = from.coerceIn(0, queueWindows.lastIndex)
-                val safeTo = to.coerceIn(0, queueWindows.lastIndex)
+                // असली Queue में ड्रैग की जगह एडजस्ट करने के लिए offset जोड़ेंगे
+                val actualFrom = (from + safeCurrentIndex).coerceIn(0, queueWindows.lastIndex)
+                val actualTo = (to + safeCurrentIndex).coerceIn(0, queueWindows.lastIndex)
 
                 if (!playerConnection.player.shuffleModeEnabled) {
-                    playerConnection.player.moveMediaItem(safeFrom, safeTo)
+                    playerConnection.player.moveMediaItem(actualFrom, actualTo)
                 } else {
                     playerConnection.player.setShuffleOrder(
                         DefaultShuffleOrder(
                             queueWindows.map { it.firstPeriodIndex }
                                 .toMutableList()
-                                .move(safeFrom, safeTo)
+                                .move(actualFrom, actualTo)
                                 .toIntArray(),
                             System.currentTimeMillis(),
                         ),
@@ -106,16 +111,11 @@ internal fun AppleMusicQueueView(
         }
     }
 
-    LaunchedEffect(queueWindows) {
+    // Up-Next का डेटा रिफ्रेश करें (पिछले गानों को छोड़ कर)
+    LaunchedEffect(queueWindows, safeCurrentIndex) {
         mutableQueueWindows.apply {
             clear()
-            addAll(queueWindows)
-        }
-    }
-
-    LaunchedEffect(mutableQueueWindows, currentWindowIndex) {
-        if (currentWindowIndex != -1) {
-            lazyListState.scrollToItem(currentWindowIndex)
+            addAll(queueWindows.drop(safeCurrentIndex))
         }
     }
 
@@ -144,11 +144,13 @@ internal fun AppleMusicQueueView(
                     items = mutableQueueWindows,
                     key = { _, item -> item.uid.hashCode() },
                 ) { index, window ->
-                    sh.calvin.reorderable.ReorderableItem(
+                    ReorderableItem(
                         state = reorderableState,
                         key = window.uid.hashCode(),
                     ) {
-                        val isActive = index == currentWindowIndex
+                        // पहला आइटम ही करेंट गाना होगा (क्यूंकि हमने पिछले गानों को ड्रॉप कर दिया है)
+                        val isActive = window.uid == queueWindows.getOrNull(currentWindowIndex)?.uid
+                        
                         Row(
                             horizontalArrangement = Arrangement.Center,
                             modifier = Modifier.animateItem(),
@@ -202,7 +204,7 @@ internal fun AppleMusicQueueView(
                                         .fillMaxWidth()
                                         .clickable {
                                             if (!isListenTogetherGuest) {
-                                                if (index != currentWindowIndex) {
+                                                if (!isActive) {
                                                     playerConnection.player.seekToDefaultPosition(window.firstPeriodIndex)
                                                     playerConnection.player.playWhenReady = true
                                                 } else {
