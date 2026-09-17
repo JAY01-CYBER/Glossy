@@ -5,6 +5,8 @@
 
 package com.jay.glossy.ui.player.applemusic
 
+import android.content.Intent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -28,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -60,6 +63,7 @@ internal fun AppleMusicLyricsView(
     duration: Long,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
     val localDensity = LocalDensity.current
     
     val playerConnection = LocalPlayerConnection.current ?: return
@@ -80,10 +84,19 @@ internal fun AppleMusicLyricsView(
     
     val refreshState = rememberPullToRefreshState()
     
+    // UI छुपाने वाला लॉजिक (8 सेकंड बाद)
     LaunchedEffect(showCluster, interactionTick) {
         if (showCluster) {
             delay(8000L)
             showCluster = false
+        }
+    }
+
+    // ऑटो-फ़ॉलबैक लॉजिक: अगर लिरिक्स नहीं मिले, तो 2.5 सेकंड बाद MAIN पे वापस भेज दो
+    LaunchedEffect(lyrics) {
+        if (lyrics == null || lyrics == LyricsEntity.LYRICS_NOT_FOUND) {
+            delay(2500L)
+            onSelectView(AppleMusicView.MAIN)
         }
     }
 
