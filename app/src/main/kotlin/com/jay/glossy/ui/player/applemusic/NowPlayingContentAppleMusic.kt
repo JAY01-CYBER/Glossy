@@ -82,6 +82,7 @@ fun NowPlayingContentAppleMusic(
     val typography = rememberAppleMusicTypography()
     val localDensity = LocalDensity.current
     
+    // Dynamic Color Extraction (SimpMusic Style)
     var extractedColor by remember { mutableStateOf(Color(0xFF121212)) }
     val animatedSeedColor by animateColorAsState(
         targetValue = extractedColor, 
@@ -247,7 +248,7 @@ private fun AppleMusicMainView(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 24.dp), // Apple Music-like padding
+                        .padding(horizontal = 24.dp), 
                     contentAlignment = Alignment.Center
                 ) {
                     Box(
@@ -320,10 +321,11 @@ private fun AppleMusicCanvasLayer(
         canvasFetchInFlight = true
 
         val fetched = withContext(Dispatchers.IO) {
-            val metadata = item.metadata
-            val albumName = metadata?.albumTitle?.toString() ?: ""
-            val songTitleRaw = metadata?.title?.toString() ?: ""
-            val artistNameRaw = metadata?.artists?.firstOrNull()?.name ?: ""
+            // YAHAN PAR ERROR THA: item.metadata ki jagah item.mediaMetadata aayega!
+            val metadata = item.mediaMetadata
+            val albumName = metadata.albumTitle?.toString() ?: ""
+            val songTitleRaw = metadata.title?.toString() ?: ""
+            val artistNameRaw = metadata.artist?.toString() ?: ""
             
             val songTitle = normalizeCanvasSongTitle(songTitleRaw)
             val artistName = normalizeCanvasArtistName(artistNameRaw)
