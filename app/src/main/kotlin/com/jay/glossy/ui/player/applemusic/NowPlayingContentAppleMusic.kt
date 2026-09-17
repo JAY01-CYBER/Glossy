@@ -36,6 +36,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.common.MediaItem
 import androidx.palette.graphics.Palette
 import coil3.compose.AsyncImage
 import coil3.imageLoader
@@ -45,16 +46,26 @@ import coil3.request.crossfade
 import coil3.toBitmap
 import com.jay.glossy.R
 import com.jay.glossy.LocalPlayerConnection
+import com.jay.glossy.applecanvas.AppleMusicCanvasProvider
+import com.jay.glossy.canvas.CanvasArtwork
+import com.jay.glossy.canvas.TidalCanvasProvider
+import com.jay.glossy.constants.CanvasThumbnailAnimationKey
 import com.jay.glossy.constants.CropAlbumArtKey
-import com.jay.glossy.extensions.metadata 
+import com.jay.glossy.extensions.metadata
 import com.jay.glossy.ui.component.BottomSheetState
 import com.jay.glossy.ui.component.LocalBottomSheetPageState
 import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.menu.PlayerMenu
+import com.jay.glossy.ui.player.CanvasArtworkPlaybackCache
+import com.jay.glossy.ui.player.CanvasArtworkPlayer
+import com.jay.glossy.ui.player.normalizeCanvasArtistName
+import com.jay.glossy.ui.player.normalizeCanvasSongTitle
 import com.jay.glossy.ui.utils.ShowMediaInfo
 import com.jay.glossy.utils.rememberPreference
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.withContext
+import java.util.Locale
 
 @Composable
 fun NowPlayingContentAppleMusic(
@@ -71,7 +82,6 @@ fun NowPlayingContentAppleMusic(
     val typography = rememberAppleMusicTypography()
     val localDensity = LocalDensity.current
     
-    // Dynamic Color Extraction (SimpMusic Style)
     var extractedColor by remember { mutableStateOf(Color(0xFF121212)) }
     val animatedSeedColor by animateColorAsState(
         targetValue = extractedColor, 
@@ -194,11 +204,11 @@ private fun AppleMusicMainView(
     duration: Long
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
+    val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
     val queueWindows by playerConnection.queueWindows.collectAsStateWithLifecycle(initialValue = emptyList())
     val currentWindowIndex by playerConnection.currentWindowIndex.collectAsStateWithLifecycle()
     val cropAlbumArt by rememberPreference(CropAlbumArtKey, false)
 
-    // Horizontal Artwork Pager
     val pagerState = rememberPagerState(
         initialPage = maxOf(0, currentWindowIndex),
         pageCount = { queueWindows.size }
@@ -223,7 +233,7 @@ private fun AppleMusicMainView(
                 .weight(1f)
                 .fillMaxWidth()
                 .statusBarsPadding()
-                .padding(top = 32.dp),
+                .padding(top = 16.dp),
             contentAlignment = Alignment.Center
         ) {
             HorizontalPager(
@@ -231,21 +241,42 @@ private fun AppleMusicMainView(
                 modifier = Modifier.fillMaxSize(),
                 beyondViewportPageCount = 1
             ) { page ->
-                val track = queueWindows.getOrNull(page)?.mediaItem?.metadata
-                Box(modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp), contentAlignment = Alignment.Center) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(track?.thumbnailUrl)
-                            .crossfade(550)
-                            .build(),
-                        contentDescription = null,
-                        contentScale = if (cropAlbumArt) ContentScale.Crop else ContentScale.Fit,
+                val track = queueWindows.getOrNull(page)?.mediaItem
+                val trackMeta = track?.metadata
+                
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 24.dp), // Apple Music-like padding
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .aspectRatio(1f)
                             .clip(RoundedCornerShape(12.dp))
-                            .appleMusicVerticalFadeEdges(topFade = 0.dp, bottomFade = 30.dp)
-                    )
+                    ) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(trackMeta?.thumbnailUrl)
+                                .crossfade(550)
+                                .build(),
+                            contentDescription = null,
+                            contentScale = if (cropAlbumArt) ContentScale.Crop else ContentScale.Fit,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .appleMusicVerticalFadeEdges(topFade = 0.dp, bottomFade = 30.dp)
+                        )
+
+                        // Canvas Playback Logic
+                        val (canvasThumbnailAnimation) = rememberPreference(CanvasThumbnailAnimationKey, defaultValue = false)
+                        if (canvasThumbnailAnimation && track != null && track.mediaId == mediaMetadata?.id) {
+                            AppleMusicCanvasLayer(
+                                item = track,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -264,6 +295,72 @@ private fun AppleMusicMainView(
                 duration = duration
             )
         }
+    }
+}
+
+@Composable
+private fun AppleMusicCanvasLayer(
+    item: MediaItem,
+    modifier: Modifier = Modifier
+) {
+    var canvasArtwork by remember(item.mediaId) { mutableStateOf<CanvasArtwork?>(null) }
+    var canvasFetchInFlight by remember(item.mediaId) { mutableStateOf(false) }
+    val storefront = remember {
+        val country = Locale.getDefault().country
+        if (country.length == 2) country.lowercase(Locale.ROOT) else "us"
+    }
+
+    LaunchedEffect(item.mediaId) {
+        CanvasArtworkPlaybackCache.get(item.mediaId)?.let { cached ->
+            canvasArtwork = cached
+            return@LaunchedEffect
+        }
+
+        if (canvasFetchInFlight) return@LaunchedEffect
+        canvasFetchInFlight = true
+
+        val fetched = withContext(Dispatchers.IO) {
+            val metadata = item.metadata
+            val albumName = metadata?.albumTitle?.toString() ?: ""
+            val songTitleRaw = metadata?.title?.toString() ?: ""
+            val artistNameRaw = metadata?.artists?.firstOrNull()?.name ?: ""
+            
+            val songTitle = normalizeCanvasSongTitle(songTitleRaw)
+            val artistName = normalizeCanvasArtistName(artistNameRaw)
+
+            if (songTitle.isBlank() || artistName.isBlank()) return@withContext null
+
+            val tidalDeferred = async {
+                TidalCanvasProvider.getBySongArtist(songTitle, artistName, albumName)
+                    ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
+            }
+            
+            val appleDeferred = async {
+                if (albumName.isNotBlank()) {
+                    AppleMusicCanvasProvider.getByAlbumArtist(albumName, artistName, storefront)
+                        ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
+                } else {
+                    null
+                } ?: AppleMusicCanvasProvider.getBySongArtist(songTitle, artistName, albumName, storefront)
+                    ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
+            }
+
+            tidalDeferred.await() ?: appleDeferred.await()
+        }
+        
+        canvasArtwork = fetched
+        if (fetched != null) {
+            CanvasArtworkPlaybackCache.put(item.mediaId, fetched)
+        }
+        canvasFetchInFlight = false
+    }
+
+    canvasArtwork?.let { artwork ->
+        CanvasArtworkPlayer(
+            primaryUrl = artwork.animated,
+            fallbackUrl = artwork.videoUrl,
+            modifier = modifier
+        )
     }
 }
 
