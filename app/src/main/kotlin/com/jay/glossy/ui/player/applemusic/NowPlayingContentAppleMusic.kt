@@ -50,7 +50,6 @@ import com.jay.glossy.applecanvas.AppleMusicCanvasProvider
 import com.jay.glossy.canvas.CanvasArtwork
 import com.jay.glossy.canvas.TidalCanvasProvider
 import com.jay.glossy.constants.CanvasThumbnailAnimationKey
-import com.jay.glossy.constants.CropAlbumArtKey
 import com.jay.glossy.extensions.metadata
 import com.jay.glossy.ui.component.BottomSheetState
 import com.jay.glossy.ui.component.LocalBottomSheetPageState
@@ -207,7 +206,6 @@ private fun AppleMusicMainView(
     val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
     val queueWindows by playerConnection.queueWindows.collectAsStateWithLifecycle(initialValue = emptyList())
     val currentWindowIndex by playerConnection.currentWindowIndex.collectAsStateWithLifecycle()
-    val cropAlbumArt by rememberPreference(CropAlbumArtKey, false)
 
     val pagerState = rememberPagerState(
         initialPage = maxOf(0, currentWindowIndex),
@@ -230,10 +228,9 @@ private fun AppleMusicMainView(
     Column(modifier = Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .statusBarsPadding(),
-            contentAlignment = Alignment.Center
+                .weight(1f) // Takes all space above controls
+                .fillMaxWidth(), // No status bars padding, bleeds to the top!
+            contentAlignment = Alignment.TopCenter
         ) {
             HorizontalPager(
                 state = pagerState,
@@ -243,42 +240,40 @@ private fun AppleMusicMainView(
                 val track = queueWindows.getOrNull(page)?.mediaItem
                 val trackMeta = track?.metadata
                 
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 28.dp), 
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(
+                Box(modifier = Modifier.fillMaxSize()) {
+                    val (canvasThumbnailAnimation) = rememberPreference(CanvasThumbnailAnimationKey, defaultValue = false)
+                    val showCanvas = canvasThumbnailAnimation && track != null && track.mediaId == mediaMetadata?.id
+                    
+                    // FULL SCREEN ARTWORK
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(trackMeta?.thumbnailUrl)
+                            .crossfade(550)
+                            .build(),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop, // Fill the space edge-to-edge
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(1f)
-                            .clip(RoundedCornerShape(12.dp))
-                    ) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(LocalContext.current)
-                                .data(trackMeta?.thumbnailUrl)
-                                .crossfade(550)
-                                .build(),
-                            contentDescription = null,
-                            contentScale = if (cropAlbumArt) ContentScale.Crop else ContentScale.Fit,
+                            .fillMaxSize()
+                            .alpha(if (showCanvas) 0f else 1f) // Hide if canvas is showing
+                            .appleMusicVerticalFadeEdges(topFade = 0.dp, bottomFade = 300.dp) // Fades into controls at bottom
+                    )
+
+                    // CANVAS VIDEO LAYER
+                    if (showCanvas && track != null) {
+                        AppleMusicCanvasLayer(
+                            item = track,
                             modifier = Modifier.fillMaxSize()
                         )
-
-                        // Canvas Playback Logic
-                        val (canvasThumbnailAnimation) = rememberPreference(CanvasThumbnailAnimationKey, defaultValue = false)
-                        if (canvasThumbnailAnimation && track != null && track.mediaId == mediaMetadata?.id) {
-                            AppleMusicCanvasLayer(
-                                item = track,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
                     }
                 }
             }
         }
 
-        Column(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.Transparent)
+        ) {
             Spacer(modifier = Modifier.height(20.dp))
             AppleMusicMainTitleRow(typography = typography, bottomSheetState = bottomSheetState)
             Spacer(modifier = Modifier.height(16.dp))
@@ -317,10 +312,10 @@ private fun AppleMusicCanvasLayer(
         canvasFetchInFlight = true
 
         val fetched = withContext(Dispatchers.IO) {
-            val metadata = item.metadata
-            val albumName = metadata?.album?.title ?: "" // FIX: Correctly access album title
-            val songTitleRaw = metadata?.title ?: ""
-            val artistNameRaw = metadata?.artists?.firstOrNull()?.name ?: ""
+            val metadata = item.mediaMetadata
+            val albumName = metadata.albumTitle?.toString() ?: ""
+            val songTitleRaw = metadata.title?.toString() ?: ""
+            val artistNameRaw = metadata.artist?.toString() ?: ""
             
             val songTitle = normalizeCanvasSongTitle(songTitleRaw)
             val artistName = normalizeCanvasArtistName(artistNameRaw)
