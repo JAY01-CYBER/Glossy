@@ -119,14 +119,6 @@ internal fun AppleMusicLyricsView(
         }
     }
 
-    // AUTO FALLBACK
-    LaunchedEffect(lyrics) {
-        if (lyrics == null || lyrics == LyricsEntity.LYRICS_NOT_FOUND) {
-            delay(2500L)
-            onSelectView(AppleMusicView.MAIN)
-        }
-    }
-
     val scrollWakesControls = remember {
         object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
             override fun onPreScroll(available: androidx.compose.ui.geometry.Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource): androidx.compose.ui.geometry.Offset {
@@ -185,10 +177,9 @@ internal fun AppleMusicLyricsView(
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(
                             text = stringResource(R.string.lyrics_not_found),
-                            style = MaterialTheme.typography.bodyLarge,
+                            style = MaterialTheme.typography.titleMedium,
                             color = Color.White.copy(alpha = 0.7f),
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth()
+                            textAlign = TextAlign.Center
                         )
                     }
                 }
