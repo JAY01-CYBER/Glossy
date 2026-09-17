@@ -42,7 +42,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
 import androidx.palette.graphics.Palette
 import coil3.compose.AsyncImage
 import coil3.imageLoader
@@ -72,6 +74,31 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.util.Locale
+
+@Immutable
+data class AppleMediaItemsData(
+    val items: List<MediaItem>,
+    val currentIndex: Int
+)
+
+@Stable
+private fun getAppleMediaItems(player: Player): AppleMediaItemsData {
+    val timeline = player.currentTimeline
+    val currentIndex = player.currentMediaItemIndex
+    val shuffleModeEnabled = player.shuffleModeEnabled
+    
+    val currentMediaItem = try { player.currentMediaItem } catch (e: Exception) { null }
+    val previousIndex = if (!timeline.isEmpty) timeline.getPreviousWindowIndex(currentIndex, Player.REPEAT_MODE_OFF, shuffleModeEnabled) else C.INDEX_UNSET
+    val nextIndex = if (!timeline.isEmpty) timeline.getNextWindowIndex(currentIndex, Player.REPEAT_MODE_OFF, shuffleModeEnabled) else C.INDEX_UNSET
+    
+    val prev = if (previousIndex != C.INDEX_UNSET) try { player.getMediaItemAt(previousIndex) } catch(e: Exception) { null } else null
+    val next = if (nextIndex != C.INDEX_UNSET) try { player.getMediaItemAt(nextIndex) } catch(e: Exception) { null } else null
+    
+    val items = listOfNotNull(prev, currentMediaItem, next)
+    val currentIdx = items.indexOf(currentMediaItem)
+    
+    return AppleMediaItemsData(items, currentIdx)
+}
 
 @Composable
 fun NowPlayingContentAppleMusic(
@@ -175,8 +202,25 @@ fun NowPlayingContentAppleMusic(
                 )
             }
         }
-        
-        // Removed the top indicator handle (pill) from here as per request
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = with(localDensity) { WindowInsets.statusBars.getTop(localDensity).toDp() })
+                .size(width = 64.dp, height = 28.dp)
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                ) { bottomSheetState.collapseSoft() },
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(width = 36.dp, height = 5.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(Color.White.copy(alpha = 0.35f)),
+            )
+        }
     }
 }
 
@@ -194,8 +238,6 @@ private fun AppleMusicMainView(
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
-    val queueWindows by playerConnection.queueWindows.collectAsStateWithLifecycle(initialValue = emptyList())
-    val currentWindowIndex by playerConnection.currentWindowIndex.collectAsStateWithLifecycle()
 
     val localDensity = LocalDensity.current
     val configuration = LocalConfiguration.current
@@ -207,32 +249,53 @@ private fun AppleMusicMainView(
     var hasActiveCanvas by remember { mutableStateOf(false) }
     var showControlLayout by rememberSaveable { mutableStateOf(true) }
 
-    // If canvas is turned off or missing, always show controls
-    LaunchedEffect(hasActiveCanvas) {
-        if (!hasActiveCanvas) {
-            showControlLayout = true
-        }
+    // EXACT THUMBNAIL.KT LOGIC IMPLEMENTATION (Prevents Mini-Player Expand Desync)
+    val mediaItemsData by remember(
+        playerConnection.player.currentMediaItemIndex,
+        playerConnection.player.shuffleModeEnabled,
+        mediaMetadata
+    ) {
+        derivedStateOf { getAppleMediaItems(playerConnection.player) }
     }
+    
+    val mediaItems = mediaItemsData.items
+    val currentMediaIndex = mediaItemsData.currentIndex
 
-    val safeCurrentIndex = maxOf(0, currentWindowIndex)
-    val safeQueueSize = maxOf(1, queueWindows.size)
+    val safeQueueSize = maxOf(1, mediaItems.size)
+    val safeCurrentIndex = maxOf(0, currentMediaIndex)
 
     val pagerState = rememberPagerState(
         initialPage = safeCurrentIndex,
         pageCount = { safeQueueSize }
     )
 
-    // Snap to correct page instantly without animation to prevent square glitch on mini-player return
-    LaunchedEffect(safeCurrentIndex) {
-        if (pagerState.currentPage != safeCurrentIndex && safeCurrentIndex < safeQueueSize) {
-            pagerState.scrollToPage(safeCurrentIndex)
+    // Force sync Pager to exact 3-item list (Resolves Race Condition)
+    LaunchedEffect(currentMediaIndex, mediaItems) {
+        if (currentMediaIndex >= 0 && currentMediaIndex < mediaItems.size) {
+            pagerState.scrollToPage(currentMediaIndex)
         }
     }
 
     LaunchedEffect(pagerState.currentPage) {
         if (!pagerState.isScrollInProgress) return@LaunchedEffect
-        if (pagerState.currentPage != safeCurrentIndex && pagerState.currentPage < queueWindows.size) {
-            playerConnection.player.seekToDefaultPosition(queueWindows[pagerState.currentPage].firstPeriodIndex)
+        if (pagerState.currentPage > currentMediaIndex) {
+            playerConnection.player.seekToNext()
+        } else if (pagerState.currentPage < currentMediaIndex) {
+            playerConnection.player.seekToPreviousMediaItem()
+        }
+    }
+
+    // Auto-hide controls ONLY if a Canvas is actively playing
+    LaunchedEffect(hasActiveCanvas) {
+        if (!hasActiveCanvas) {
+            showControlLayout = true
+        }
+    }
+
+    LaunchedEffect(showControlLayout, hasActiveCanvas) {
+        if (showControlLayout && hasActiveCanvas) {
+            delay(4000)
+            showControlLayout = false
         }
     }
 
@@ -241,12 +304,10 @@ private fun AppleMusicMainView(
             state = pagerState,
             modifier = Modifier.fillMaxSize(),
             beyondViewportPageCount = 1,
-            // Key makes sure that the pager doesn't recycle wrong items when expanding
-            key = { idx -> queueWindows.getOrNull(idx)?.uid?.hashCode() ?: idx }
+            key = { idx -> mediaItems.getOrNull(idx)?.mediaId ?: idx.toString() }
         ) { page ->
-            val track = queueWindows.getOrNull(page)?.mediaItem
-            // ⭐️ FIX: Use pagerState.currentPage instead of safeCurrentIndex so the centered item is ALWAYS full screen
-            val isCurrentPage = page == pagerState.currentPage
+            val track = mediaItems.getOrNull(page)
+            val isCurrentPage = page == currentMediaIndex
             
             AppleMusicArtworkPage(
                 track = track,
@@ -343,7 +404,6 @@ private fun AppleMusicArtworkPage(
     onCanvasReady: (Boolean) -> Unit
 ) {
     val (canvasThumbnailAnimation) = rememberPreference(CanvasThumbnailAnimationKey, defaultValue = false)
-    // Only attempt canvas if it is the current page AND the track matches the playing metadata
     val tryShowCanvas = canvasThumbnailAnimation && isCurrentPage && track?.mediaId == mediaMetadata?.id
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -358,13 +418,9 @@ private fun AppleMusicArtworkPage(
                         interactionSource = remember { MutableInteractionSource() }
                     ) { onToggleControls() }
             ) {
-                // STATIC IMAGE LAYER - ALWAYS VISIBLE!
-                // Prioritize high-res mediaMetadata thumbnail for current playing song.
-                val currentArtworkUrl = if (track?.mediaId == mediaMetadata?.id) {
-                    mediaMetadata?.thumbnailUrl ?: track?.mediaMetadata?.artworkUri
-                } else {
-                    track?.mediaMetadata?.artworkUri ?: mediaMetadata?.thumbnailUrl
-                }
+                // STATIC IMAGE LAYER
+                // ALWAYS use mediaMetadata for the current page so it perfectly matches the Bottom Info
+                val currentArtworkUrl = mediaMetadata?.thumbnailUrl ?: track?.mediaMetadata?.artworkUri
 
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
@@ -401,7 +457,7 @@ private fun AppleMusicArtworkPage(
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
                     .height(artworkZoneHeightDp.dp)
-                    .padding(24.dp), // Square padding
+                    .padding(24.dp), 
                 contentAlignment = Alignment.Center
             ) {
                 AsyncImage(
