@@ -179,7 +179,8 @@ internal fun AppleMusicLyricsView(
                             text = stringResource(R.string.lyrics_not_found),
                             style = MaterialTheme.typography.titleMedium,
                             color = Color.White.copy(alpha = 0.7f),
-                            textAlign = TextAlign.Center
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
