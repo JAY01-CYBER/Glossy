@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.jay.glossy.LocalDatabase
 import com.jay.glossy.R
 import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.db.entities.LyricsEntity
@@ -49,7 +50,10 @@ import com.jay.glossy.ui.component.LyricsShareDialog
 import com.jay.glossy.ui.component.PlayStoreRefreshIndicator
 import com.jay.glossy.ui.screens.settings.LyricsPosition
 import com.jay.glossy.ui.utils.ShowOffsetDialog
+import dagger.hilt.android.EntryPointAccessors
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -69,6 +73,8 @@ internal fun AppleMusicLyricsView(
     val playerConnection = LocalPlayerConnection.current ?: return
     val menuState = LocalMenuState.current
     val bottomSheetPageState = LocalBottomSheetPageState.current
+    val database = LocalDatabase.current
+    val coroutineScope = rememberCoroutineScope()
 
     val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
     val currentSong by playerConnection.currentSong.collectAsStateWithLifecycle(initialValue = null)
@@ -84,7 +90,6 @@ internal fun AppleMusicLyricsView(
     
     val refreshState = rememberPullToRefreshState()
     
-    // UI छुपाने वाला लॉजिक (8 सेकंड बाद)
     LaunchedEffect(showCluster, interactionTick) {
         if (showCluster) {
             delay(8000L)
@@ -92,7 +97,29 @@ internal fun AppleMusicLyricsView(
         }
     }
 
-    // ऑटो-फ़ॉलबैक लॉजिक: अगर लिरिक्स नहीं मिले, तो 2.5 सेकंड बाद MAIN पे वापस भेज दो
+    // LYRICS FETCH LOGIC
+    LaunchedEffect(mediaMetadata?.id, currentLyrics) {
+        if (mediaMetadata != null && currentLyrics == null) {
+            delay(500)
+            coroutineScope.launch(Dispatchers.IO) {
+                try {
+                    val entryPoint = EntryPointAccessors.fromApplication(
+                        context.applicationContext,
+                        com.jay.glossy.di.LyricsHelperEntryPoint::class.java,
+                    )
+                    val lyricsHelper = entryPoint.lyricsHelper()
+                    val fetchedLyricsWithProvider = lyricsHelper.getLyrics(mediaMetadata!!)
+                    database.query {
+                        upsert(LyricsEntity(mediaMetadata!!.id, fetchedLyricsWithProvider.lyrics, fetchedLyricsWithProvider.provider))
+                    }
+                } catch (e: Exception) {
+                    // Handle error silently
+                }
+            }
+        }
+    }
+
+    // AUTO FALLBACK
     LaunchedEffect(lyrics) {
         if (lyrics == null || lyrics == LyricsEntity.LYRICS_NOT_FOUND) {
             delay(2500L)
@@ -155,12 +182,15 @@ internal fun AppleMusicLyricsView(
                 }
 
                 lyrics == LyricsEntity.LYRICS_NOT_FOUND -> {
-                    Text(
-                        text = stringResource(R.string.lyrics_not_found),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.7f),
-                        textAlign = TextAlign.Center,
-                    )
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = stringResource(R.string.lyrics_not_found),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = Color.White.copy(alpha = 0.7f),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
 
                 else -> {
