@@ -46,6 +46,7 @@ import coil3.toBitmap
 import com.jay.glossy.R
 import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.constants.CropAlbumArtKey
+import com.jay.glossy.extensions.metadata 
 import com.jay.glossy.ui.component.BottomSheetState
 import com.jay.glossy.ui.component.LocalBottomSheetPageState
 import com.jay.glossy.ui.component.LocalMenuState
@@ -197,7 +198,7 @@ private fun AppleMusicMainView(
     val currentWindowIndex by playerConnection.currentWindowIndex.collectAsStateWithLifecycle()
     val cropAlbumArt by rememberPreference(CropAlbumArtKey, false)
 
-    // Horizontal Artwork Pager (SimpMusic Style)
+    // Horizontal Artwork Pager
     val pagerState = rememberPagerState(
         initialPage = maxOf(0, currentWindowIndex),
         pageCount = { queueWindows.size }
