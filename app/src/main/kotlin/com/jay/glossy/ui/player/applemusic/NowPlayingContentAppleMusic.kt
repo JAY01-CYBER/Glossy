@@ -6,12 +6,15 @@
 package com.jay.glossy.ui.player.applemusic
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -33,9 +36,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.palette.graphics.Palette
 import coil3.compose.AsyncImage
+import coil3.imageLoader
 import coil3.request.ImageRequest
+import coil3.request.allowHardware
 import coil3.request.crossfade
+import coil3.toBitmap
 import com.jay.glossy.R
 import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.constants.CropAlbumArtKey
@@ -45,6 +52,8 @@ import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.menu.PlayerMenu
 import com.jay.glossy.ui.utils.ShowMediaInfo
 import com.jay.glossy.utils.rememberPreference
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun NowPlayingContentAppleMusic(
@@ -53,6 +62,7 @@ fun NowPlayingContentAppleMusic(
     duration: Long,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val playerConnection = LocalPlayerConnection.current ?: return
     val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
     
@@ -60,15 +70,44 @@ fun NowPlayingContentAppleMusic(
     val typography = rememberAppleMusicTypography()
     val localDensity = LocalDensity.current
     
-    val seedColor = MaterialTheme.colorScheme.primary
-    val activePillContainer = remember(seedColor) { Color.White.copy(alpha = 0.2f) }
-    val activePillContent = remember(seedColor) { Color.White }
+    // Dynamic Color Extraction (SimpMusic Style)
+    var extractedColor by remember { mutableStateOf(Color(0xFF121212)) }
+    val animatedSeedColor by animateColorAsState(
+        targetValue = extractedColor, 
+        animationSpec = tween(800),
+        label = "appleMusicDynamicColor"
+    )
 
-    val backdropBrush = remember(seedColor) {
+    LaunchedEffect(mediaMetadata?.thumbnailUrl) {
+        val url = mediaMetadata?.thumbnailUrl
+        if (url != null) {
+            withContext(Dispatchers.IO) {
+                val request = ImageRequest.Builder(context)
+                    .data(url)
+                    .size(100, 100)
+                    .allowHardware(false)
+                    .build()
+                val result = runCatching { context.imageLoader.execute(request) }.getOrNull()
+                val bitmap = result?.image?.toBitmap()
+                if (bitmap != null) {
+                    val palette = Palette.from(bitmap).generate()
+                    val dominant = palette.getVibrantColor(palette.getMutedColor(0xFF121212.toInt()))
+                    withContext(Dispatchers.Main) {
+                        extractedColor = Color(dominant)
+                    }
+                }
+            }
+        }
+    }
+
+    val activePillContainer = remember(animatedSeedColor) { Color.White.copy(alpha = 0.2f) }
+    val activePillContent = remember(animatedSeedColor) { Color.White }
+
+    val backdropBrush = remember(animatedSeedColor) {
         Brush.verticalGradient(
-            0f to appleMusicGradientColorAt(seedColor, 0f),
-            0.48f to appleMusicGradientColorAt(seedColor, 0.48f),
-            1f to appleMusicGradientColorAt(seedColor, 1f),
+            0f to appleMusicGradientColorAt(animatedSeedColor, 0f),
+            0.48f to appleMusicGradientColorAt(animatedSeedColor, 0.48f),
+            1f to appleMusicGradientColorAt(animatedSeedColor, 1f),
         )
     }
 
@@ -141,6 +180,7 @@ fun NowPlayingContentAppleMusic(
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun AppleMusicMainView(
     viewState: AppleMusicView,
@@ -153,8 +193,28 @@ private fun AppleMusicMainView(
     duration: Long
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
-    val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
+    val queueWindows by playerConnection.queueWindows.collectAsStateWithLifecycle(initialValue = emptyList())
+    val currentWindowIndex by playerConnection.currentWindowIndex.collectAsStateWithLifecycle()
     val cropAlbumArt by rememberPreference(CropAlbumArtKey, false)
+
+    // Horizontal Artwork Pager (SimpMusic Style)
+    val pagerState = rememberPagerState(
+        initialPage = maxOf(0, currentWindowIndex),
+        pageCount = { queueWindows.size }
+    )
+
+    LaunchedEffect(currentWindowIndex) {
+        if (currentWindowIndex >= 0 && currentWindowIndex != pagerState.currentPage && currentWindowIndex < queueWindows.size) {
+            pagerState.animateScrollToPage(currentWindowIndex)
+        }
+    }
+
+    LaunchedEffect(pagerState.currentPage) {
+        if (!pagerState.isScrollInProgress) return@LaunchedEffect
+        if (pagerState.currentPage != currentWindowIndex && pagerState.currentPage < queueWindows.size) {
+            playerConnection.player.seekToDefaultPosition(queueWindows[pagerState.currentPage].firstPeriodIndex)
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Box(
@@ -162,22 +222,31 @@ private fun AppleMusicMainView(
                 .weight(1f)
                 .fillMaxWidth()
                 .statusBarsPadding()
-                .padding(top = 32.dp, start = 32.dp, end = 32.dp),
+                .padding(top = 32.dp),
             contentAlignment = Alignment.Center
         ) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(mediaMetadata?.thumbnailUrl)
-                    .crossfade(550)
-                    .build(),
-                contentDescription = null,
-                contentScale = if (cropAlbumArt) ContentScale.Crop else ContentScale.Fit,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f)
-                    .clip(RoundedCornerShape(12.dp))
-                    .appleMusicVerticalFadeEdges(topFade = 0.dp, bottomFade = 30.dp)
-            )
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize(),
+                beyondViewportPageCount = 1
+            ) { page ->
+                val track = queueWindows.getOrNull(page)?.mediaItem?.metadata
+                Box(modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp), contentAlignment = Alignment.Center) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(track?.thumbnailUrl)
+                            .crossfade(550)
+                            .build(),
+                        contentDescription = null,
+                        contentScale = if (cropAlbumArt) ContentScale.Crop else ContentScale.Fit,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .appleMusicVerticalFadeEdges(topFade = 0.dp, bottomFade = 30.dp)
+                    )
+                }
+            }
         }
 
         Column(modifier = Modifier.fillMaxWidth()) {
