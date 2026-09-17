@@ -82,7 +82,6 @@ fun NowPlayingContentAppleMusic(
     val typography = rememberAppleMusicTypography()
     val localDensity = LocalDensity.current
     
-    // Dynamic Color Extraction (SimpMusic Style)
     var extractedColor by remember { mutableStateOf(Color(0xFF121212)) }
     val animatedSeedColor by animateColorAsState(
         targetValue = extractedColor, 
@@ -233,8 +232,7 @@ private fun AppleMusicMainView(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(top = 16.dp),
+                .statusBarsPadding(),
             contentAlignment = Alignment.Center
         ) {
             HorizontalPager(
@@ -248,7 +246,7 @@ private fun AppleMusicMainView(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 24.dp), 
+                        .padding(horizontal = 28.dp), 
                     contentAlignment = Alignment.Center
                 ) {
                     Box(
@@ -264,9 +262,7 @@ private fun AppleMusicMainView(
                                 .build(),
                             contentDescription = null,
                             contentScale = if (cropAlbumArt) ContentScale.Crop else ContentScale.Fit,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .appleMusicVerticalFadeEdges(topFade = 0.dp, bottomFade = 30.dp)
+                            modifier = Modifier.fillMaxSize()
                         )
 
                         // Canvas Playback Logic
@@ -321,11 +317,10 @@ private fun AppleMusicCanvasLayer(
         canvasFetchInFlight = true
 
         val fetched = withContext(Dispatchers.IO) {
-            // YAHAN PAR ERROR THA: item.metadata ki jagah item.mediaMetadata aayega!
-            val metadata = item.mediaMetadata
-            val albumName = metadata.albumTitle?.toString() ?: ""
-            val songTitleRaw = metadata.title?.toString() ?: ""
-            val artistNameRaw = metadata.artist?.toString() ?: ""
+            val metadata = item.metadata
+            val albumName = metadata?.album?.title ?: "" // FIX: Correctly access album title
+            val songTitleRaw = metadata?.title ?: ""
+            val artistNameRaw = metadata?.artists?.firstOrNull()?.name ?: ""
             
             val songTitle = normalizeCanvasSongTitle(songTitleRaw)
             val artistName = normalizeCanvasArtistName(artistNameRaw)
