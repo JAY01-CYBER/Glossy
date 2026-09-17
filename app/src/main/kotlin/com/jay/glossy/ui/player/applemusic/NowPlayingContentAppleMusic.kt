@@ -241,6 +241,7 @@ private fun AppleMusicMainView(
             state = pagerState,
             modifier = Modifier.fillMaxSize(),
             beyondViewportPageCount = 1,
+            // Key makes sure that the pager doesn't recycle wrong items when expanding
             key = { idx -> queueWindows.getOrNull(idx)?.uid?.hashCode() ?: idx }
         ) { page ->
             val track = queueWindows.getOrNull(page)?.mediaItem
@@ -357,7 +358,8 @@ private fun AppleMusicArtworkPage(
                         interactionSource = remember { MutableInteractionSource() }
                     ) { onToggleControls() }
             ) {
-                // STATIC IMAGE LAYER
+                // STATIC IMAGE LAYER - ALWAYS VISIBLE!
+                // Prioritize high-res mediaMetadata thumbnail for current playing song.
                 val currentArtworkUrl = if (track?.mediaId == mediaMetadata?.id) {
                     mediaMetadata?.thumbnailUrl ?: track?.mediaMetadata?.artworkUri
                 } else {
@@ -370,7 +372,7 @@ private fun AppleMusicArtworkPage(
                         .crossfade(550)
                         .build(),
                     contentDescription = null,
-                    contentScale = ContentScale.Crop, // Edge to Edge!
+                    contentScale = ContentScale.Crop, // EDGE-TO-EDGE
                     modifier = Modifier
                         .fillMaxSize()
                         .appleMusicVerticalFadeEdges(topFade = 0.dp, bottomFade = 300.dp)
@@ -399,7 +401,7 @@ private fun AppleMusicArtworkPage(
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
                     .height(artworkZoneHeightDp.dp)
-                    .padding(24.dp), 
+                    .padding(24.dp), // Square padding
                 contentAlignment = Alignment.Center
             ) {
                 AsyncImage(
