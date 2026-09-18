@@ -38,8 +38,6 @@ import okhttp3.OkHttpClient
 import java.io.File
 import java.util.Locale
 
-// Yahan se singleton ExoPlayer hata diya gaya hai taaki ghost frames na aaye.
-// CacheManager ab sirf video ki storage file (SimpleCache) sambhalega.
 object CanvasCacheManager {
     private var videoCache: SimpleCache? = null
     private var okHttpClient: OkHttpClient? = null
@@ -48,7 +46,6 @@ object CanvasCacheManager {
     fun getVideoCache(context: Context): SimpleCache {
         if (videoCache == null) {
             val cacheDir = File(context.filesDir, "canvas_video_cache")
-            // 256MB LRU Cache jisse bandwidth bache
             val evictor = LeastRecentlyUsedCacheEvictor(256 * 1024 * 1024L)
             val databaseProvider = StandaloneDatabaseProvider(context)
             videoCache = SimpleCache(cacheDir, evictor, databaseProvider)
@@ -87,16 +84,15 @@ fun CanvasArtworkPlayer(
     fallbackUrl: String?,
     isPlaying: Boolean,
     modifier: Modifier = Modifier,
+    onVideoReady: (Boolean) -> Unit = {} // Naya parameter add kiya video state track karne ke liye
 ) {
     val context = LocalContext.current
     val primary = primaryUrl?.takeIf { it.isNotBlank() }
     val fallback = fallbackUrl?.takeIf { it.isNotBlank() }
     val initial = primary ?: fallback ?: return
     
-    // M3Play ki tarah isko locally maintain kar rahe hain taki state fresh rahe
     var currentUrl by remember(initial) { mutableStateOf(initial) }
     var isVideoReady by remember(initial) { mutableStateOf(false) }
-    var videoAspectRatio by remember(initial) { mutableStateOf(1f) }
 
     val (canvasCacheMode) = rememberEnumPreference(CanvasCacheModeKey, defaultValue = CanvasCacheMode.VIDEO_AND_URL)
     val enableVideoCache = canvasCacheMode == CanvasCacheMode.VIDEO_AND_URL
@@ -105,7 +101,6 @@ fun CanvasArtworkPlayer(
         CanvasCacheManager.getMediaSourceFactory(context, enableVideoCache)
     }
 
-    // Naya gaana aate hi completely naya player banega (No ghost frames!)
     val exoPlayer = remember(initial) {
         val loadControl = DefaultLoadControl.Builder()
             .setBufferDurationsMs(500, 5000, 100, 500)
@@ -128,35 +123,29 @@ fun CanvasArtworkPlayer(
             }
     }
 
-    // Play/Pause state ko live sync karna
     LaunchedEffect(isPlaying) {
         exoPlayer.playWhenReady = isPlaying
     }
 
-    // Video render hone par listeners set karna
     DisposableEffect(exoPlayer, primary, fallback) {
         val listener = object : Player.Listener {
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                 val next = if (currentUrl == primary) fallback else null
                 if (!next.isNullOrBlank()) {
                     currentUrl = next
-                    isVideoReady = false // Fallback URL try karte time animation zero kar do
+                    isVideoReady = false
+                    onVideoReady(false) // Signal pass
                 }
             }
             override fun onRenderedFirstFrame() {
-                isVideoReady = true // Ekdam smooth entry trigger hogi yahan se
-            }
-            override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
-                if (videoSize.width > 0 && videoSize.height > 0) {
-                    videoAspectRatio = videoSize.width.toFloat() / videoSize.height
-                }
+                isVideoReady = true
+                onVideoReady(true) // Jaise hi video ready hoga, callback fire hoga
             }
         }
         exoPlayer.addListener(listener)
         onDispose { exoPlayer.removeListener(listener) }
     }
 
-    // URL update aur media player me inject karna
     LaunchedEffect(currentUrl, exoPlayer) {
         val normalizedUrl = currentUrl.trim()
         val mimeType = if (normalizedUrl.contains(".m3u8", true) || normalizedUrl.lowercase(Locale.ROOT).split('?').first().endsWith(".m3u8")) {
@@ -166,19 +155,19 @@ fun CanvasArtworkPlayer(
         }
 
         exoPlayer.stop()
+        isVideoReady = false
+        onVideoReady(false) // Signal pass
         exoPlayer.setMediaItem(MediaItem.Builder().setUri(normalizedUrl).setMimeType(mimeType).build())
         exoPlayer.prepare()
         exoPlayer.playWhenReady = isPlaying
     }
 
-    // Composable destroy hote hi memory clean karna
     DisposableEffect(exoPlayer) {
         onDispose {
             exoPlayer.release()
         }
     }
 
-    // Alpha animation ko thoda aur smooth (600ms) bana diya
     val alpha by animateFloatAsState(
         targetValue = if (isVideoReady) 1f else 0f,
         animationSpec = tween(600),
@@ -197,15 +186,6 @@ fun CanvasArtworkPlayer(
                 addView(textureView)
                 exoPlayer.setVideoTextureView(textureView)
                 setBackgroundColor(android.graphics.Color.TRANSPARENT)
-            }
-        },
-        update = { view -> 
-            view.setAspectRatio(videoAspectRatio)
-        },
-        onRelease = { view ->
-            val textureView = view.getChildAt(0) as? TextureView
-            if (textureView != null) {
-                exoPlayer.clearVideoTextureView(textureView)
             }
         },
         modifier = modifier.alpha(alpha),
