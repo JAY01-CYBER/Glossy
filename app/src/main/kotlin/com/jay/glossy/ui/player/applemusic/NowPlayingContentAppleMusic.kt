@@ -343,6 +343,9 @@ private fun AppleMusicArtworkPage(
     val (canvasThumbnailAnimation) = rememberPreference(CanvasThumbnailAnimationKey, defaultValue = false)
     val tryShowCanvas = canvasThumbnailAnimation && isCurrentPage && track?.mediaId == mediaMetadata?.id
 
+    // NAYA STATE: Canvas Play hone ka state track karne ke liye
+    var isVideoPlaying by remember { mutableStateOf(false) }
+
     Box(modifier = Modifier.fillMaxSize()) {
         if (isCurrentPage) {
             Box(
@@ -353,6 +356,13 @@ private fun AppleMusicArtworkPage(
             ) {
                 val currentArtworkUrl = mediaMetadata?.thumbnailUrl ?: track?.mediaMetadata?.artworkUri
 
+                // Jaise hi video chalu hoga, image ki alpha value 0 ho jayegi jisse double face na dikhe
+                val imageAlpha by animateFloatAsState(
+                    targetValue = if (isVideoPlaying) 0f else 1f,
+                    animationSpec = tween(600),
+                    label = "imageAlpha"
+                )
+
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(currentArtworkUrl)
@@ -362,6 +372,7 @@ private fun AppleMusicArtworkPage(
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .fillMaxSize()
+                        .alpha(imageAlpha) // Ye apply kar diya overlap hatane ke liye
                         .appleMusicVerticalFadeEdges(topFade = 0.dp, bottomFade = 300.dp)
                 )
 
@@ -369,13 +380,17 @@ private fun AppleMusicArtworkPage(
                     AppleMusicCanvasLayer(
                         track = track,
                         mediaMetadata = mediaMetadata,
-                        onCanvasReady = onCanvasReady,
+                        onCanvasReady = { isReady ->
+                            isVideoPlaying = isReady // Video ready hone ka signal receive karna
+                            onCanvasReady(isReady)
+                        },
                         modifier = Modifier
                             .fillMaxSize()
                             .appleMusicVerticalFadeEdges(topFade = 0.dp, bottomFade = 300.dp)
                     )
                 } else {
                     LaunchedEffect(Unit) {
+                        isVideoPlaying = false
                         onCanvasReady(false)
                     }
                 }
@@ -413,7 +428,6 @@ private fun AppleMusicCanvasLayer(
     onCanvasReady: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // FIX: Get the player connection and extract isPlaying state
     val playerConnection = LocalPlayerConnection.current ?: return
     val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
 
@@ -470,17 +484,17 @@ private fun AppleMusicCanvasLayer(
         canvasFetchInFlight = false
     }
 
-    LaunchedEffect(canvasArtwork) {
-        onCanvasReady(canvasArtwork != null)
-    }
-
+    // Yahan agar video nahi hai, to false signal bhej diya
     canvasArtwork?.let { artwork ->
         CanvasArtworkPlayer(
             primaryUrl = artwork.animated,
             fallbackUrl = artwork.videoUrl,
-            isPlaying = isPlaying, // FIXED: Now passing isPlaying state correctly
-            modifier = modifier
+            isPlaying = isPlaying, 
+            modifier = modifier,
+            onVideoReady = onCanvasReady // Callback attach kar diya
         )
+    } ?: LaunchedEffect(Unit) {
+        onCanvasReady(false)
     }
 }
 
