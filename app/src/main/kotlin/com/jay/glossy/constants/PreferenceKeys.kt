@@ -69,7 +69,8 @@ enum class PlayerStyle {
     CLASSIC,
     MODERN,
     WAVY,
-    VIVI_NEW
+    VIVI_NEW,
+    APPLE_MUSIC
 }
 
 val MiniPlayerStyleKey = stringPreferencesKey("miniPlayerStyle")
