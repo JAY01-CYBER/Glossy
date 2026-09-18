@@ -96,10 +96,17 @@ import com.jay.glossy.listentogether.RoomRole
 import com.jay.glossy.ui.component.CastButton
 import com.jay.glossy.utils.rememberEnumPreference
 import com.jay.glossy.utils.rememberPreference
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.Json
+import java.io.File
 import java.util.Locale
 
 @Immutable
@@ -189,11 +196,31 @@ private fun getTextColor(playerBackground: PlayerBackgroundStyle): Color {
     }
 }
 
-// CACHE UPDATE FOR SETTINGS SLIDER
+// OPTIMIZED PERSISTENT CACHE
 object CanvasArtworkPlaybackCache {
     private const val defaultMaxSize = 256
+    private const val PERSIST_FILE = "canvas_artwork_cache.json"
+    private const val PERSIST_DEBOUNCE_MS = 2_000L
+
     private val map = LinkedHashMap<String, CanvasArtwork>(defaultMaxSize, 0.75f, true)
     @Volatile private var maxSize = defaultMaxSize
+    @Volatile private var cacheFile: File? = null
+
+    private val persistScope = CoroutineScope(Dispatchers.IO)
+    private var persistJob: Job? = null
+
+    private val json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+        explicitNulls = false
+    }
+
+    private val mapSerializer = MapSerializer(String.serializer(), CanvasArtwork.serializer())
+
+    fun init(context: android.content.Context) {
+        cacheFile = File(context.filesDir, PERSIST_FILE)
+        loadFromDisk()
+    }
 
     val currentItemCount: Int
         get() = map.size
@@ -210,11 +237,13 @@ object CanvasArtworkPlaybackCache {
         if (limit <= 0 || mediaId.isBlank()) return
         map[mediaId] = artwork
         trimToSize()
+        schedulePersist()
     }
 
     @Synchronized
     fun clear() {
         map.clear()
+        schedulePersist()
     }
 
     @Synchronized
@@ -222,20 +251,61 @@ object CanvasArtworkPlaybackCache {
         maxSize = newSize
         if (newSize == 0) {
             map.clear()
+            schedulePersist()
         } else {
             trimToSize()
         }
     }
 
     private fun trimToSize() {
+        var evicted = false
         while (map.size > maxSize) {
             val it = map.entries.iterator()
             if (it.hasNext()) {
                 it.next()
                 it.remove()
+                evicted = true
             } else {
                 break
             }
+        }
+        if (evicted) schedulePersist()
+    }
+
+    @Synchronized
+    private fun loadFromDisk() {
+        val file = cacheFile ?: return
+        if (!file.exists()) return
+        try {
+            val raw = file.readText()
+            if (raw.isBlank()) return
+            val restored = json.decodeFromString(mapSerializer, raw)
+            map.clear()
+            map.putAll(restored)
+            trimToSize()
+        } catch (e: Exception) {
+            runCatching { file.delete() }
+        }
+    }
+
+    private fun schedulePersist() {
+        persistJob?.cancel()
+        persistJob = persistScope.launch {
+            delay(PERSIST_DEBOUNCE_MS)
+            writeToDisk()
+        }
+    }
+
+    private fun writeToDisk() {
+        val file = cacheFile ?: return
+        try {
+            val snapshot: Map<String, CanvasArtwork>
+            synchronized(this@CanvasArtworkPlaybackCache) {
+                snapshot = LinkedHashMap(map)
+            }
+            val raw = json.encodeToString(mapSerializer, snapshot)
+            file.writeText(raw)
+        } catch (e: Exception) {
         }
     }
 }
@@ -569,6 +639,9 @@ private fun CanvasLayer(
     item: MediaItem,
     modifier: Modifier = Modifier
 ) {
+    val playerConnection = LocalPlayerConnection.current ?: return
+    val isPlaying by playerConnection.isPlaying.collectAsState()
+
     var canvasArtwork by remember(item.mediaId) { mutableStateOf<CanvasArtwork?>(null) }
     var canvasFetchInFlight by remember(item.mediaId) { mutableStateOf(false) }
     val storefront = remember {
@@ -625,6 +698,7 @@ private fun CanvasLayer(
         CanvasArtworkPlayer(
             primaryUrl = artwork.animated,
             fallbackUrl = artwork.videoUrl,
+            isPlaying = isPlaying, // Pause animation when music is paused
             modifier = modifier
         )
     }
@@ -822,6 +896,13 @@ private fun ThumbnailImage(
     playerStyleName: String,
     modifier: Modifier = Modifier
 ) {
+    // 1080p High-Resolution Regex logic added here
+    val highResUri = remember(artworkUri) {
+        artworkUri?.replace(Regex("=[wh]\\d+-[wh]\\d+.*"), "=w1080-h1080-l90-rj")
+            ?.replace(Regex("-[wh]\\d+-[wh]\\d+.*"), "-w1080-h1080-l90-rj")
+            ?.replace(Regex("=s\\d+.*"), "=s1080-l90-rj")
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -833,7 +914,7 @@ private fun ThumbnailImage(
     ) {
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
-                .data(artworkUri)
+                .data(highResUri ?: artworkUri) // Use the high-res link
                 .memoryCachePolicy(CachePolicy.ENABLED)
                 .diskCachePolicy(CachePolicy.ENABLED)
                 .networkCachePolicy(CachePolicy.ENABLED)
