@@ -84,7 +84,7 @@ fun CanvasArtworkPlayer(
     fallbackUrl: String?,
     isPlaying: Boolean,
     modifier: Modifier = Modifier,
-    onVideoReady: (Boolean) -> Unit = {} // Naya parameter add kiya video state track karne ke liye
+    onVideoReady: (Boolean) -> Unit = {} 
 ) {
     val context = LocalContext.current
     val primary = primaryUrl?.takeIf { it.isNotBlank() }
@@ -93,6 +93,9 @@ fun CanvasArtworkPlayer(
     
     var currentUrl by remember(initial) { mutableStateOf(initial) }
     var isVideoReady by remember(initial) { mutableStateOf(false) }
+    
+    // YAHAN FIX KIYA: Video ka aspect ratio track karne ke liye variable add kiya
+    var videoAspectRatio by remember(initial) { mutableFloatStateOf(1f) }
 
     val (canvasCacheMode) = rememberEnumPreference(CanvasCacheModeKey, defaultValue = CanvasCacheMode.VIDEO_AND_URL)
     val enableVideoCache = canvasCacheMode == CanvasCacheMode.VIDEO_AND_URL
@@ -134,15 +137,27 @@ fun CanvasArtworkPlayer(
                 if (!next.isNullOrBlank()) {
                     currentUrl = next
                     isVideoReady = false
-                    onVideoReady(false) // Signal pass
+                    onVideoReady(false)
                 }
             }
             override fun onRenderedFirstFrame() {
                 isVideoReady = true
-                onVideoReady(true) // Jaise hi video ready hoga, callback fire hoga
+                onVideoReady(true)
+            }
+            // YAHAN FIX KIYA: Video ki actual height/width get karke ratio update karna
+            override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+                if (videoSize.width > 0 && videoSize.height > 0) {
+                    videoAspectRatio = videoSize.width.toFloat() / videoSize.height
+                }
             }
         }
         exoPlayer.addListener(listener)
+        
+        // Initial check in case player already knows the size
+        if (exoPlayer.videoSize.width > 0 && exoPlayer.videoSize.height > 0) {
+            videoAspectRatio = exoPlayer.videoSize.width.toFloat() / exoPlayer.videoSize.height
+        }
+        
         onDispose { exoPlayer.removeListener(listener) }
     }
 
@@ -156,7 +171,7 @@ fun CanvasArtworkPlayer(
 
         exoPlayer.stop()
         isVideoReady = false
-        onVideoReady(false) // Signal pass
+        onVideoReady(false)
         exoPlayer.setMediaItem(MediaItem.Builder().setUri(normalizedUrl).setMimeType(mimeType).build())
         exoPlayer.prepare()
         exoPlayer.playWhenReady = isPlaying
@@ -187,6 +202,10 @@ fun CanvasArtworkPlayer(
                 exoPlayer.setVideoTextureView(textureView)
                 setBackgroundColor(android.graphics.Color.TRANSPARENT)
             }
+        },
+        update = { view ->
+            // YAHAN FIX KIYA: AndroidView ko video ka asli ratio pass karna jisse wo stretch na ho!
+            view.setAspectRatio(videoAspectRatio)
         },
         modifier = modifier.alpha(alpha),
     )
