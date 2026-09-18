@@ -50,6 +50,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -78,6 +79,7 @@ import com.jay.glossy.constants.CanvasThumbnailAnimationKey
 import com.jay.glossy.db.entities.LyricsEntity
 import com.jay.glossy.extensions.metadata
 import com.jay.glossy.extensions.move
+import com.jay.glossy.extensions.toggleRepeatMode
 import com.jay.glossy.listentogether.RoomRole
 import com.jay.glossy.ui.component.BottomSheetState
 import com.jay.glossy.ui.component.LocalBottomSheetPageState
@@ -194,7 +196,7 @@ fun NowPlayingContentAppleMusic(
         }
     }
 
-    // ⭐️ NESTED SCROLL CONNECTION (SimpMusic Native Scroll Detection)
+    // ⭐️ NESTED SCROLL CONNECTION
     val scrollWakesControls = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(
@@ -275,7 +277,7 @@ fun NowPlayingContentAppleMusic(
             Box(Modifier.fillMaxSize().alpha(0.62f).background(backdropBrush))
         }
 
-        // 2. MAIN BOTTOM GRADIENT (Keeps controls readable in MAIN)
+        // 2. MAIN BOTTOM GRADIENT
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -285,7 +287,7 @@ fun NowPlayingContentAppleMusic(
                 .background(Brush.verticalGradient(0f to Color.Transparent, 0.4f to Color.Black.copy(alpha=0.6f), 1f to Color.Black.copy(alpha=0.9f)))
         )
 
-        // 3. ARTWORK PAGER (Shrinks & Moves smoothly)
+        // 3. ARTWORK PAGER
         Box(
             modifier = Modifier
                 .offset(x = artOffsetX, y = artOffsetY + headerY)
@@ -314,12 +316,11 @@ fun NowPlayingContentAppleMusic(
                     .fillMaxSize()
                     .padding(top = statusBarTop + 12.dp + 55.dp + 16.dp, bottom = clusterHeight)
                     .alpha(bodyAlpha)
-                    .nestedScroll(scrollWakesControls) // Scroll detection active
+                    .nestedScroll(scrollWakesControls) 
             ) {
                 if (viewState == AppleMusicView.LYRICS) {
                     AppleMusicLyricsBody(
                         onUserInteract = {
-                            // Smart logic to distinguish drag and tap from Lyrics.kt
                             val now = System.currentTimeMillis()
                             if (now - lastInteractTime < 250) {
                                 lyricsControlsVisible = true
@@ -336,7 +337,7 @@ fun NowPlayingContentAppleMusic(
             }
         }
 
-        // 5. TITLE ROW & ACTIONS (Moves alongside the Artwork)
+        // 5. TITLE ROW & ACTIONS
         Row(
             modifier = Modifier
                 .offset(x = titleOffsetX, y = titleOffsetY + headerY)
@@ -384,7 +385,7 @@ fun NowPlayingContentAppleMusic(
             AppleMusicHeaderActions(viewState = viewState, bottomSheetState = bottomSheetState)
         }
 
-        // 6. BOTTOM CLUSTER (Transport, Volume, Dock)
+        // 6. BOTTOM CLUSTER
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -503,7 +504,7 @@ private fun AppleMusicLyricsBody(
                             .padding(horizontal = 24.dp)
                             .appleMusicVerticalFadeEdges(topFade = 28.dp, bottomFade = 18.dp),
                         showLyrics = true,
-                        onUserInteract = onUserInteract // Connect to Lyrics.kt callback
+                        onUserInteract = onUserInteract 
                     )
                 }
             }
@@ -735,6 +736,59 @@ internal fun AppleMusicHeaderActions(
                 }
             }
         )
+    }
+}
+
+@Composable
+internal fun AppleMusicCompactHeader(
+    typography: AppleMusicTypography,
+    modifier: Modifier = Modifier,
+) {
+    val playerConnection = LocalPlayerConnection.current ?: return
+    val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
+
+    Row(
+        modifier = modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        AsyncImage(
+            model = ImageRequest.Builder(LocalContext.current)
+                .data(mediaMetadata?.thumbnailUrl)
+                .crossfade(300)
+                .build(),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.size(55.dp).clip(RoundedCornerShape(4.dp)),
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = mediaMetadata?.title ?: "",
+                style = typography.compactTitle,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (mediaMetadata?.explicit == true) {
+                    Icon(
+                        painter = painterResource(R.drawable.explicit), 
+                        contentDescription = null, 
+                        tint = Color.White, 
+                        modifier = Modifier.size(16.dp).padding(end = 4.dp)
+                    )
+                }
+                Text(
+                    text = mediaMetadata?.artists?.joinToString { it.name } ?: "",
+                    style = typography.compactArtist,
+                    color = AppleMusicTextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
     }
 }
 
