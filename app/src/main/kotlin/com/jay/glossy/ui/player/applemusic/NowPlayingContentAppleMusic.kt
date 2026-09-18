@@ -413,6 +413,10 @@ private fun AppleMusicCanvasLayer(
     onCanvasReady: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // FIX: Get the player connection and extract isPlaying state
+    val playerConnection = LocalPlayerConnection.current ?: return
+    val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
+
     val mediaId = track?.mediaId ?: mediaMetadata?.id ?: return
     var canvasArtwork by remember(mediaId) { mutableStateOf<CanvasArtwork?>(null) }
     var canvasFetchInFlight by remember(mediaId) { mutableStateOf(false) }
@@ -474,6 +478,7 @@ private fun AppleMusicCanvasLayer(
         CanvasArtworkPlayer(
             primaryUrl = artwork.animated,
             fallbackUrl = artwork.videoUrl,
+            isPlaying = isPlaying, // FIXED: Now passing isPlaying state correctly
             modifier = modifier
         )
     }
