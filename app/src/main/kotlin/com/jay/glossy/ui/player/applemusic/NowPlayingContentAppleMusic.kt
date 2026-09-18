@@ -22,6 +22,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -34,12 +35,16 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
 import androidx.palette.graphics.Palette
 import coil3.compose.AsyncImage
 import coil3.imageLoader
@@ -54,16 +59,45 @@ import com.jay.glossy.canvas.CanvasArtwork
 import com.jay.glossy.canvas.TidalCanvasProvider
 import com.jay.glossy.constants.CanvasThumbnailAnimationKey
 import com.jay.glossy.ui.component.BottomSheetState
+import com.jay.glossy.ui.component.LocalBottomSheetPageState
+import com.jay.glossy.ui.component.LocalMenuState
+import com.jay.glossy.ui.menu.PlayerMenu
 import com.jay.glossy.ui.player.CanvasArtworkPlaybackCache
 import com.jay.glossy.ui.player.CanvasArtworkPlayer
 import com.jay.glossy.ui.player.normalizeCanvasArtistName
 import com.jay.glossy.ui.player.normalizeCanvasSongTitle
+import com.jay.glossy.ui.utils.ShowMediaInfo
 import com.jay.glossy.utils.rememberPreference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.util.Locale
+
+@Immutable
+data class AppleMediaItemsData(
+    val items: List<MediaItem>,
+    val currentIndex: Int
+)
+
+@Stable
+internal fun getAppleMediaItems(player: Player): AppleMediaItemsData {
+    val timeline = player.currentTimeline
+    val currentIndex = player.currentMediaItemIndex
+    val shuffleModeEnabled = player.shuffleModeEnabled
+    
+    val currentMediaItem = try { player.currentMediaItem } catch (e: Exception) { null }
+    val previousIndex = if (!timeline.isEmpty) timeline.getPreviousWindowIndex(currentIndex, Player.REPEAT_MODE_OFF, shuffleModeEnabled) else C.INDEX_UNSET
+    val nextIndex = if (!timeline.isEmpty) timeline.getNextWindowIndex(currentIndex, Player.REPEAT_MODE_OFF, shuffleModeEnabled) else C.INDEX_UNSET
+    
+    val prev = if (previousIndex != C.INDEX_UNSET) try { player.getMediaItemAt(previousIndex) } catch(e: Exception) { null } else null
+    val next = if (nextIndex != C.INDEX_UNSET) try { player.getMediaItemAt(nextIndex) } catch(e: Exception) { null } else null
+    
+    val items = listOfNotNull(prev, currentMediaItem, next)
+    val currentIdx = items.indexOf(currentMediaItem)
+    
+    return AppleMediaItemsData(items, currentIdx)
+}
 
 @Composable
 fun NowPlayingContentAppleMusic(
@@ -167,6 +201,20 @@ fun NowPlayingContentAppleMusic(
                 )
             }
         }
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = with(localDensity) { WindowInsets.statusBars.getTop(localDensity).toDp() })
+                .size(width = 64.dp, height = 28.dp)
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                ) { bottomSheetState.collapseSoft() },
+            contentAlignment = Alignment.Center,
+        ) {
+            // Invisible touch target - No visible Pill
+        }
     }
 }
 
@@ -186,8 +234,11 @@ private fun AppleMusicMainView(
     val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
 
     val localDensity = LocalDensity.current
+    val configuration = LocalConfiguration.current
+    val screenHeight = configuration.screenHeightDp
     
     var bottomContentHeightDp by remember { mutableIntStateOf(330) }
+    val artworkZoneHeightDp = (screenHeight - bottomContentHeightDp).coerceAtLeast(200)
 
     var hasActiveCanvas by remember { mutableStateOf(false) }
     var showControlLayout by rememberSaveable { mutableStateOf(true) }
@@ -253,6 +304,7 @@ private fun AppleMusicMainView(
                 track = track,
                 isCurrentPage = isCurrentPage,
                 mediaMetadata = mediaMetadata,
+                artworkZoneHeightDp = artworkZoneHeightDp,
                 onToggleControls = { showControlLayout = !showControlLayout },
                 onCanvasReady = { isReady ->
                     if (isCurrentPage && track?.mediaId == mediaMetadata?.id) {
@@ -336,6 +388,7 @@ private fun AppleMusicArtworkPage(
     track: MediaItem?,
     isCurrentPage: Boolean,
     mediaMetadata: com.metrolist.models.MediaMetadata?,
+    artworkZoneHeightDp: Int,
     onToggleControls: () -> Unit,
     onCanvasReady: (Boolean) -> Unit
 ) {
@@ -346,7 +399,9 @@ private fun AppleMusicArtworkPage(
         if (isCurrentPage) {
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .height(artworkZoneHeightDp.dp)
                     .clickable(
                         indication = null,
                         interactionSource = remember { MutableInteractionSource() }
@@ -360,7 +415,7 @@ private fun AppleMusicArtworkPage(
                         .crossfade(550)
                         .build(),
                     contentDescription = null,
-                    contentScale = ContentScale.Crop, 
+                    contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .fillMaxSize()
                         .appleMusicVerticalFadeEdges(topFade = 0.dp, bottomFade = 300.dp)
@@ -384,7 +439,9 @@ private fun AppleMusicArtworkPage(
         } else if (track != null) {
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .height(artworkZoneHeightDp.dp)
                     .padding(24.dp), 
                 contentAlignment = Alignment.Center
             ) {
@@ -520,6 +577,61 @@ private fun AppleMusicMainTitleRow(
             }
         }
         Spacer(modifier = Modifier.width(12.dp))
-        AppleMusicHeaderActions(viewState = AppleMusicView.MAIN, bottomSheetState = bottomSheetState)
+        AppleMusicHeaderActions(bottomSheetState = bottomSheetState)
+    }
+}
+
+@Composable
+internal fun AppleMusicHeaderActions(
+    bottomSheetState: BottomSheetState,
+    modifier: Modifier = Modifier,
+) {
+    val playerConnection = LocalPlayerConnection.current ?: return
+    val menuState = LocalMenuState.current
+    val bottomSheetPageState = LocalBottomSheetPageState.current
+    val currentSong by playerConnection.currentSong.collectAsStateWithLifecycle(initialValue = null)
+    val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
+    
+    val isEpisode = currentSong?.song?.isEpisode == true
+    val isFavorite = if (isEpisode) currentSong?.song?.inLibrary != null else currentSong?.song?.liked == true
+    
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .appleMusicPressInflate()
+                .size(32.dp)
+                .clip(CircleShape)
+                .clickable { playerConnection.toggleLike() },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painter = painterResource(if (isFavorite) R.drawable.favorite else R.drawable.favorite_border),
+                contentDescription = null,
+                tint = if (isFavorite) MaterialTheme.colorScheme.error else Color.White,
+                modifier = Modifier.size(24.dp),
+            )
+        }
+        
+        AppleMusicGlyphButton(
+            icon = R.drawable.more_vert, 
+            onClick = {
+                menuState.show {
+                    PlayerMenu(
+                        mediaMetadata = mediaMetadata,
+                        playerBottomSheetState = bottomSheetState,
+                        onShowDetailsDialog = {
+                            mediaMetadata?.id?.let {
+                                bottomSheetPageState.show { ShowMediaInfo(it) }
+                            }
+                        },
+                        onDismiss = menuState::dismiss
+                    )
+                }
+            }
+        )
     }
 }
