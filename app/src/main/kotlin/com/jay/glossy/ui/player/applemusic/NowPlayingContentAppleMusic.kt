@@ -19,8 +19,10 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -37,9 +39,12 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
 import androidx.palette.graphics.Palette
 import coil3.compose.AsyncImage
 import coil3.imageLoader
@@ -54,16 +59,45 @@ import com.jay.glossy.canvas.CanvasArtwork
 import com.jay.glossy.canvas.TidalCanvasProvider
 import com.jay.glossy.constants.CanvasThumbnailAnimationKey
 import com.jay.glossy.ui.component.BottomSheetState
+import com.jay.glossy.ui.component.LocalBottomSheetPageState
+import com.jay.glossy.ui.component.LocalMenuState
+import com.jay.glossy.ui.menu.PlayerMenu
 import com.jay.glossy.ui.player.CanvasArtworkPlaybackCache
 import com.jay.glossy.ui.player.CanvasArtworkPlayer
 import com.jay.glossy.ui.player.normalizeCanvasArtistName
 import com.jay.glossy.ui.player.normalizeCanvasSongTitle
+import com.jay.glossy.ui.utils.ShowMediaInfo
 import com.jay.glossy.utils.rememberPreference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.util.Locale
+
+@Immutable
+data class AppleMediaItemsData(
+    val items: List<MediaItem>,
+    val currentIndex: Int
+)
+
+@Stable
+internal fun getAppleMediaItems(player: Player): AppleMediaItemsData {
+    val timeline = player.currentTimeline
+    val currentIndex = player.currentMediaItemIndex
+    val shuffleModeEnabled = player.shuffleModeEnabled
+    
+    val currentMediaItem = try { player.currentMediaItem } catch (e: Exception) { null }
+    val previousIndex = if (!timeline.isEmpty) timeline.getPreviousWindowIndex(currentIndex, Player.REPEAT_MODE_OFF, shuffleModeEnabled) else C.INDEX_UNSET
+    val nextIndex = if (!timeline.isEmpty) timeline.getNextWindowIndex(currentIndex, Player.REPEAT_MODE_OFF, shuffleModeEnabled) else C.INDEX_UNSET
+    
+    val prev = if (previousIndex != C.INDEX_UNSET) try { player.getMediaItemAt(previousIndex) } catch(e: Exception) { null } else null
+    val next = if (nextIndex != C.INDEX_UNSET) try { player.getMediaItemAt(nextIndex) } catch(e: Exception) { null } else null
+    
+    val items = listOfNotNull(prev, currentMediaItem, next)
+    val currentIdx = items.indexOf(currentMediaItem)
+    
+    return AppleMediaItemsData(items, currentIdx)
+}
 
 @Composable
 fun NowPlayingContentAppleMusic(
@@ -87,7 +121,6 @@ fun NowPlayingContentAppleMusic(
         label = "appleMusicDynamicColor"
     )
 
-    // Palette Extraction
     LaunchedEffect(mediaMetadata?.thumbnailUrl) {
         val url = mediaMetadata?.thumbnailUrl
         if (url != null) {
@@ -102,7 +135,9 @@ fun NowPlayingContentAppleMusic(
                 if (bitmap != null) {
                     val palette = Palette.from(bitmap).generate()
                     val dominant = palette.getVibrantColor(palette.getMutedColor(0xFF121212.toInt()))
-                    withContext(Dispatchers.Main) { extractedColor = Color(dominant) }
+                    withContext(Dispatchers.Main) {
+                        extractedColor = Color(dominant)
+                    }
                 }
             }
         }
@@ -110,6 +145,7 @@ fun NowPlayingContentAppleMusic(
 
     val activePillContainer = remember(animatedSeedColor) { Color.White.copy(alpha = 0.2f) }
     val activePillContent = remember(animatedSeedColor) { Color.White }
+
     val backdropBrush = remember(animatedSeedColor) {
         Brush.verticalGradient(
             0f to appleMusicGradientColorAt(animatedSeedColor, 0f),
@@ -201,8 +237,6 @@ private fun AppleMusicMainView(
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
-    val queueWindows by playerConnection.queueWindows.collectAsStateWithLifecycle(initialValue = emptyList())
-    val currentWindowIndex by playerConnection.currentWindowIndex.collectAsStateWithLifecycle()
 
     val localDensity = LocalDensity.current
     val configuration = LocalConfiguration.current
@@ -211,30 +245,39 @@ private fun AppleMusicMainView(
     var bottomContentHeightDp by remember { mutableIntStateOf(330) }
     val artworkZoneHeightDp = (screenHeight - bottomContentHeightDp).coerceAtLeast(200)
 
-    var showControlLayout by rememberSaveable { mutableStateOf(true) }
+    var hasActiveCanvas by remember { mutableStateOf(false) }
 
-    LaunchedEffect(showControlLayout) {
-        if (showControlLayout) {
-            delay(4000)
-            showControlLayout = false
-        }
+    val mediaItemsData by remember(
+        playerConnection.player.currentMediaItemIndex,
+        playerConnection.player.shuffleModeEnabled,
+        mediaMetadata
+    ) {
+        derivedStateOf { getAppleMediaItems(playerConnection.player) }
     }
+    
+    val mediaItems = mediaItemsData.items
+    val currentMediaIndex = mediaItemsData.currentIndex
+
+    val safeCurrentIndex = maxOf(0, currentMediaIndex)
+    val safeQueueSize = maxOf(1, mediaItems.size)
 
     val pagerState = rememberPagerState(
-        initialPage = maxOf(0, currentWindowIndex),
-        pageCount = { queueWindows.size }
+        initialPage = safeCurrentIndex,
+        pageCount = { safeQueueSize }
     )
 
-    LaunchedEffect(currentWindowIndex) {
-        if (currentWindowIndex >= 0 && currentWindowIndex != pagerState.currentPage && currentWindowIndex < queueWindows.size) {
-            pagerState.animateScrollToPage(currentWindowIndex)
+    LaunchedEffect(currentMediaIndex, mediaItems) {
+        if (currentMediaIndex >= 0 && currentMediaIndex < mediaItems.size) {
+            pagerState.scrollToPage(currentMediaIndex)
         }
     }
 
     LaunchedEffect(pagerState.currentPage) {
         if (!pagerState.isScrollInProgress) return@LaunchedEffect
-        if (pagerState.currentPage != currentWindowIndex && pagerState.currentPage < queueWindows.size) {
-            playerConnection.player.seekToDefaultPosition(queueWindows[pagerState.currentPage].firstPeriodIndex)
+        if (pagerState.currentPage > currentMediaIndex) {
+            playerConnection.player.seekToNext()
+        } else if (pagerState.currentPage < currentMediaIndex) {
+            playerConnection.player.seekToPreviousMediaItem()
         }
     }
 
@@ -242,17 +285,22 @@ private fun AppleMusicMainView(
         HorizontalPager(
             state = pagerState,
             modifier = Modifier.fillMaxSize(),
-            beyondViewportPageCount = 1
+            beyondViewportPageCount = 1,
+            key = { idx -> mediaItems.getOrNull(idx)?.mediaId ?: idx.toString() }
         ) { page ->
-            val track = queueWindows.getOrNull(page)?.mediaItem
-            val isCurrentPage = page == currentWindowIndex
+            val track = mediaItems.getOrNull(page)
+            val isCurrentPage = page == currentMediaIndex
             
             AppleMusicArtworkPage(
                 track = track,
                 isCurrentPage = isCurrentPage,
                 mediaMetadata = mediaMetadata,
                 artworkZoneHeightDp = artworkZoneHeightDp,
-                onToggleControls = { showControlLayout = !showControlLayout }
+                onCanvasReady = { isReady ->
+                    if (isCurrentPage && track?.mediaId == mediaMetadata?.id) {
+                        hasActiveCanvas = isReady
+                    }
+                }
             )
         }
 
@@ -261,15 +309,8 @@ private fun AppleMusicMainView(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
         ) {
-            val controlsAlpha by animateFloatAsState(
-                targetValue = if (showControlLayout) 1f else 0f,
-                animationSpec = tween(if (showControlLayout) 180 else 500),
-                label = "appleMusicControlsAlpha"
-            )
-
             Column(
                 modifier = Modifier
-                    .alpha(controlsAlpha)
                     .onGloballyPositioned { coords ->
                         bottomContentHeightDp = with(localDensity) { coords.size.height.toDp().value.toInt() }
                     }
@@ -287,43 +328,6 @@ private fun AppleMusicMainView(
                     duration = duration
                 )
             }
-
-            val (canvasThumbnailAnimation) = rememberPreference(CanvasThumbnailAnimationKey, defaultValue = false)
-            val showCanvasOverlay = canvasThumbnailAnimation && queueWindows.getOrNull(currentWindowIndex)?.mediaItem?.mediaId == mediaMetadata?.id
-
-            if (showCanvasOverlay) {
-                AnimatedVisibility(
-                    visible = !showControlLayout,
-                    enter = fadeIn(),
-                    exit = fadeOut(),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(bottomContentHeightDp.dp)
-                            .clickable(
-                                onClick = { showControlLayout = true },
-                                indication = null,
-                                interactionSource = remember { MutableInteractionSource() }
-                            ),
-                        contentAlignment = Alignment.BottomStart
-                    ) {
-                        Box(
-                            modifier = Modifier.fillMaxSize().background(
-                                Brush.verticalGradient(
-                                    0f to Color.Transparent,
-                                    0.5f to Color.Black.copy(alpha = 0.5f),
-                                    1f to Color.Black.copy(alpha = 0.85f)
-                                )
-                            )
-                        )
-                        AppleMusicCompactHeader(
-                            typography = typography, 
-                            modifier = Modifier.padding(bottom = with(localDensity) { WindowInsets.systemBars.getBottom(localDensity).toDp() } + 16.dp)
-                        )
-                    }
-                }
-            }
         }
     }
 }
@@ -334,10 +338,10 @@ private fun AppleMusicArtworkPage(
     isCurrentPage: Boolean,
     mediaMetadata: com.metrolist.models.MediaMetadata?,
     artworkZoneHeightDp: Int,
-    onToggleControls: () -> Unit
+    onCanvasReady: (Boolean) -> Unit
 ) {
     val (canvasThumbnailAnimation) = rememberPreference(CanvasThumbnailAnimationKey, defaultValue = false)
-    val showCanvas = canvasThumbnailAnimation && isCurrentPage && track?.mediaId == mediaMetadata?.id
+    val tryShowCanvas = canvasThumbnailAnimation && isCurrentPage && track?.mediaId == mediaMetadata?.id
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (isCurrentPage) {
@@ -347,45 +351,34 @@ private fun AppleMusicArtworkPage(
                     .fillMaxWidth()
                     .height(artworkZoneHeightDp.dp)
             ) {
+                val currentArtworkUrl = mediaMetadata?.thumbnailUrl ?: track?.mediaMetadata?.artworkUri
+
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
-                        .data(track?.mediaMetadata?.artworkUri ?: mediaMetadata?.thumbnailUrl)
+                        .data(currentArtworkUrl)
                         .crossfade(550)
                         .build(),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .fillMaxSize()
-                        .alpha(if (showCanvas) 0f else 1f)
                         .appleMusicVerticalFadeEdges(topFade = 0.dp, bottomFade = 300.dp)
                 )
-            }
 
-            if (showCanvas && track != null) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .fillMaxWidth()
-                        .height(artworkZoneHeightDp.dp)
-                        .clickable(
-                            indication = null,
-                            interactionSource = remember { MutableInteractionSource() }
-                        ) { onToggleControls() }
-                ) {
+                if (tryShowCanvas && track != null) {
                     AppleMusicCanvasLayer(
-                        item = track,
-                        modifier = Modifier.fillMaxSize()
+                        track = track,
+                        mediaMetadata = mediaMetadata,
+                        onCanvasReady = onCanvasReady,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .appleMusicVerticalFadeEdges(topFade = 0.dp, bottomFade = 300.dp)
                     )
+                } else {
+                    LaunchedEffect(Unit) {
+                        onCanvasReady(false)
+                    }
                 }
-            } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clickable(
-                            indication = null,
-                            interactionSource = remember { MutableInteractionSource() }
-                        ) { onToggleControls() }
-                )
             }
         } else if (track != null) {
             Box(
@@ -393,7 +386,7 @@ private fun AppleMusicArtworkPage(
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
                     .height(artworkZoneHeightDp.dp)
-                    .padding(24.dp),
+                    .padding(24.dp), 
                 contentAlignment = Alignment.Center
             ) {
                 AsyncImage(
@@ -410,6 +403,79 @@ private fun AppleMusicArtworkPage(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun AppleMusicCanvasLayer(
+    track: MediaItem?,
+    mediaMetadata: com.metrolist.models.MediaMetadata?,
+    onCanvasReady: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val mediaId = track?.mediaId ?: mediaMetadata?.id ?: return
+    var canvasArtwork by remember(mediaId) { mutableStateOf<CanvasArtwork?>(null) }
+    var canvasFetchInFlight by remember(mediaId) { mutableStateOf(false) }
+    
+    val storefront = remember {
+        val country = Locale.getDefault().country
+        if (country.length == 2) country.lowercase(Locale.ROOT) else "us"
+    }
+
+    LaunchedEffect(mediaId) {
+        CanvasArtworkPlaybackCache.get(mediaId)?.let { cached ->
+            canvasArtwork = cached
+            return@LaunchedEffect
+        }
+
+        if (canvasFetchInFlight) return@LaunchedEffect
+        canvasFetchInFlight = true
+
+        val fetched = withContext(Dispatchers.IO) {
+            val albumName = track?.mediaMetadata?.albumTitle?.toString() ?: mediaMetadata?.album?.title ?: ""
+            val songTitleRaw = track?.mediaMetadata?.title?.toString() ?: mediaMetadata?.title ?: ""
+            val artistNameRaw = track?.mediaMetadata?.artist?.toString() ?: mediaMetadata?.artists?.joinToString { it.name } ?: ""
+            
+            val songTitle = normalizeCanvasSongTitle(songTitleRaw)
+            val artistName = normalizeCanvasArtistName(artistNameRaw)
+
+            if (songTitle.isBlank() || artistName.isBlank()) return@withContext null
+
+            val tidalDeferred = async {
+                TidalCanvasProvider.getBySongArtist(songTitle, artistName, albumName)
+                    ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
+            }
+            
+            val appleDeferred = async {
+                if (albumName.isNotBlank()) {
+                    AppleMusicCanvasProvider.getByAlbumArtist(albumName, artistName, storefront)
+                        ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
+                } else {
+                    null
+                } ?: AppleMusicCanvasProvider.getBySongArtist(songTitle, artistName, albumName, storefront)
+                    ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
+            }
+
+            tidalDeferred.await() ?: appleDeferred.await()
+        }
+        
+        canvasArtwork = fetched
+        if (fetched != null) {
+            CanvasArtworkPlaybackCache.put(mediaId, fetched)
+        }
+        canvasFetchInFlight = false
+    }
+
+    LaunchedEffect(canvasArtwork) {
+        onCanvasReady(canvasArtwork != null)
+    }
+
+    canvasArtwork?.let { artwork ->
+        CanvasArtworkPlayer(
+            primaryUrl = artwork.animated,
+            fallbackUrl = artwork.videoUrl,
+            modifier = modifier
+        )
     }
 }
 
@@ -456,72 +522,5 @@ private fun AppleMusicMainTitleRow(
         }
         Spacer(modifier = Modifier.width(12.dp))
         AppleMusicHeaderActions(viewState = AppleMusicView.MAIN, bottomSheetState = bottomSheetState)
-    }
-}
-
-@Composable
-private fun AppleMusicCanvasLayer(
-    item: MediaItem,
-    modifier: Modifier = Modifier
-) {
-    val mediaId = item.mediaId
-    var canvasArtwork by remember(mediaId) { mutableStateOf<CanvasArtwork?>(null) }
-    var canvasFetchInFlight by remember(mediaId) { mutableStateOf(false) }
-    
-    val storefront = remember {
-        val country = Locale.getDefault().country
-        if (country.length == 2) country.lowercase(Locale.ROOT) else "us"
-    }
-
-    LaunchedEffect(mediaId) {
-        CanvasArtworkPlaybackCache.get(mediaId)?.let { cached ->
-            canvasArtwork = cached
-            return@LaunchedEffect
-        }
-
-        if (canvasFetchInFlight) return@LaunchedEffect
-        canvasFetchInFlight = true
-
-        val fetched = withContext(Dispatchers.IO) {
-            val albumName = item.mediaMetadata.albumTitle?.toString() ?: ""
-            val songTitleRaw = item.mediaMetadata.title?.toString() ?: ""
-            val artistNameRaw = item.mediaMetadata.artist?.toString() ?: ""
-            
-            val songTitle = normalizeCanvasSongTitle(songTitleRaw)
-            val artistName = normalizeCanvasArtistName(artistNameRaw)
-
-            if (songTitle.isBlank() || artistName.isBlank()) return@withContext null
-
-            val tidalDeferred = async {
-                TidalCanvasProvider.getBySongArtist(songTitle, artistName, albumName)
-                    ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
-            }
-            
-            val appleDeferred = async {
-                if (albumName.isNotBlank()) {
-                    AppleMusicCanvasProvider.getByAlbumArtist(albumName, artistName, storefront)
-                        ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
-                } else {
-                    null
-                } ?: AppleMusicCanvasProvider.getBySongArtist(songTitle, artistName, albumName, storefront)
-                    ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
-            }
-
-            tidalDeferred.await() ?: appleDeferred.await()
-        }
-        
-        canvasArtwork = fetched
-        if (fetched != null) {
-            CanvasArtworkPlaybackCache.put(mediaId, fetched)
-        }
-        canvasFetchInFlight = false
-    }
-
-    canvasArtwork?.let { artwork ->
-        CanvasArtworkPlayer(
-            primaryUrl = artwork.animated,
-            fallbackUrl = artwork.videoUrl,
-            modifier = modifier
-        )
     }
 }
