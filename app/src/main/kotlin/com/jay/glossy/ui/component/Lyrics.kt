@@ -23,11 +23,10 @@ fun Lyrics(
     modifier: Modifier = Modifier,
     showLyrics: Boolean,
     lyricsViewModel: LyricsViewModel = hiltViewModel(),
-    onUserInteract: () -> Unit = {} // Default empty lambda taaki baaki players break na hon
+    onUserInteract: () -> Unit = {} 
 ) {
     val (experimentalLyrics, _) = rememberPreference(key = ExperimentalLyricsKey, defaultValue = true)
 
-    // Touch aur Scroll detect karne ka logic jo baaki elements se pehle trigger hoga
     val interactiveModifier = modifier.pointerInput(Unit) {
         awaitPointerEventScope {
             while (true) {
@@ -36,8 +35,8 @@ fun Lyrics(
                     var isDrag = false
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
-                        // Agar 3 pixel se zyada swipe hua toh drag maanenge
-                        if (event.changes.any { it.positionChange().getDistance() > 3f }) {
+                        // FIX: Changed to direct position subtraction to avoid missing extension imports
+                        if (event.changes.any { (it.position - it.previousPosition).getDistance() > 3f }) {
                             isDrag = true
                             onUserInteract()
                         }
@@ -45,7 +44,6 @@ fun Lyrics(
                             break
                         }
                     }
-                    // Agar drag nahi hua, iska matlab user ne bas tap (click) kiya hai
                     if (!isDrag) {
                         onUserInteract()
                     }
