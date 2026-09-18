@@ -321,7 +321,7 @@ fun StorageSettings(
             onConfirm = {
                 com.jay.glossy.ui.player.CanvasArtworkPlaybackCache.clear()
                 canvasCacheSize = 0
-                com.jay.glossy.ui.player.CanvasPlayerManager.clearVideoCache(context)
+                com.jay.glossy.ui.player.CanvasCacheManager.clearVideoCache(context)
                 Toast.makeText(context, "Canvas cache cleared", Toast.LENGTH_SHORT).show()
                 clearCanvasCacheDialog = false
             },
