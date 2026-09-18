@@ -74,6 +74,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
+@Stable
+internal fun String.toHighRes(): String {
+    return this.replace(Regex("=[wh]\\d+-[wh]\\d+.*"), "=w1080-h1080-l90-rj")
+        .replace(Regex("-[wh]\\d+-[wh]\\d+.*"), "-w1080-h1080-l90-rj")
+        .replace(Regex("=s\\d+.*"), "=s1080-l90-rj")
+}
+
 @Immutable
 data class AppleMediaItemsData(
     val items: List<MediaItem>,
@@ -121,12 +128,16 @@ fun NowPlayingContentAppleMusic(
         label = "appleMusicDynamicColor"
     )
 
-    LaunchedEffect(mediaMetadata?.thumbnailUrl) {
-        val url = mediaMetadata?.thumbnailUrl
-        if (url != null) {
+    // Background ke liye bhi high-res url use karenge
+    val highResThumbnailUrl = remember(mediaMetadata?.thumbnailUrl) {
+        mediaMetadata?.thumbnailUrl?.toHighRes()
+    }
+
+    LaunchedEffect(highResThumbnailUrl) {
+        if (highResThumbnailUrl != null) {
             withContext(Dispatchers.IO) {
                 val request = ImageRequest.Builder(context)
-                    .data(url)
+                    .data(highResThumbnailUrl)
                     .size(100, 100)
                     .allowHardware(false)
                     .build()
@@ -158,7 +169,7 @@ fun NowPlayingContentAppleMusic(
         Box(modifier = Modifier.matchParentSize()) {
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
-                    .data(mediaMetadata?.thumbnailUrl)
+                    .data(highResThumbnailUrl) // High res background
                     .crossfade(500)
                     .build(),
                 contentDescription = null,
@@ -343,7 +354,6 @@ private fun AppleMusicArtworkPage(
     val (canvasThumbnailAnimation) = rememberPreference(CanvasThumbnailAnimationKey, defaultValue = false)
     val tryShowCanvas = canvasThumbnailAnimation && isCurrentPage && track?.mediaId == mediaMetadata?.id
 
-    // NAYA STATE: Canvas Play hone ka state track karne ke liye
     var isVideoPlaying by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -354,9 +364,10 @@ private fun AppleMusicArtworkPage(
                     .fillMaxWidth()
                     .height(artworkZoneHeightDp.dp)
             ) {
-                val currentArtworkUrl = mediaMetadata?.thumbnailUrl ?: track?.mediaMetadata?.artworkUri
+                val rawUrl = mediaMetadata?.thumbnailUrl ?: track?.mediaMetadata?.artworkUri?.toString()
+                // HIGH-RES REGEX YAHAN APPLY HUA HAI
+                val currentArtworkUrl = remember(rawUrl) { rawUrl?.toHighRes() }
 
-                // Jaise hi video chalu hoga, image ki alpha value 0 ho jayegi jisse double face na dikhe
                 val imageAlpha by animateFloatAsState(
                     targetValue = if (isVideoPlaying) 0f else 1f,
                     animationSpec = tween(600),
@@ -365,14 +376,14 @@ private fun AppleMusicArtworkPage(
 
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
-                        .data(currentArtworkUrl)
+                        .data(currentArtworkUrl) // High Res Square Image
                         .crossfade(550)
                         .build(),
                     contentDescription = null,
-                    contentScale = ContentScale.Crop,
+                    contentScale = ContentScale.Crop, // Ab face stretch nahi hoga
                     modifier = Modifier
                         .fillMaxSize()
-                        .alpha(imageAlpha) // Ye apply kar diya overlap hatane ke liye
+                        .alpha(imageAlpha)
                         .appleMusicVerticalFadeEdges(topFade = 0.dp, bottomFade = 300.dp)
                 )
 
@@ -381,7 +392,7 @@ private fun AppleMusicArtworkPage(
                         track = track,
                         mediaMetadata = mediaMetadata,
                         onCanvasReady = { isReady ->
-                            isVideoPlaying = isReady // Video ready hone ka signal receive karna
+                            isVideoPlaying = isReady
                             onCanvasReady(isReady)
                         },
                         modifier = Modifier
@@ -404,9 +415,13 @@ private fun AppleMusicArtworkPage(
                     .padding(24.dp), 
                 contentAlignment = Alignment.Center
             ) {
+                val rawUrl = track.mediaMetadata.artworkUri?.toString()
+                // QUEUE ME BHI HIGH RES LAAGU
+                val nextArtworkUrl = remember(rawUrl) { rawUrl?.toHighRes() }
+
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
-                        .data(track.mediaMetadata.artworkUri)
+                        .data(nextArtworkUrl)
                         .crossfade(300)
                         .build(),
                     contentDescription = null,
@@ -484,14 +499,13 @@ private fun AppleMusicCanvasLayer(
         canvasFetchInFlight = false
     }
 
-    // Yahan agar video nahi hai, to false signal bhej diya
     canvasArtwork?.let { artwork ->
         CanvasArtworkPlayer(
             primaryUrl = artwork.animated,
             fallbackUrl = artwork.videoUrl,
             isPlaying = isPlaying, 
             modifier = modifier,
-            onVideoReady = onCanvasReady // Callback attach kar diya
+            onVideoReady = onCanvasReady 
         )
     } ?: LaunchedEffect(Unit) {
         onCanvasReady(false)
