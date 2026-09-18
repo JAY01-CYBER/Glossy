@@ -124,6 +124,7 @@ object CanvasPlayerManager {
 fun CanvasArtworkPlayer(
     primaryUrl: String?,
     fallbackUrl: String?,
+    isPlaying: Boolean, // Added play state sync
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -144,8 +145,12 @@ fun CanvasArtworkPlayer(
         CanvasPlayerManager.play(context, initialUrl, enableVideoCache)
     }
 
+    // React to play/pause state changes
+    LaunchedEffect(isPlaying) {
+        exoPlayer.playWhenReady = isPlaying
+    }
+
     DisposableEffect(exoPlayer) {
-        exoPlayer.playWhenReady = true
         onDispose {
             exoPlayer.playWhenReady = false 
         }
