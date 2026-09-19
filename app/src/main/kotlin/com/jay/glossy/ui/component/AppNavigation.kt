@@ -230,7 +230,6 @@ private fun FloatingAppNavigationBar(
         }
     }
 
-    // YAHAN HUA HAI FIX! Height kam kar di gayi hai (Sleek & Premium look)
     val barHeight = if (slimNav) 48.dp else 56.dp 
     val fabSize = if (slimNav) 48.dp else 56.dp 
 
@@ -254,7 +253,7 @@ private fun FloatingAppNavigationBar(
             onItemClick = onItemClick
         )
 
-        // 2. Detached Search FAB (Guaranteed to be a PERFECT CIRCLE now)
+        // 2. Detached Search FAB
         if (searchItem != null) {
             Spacer(modifier = Modifier.width(16.dp)) 
             
@@ -287,7 +286,6 @@ private fun FloatingAppNavigationBar(
                 }
             }
 
-            // Using Surface guarantees the shape will NOT stretch into a rectangle
             Surface(
                 onClick = {
                     if (onSearchLongClick == null) {
@@ -299,7 +297,7 @@ private fun FloatingAppNavigationBar(
                 color = if (isSearchSelected) floatingToolbarSelectedItemContainerColor(pureBlack) else floatingToolbarFabContainerColor(pureBlack),
                 contentColor = if (isSearchSelected) floatingToolbarSelectedItemContentColor(pureBlack) else floatingToolbarFabContentColor(pureBlack),
                 shadowElevation = 12.dp,
-                modifier = Modifier.size(fabSize) // Exactly 56x56 Circle
+                modifier = Modifier.size(fabSize) 
             ) {
                 Box(
                     contentAlignment = Alignment.Center, 
@@ -330,7 +328,6 @@ private fun MaterialLiquidTabBar(
 ) {
     val tabsCount = tabs.size
     
-    // Tab width aur indicator height bhi sleek kar diye hain
     val tabWidth = if (slimNav) 64.dp else 80.dp 
     val blobHeight = if (slimNav) 36.dp else 44.dp 
     
@@ -338,7 +335,10 @@ private fun MaterialLiquidTabBar(
     val totalWidth = tabWidth * tabsCount 
     
     val animationScope = rememberCoroutineScope()
+    
+    // FIX ADDED HERE: Added totalDragDistance to prevent micro-movements from blocking the tap
     val draggedFlag = remember { booleanArrayOf(false) }
+    val totalDragDistance = remember { floatArrayOf(0f) } 
     
     val currentOnItemClick by rememberUpdatedState(onItemClick)
     val currentRouteState by rememberUpdatedState(currentRoute)
@@ -353,7 +353,10 @@ private fun MaterialLiquidTabBar(
             visibilityThreshold = 0.001f,
             initialScale = 1f,
             pressedScale = 1.15f, 
-            onDragStarted = { draggedFlag[0] = false },
+            onDragStarted = { 
+                draggedFlag[0] = false
+                totalDragDistance[0] = 0f 
+            },
             onDragStopped = {
                 if (draggedFlag[0]) {
                     val target = targetValue.roundToInt().coerceIn(0, tabsCount - 1)
@@ -365,7 +368,13 @@ private fun MaterialLiquidTabBar(
                 }
             },
             onDrag = { _, dragAmount ->
-                if (dragAmount.x != 0f) draggedFlag[0] = true
+                totalDragDistance[0] += kotlin.math.abs(dragAmount.x)
+                
+                // 8 pixel ka touch threshold lagaya gaya hai
+                if (totalDragDistance[0] > 8f) {
+                    draggedFlag[0] = true
+                }
+                
                 updateValue((targetValue + dragAmount.x / tabWidthPx).coerceIn(0f, (tabsCount - 1).toFloat()))
             }
         )

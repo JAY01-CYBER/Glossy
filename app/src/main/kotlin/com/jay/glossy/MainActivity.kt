@@ -46,6 +46,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -230,6 +231,7 @@ import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.util.Locale
 import javax.inject.Inject
+import kotlin.math.roundToInt
 
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.compose.ui.platform.LocalContext
@@ -1250,30 +1252,30 @@ class MainActivity : ComponentActivity() {
                                         )
                                     }
 
-                                    // YAHAN HUA HAI FIX! Animation box smooth translation ke sath!
+                                    // YAHAN HUA HAI FIX! Animation box smooth translation ke sath aur offset touch fix!
                                     Box(
                                         modifier =
                                             Modifier
                                                 .fillMaxWidth()
                                                 .align(Alignment.BottomCenter)
                                                 .height(if (useFloatingNavBar) bottomInsetDp + 90.dp else bottomInsetDp)
-                                                .graphicsLayer {
+                                                .offset {
                                                     val navBarHeightPx = navigationBarHeight.toPx()
                                                     val totalHeightPx = navBarTotalHeight.toPx()
                                                     val progress = playerBottomSheetState.progress.coerceIn(0f, 1f)
 
-                                                    // Background ab abruptly gayab nahi hoga, Navigation Bar ke sath smoothly niche jayega!
-                                                    translationY =
-                                                        if (navBarHeightPx == 0f) {
-                                                            totalHeightPx
-                                                        } else {
-                                                            val slideOffset = totalHeightPx * progress
-                                                            val hideOffset =
-                                                                totalHeightPx * (1 - navBarHeightPx / NavigationBarHeight.toPx())
-                                                            slideOffset + hideOffset
-                                                        }
-
-                                                    // Alpha ko smooth fade kar diya, instant 0 pe nahi girega
+                                                    val yOffset = if (navBarHeightPx == 0f) {
+                                                        totalHeightPx
+                                                    } else {
+                                                        val slideOffset = totalHeightPx * progress
+                                                        val hideOffset =
+                                                            totalHeightPx * (1 - navBarHeightPx / NavigationBarHeight.toPx())
+                                                        slideOffset + hideOffset
+                                                    }
+                                                    androidx.compose.ui.unit.IntOffset(0, yOffset.roundToInt())
+                                                }
+                                                .graphicsLayer {
+                                                    val progress = playerBottomSheetState.progress.coerceIn(0f, 1f)
                                                     alpha = if (useNewMiniPlayerDesign && !shouldShowNavigationBar) {
                                                         0f
                                                     } else {
@@ -1299,20 +1301,20 @@ class MainActivity : ComponentActivity() {
                                                     if (useFloatingNavBar) Modifier
                                                     else Modifier.height(bottomInset + navPadding).clip(RectangleShape)
                                                 )
-                                                .graphicsLayer {
+                                                .offset {
                                                     val navBarHeightPx = navigationBarHeight.toPx()
                                                     val totalHeightPx = navBarTotalHeight.toPx()
 
-                                                    translationY =
-                                                        if (navBarHeightPx == 0f) {
-                                                            totalHeightPx
-                                                        } else {
-                                                            val progress = playerBottomSheetState.progress.coerceIn(0f, 1f)
-                                                            val slideOffset = totalHeightPx * progress
-                                                            val hideOffset =
-                                                                totalHeightPx * (1 - navBarHeightPx / NavigationBarHeight.toPx())
-                                                            slideOffset + hideOffset
-                                                        }
+                                                    val yOffset = if (navBarHeightPx == 0f) {
+                                                        totalHeightPx
+                                                    } else {
+                                                        val progress = playerBottomSheetState.progress.coerceIn(0f, 1f)
+                                                        val slideOffset = totalHeightPx * progress
+                                                        val hideOffset =
+                                                            totalHeightPx * (1 - navBarHeightPx / NavigationBarHeight.toPx())
+                                                        slideOffset + hideOffset
+                                                    }
+                                                    androidx.compose.ui.unit.IntOffset(0, yOffset.roundToInt())
                                                 },
                                     )
                                 }
@@ -1730,11 +1732,13 @@ class MainActivity : ComponentActivity() {
             isAppearanceLightStatusBars = !isDark
             isAppearanceLightNavigationBars = !isDark
         }
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            window.statusBarColor = (if (isDark) Color.Transparent else Color.Black.copy(alpha = 0.2f)).toArgb()
-        }
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-            window.navigationBarColor = (if (isDark) Color.Transparent else Color.Black.copy(alpha = 0.2f)).toArgb()
+        
+        window.statusBarColor = Color.Transparent.toArgb()
+        window.navigationBarColor = Color.Transparent.toArgb()
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
+            window.isStatusBarContrastEnforced = false
         }
     }
 }
