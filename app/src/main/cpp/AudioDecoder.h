@@ -27,6 +27,11 @@ public:
     // Audio packets ko read karke raw PCM me decode karega
     int decodeFrame(uint8_t** outBuffer);
     
+    // Naye Playback Controls
+    void pause();
+    void resume();
+    void stop();
+    
     void release();
 
     int getSampleRate() const { return targetSampleRate; }
@@ -38,14 +43,16 @@ private:
     AVFrame* frame = nullptr;
     AVPacket* packet = nullptr;
     
-    // Resampler: YouTube ke alag-alag audio formats ko ek standard me convert karne ke liye
     SwrContext* swrCtx = nullptr; 
 
     int audioStreamIndex = -1;
     
-    // Oboe ke liye standard format (48kHz, Stereo)
     int targetSampleRate = 48000;
     int targetChannels = 2; 
+
+    // Playback state track karne ke liye
+    bool isPlaying = false;
+    bool isPaused = false;
 };
 
 #endif // GLOSSY_AUDIO_DECODER_H
