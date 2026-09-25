@@ -96,6 +96,16 @@ android {
     namespace = "com.jay.glossy"
     compileSdk = 37
 
+    // ==========================================
+    // C++ Engine Setup (Added for Glossy Native)
+    // ==========================================
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
+    }
+
     defaultConfig {
         applicationId = applicationIdOverride ?: baseApplicationId
         minSdk = 26
@@ -215,6 +225,7 @@ android {
         compose = true
         buildConfig = true
         resValues = true
+        prefab = true // Prefab enabled for Google Oboe
     }
 
     dependenciesInfo {
@@ -398,7 +409,6 @@ dependencies {
     implementation(project(":canvas"))
     implementation(project(":applecanvas"))
 
-
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.cio)
     implementation(libs.ktor.client.okhttp)
@@ -424,8 +434,11 @@ dependencies {
     implementation("io.github.kyant0:backdrop:2.0.1")
     implementation("dev.chrisbanes.haze:haze:1.1.1")
     implementation("dev.chrisbanes.haze:haze-materials:1.1.1")
+    
+    // ==========================================
+    // C++ Audio Engine Dependencies
+    // ==========================================
+    implementation("com.google.oboe:oboe:1.8.1")
 }
 
-
 // Cache bust for spotifycore module update
-
