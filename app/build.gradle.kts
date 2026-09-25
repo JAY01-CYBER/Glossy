@@ -97,13 +97,12 @@ android {
     compileSdk = 37
 
     // ==========================================
-    // C++ Engine Setup (Added for Glossy Native)
+    // C++ Engine Path Setup
     // ==========================================
     externalNativeBuild {
         cmake {
             path = file("src/main/cpp/CMakeLists.txt")
             version = "3.22.1"
-            arguments += "-DANDROID_STL=c++_shared"
         }
     }
 
@@ -120,6 +119,15 @@ android {
 
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+        }
+
+        // ==========================================
+        // C++ Compiler Arguments (Correct Block)
+        // ==========================================
+        externalNativeBuild {
+            cmake {
+                arguments("-DANDROID_STL=c++_shared")
+            }
         }
 
         // LastFM API keys from GitHub Secrets
