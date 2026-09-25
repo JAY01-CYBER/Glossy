@@ -1,6 +1,6 @@
 #include <jni.h>
 #include <string>
-#include "audio_decoder.h"
+#include "AudioDecoder.h"
 
 AudioDecoder* decoder = nullptr;
 
