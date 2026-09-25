@@ -118,11 +118,12 @@ android {
         vectorDrawables.useSupportLibrary = true
 
         ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+            // Sirf 64-bit support rakha hai kyunki FFmpeg prebuilt sirf arm64-v8a ke liye hai
+            abiFilters += listOf("arm64-v8a")
         }
 
         // ==========================================
-        // C++ Compiler Arguments (Correct Block)
+        // C++ Compiler Arguments
         // ==========================================
         externalNativeBuild {
             cmake {
