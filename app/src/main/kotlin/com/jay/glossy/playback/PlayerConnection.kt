@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -36,10 +36,12 @@ import com.jay.glossy.playback.queues.Queue
 import com.jay.glossy.utils.dataStore
 import com.jay.glossy.utils.get
 import com.jay.glossy.utils.reportException
+import com.jay.glossy.ui.player.NativeEngine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
@@ -63,6 +65,9 @@ class PlayerConnection(
 
     val service = binder.service
     private val playerReadinessFlow = service.isPlayerReady
+
+    // --- 🚀 GLOSSY NATIVE ENGINE ---
+    val nativeEngine = NativeEngine().apply { nInitEngine() }
 
     private fun getPlayerSafe(): ExoPlayer {
         check(playerReadinessFlow.value) {
@@ -159,10 +164,6 @@ class PlayerConnection(
         )
 
     val mediaMetadata = MutableStateFlow(getPlayerOrNull()?.currentMetadata)
-    // stateIn so the latest DB result is cached and shared: on resume / re-subscription the value
-    // is available immediately instead of re-running the Room query (which delayed now-playing
-    // details, format and like-state on every foreground). Lazily keeps it hot across lifecycle
-    // pauses, matching isPlaying above. StateFlow is still a Flow, so existing collectors are unaffected.
     val currentSong =
         mediaMetadata.flatMapLatest {
             database.song(it?.id)
@@ -193,10 +194,8 @@ class PlayerConnection(
 
     val waitingForNetworkConnection = service.waitingForNetworkConnection
 
-    // Callback to check if playback changes should be blocked (e.g., Listen Together guest)
     var shouldBlockPlaybackChanges: (() -> Boolean)? = null
 
-    // Flag to allow internal sync operations to bypass blocking (set by ListenTogetherManager)
     @Volatile
     var allowInternalSync: Boolean = false
 
@@ -218,6 +217,36 @@ class PlayerConnection(
             updateAttachedPlayer(readyPlayer)
         }
 
+        // --- 🚀 PRO DEV: NATIVE ENGINE SYNC OBSERVERS ---
+        
+        // 1. Gaana change hone par url seedha engine ko dena
+        scope.launch {
+            mediaMetadata.collectLatest { metadata ->
+                metadata?.id?.let { mediaId ->
+                    val streamUrl = service.getStreamUrl(mediaId)
+                    if (streamUrl != null) {
+                        Timber.tag(TAG).d("Glossy Native Engine: Playing URL -> $streamUrl")
+                        nativeEngine.nPlayUrl(streamUrl)
+                        service.setMuted(true) // ExoPlayer chup rahega, C++ engine bajega
+                    }
+                }
+            }
+        }
+
+        // 2. Play/Pause state observe karna (Bluetooth button dabane pe bhi ye sync hoga!)
+        scope.launch {
+            isPlaying.collectLatest { playing ->
+                if (playing) {
+                    nativeEngine.nResume()
+                    Timber.tag(TAG).d("Glossy Native Engine: Resumed")
+                } else {
+                    nativeEngine.nPause()
+                    Timber.tag(TAG).d("Glossy Native Engine: Paused")
+                }
+            }
+        }
+        // ------------------------------------------------
+
         Timber.tag(TAG).d("PlayerConnection flow observer registered; playerReady=${playerReadinessFlow.value}")
     }
 
@@ -225,7 +254,6 @@ class PlayerConnection(
         attachedPlayer?.removeListener(this)
         attachedPlayer = newPlayer
         newPlayer.addListener(this)
-        // Refresh all state from new player
         playbackState.value = newPlayer.playbackState
         playWhenReady.value = newPlayer.playWhenReady
         mediaMetadata.value = newPlayer.currentMetadata
@@ -239,7 +267,6 @@ class PlayerConnection(
     }
 
     fun playQueue(queue: Queue) {
-        // Block if Listen Together guest (unless internal sync)
         if (!allowInternalSync && shouldBlockPlaybackChanges?.invoke() == true) {
             Timber.tag("PlayerConnection").d("playQueue blocked - Listen Together guest")
             return
@@ -256,7 +283,6 @@ class PlayerConnection(
     }
 
     fun startRadioSeamlessly() {
-        // Block if Listen Together guest
         if (shouldBlockPlaybackChanges?.invoke() == true) {
             Timber.tag("PlayerConnection").d("startRadioSeamlessly blocked - Listen Together guest")
             return
@@ -275,7 +301,6 @@ class PlayerConnection(
     fun playNext(item: MediaItem) = playNext(listOf(item))
 
     fun playNext(items: List<MediaItem>) {
-        // Block if Listen Together guest (unless internal sync)
         if (!allowInternalSync && shouldBlockPlaybackChanges?.invoke() == true) {
             Timber.tag("PlayerConnection").d("playNext blocked - Listen Together guest")
             return
@@ -291,7 +316,6 @@ class PlayerConnection(
     fun addToQueue(item: MediaItem) = addToQueue(listOf(item))
 
     fun addToQueue(items: List<MediaItem>) {
-        // Block if Listen Together guest (unless internal sync)
         if (!allowInternalSync && shouldBlockPlaybackChanges?.invoke() == true) {
             Timber.tag("PlayerConnection").d("addToQueue blocked - Listen Together guest")
             return
@@ -328,9 +352,6 @@ class PlayerConnection(
         }
     }
 
-    /**
-     * Toggle play/pause - handles Cast when active
-     */
     fun togglePlayPause() {
         if (!allowInternalSync && shouldBlockPlaybackChanges?.invoke() == true) return
         try {
@@ -349,9 +370,6 @@ class PlayerConnection(
         }
     }
 
-    /**
-     * Start playback - handles Cast when active
-     */
     fun play() {
         try {
             val castHandler = service.castConnectionHandler
@@ -368,9 +386,6 @@ class PlayerConnection(
         }
     }
 
-    /**
-     * Pause playback - handles Cast when active
-     */
     fun pause() {
         try {
             val castHandler = service.castConnectionHandler
@@ -384,9 +399,6 @@ class PlayerConnection(
         }
     }
 
-    /**
-     * Seek to position - handles Cast when active
-     */
     fun seekTo(position: Long) {
         try {
             val castHandler = service.castConnectionHandler
@@ -402,7 +414,6 @@ class PlayerConnection(
 
     fun seekToNext() {
         try {
-            // When casting, use Cast skip instead of local player
             val castHandler = service.castConnectionHandler
             if (castHandler?.isCasting?.value == true) {
                 castHandler.skipToNext()
@@ -423,15 +434,12 @@ class PlayerConnection(
 
     fun seekToPrevious() {
         try {
-            // When casting, use Cast skip instead of local player
             val castHandler = service.castConnectionHandler
             if (castHandler?.isCasting?.value == true) {
                 castHandler.skipToPrevious()
                 return
             }
 
-            // Logic to mimic standard seekToPrevious behavior but with explicit callbacks
-            // If we are more than 3 seconds in, just restart the song
             if (player.currentPosition > 3000 || !player.hasPreviousMediaItem()) {
                 player.seekTo(0)
                 if (player.playbackState == Player.STATE_IDLE || player.playbackState == Player.STATE_ENDED) {
@@ -440,7 +448,6 @@ class PlayerConnection(
                 player.playWhenReady = true
                 onRestartSong?.invoke()
             } else {
-                // Otherwise go to previous media item
                 player.seekToPreviousMediaItem()
                 if (player.playbackState == Player.STATE_IDLE || player.playbackState == Player.STATE_ENDED) {
                     player.prepare()
@@ -453,7 +460,6 @@ class PlayerConnection(
         }
     }
 
-    /** Parses "0=09:00-23:00;1=22:00-06:00" into Map<dayIndex, Pair<start, end>>. */
     private fun parseDayTimes(raw: String): Map<Int, Pair<String, String>> {
         if (raw.isBlank()) return emptyMap()
         return raw
@@ -490,58 +496,26 @@ class PlayerConnection(
             val sleepTimerCustomDaysStr = service.applicationContext.dataStore.get(SleepTimerCustomDaysKey) ?: "0,1,2,3,4"
             val sleepTimerDayTimesStr = service.applicationContext.dataStore.get(SleepTimerDayTimesKey) ?: ""
 
-            Timber
-                .tag(
-                    TAG,
-                ).d(
-                    "Sleep Timer Config: repeat=$sleepTimerRepeat start=$sleepTimerStartTime end=$sleepTimerEndTime default=$sleepTimerDefaultMinutes custom=$sleepTimerCustomDaysStr",
-                )
-
             val currentTime = LocalTime.now()
             val today = LocalDate.now()
             val dayOfWeek = today.dayOfWeek.value % 7
             val adjustedDayOfWeek = if (dayOfWeek == 0) 6 else dayOfWeek - 1
 
-            Timber.tag(TAG).d("Current: time=$currentTime dayOfWeek=$adjustedDayOfWeek")
-
             val isDayAllowed =
                 when (sleepTimerRepeat) {
-                    "daily" -> {
-                        true
-                    }
-
-                    "weekdays" -> {
-                        adjustedDayOfWeek in 0..4
-                    }
-
-                    "weekends" -> {
-                        adjustedDayOfWeek in 5..6
-                    }
-
-                    "weekdays_weekends" -> {
-                        true
-                    }
-
-                    // both groups active; per-day time handles the distinction
+                    "daily" -> true
+                    "weekdays" -> adjustedDayOfWeek in 0..4
+                    "weekends" -> adjustedDayOfWeek in 5..6
+                    "weekdays_weekends" -> true
                     "custom" -> {
                         val customDays = sleepTimerCustomDaysStr.split(",").mapNotNull { it.trim().toIntOrNull() }
-                        Timber.tag(TAG).d("Custom days: $customDays, adjustedDayOfWeek=$adjustedDayOfWeek")
                         adjustedDayOfWeek in customDays
                     }
-
-                    else -> {
-                        false
-                    }
+                    else -> false
                 }
 
-            if (!isDayAllowed) {
-                Timber.tag(TAG).d("✗ Day not allowed for Sleep Timer")
-                return false
-            }
+            if (!isDayAllowed) return false
 
-// "daily" uses the single global time window.
-// All other modes store per-day times in the dayTimes map so that
-// e.g. weekdays and weekends can have different windows.
             val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
             val usesDayTimesMap = sleepTimerRepeat != "daily"
             val (startStr, endStr) =
@@ -555,7 +529,6 @@ class PlayerConnection(
             val startTime = LocalTime.parse(startStr, timeFormatter)
             val endTime = LocalTime.parse(endStr, timeFormatter)
 
-            // Support overnight ranges (e.g. 22:00–06:00) in addition to normal ranges
             val isTimeInRange =
                 if (endTime.isAfter(startTime)) {
                     currentTime.isAfter(startTime) && currentTime.isBefore(endTime)
@@ -563,15 +536,11 @@ class PlayerConnection(
                     currentTime.isAfter(startTime) || currentTime.isBefore(endTime)
                 }
 
-            Timber.tag(TAG).d("Time check: $currentTime between $startStr-$endStr? $isTimeInRange")
-
             if (isTimeInRange) {
                 Timber.tag(TAG).i("AUTO SLEEP TIMER STARTED: $sleepTimerDefaultMinutes minutes")
                 service.sleepTimer?.start(sleepTimerDefaultMinutes)
                 return true
             }
-
-            Timber.tag(TAG).d("✗ Time not in range")
             return false
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Sleep Timer error")
@@ -591,7 +560,6 @@ class PlayerConnection(
         val wasPlaying = playWhenReady.value
         playWhenReady.value = newPlayWhenReady
 
-        // Central sleep timer trigger: fires on every paused -> playing transition,
         if (newPlayWhenReady && !wasPlaying) {
             checkAndStartAutomaticSleepTimer()
         }
