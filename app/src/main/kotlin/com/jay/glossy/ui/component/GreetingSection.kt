@@ -1,15 +1,28 @@
 package com.jay.glossy.ui.component
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jay.glossy.LocalNavController
@@ -20,136 +33,122 @@ import java.util.Calendar
 fun GreetingSection(userName: String) {
     val navController = LocalNavController.current
 
-    // 1. Dynamic Salutation (Hi, Hello, Hey)
-    val salutations = listOf("Hi,", "Hello,", "Hey,")
-    val salutation = remember { salutations.random() }
-
-    // 2. Dynamic Greeting Lines
     val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-    
-    // Time ke hisaab se lines
-    val timeBasedPhrases = when (currentHour) {
-        in 5..11 -> listOf("Morning vibes are best served loud. ☕", "Wake up and smell the music. 🌅")
-        in 12..16 -> listOf("Midday reset? Press play. ☀️", "Keep the energy up! ⚡")
-        in 17..20 -> listOf("Enjoy the evening vibes. 🌆", "Sunset tunes loaded up. 🌇")
-        else -> listOf("Late night, great music. 🦉", "Wind down with some good tunes. 🌙")
+    val greeting = remember(currentHour) {
+        when (currentHour) {
+            in 5..11 -> "Good morning"
+            in 12..16 -> "Good afternoon"
+            in 17..21 -> "Good evening"
+            else -> "Hey night owl"
+        }
     }
 
-    // Aapki di hui custom lines
+    val timeBasedPhrases = when (currentHour) {
+        in 5..11 -> listOf("Morning vibes are best served loud ☕", "Wake up and smell the music 🌅")
+        in 12..16 -> listOf("Midday reset? Press play ☀️", "Keep the energy up ⚡")
+        in 17..21 -> listOf("Sunset tunes loaded up 🌇", "Golden hour playlist ready 🌆")
+        else -> listOf("Late night, great music 🦉", "Wind down with some good tunes 🌙")
+    }
+
     val customPhrases = listOf(
-        "Haalooooo 👋",
         "What are we feeling today? 🎧",
-        "Let’s give today a soundtrack. 💽",
-        "Your mood called. It wants music. 🎼",
-        "Another day, another soundtrack. 💽",
-        "Whatever the day brings, bring the music. 🎵",
+        "Let’s give today a soundtrack 💽",
+        "Your mood called — it wants music 🎼",
         "Ready to get lost in a song? 👀",
-        "Your vibe is here. Let’s press play. 💖"
+        "Your vibe is here. Let’s press play 💖",
     )
 
-    // Dono list ko mix karke koi ek random line uthana
-    val subtitlePhrase = remember { (timeBasedPhrases + customPhrases).random() }
+    val subtitlePhrase = remember(currentHour) { (timeBasedPhrases + customPhrases).random() }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 16.dp),
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        // --- LEFT SIDE: Texts (Hi, Username, Line) ---
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
+        Column(modifier = Modifier.weight(1f)) {
+            // Small-caps overline, Material 3 style
             Text(
-                text = salutation,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                text = greeting.uppercase(),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 2.sp,
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
+            Spacer(modifier = Modifier.height(6.dp))
+            // Hero name
             Text(
                 text = userName,
-                style = MaterialTheme.typography.headlineLarge,
+                style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.ExtraBold,
-                // Primary color se Flux Leox jaisa highlight aayega
-                color = MaterialTheme.colorScheme.primary, 
-                fontSize = 32.sp
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = subtitlePhrase,
                 style = MaterialTheme.typography.bodyMedium,
                 fontStyle = FontStyle.Italic,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
 
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(12.dp))
 
-        // --- RIGHT SIDE: Buttons (Download & Liked) ---
-        Column(
-            horizontalAlignment = Alignment.End,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.width(IntrinsicSize.Max) // Dono buttons ko same size ka banane ke liye
-        ) {
-            // Download Button
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                modifier = Modifier
-                    .fillMaxWidth() // Parent column ki max width lega
-                    .clickable {
-                        // Seedha downloaded playlist par le jayega
-                        navController.navigate("auto_playlist/downloaded")
-                    }
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.download), // Agar icon name alag ho toh change kar lena
-                        contentDescription = "Downloads",
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Download",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
-
-            // Liked Button (Trending ki jagah)
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                modifier = Modifier
-                    .fillMaxWidth() // Parent column ki max width lega
-                    .clickable {
-                        // Seedha Liked songs wali playlist par le jayega
-                        navController.navigate("auto_playlist/liked")
-                    }
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.favorite), // Agar icon name alag ho (jaise ic_favorite) toh update kar lena
-                        contentDescription = "Liked",
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Liked",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
+        // Quick actions: filled-tonal circular buttons
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            GreetingCircleAction(
+                icon = R.drawable.download,
+                contentDescription = "Downloads",
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                onClick = { navController.navigate("auto_playlist/downloaded") },
+            )
+            GreetingCircleAction(
+                icon = R.drawable.favorite,
+                contentDescription = "Liked",
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                onClick = { navController.navigate("auto_playlist/liked") },
+            )
         }
     }
 }
+
+@Composable
+private fun GreetingCircleAction(
+    icon: Int,
+    contentDescription: String,
+    containerColor: androidx.compose.ui.graphics.Color,
+    contentColor: androidx.compose.ui.graphics.Color,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = containerColor,
+        contentColor = contentColor,
+        border = BorderStroke(1.dp, contentColor.copy(alpha = 0.12f)),
+        modifier = Modifier.size(44.dp),
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(0.dp),
+        ) {
+            Icon(
+                painter = painterResource(id = icon),
+                contentDescription = contentDescription,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+    }
+}
+
+

@@ -23,10 +23,15 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
@@ -144,6 +149,7 @@ import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.WatchEndpoint
 import com.jay.glossy.constants.AppBarHeight
 import com.jay.glossy.constants.AppLanguageKey
+import com.jay.glossy.constants.BackgroundBlurEnabledKey
 import com.jay.glossy.constants.CheckForUpdatesKey
 import com.jay.glossy.constants.DarkModeKey
 import com.jay.glossy.constants.DefaultOpenTabKey
@@ -186,6 +192,7 @@ import com.jay.glossy.playback.PlayerConnection
 import com.jay.glossy.playback.queues.YouTubeQueue
 import com.jay.glossy.ui.component.AccountSettingsDialog
 import com.jay.glossy.ui.component.AppNavigationBar
+import com.jay.glossy.ui.component.BackgroundBlurBackdrop
 import com.jay.glossy.ui.component.AppNavigationRail
 import com.jay.glossy.ui.component.BottomSheetMenu
 import com.jay.glossy.ui.component.BottomSheetPage
@@ -404,11 +411,12 @@ class MainActivity : ComponentActivity() {
         }
 
         lifecycleScope.launch(Dispatchers.IO) {
+            kotlinx.coroutines.delay(500L)
             val preferences = dataStore.data.first()
             val currentVersion = BuildConfig.VERSION_NAME
 
-            if (preferences[SimpMusicMigrationDoneKey] != true) {
-                safeDataStoreEdit { settings ->
+            safeDataStoreEdit { settings ->
+                if (preferences[SimpMusicMigrationDoneKey] != true) {
                     val currentOrder = settings[LyricsProviderOrderKey] ?: ""
                     if (currentOrder.contains("SimpMusic")) {
                         val orderList =
@@ -427,14 +435,8 @@ class MainActivity : ComponentActivity() {
                         settings[PreferredLyricsProviderKey] = PreferredLyricsProvider.LRCLIB.name
                     }
                     settings[SimpMusicMigrationDoneKey] = true
-                    settings[LastSeenVersionKey] = currentVersion
                 }
-            }
-        }
-
-        lifecycleScope.launch(Dispatchers.IO) {
-            safeDataStoreEdit { settings ->
-                settings[LastSeenVersionKey] = BuildConfig.VERSION_NAME
+                settings[LastSeenVersionKey] = currentVersion
             }
         }
 
@@ -671,6 +673,16 @@ class MainActivity : ComponentActivity() {
                         .fillMaxSize()
                         .background(if (pureBlack) Color.Black else MaterialTheme.colorScheme.surface),
             ) {
+                val (backgroundBlurOn) = rememberPreference(BackgroundBlurEnabledKey, defaultValue = true)
+
+                if (backgroundBlurOn) {
+                    BackgroundBlurBackdrop(
+                        modifier = Modifier.matchParentSize(),
+                        pureBlack = pureBlack,
+                        playerConnection = playerConnectionSnapshot,
+                    )
+                }
+
                 val density = LocalDensity.current
                 val configuration = LocalWindowInfo.current
                 val cutoutInsets = WindowInsets.displayCutout
@@ -711,7 +723,7 @@ class MainActivity : ComponentActivity() {
                     navigationItems.mapIndexed { i, s -> s.route to i }.toMap()
                 }
                 val (slimNav) = rememberPreference(SlimNavBarKey, defaultValue = false)
-                val (useFloatingNavBar) = rememberPreference(UseFloatingNavBarKey, defaultValue = false)
+                val (useFloatingNavBar) = rememberPreference(UseFloatingNavBarKey, defaultValue = true)
                 val (useNewMiniPlayerDesign) = rememberPreference(UseNewMiniPlayerDesignKey, defaultValue = true)
                 val (defaultOpenTabInt) = rememberPreference(DefaultOpenTabKey, defaultValue = NavigationTab.HOME.name)
                 val defaultOpenTab = remember(defaultOpenTabInt) {
@@ -785,6 +797,11 @@ class MainActivity : ComponentActivity() {
                             navigationItemRoutes.contains(currentRoute) ||
                             currentRoute!!.startsWith("search/")
                     }
+
+                // Routes that must render without the mini player, nav bar and rail
+                // (the login page shows a loading bottom bar otherwise).
+                val hideBottomUi =
+                    currentRoute == "wrapped" || currentRoute == "login" || currentRoute == "welcome"
 
                 val isLandscape = configuration.containerDpSize.width > configuration.containerDpSize.height
                 val isTablet = configuration.containerDpSize.width >= 600.dp
@@ -999,6 +1016,7 @@ class MainActivity : ComponentActivity() {
 
                     Scaffold(
                         snackbarHost = { SnackbarHost(snackbarHostState) },
+                        containerColor = if (backgroundBlurOn) Color.Transparent else MaterialTheme.colorScheme.background,
                         topBar = {
                             AnimatedVisibility(
                                 visible = shouldShowTopBar,
@@ -1242,7 +1260,7 @@ class MainActivity : ComponentActivity() {
                                 androidx.compose.ui.graphics.Brush.verticalGradient(listOf(baseBg, baseBg))
                             }
 
-                            if (!showRail && currentRoute != "wrapped") {
+                            if (!showRail && !hideBottomUi) {
                                 Box {
                                     if (activePlayerConnection != null) {
                                         BottomSheetPlayer(
@@ -1319,7 +1337,7 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
                             } else {
-                                if (currentRoute != "wrapped") {
+                                if (!hideBottomUi) {
                                     if (activePlayerConnection != null) {
                                         BottomSheetPlayer(
                                             state = playerBottomSheetState,
@@ -1386,7 +1404,7 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
 
-                            if (showRail && currentRoute != "wrapped") {
+                            if (showRail && !hideBottomUi) {
                                 AppNavigationRail(
                                     navigationItems = navigationItems,
                                     currentRoute = currentRoute,
@@ -1407,43 +1425,83 @@ class MainActivity : ComponentActivity() {
                                             }.route
                                         },
                                     enterTransition = {
-                                        val currentRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
-                                        val previousRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
-
-                                        if (currentRouteIndex == -1 || currentRouteIndex > previousRouteIndex) {
-                                            slideInHorizontally { it / 8 } + fadeIn(tween(200))
+                                        val isFromWelcome = initialState.destination.route == "welcome"
+                                        if (isFromWelcome) {
+                                            fadeIn(tween(400, easing = LinearOutSlowInEasing)) + scaleIn(
+                                                initialScale = 0.94f,
+                                                animationSpec = tween(400, easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f))
+                                            )
                                         } else {
-                                            slideInHorizontally { -it / 8 } + fadeIn(tween(200))
+                                            val currentRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
+                                            val previousRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
+                                            val enterSpec = tween<Float>(durationMillis = 360, easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f))
+                                            val slideSpec = tween<androidx.compose.ui.unit.IntOffset>(durationMillis = 360, easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f))
+
+                                            if (currentRouteIndex == -1 || currentRouteIndex > previousRouteIndex) {
+                                                slideInHorizontally(animationSpec = slideSpec) { it / 5 } +
+                                                    fadeIn(animationSpec = enterSpec) +
+                                                    scaleIn(initialScale = 0.96f, animationSpec = enterSpec)
+                                            } else {
+                                                slideInHorizontally(animationSpec = slideSpec) { -it / 5 } +
+                                                    fadeIn(animationSpec = enterSpec) +
+                                                    scaleIn(initialScale = 0.96f, animationSpec = enterSpec)
+                                            }
                                         }
                                     },
                                     exitTransition = {
-                                        val currentRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
-                                        val targetRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
-
-                                        if (targetRouteIndex == -1 || targetRouteIndex > currentRouteIndex) {
-                                            slideOutHorizontally { -it / 8 } + fadeOut(tween(200))
+                                        val isToWelcome = targetState.destination.route == "welcome"
+                                        if (isToWelcome) {
+                                            fadeOut(tween(250, easing = FastOutLinearInEasing)) + scaleOut(
+                                                targetScale = 0.94f,
+                                                animationSpec = tween(250)
+                                            )
                                         } else {
-                                            slideOutHorizontally { it / 8 } + fadeOut(tween(200))
+                                            val currentRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
+                                            val targetRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
+                                            val exitSpec = tween<Float>(durationMillis = 280, easing = FastOutLinearInEasing)
+                                            val slideSpec = tween<androidx.compose.ui.unit.IntOffset>(durationMillis = 300, easing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f))
+
+                                            if (targetRouteIndex == -1 || targetRouteIndex > currentRouteIndex) {
+                                                slideOutHorizontally(animationSpec = slideSpec) { -it / 5 } +
+                                                    fadeOut(animationSpec = exitSpec) +
+                                                    scaleOut(targetScale = 0.96f, animationSpec = exitSpec)
+                                            } else {
+                                                slideOutHorizontally(animationSpec = slideSpec) { it / 5 } +
+                                                    fadeOut(animationSpec = exitSpec) +
+                                                    scaleOut(targetScale = 0.96f, animationSpec = exitSpec)
+                                            }
                                         }
                                     },
                                     popEnterTransition = {
                                         val currentRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
                                         val previousRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
+                                        val enterSpec = tween<Float>(durationMillis = 360, easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f))
+                                        val slideSpec = tween<androidx.compose.ui.unit.IntOffset>(durationMillis = 360, easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f))
 
                                         if (previousRouteIndex != -1 && previousRouteIndex < currentRouteIndex) {
-                                            slideInHorizontally { it / 8 } + fadeIn(tween(200))
+                                            slideInHorizontally(animationSpec = slideSpec) { it / 5 } +
+                                                fadeIn(animationSpec = enterSpec) +
+                                                scaleIn(initialScale = 0.96f, animationSpec = enterSpec)
                                         } else {
-                                            slideInHorizontally { -it / 8 } + fadeIn(tween(200))
+                                            slideInHorizontally(animationSpec = slideSpec) { -it / 5 } +
+                                                fadeIn(animationSpec = enterSpec) +
+                                                scaleIn(initialScale = 0.96f, animationSpec = enterSpec)
                                         }
                                     },
                                     popExitTransition = {
                                         val currentRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
                                         val targetRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
+                                        val exitSpec = tween<Float>(durationMillis = 280, easing = FastOutLinearInEasing)
+                                        val slideSpec = tween<androidx.compose.ui.unit.IntOffset>(durationMillis = 300, easing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f))
 
                                         if (currentRouteIndex != -1 && currentRouteIndex < targetRouteIndex) {
-                                            slideOutHorizontally { -it / 8 } + fadeOut(tween(200))
+                                            slideOutHorizontally(animationSpec = slideSpec) { -it / 5 } +
+                                                fadeOut(animationSpec = exitSpec) +
+                                                scaleOut(targetScale = 0.96f, animationSpec = exitSpec)
                                         } else {
-                                            slideOutHorizontally { it / 8 } + fadeOut(tween(200))
+                                            slideOutHorizontally(animationSpec = slideSpec) { it / 5 } +
+                                                fadeOut(animationSpec = exitSpec) +
+                                                scaleOut(targetScale = 0.96f, animationSpec = exitSpec)
                                         }
                                     },
                                     modifier = Modifier.nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),

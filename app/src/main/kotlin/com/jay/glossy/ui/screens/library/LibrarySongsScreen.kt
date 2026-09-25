@@ -296,15 +296,18 @@ fun LibrarySongsScreen(
         }
     }
 
-    val filteredSongs =
+    // YAHAN FIX HAI: distinctBy properly map karke apply kiya hai taaki array conversion ka syntax error na aaye
+    val filteredSongs = remember(songs, hideExplicit, normalizedQuery) {
         (if (hideExplicit) {
             songs.filter { !it.song.explicit }
         } else {
             songs
         }).filter { song ->
-            val artistNames = song.artists.map { it.name }.toTypedArray()
-            matchesNormalizedQuery(normalizedQuery, song.song.title, song.album?.title, *artistNames)
-        }
+            val queryMatchesTitle = matchesNormalizedQuery(normalizedQuery, song.song.title, song.album?.title)
+            val queryMatchesArtist = song.artists.any { matchesNormalizedQuery(normalizedQuery, it.name) }
+            queryMatchesTitle || queryMatchesArtist
+        }.distinctBy { it.song.id }
+    }
 
     // Upload progress dialog
     if (showUploadDialog) {

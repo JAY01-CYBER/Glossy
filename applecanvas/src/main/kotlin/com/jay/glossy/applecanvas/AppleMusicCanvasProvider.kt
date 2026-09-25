@@ -15,6 +15,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.KotlinxSerializationConverter
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.*
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
@@ -58,7 +59,7 @@ object AppleMusicCanvasProvider {
     }
 
     private suspend fun searchAndFetchMotion(term: String, artist: String, album: String?, storefront: String, type: String): CanvasArtwork? {
-        return runCatching {
+        return try {
             val query = if (term.contains(artist, true)) term else "$artist $term"
             val token = AppleMusicTokenProvider.getToken()
             
@@ -71,28 +72,43 @@ object AppleMusicCanvasProvider {
                 parameter("extend", "editorialVideo")
                 parameter("include", "albums")
             }
-            if (response.status != HttpStatusCode.OK) return@runCatching null
+            if (response.status != HttpStatusCode.OK) return null
 
             val root = response.body<JsonObject>()
-            val results = root["results"]?.jsonObject?.get(type)?.jsonObject?.get("data")?.jsonArray ?: return@runCatching null
+            val results = root["results"]?.jsonObject?.get(type)?.jsonObject?.get("data")?.jsonArray ?: return null
 
             for (item in results) {
                 val attributes = item.jsonObject["attributes"]?.jsonObject ?: continue
+
+                // Validate the hit actually is the requested song before
+                // accepting its motion video — otherwise a different track
+                // with an editorial video gets painted for this song.
+                val resultName = attributes["name"]?.jsonPrimitive?.contentOrNull.orEmpty()
+                val resultArtist = attributes["artistName"]?.jsonPrimitive?.contentOrNull.orEmpty()
+                if (!resultName.contains(term, ignoreCase = true)) continue
+                if (artist.isNotBlank() && !resultArtist.contains(artist, ignoreCase = true)) continue
+
                 val ev = attributes["editorialVideo"]?.jsonObject
                 
                 if (ev != null) {
                     val url = extractEditorialVideoUrl(ev)
                     if (!url.isNullOrBlank()) {
-                        return@runCatching CanvasArtwork(
-                            name = attributes["name"]?.jsonPrimitive?.contentOrNull,
-                            artist = attributes["artistName"]?.jsonPrimitive?.contentOrNull,
+                        return CanvasArtwork(
+                            name = resultName,
+                            artist = resultArtist,
                             animated = url
                         )
                     }
                 }
             }
             null
-        }.getOrNull()
+        } catch (e: CancellationException) {
+            // Never swallow cancellation — a lookup cancelled by a track change
+            // must not complete and paint the previous song's artwork.
+            throw e
+        } catch (e: Exception) {
+            null
+        }
     }
 
     private fun extractEditorialVideoUrl(ev: JsonObject): String? {

@@ -64,6 +64,9 @@ import com.jay.glossy.ui.screens.settings.integrations.DiscordSettings
 import com.jay.glossy.ui.screens.settings.integrations.IntegrationScreen
 import com.jay.glossy.ui.screens.settings.integrations.LastFMSettings
 import com.jay.glossy.ui.screens.settings.integrations.ListenTogetherSettings
+import com.jay.glossy.spotify.SpotifyLoginScreen
+import com.jay.glossy.spotify.SpotifyTokenLoginScreen
+import com.jay.glossy.spotify.SpotifyPlaylistScreen
 
 import com.jay.glossy.ui.screens.wrapped.WrappedScreen
 import com.jay.glossy.utils.rememberEnumPreference
@@ -100,9 +103,6 @@ fun NavGraphBuilder.navigationBuilder(
                 }
             },
             onGoogleLoginClick = { 
-                // BUG FIX: Yahan 'has_seen_welcome' ko true nahi karna hai aur 
-                // 'welcome' screen ko history se delete (popUpTo) nahi karna hai.
-                // Sirf login screen par navigate karna hai.
                 navController.navigate("login")
             }
         )
@@ -443,6 +443,35 @@ fun NavGraphBuilder.navigationBuilder(
         LastFMSettings(navController)
     }
 
+    composable("settings/integrations/spotify") {
+        SpotifyLoginScreen(navController)
+    }
+
+    composable("settings/integrations/spotify_token") {
+        SpotifyTokenLoginScreen(navController)
+    }
+
+    // Direct Routes for Spotify Screens
+    composable("spotify_login") {
+        SpotifyLoginScreen(navController)
+    }
+    
+    composable("spotify_token_login") {
+        SpotifyTokenLoginScreen(navController)
+    }
+
+    composable(
+        route = "spotify_playlist/{playlistId}",
+        arguments =
+            listOf(
+                navArgument("playlistId") {
+                    type = NavType.StringType
+                },
+            ),
+    ) {
+        SpotifyPlaylistScreen(navController, scrollBehavior)
+    }
+
     composable(route = "settings/integrations/listen_together") {
         ListenTogetherSettings(navController)
     }
@@ -489,6 +518,7 @@ fun NavGraphBuilder.navigationBuilder(
     composable("recognition_history") {
         RecognitionHistoryScreen(navController)
     }
+    
     composable("settings/android_auto") {
         AndroidAutoSettings(navController)
     }

@@ -413,6 +413,7 @@
     <string name="lyrics_romanize_as_main">Show romanized lyrics as main</string>
 
     <string name="integrations">Integrations</string>
+    <string name="spotify_integration">Spotify</string>
     <string name="username">Username</string>
     <string name="password">Password</string>
 
@@ -523,6 +524,42 @@
     <string name="import_error_title">Import error</string>
     <string name="error_title">Error</string>
     <string name="error_eq_apply_failed">Failed to apply equalizer profile: %1$s</string>
+
+    <!-- Sound FX (ArchiveTune-style system equalizer) -->
+    <string name="sound_fx">Sound FX</string>
+    <string name="autoeq_tab">AutoEQ</string>
+    <string name="sound_fx_loading">Loading sound effects…</string>
+    <string name="sound_fx_enable">Enable sound effects</string>
+    <string name="sound_fx_enable_desc">System equalizer, bass boost and surround effects</string>
+    <string name="sound_fx_needs_playback">Start playing a song to load your device\'s equalizer</string>
+    <string name="sound_fx_mode_basic">Basic</string>
+    <string name="sound_fx_mode_advanced">Advanced</string>
+    <string name="sound_fx_presets">Presets</string>
+    <string name="preset_flat">Flat</string>
+    <string name="sound_fx_tone_bass">Bass</string>
+    <string name="sound_fx_tone_midrange">Midrange</string>
+    <string name="sound_fx_tone_treble">Treble</string>
+    <string name="sound_fx_reset_bands">Reset</string>
+    <string name="sound_fx_output_gain">Output gain</string>
+    <string name="sound_fx_output_gain_desc">Boost or cut the overall volume up to ±15 dB</string>
+    <string name="sound_fx_gain_value">Gain: %1$s</string>
+    <string name="sound_fx_max_boost">Max boost</string>
+    <string name="sound_fx_normalization_warning">Volume normalization is on — it lowers loudness and may fight your boost</string>
+    <string name="sound_fx_bass_boost">Bass boost</string>
+    <string name="sound_fx_virtualizer">Virtualizer (surround)</string>
+    <string name="sound_fx_strength">%1$d / 1000</string>
+    <string name="sound_fx_auto_headroom">Auto headroom</string>
+    <string name="sound_fx_auto_headroom_desc">Reduce gain to prevent clipping while boosting</string>
+    <string name="sound_fx_profiles">Profiles</string>
+    <string name="sound_fx_save_profile">Save profile</string>
+    <string name="sound_fx_profile_name">Profile name</string>
+    <string name="sound_fx_save">Save</string>
+    <string name="sound_fx_import">Import</string>
+    <string name="sound_fx_export">Export</string>
+    <string name="sound_fx_delete">Delete</string>
+    <string name="sound_fx_no_profiles">No saved profiles yet</string>
+    <string name="sound_fx_error">Something went wrong: %1$s</string>
+    <string name="sound_fx_error_preset">Couldn\'t apply the preset — start playback first, then try again</string>
 
     <!-- EQ Wizard -->
     <string name="wizard_select_model">Select Model</string>

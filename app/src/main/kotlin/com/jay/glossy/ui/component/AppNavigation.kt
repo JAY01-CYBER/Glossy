@@ -175,7 +175,7 @@ fun AppNavigationBar(
     slimNav: Boolean = false,
     onSearchLongClick: (() -> Unit)? = null
 ) {
-    val (useFloatingNavBar) = rememberPreference(UseFloatingNavBarKey, defaultValue = false)
+    val (useFloatingNavBar) = rememberPreference(UseFloatingNavBarKey, defaultValue = true)
 
     if (useFloatingNavBar) {
         FloatingAppNavigationBar(

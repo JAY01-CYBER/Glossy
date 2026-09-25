@@ -13,6 +13,7 @@ import android.media.AudioManager
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -27,6 +28,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.*
@@ -431,9 +434,11 @@ internal fun AppleMusicBottomCluster(
     position: Long,
     duration: Long,
     modifier: Modifier = Modifier,
+    withFrost: Boolean = true,
 ) {
     val localDensity = LocalDensity.current
-    Column(modifier = modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 8.dp)) {
+    val clusterContent: @Composable () -> Unit = {
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 8.dp)) {
         
         val playerConnection = LocalPlayerConnection.current
         var sliderPosition by remember { mutableStateOf<Long?>(null) }
@@ -466,19 +471,87 @@ internal fun AppleMusicBottomCluster(
         AppleMusicVolumeRow()
         Spacer(modifier = Modifier.height(14.dp))
         
-        AppleMusicDock(
-            viewState = viewState,
-            onSelectView = onSelectView,
-            lyricsAvailable = lyricsAvailable,
-            activeColor = activeColor,
-            activeContentColor = activeContentColor,
+            AppleMusicDock(
+                viewState = viewState,
+                onSelectView = onSelectView,
+                lyricsAvailable = lyricsAvailable,
+                activeColor = activeColor,
+                activeContentColor = activeContentColor,
+            )
+            
+            Spacer(
+                modifier = Modifier.height(
+                    with(localDensity) { WindowInsets.systemBars.getBottom(localDensity).toDp() } + 12.dp,
+                ),
+            )
+        }
+    }
+
+    if (withFrost) {
+        FrostedBottomPanel(modifier = modifier.fillMaxWidth()) {
+            clusterContent()
+        }
+    } else {
+        clusterContent()
+    }
+}
+
+/**
+ * Premium frosted-glass sheet for the bottom of the Apple Music style player:
+ * a heavily blurred, darkened crop of the current artwork sits behind the
+ * controls with a hairline glass edge on top.
+ */
+@Composable
+internal fun FrostedBottomPanel(
+    modifier: Modifier = Modifier,
+    cornerRadius: Dp = 32.dp,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    val shape = RoundedCornerShape(topStart = cornerRadius, topEnd = cornerRadius)
+    val playerConnection = LocalPlayerConnection.current
+    val mediaMetadata = playerConnection?.mediaMetadata?.collectAsStateWithLifecycle()?.value
+    val context = LocalContext.current
+    val artworkUrl = remember(mediaMetadata?.thumbnailUrl) {
+        mediaMetadata?.thumbnailUrl?.toHighRes()
+    }
+
+    Box(modifier = modifier.clip(shape)) {
+        if (artworkUrl != null) {
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(artworkUrl)
+                    .crossfade(400)
+                    .build(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .matchParentSize()
+                    .graphicsLayer {
+                        scaleX = 1.4f
+                        scaleY = 1.4f
+                    }
+                    .blur(56.dp)
+                    .alpha(0.55f),
+            )
+        }
+        Box(
+            Modifier
+                .matchParentSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color.Black.copy(alpha = 0.50f),
+                            Color.Black.copy(alpha = 0.22f),
+                        ),
+                    ),
+                ),
         )
-        
-        Spacer(
-            modifier = Modifier.height(
-                with(localDensity) { WindowInsets.systemBars.getBottom(localDensity).toDp() } + 12.dp,
-            ),
+        Box(
+            Modifier
+                .matchParentSize()
+                .border(1.dp, Color.White.copy(alpha = 0.10f), shape),
         )
+        content()
     }
 }
 

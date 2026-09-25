@@ -59,6 +59,10 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import androidx.navigation.NavController
 import com.jay.glossy.LocalPlayerAwareWindowInsets
+import com.jay.glossy.constants.CanvasStyle
+import com.jay.glossy.constants.CanvasStyleKey
+import com.jay.glossy.constants.BackgroundBlurEnabledKey
+import com.jay.glossy.constants.BackgroundBlurStrengthKey
 import com.jay.glossy.constants.CanvasThumbnailAnimationKey
 import com.jay.glossy.constants.ChipSortTypeKey
 import com.jay.glossy.constants.CropAlbumArtKey
@@ -225,6 +229,13 @@ fun AppearanceSettings(
             defaultValue = false, // DEFAULT OFF RAKHA HAI MANGI HUI TAZA
         )
 
+    val (canvasStyle, onCanvasStyleChange) =
+        rememberEnumPreference(
+            CanvasStyleKey,
+            defaultValue = CanvasStyle.ALL,
+        )
+    var showCanvasStyleDialog by rememberSaveable { mutableStateOf(false) }
+
     val (defaultOpenTab, onDefaultOpenTabChange) =
         rememberEnumPreference(
             DefaultOpenTabKey,
@@ -264,6 +275,11 @@ fun AppearanceSettings(
     val (lyricsLineSpacing, onLyricsLineSpacingChange) = rememberPreference(LyricsLineSpacingKey, defaultValue = 1.2f)
 
     val (showFeaturedCarousel, onShowFeaturedCarouselChange) = rememberPreference(ShowFeaturedCarouselKey, defaultValue = true)
+
+    val (backgroundBlurEnabled, onBackgroundBlurEnabledChange) =
+        rememberPreference(BackgroundBlurEnabledKey, defaultValue = true)
+    val (backgroundBlurStrength, onBackgroundBlurStrengthChange) =
+        rememberPreference(BackgroundBlurStrengthKey, defaultValue = 0.6f)
     val (quickPicksStyle, onQuickPicksStyleChange) = rememberEnumPreference(QuickPicksStyleKey, defaultValue = QuickPicksStyle.GRID)
     var showQuickPicksStyleDialog by rememberSaveable { mutableStateOf(false) }
 
@@ -314,7 +330,7 @@ fun AppearanceSettings(
     val (useFloatingNavBar, onUseFloatingNavBarChange) = 
         rememberPreference(
             UseFloatingNavBarKey,
-            defaultValue = false,
+            defaultValue = true,
         )
 
     val context = activity as Context
@@ -394,6 +410,29 @@ fun AppearanceSettings(
     var showPlayerBackgroundDialog by rememberSaveable { mutableStateOf(false) }
     var showPlayerButtonsStyleDialog by rememberSaveable { mutableStateOf(false) }
     var showLyricsPositionDialog by rememberSaveable { mutableStateOf(false) }
+
+    if (showCanvasStyleDialog) {
+        EnumDialog(
+            onDismiss = { showCanvasStyleDialog = false },
+            onSelect = {
+                onCanvasStyleChange(it)
+                com.jay.glossy.ui.player.CanvasResolver.invalidateStyle()
+                showCanvasStyleDialog = false
+            },
+            title = "Canvas Style",
+            current = canvasStyle,
+            values = CanvasStyle.entries.toList(),
+            valueText = {
+                when (it) {
+                    CanvasStyle.ALL -> "All Providers (fastest — races all sources)"
+                    CanvasStyle.GLOSSY -> "Glossy (Tidal + Apple Music)"
+                    CanvasStyle.ARCHIVE_TUNE -> "ArchiveTune (BetterLyrics)"
+                    CanvasStyle.BOTH -> "Both (ArchiveTune first, Glossy fallback)"
+                    CanvasStyle.SPOTIFY -> "Spotify Canvas"
+                }
+            },
+        )
+    }
 
     if (showPlayerStyleDialog) {
         EnumDialog(
@@ -748,6 +787,7 @@ fun AppearanceSettings(
                     LibraryFilter.PLAYLISTS -> stringResource(R.string.playlists)
                     LibraryFilter.PODCASTS -> stringResource(R.string.filter_podcasts)
                     LibraryFilter.LIBRARY -> stringResource(R.string.filter_library)
+                    LibraryFilter.SPOTIFY -> "Spotify"
                 }
             },
         )
@@ -1101,6 +1141,51 @@ fun AppearanceSettings(
                 )
             )
         )
+
+        Spacer(modifier = Modifier.height(27.dp))
+
+        Material3SettingsGroup(
+            title = "Background Blur",
+            items = listOf(
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.gradient),
+                    title = { Text("Frosted Background") },
+                    description = { Text("Blur + soft color glow behind the whole app") },
+                    trailingContent = {
+                        Switch(
+                            checked = backgroundBlurEnabled,
+                            onCheckedChange = onBackgroundBlurEnabledChange,
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(id = if (backgroundBlurEnabled) R.drawable.check else R.drawable.close),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                )
+                            }
+                        )
+                    },
+                    onClick = { onBackgroundBlurEnabledChange(!backgroundBlurEnabled) }
+                ),
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.tune),
+                    title = { Text("Blur Strength") },
+                    description = {
+                        Column {
+                            Text("${(backgroundBlurStrength * 100).toInt()}%")
+                            Slider(
+                                value = backgroundBlurStrength,
+                                onValueChange = onBackgroundBlurStrengthChange,
+                                valueRange = 0.1f..1f,
+                                enabled = backgroundBlurEnabled,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                    },
+                    enabled = backgroundBlurEnabled,
+                    onClick = null
+                )
+            )
+        )
         
         Spacer(modifier = Modifier.height(27.dp))
 
@@ -1438,6 +1523,22 @@ fun AppearanceSettings(
                             )
                         },
                         onClick = { onCanvasThumbnailAnimationChange(!canvasThumbnailAnimation) }
+                    ),
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.play),
+                        title = { Text("Canvas Style") },
+                        description = {
+                            Text(
+                                when (canvasStyle) {
+                                    CanvasStyle.ALL -> "All Providers (fastest — races all sources)"
+                                    CanvasStyle.GLOSSY -> "Glossy (Tidal + Apple Music)"
+                                    CanvasStyle.ARCHIVE_TUNE -> "ArchiveTune (BetterLyrics)"
+                                    CanvasStyle.BOTH -> "Both (ArchiveTune first, Glossy fallback)"
+                                    CanvasStyle.SPOTIFY -> "Spotify Canvas"
+                                }
+                            )
+                        },
+                        onClick = { showCanvasStyleDialog = true }
                     ),
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.swipe),
@@ -1826,6 +1927,7 @@ fun AppearanceSettings(
                                     LibraryFilter.PLAYLISTS -> stringResource(R.string.playlists)
                                     LibraryFilter.PODCASTS -> stringResource(R.string.filter_podcasts)
                                     LibraryFilter.LIBRARY -> stringResource(R.string.filter_library)
+                                    LibraryFilter.SPOTIFY -> "Spotify"
                                 },
                             )
                         },

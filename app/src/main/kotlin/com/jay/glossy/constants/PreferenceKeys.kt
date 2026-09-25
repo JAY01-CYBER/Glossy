@@ -55,7 +55,11 @@ enum class DensityScale(
 
 val DefaultOpenTabKey = stringPreferencesKey("defaultOpenTab")
 val SlimNavBarKey = booleanPreferencesKey("slimNavBar")
-val UseFloatingNavBarKey = booleanPreferencesKey("useFloatingNavBar") 
+val UseFloatingNavBarKey = booleanPreferencesKey("useFloatingNavBar")
+
+// App-wide background blur (frosted gradient backdrop behind Home/Library/etc.)
+val BackgroundBlurEnabledKey = booleanPreferencesKey("backgroundBlurEnabled")
+val BackgroundBlurStrengthKey = floatPreferencesKey("backgroundBlurStrength")
 val GridItemsSizeKey = stringPreferencesKey("gridItemSize")
 val SliderStyleKey = stringPreferencesKey("sliderStyle")
 val SquigglySliderKey = booleanPreferencesKey("squigglySlider")
@@ -98,6 +102,23 @@ val AlarmEntriesKey = stringPreferencesKey("alarmEntries")
 val DeveloperModeKey = booleanPreferencesKey("developerMode")
 val CanvasThumbnailAnimationKey = booleanPreferencesKey("canvasThumbnailAnimation")
 
+/** Which canvas provider strategy to use for animated artwork. */
+val CanvasStyleKey = stringPreferencesKey("canvasStyle")
+enum class CanvasStyle {
+    /**
+     * Race every provider (Spotify + ArchiveTune + Tidal + Apple = the
+     * Glossy engine) concurrently and show the first canvas that comes back.
+     */
+    ALL,
+    /** Glossy engine: Tidal + Apple Music (original behavior). */
+    GLOSSY,
+    /** ArchiveTune engine: BetterLyrics community artwork service. */
+    ARCHIVE_TUNE,
+    /** Try BetterLyrics first, then fall back to Tidal + Apple Music. */
+    BOTH,
+    /** Spotify web-player Canvas artwork. */
+    SPOTIFY,
+}
 
 val CanvasCacheModeKey = stringPreferencesKey("canvasCacheMode")
 enum class CanvasCacheMode {
@@ -175,6 +196,20 @@ enum class LoudnessLevel(
     BALANCED(-14f),
     QUIET(-19f),
 }
+
+// Sound FX (system audio effect equalizer: bands, output gain, bass boost, virtualizer)
+val SoundFxEnabledKey = booleanPreferencesKey("soundFxEnabled")
+val SoundFxControlModeKey = stringPreferencesKey("soundFxControlMode")
+val SoundFxBandLevelsMbKey = stringPreferencesKey("soundFxBandLevelsMb")
+val SoundFxSelectedProfileIdKey = stringPreferencesKey("soundFxSelectedProfileId")
+val SoundFxOutputGainEnabledKey = booleanPreferencesKey("soundFxOutputGainEnabled")
+val SoundFxOutputGainMbKey = intPreferencesKey("soundFxOutputGainMb")
+val SoundFxBassBoostEnabledKey = booleanPreferencesKey("soundFxBassBoostEnabled")
+val SoundFxBassBoostStrengthKey = intPreferencesKey("soundFxBassBoostStrength")
+val SoundFxVirtualizerEnabledKey = booleanPreferencesKey("soundFxVirtualizerEnabled")
+val SoundFxVirtualizerStrengthKey = intPreferencesKey("soundFxVirtualizerStrength")
+val SoundFxAutoHeadroomKey = booleanPreferencesKey("soundFxAutoHeadroom")
+val SoundFxProfilesJsonKey = stringPreferencesKey("soundFxProfilesJson")
 
 val AutoLoadMoreKey = booleanPreferencesKey("autoLoadMore")
 val AutoRadioQueueKey = booleanPreferencesKey("autoRadioQueue")
@@ -259,6 +294,7 @@ val ScrobbleMinSongDurationKey = intPreferencesKey("scrobbleMinSongDuration")
 val ScrobbleDelaySecondsKey = intPreferencesKey("scrobbleDelaySeconds")
 
 val ChipSortTypeKey = stringPreferencesKey("chipSortType")
+
 val SongSortTypeKey = stringPreferencesKey("songSortType")
 val SongSortDescendingKey = booleanPreferencesKey("songSortDescending")
 val PlaylistSongSortTypeKey = stringPreferencesKey("playlistSongSortType")

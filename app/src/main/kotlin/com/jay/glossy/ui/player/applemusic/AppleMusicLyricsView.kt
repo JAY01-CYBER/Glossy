@@ -10,9 +10,12 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -25,7 +28,13 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -37,6 +46,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.jay.glossy.LocalDatabase
 import com.jay.glossy.R
 import com.jay.glossy.LocalPlayerConnection
@@ -176,16 +188,69 @@ internal fun AppleMusicLyricsView(
         Box(
             modifier = Modifier
                 .weight(1f)
-                .nestedScroll(scrollWakesControls)
-                .clickable(
-                    indication = null,
-                    interactionSource = remember { MutableInteractionSource() }
-                ) {
-                    showCluster = !showCluster
-                    interactionTick++
-                },
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp),
             contentAlignment = Alignment.Center
         ) {
+            // Premium frosted-glass lyrics panel: blurred artwork backdrop + dark scrim.
+            val lyricsArtworkUrl = remember(mediaMetadata?.thumbnailUrl) {
+                mediaMetadata?.thumbnailUrl?.toHighRes()
+            }
+            val lyricsPanelShape = RoundedCornerShape(28.dp)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(lyricsPanelShape)
+            ) {
+                if (lyricsArtworkUrl != null) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(lyricsArtworkUrl)
+                            .crossfade(400)
+                            .build(),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .matchParentSize()
+                            .graphicsLayer {
+                                scaleX = 1.5f
+                                scaleY = 1.5f
+                            }
+                            .blur(72.dp)
+                            .alpha(0.6f),
+                    )
+                }
+                Box(
+                    Modifier
+                        .matchParentSize()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color.Black.copy(alpha = 0.35f),
+                                    Color.Black.copy(alpha = 0.55f),
+                                ),
+                            ),
+                        ),
+                )
+                Box(
+                    Modifier
+                        .matchParentSize()
+                        .border(1.dp, Color.White.copy(alpha = 0.10f), lyricsPanelShape),
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .nestedScroll(scrollWakesControls)
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() }
+                    ) {
+                        showCluster = !showCluster
+                        interactionTick++
+                    },
+                contentAlignment = Alignment.Center
+            ) {
             when {
                 lyrics == null -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -227,6 +292,7 @@ internal fun AppleMusicLyricsView(
                         )
                     }
                 }
+            }
             }
         }
 

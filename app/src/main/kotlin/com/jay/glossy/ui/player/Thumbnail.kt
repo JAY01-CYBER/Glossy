@@ -8,6 +8,8 @@ package com.jay.glossy.ui.player
 import com.jay.glossy.R
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -31,7 +33,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -78,9 +80,7 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.jay.glossy.LocalListenTogetherManager
 import com.jay.glossy.LocalPlayerConnection
-import com.jay.glossy.applecanvas.AppleMusicCanvasProvider
 import com.jay.glossy.canvas.CanvasArtwork
-import com.jay.glossy.canvas.TidalCanvasProvider
 import com.jay.glossy.constants.CanvasThumbnailAnimationKey
 import com.jay.glossy.constants.CropAlbumArtKey
 import com.jay.glossy.constants.HidePlayerThumbnailKey
@@ -99,15 +99,12 @@ import com.jay.glossy.utils.rememberPreference
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import java.io.File
-import java.util.Locale
 
 @Immutable
 data class ThumbnailDimensions(
@@ -199,7 +196,10 @@ private fun getTextColor(playerBackground: PlayerBackgroundStyle): Color {
 // OPTIMIZED PERSISTENT CACHE
 object CanvasArtworkPlaybackCache {
     private const val defaultMaxSize = 256
-    private const val PERSIST_FILE = "canvas_artwork_cache.json"
+    // v2: the v1 file may hold mismatched canvases from before per-track
+    // validation existed, so it is ignored and deleted on init.
+    private const val PERSIST_FILE = "canvas_artwork_cache_v2.json"
+    private const val LEGACY_PERSIST_FILE = "canvas_artwork_cache.json"
     private const val PERSIST_DEBOUNCE_MS = 2_000L
 
     private val map = LinkedHashMap<String, CanvasArtwork>(defaultMaxSize, 0.75f, true)
@@ -219,6 +219,8 @@ object CanvasArtworkPlaybackCache {
 
     fun init(context: android.content.Context) {
         cacheFile = File(context.filesDir, PERSIST_FILE)
+        // Drop pre-validation entries: they can contain wrong-song canvases.
+        runCatching { File(context.filesDir, LEGACY_PERSIST_FILE).delete() }
         loadFromDisk()
     }
 
@@ -541,33 +543,61 @@ fun Thumbnail(
                                         .fillMaxSize()
                                         .clip(RoundedCornerShape(dimensions.cornerRadius))
                                 ) {
-                                    if (hidePlayerThumbnail) {
-                                        HiddenThumbnailPlaceholder(
-                                            textBackgroundColor = textBackgroundColor,
-                                            playerStyleName = playerStyle.name
-                                        )
-                                    } else {
-                                        val artworkUriToUse = if (currentMedia?.mediaId == mediaMetadata?.id && !mediaMetadata?.thumbnailUrl.isNullOrBlank()) {
-                                            mediaMetadata?.thumbnailUrl
-                                        } else {
-                                            currentMedia?.mediaMetadata?.artworkUri?.toString()
-                                        }
-                                        ThumbnailImage(
-                                            artworkUri = artworkUriToUse,
-                                            cropArtwork = cropAlbumArt,
-                                            playerStyleName = playerStyle.name
-                                        )
-                                    }
-
                                     val (canvasThumbnailAnimation) = rememberPreference(CanvasThumbnailAnimationKey, defaultValue = false)
+                                    var canvasVideoReady by remember { mutableStateOf(false) }
+                                    val artworkAlpha by animateFloatAsState(
+                                        targetValue = if (canvasVideoReady) 0f else 1f,
+                                        animationSpec = tween(250),
+                                        label = "artworkAlpha",
+                                    )
 
                                     if (canvasThumbnailAnimation && currentMedia?.mediaId == mediaMetadata?.id && currentMedia != null) {
+                                        // Static artwork dims out once the canvas video is
+                                        // rendering — avoids drawing two full layers every frame.
+                                        Box(Modifier.graphicsLayer { alpha = artworkAlpha }) {
+                                            if (hidePlayerThumbnail) {
+                                                HiddenThumbnailPlaceholder(
+                                                    textBackgroundColor = textBackgroundColor,
+                                                    playerStyleName = playerStyle.name
+                                                )
+                                            } else {
+                                                val artworkUriToUse = if (currentMedia?.mediaId == mediaMetadata?.id && !mediaMetadata?.thumbnailUrl.isNullOrBlank()) {
+                                                    mediaMetadata?.thumbnailUrl
+                                                } else {
+                                                    currentMedia?.mediaMetadata?.artworkUri?.toString()
+                                                }
+                                                ThumbnailImage(
+                                                    artworkUri = artworkUriToUse,
+                                                    cropArtwork = cropAlbumArt,
+                                                    playerStyleName = playerStyle.name
+                                                )
+                                            }
+                                        }
                                         CanvasLayer(
                                             item = currentMedia,
-                                            modifier = Modifier.fillMaxSize()
+                                            modifier = Modifier.fillMaxSize(),
+                                            onVideoReady = { canvasVideoReady = it }
                                         )
+                                    } else {
+                                        if (hidePlayerThumbnail) {
+                                            HiddenThumbnailPlaceholder(
+                                                textBackgroundColor = textBackgroundColor,
+                                                playerStyleName = playerStyle.name
+                                            )
+                                        } else {
+                                            val artworkUriToUse = if (currentMedia?.mediaId == mediaMetadata?.id && !mediaMetadata?.thumbnailUrl.isNullOrBlank()) {
+                                                mediaMetadata?.thumbnailUrl
+                                            } else {
+                                                currentMedia?.mediaMetadata?.artworkUri?.toString()
+                                            }
+                                            ThumbnailImage(
+                                                artworkUri = artworkUriToUse,
+                                                cropArtwork = cropAlbumArt,
+                                                playerStyleName = playerStyle.name
+                                            )
+                                        }
                                     }
-                                    
+
                                     CastButton(
                                         modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
                                         tintColor = textBackgroundColor
@@ -587,12 +617,13 @@ fun Thumbnail(
                                 Modifier.fillMaxSize()
                             }
                         ) {
-                            items(
+                            // YAHAN PAR FIX HAI: Key Collision se bachne ke liye itemsIndexed aur ID_+_Index ka use kiya gaya hai.
+                            itemsIndexed(
                                 items = mediaItems,
-                                key = { item -> 
-                                    item.mediaId.ifEmpty { "unknown_${item.hashCode()}" }
+                                key = { index, item -> 
+                                    "${item.mediaId}_$index".ifEmpty { "unknown_${item.hashCode()}_$index" }
                                 }
-                            ) { item ->
+                            ) { index, item ->
                                 ThumbnailItem(
                                     item = item,
                                     dimensions = dimensions,
@@ -637,61 +668,26 @@ fun Thumbnail(
 @Composable
 private fun CanvasLayer(
     item: MediaItem,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onVideoReady: (Boolean) -> Unit = {},
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
+    val context = LocalContext.current
     val isPlaying by playerConnection.isPlaying.collectAsState()
 
     var canvasArtwork by remember(item.mediaId) { mutableStateOf<CanvasArtwork?>(null) }
-    var canvasFetchInFlight by remember(item.mediaId) { mutableStateOf(false) }
-    val storefront = remember {
-        val country = Locale.getDefault().country
-        if (country.length == 2) country.lowercase(Locale.ROOT) else "us"
-    }
 
     LaunchedEffect(item.mediaId) {
-        CanvasArtworkPlaybackCache.get(item.mediaId)?.let { cached ->
-            canvasArtwork = cached
-            return@LaunchedEffect
-        }
-
-        if (canvasFetchInFlight) return@LaunchedEffect
-        canvasFetchInFlight = true
-
-        val fetched = withContext(Dispatchers.IO) {
-            val metadata = item.mediaMetadata
-            val albumName = metadata.albumTitle?.toString() ?: ""
-            val songTitleRaw = metadata.title?.toString() ?: ""
-            val artistNameRaw = metadata.artist?.toString() ?: ""
-            
-            val songTitle = normalizeCanvasSongTitle(songTitleRaw)
-            val artistName = normalizeCanvasArtistName(artistNameRaw)
-
-            if (songTitle.isBlank() || artistName.isBlank()) return@withContext null
-
-            val tidalDeferred = async {
-                TidalCanvasProvider.getBySongArtist(songTitle, artistName, albumName)
-                    ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
-            }
-            
-            val appleDeferred = async {
-                if (albumName.isNotBlank()) {
-                    AppleMusicCanvasProvider.getByAlbumArtist(albumName, artistName, storefront)
-                        ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
-                } else {
-                    null
-                } ?: AppleMusicCanvasProvider.getBySongArtist(songTitle, artistName, albumName, storefront)
-                    ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
-            }
-
-            tidalDeferred.await() ?: appleDeferred.await()
-        }
-        
-        canvasArtwork = fetched
-        if (fetched != null) {
-            CanvasArtworkPlaybackCache.put(item.mediaId, fetched)
-        }
-        canvasFetchInFlight = false
+        onVideoReady(false)
+        // Playback cache is checked inside CanvasResolver; style-aware providers
+        // (Glossy / ArchiveTune / Both) are selected per the user preference.
+        canvasArtwork = CanvasResolver.resolve(
+            context = context,
+            mediaId = item.mediaId,
+            songTitle = item.mediaMetadata.title?.toString() ?: "",
+            artistName = item.mediaMetadata.artist?.toString() ?: "",
+            albumName = item.mediaMetadata.albumTitle?.toString() ?: "",
+        )
     }
 
     canvasArtwork?.let { artwork ->
@@ -699,7 +695,8 @@ private fun CanvasLayer(
             primaryUrl = artwork.animated,
             fallbackUrl = artwork.videoUrl,
             isPlaying = isPlaying, // Pause animation when music is paused
-            modifier = modifier
+            modifier = modifier,
+            onVideoReady = onVideoReady
         )
     }
 }
@@ -828,32 +825,62 @@ private fun ThumbnailItem(
                 .size(dimensions.thumbnailSize)
                 .clip(RoundedCornerShape(dimensions.cornerRadius))
         ) {
-            if (hidePlayerThumbnail) {
-                HiddenThumbnailPlaceholder(
-                    textBackgroundColor = textBackgroundColor,
-                    playerStyleName = playerStyleName
-                )
-            } else {
-                val artworkUriToUse = if (item.mediaId == currentMediaId && !currentMediaThumbnail.isNullOrBlank()) {
-                    currentMediaThumbnail
-                } else {
-                    item.mediaMetadata.artworkUri?.toString()
-                }
-
-                ThumbnailImage(
-                    artworkUri = artworkUriToUse,
-                    cropArtwork = cropAlbumArt,
-                    playerStyleName = playerStyleName
-                )
-            }
-            
             val (canvasThumbnailAnimation) = rememberPreference(CanvasThumbnailAnimationKey, defaultValue = false)
+            var canvasVideoReady by remember { mutableStateOf(false) }
+            val artworkAlpha by animateFloatAsState(
+                targetValue = if (canvasVideoReady) 0f else 1f,
+                animationSpec = tween(250),
+                label = "itemArtworkAlpha",
+            )
 
             if (canvasThumbnailAnimation && item.mediaId == currentMediaId) {
+                // Fade the static artwork out once the canvas video renders so only
+                // one full-screen layer is drawn per frame.
+                Box(Modifier.graphicsLayer { alpha = artworkAlpha }) {
+                    if (hidePlayerThumbnail) {
+                        HiddenThumbnailPlaceholder(
+                            textBackgroundColor = textBackgroundColor,
+                            playerStyleName = playerStyleName
+                        )
+                    } else {
+                        val artworkUriToUse = if (item.mediaId == currentMediaId && !currentMediaThumbnail.isNullOrBlank()) {
+                            currentMediaThumbnail
+                        } else {
+                            item.mediaMetadata.artworkUri?.toString()
+                        }
+
+                        ThumbnailImage(
+                            artworkUri = artworkUriToUse,
+                            cropArtwork = cropAlbumArt,
+                            playerStyleName = playerStyleName
+                        )
+                    }
+                }
+
                 CanvasLayer(
                     item = item,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
+                    onVideoReady = { canvasVideoReady = it }
                 )
+            } else {
+                if (hidePlayerThumbnail) {
+                    HiddenThumbnailPlaceholder(
+                        textBackgroundColor = textBackgroundColor,
+                        playerStyleName = playerStyleName
+                    )
+                } else {
+                    val artworkUriToUse = if (item.mediaId == currentMediaId && !currentMediaThumbnail.isNullOrBlank()) {
+                        currentMediaThumbnail
+                    } else {
+                        item.mediaMetadata.artworkUri?.toString()
+                    }
+
+                    ThumbnailImage(
+                        artworkUri = artworkUriToUse,
+                        cropArtwork = cropAlbumArt,
+                        playerStyleName = playerStyleName
+                    )
+                }
             }
             
             CastButton(
