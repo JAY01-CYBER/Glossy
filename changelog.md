@@ -1,3 +1,34 @@
+---v0.0.4
+# 🚀 Glossy v0.0.4 - Animated Canvas, Equalizer & UI Overhaul
+
+![Glossy v0.0.4 Banner](./assets/updatebanner/v0.0.4.jpg)
+
+### ✨ New Features
+* **Animated Canvas:** Glossy (TIDAL + Apple Music), ArchiveTune (BetterLyrics), and Spotify Canvas support.
+* **Equalizer:** Tune your listening experience with built-in EQ controls.
+* **Spotify Login:** Sign in directly with your Spotify account.
+* **iOS-style Mini Player:** A completely refreshed mini-player experience.
+
+### 🎨 UI & Design
+* **Redesigned Screens:** Completely redesigned Home, Login, Player, Search, Settings, Lyrics, and Queue screens.
+* **Material You Restyle:** Complete Material You integration with a new global `GlossyShapes` corner system for a consistent rounded design.
+* **Refined Interfaces:** Improved Equalizer, Sound FX, and AutoEQ interfaces.
+* **Visual Consistency:** Improved cards, chips, buttons, menus, dialogs, text fields, and visual consistency across the entire app.
+
+### ⚡ Performance & Animations
+* **Smooth Animations:** Buttery-smooth UI animations across key screens.
+* **Lyrics Transitions:** Animated lyrics loading, state transitions, shimmering placeholders, and smoother lyrics ↔ thumbnail transitions.
+* **Stability:** Multiple performance and stability improvements.
+
+### 🎤 Faster Lyrics
+* **Instant Loading:** Lyrics are now loaded before you even open the lyrics panel, removing the artificial 500ms lyrics delay.
+* **Smart Fetching:** Lyrics begin fetching as soon as playback starts, with next-track lyrics prefetching for near-instant display when the song changes.
+* **Advanced Caching:** 24-hour negative cache prevents repeatedly searching for unavailable lyrics, while retaining existing provider racing and LRU caching.
+
+### 🛠️ And More
+* **Device Fixes:** Fixed Floating navigation bar for Samsung devices (now fully working).
+* **Under the Hood:** Numerous bug fixes, performance optimizations, playback improvements, and lots of smaller refinements across Glossy.
+
 ---v0.0.3
 # 🚀 Glossy v0.0.3 - Ultimate Lyrics Overhaul & Fixes
 
