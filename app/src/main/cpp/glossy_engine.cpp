@@ -9,11 +9,16 @@
 #include <string>
 #include "AudioDecoder.h"
 
+// FFmpeg headers for avformat_network_init()
+extern "C" {
+#include <libavformat/avformat.h>
+}
+
 AudioDecoder* decoder = nullptr;
 
 extern "C"
 JNIEXPORT jboolean JNICALL
-Java_com_jay_glossy_player_NativeEngine_nInitEngine(JNIEnv *env, jobject thiz) {
+Java_com_jay_glossy_ui_player_NativeEngine_nInitEngine(JNIEnv *env, jobject thiz) {
     if (!decoder) {
         decoder = new AudioDecoder();
     }
@@ -27,7 +32,7 @@ Java_com_jay_glossy_player_NativeEngine_nInitEngine(JNIEnv *env, jobject thiz) {
 
 extern "C"
 JNIEXPORT jboolean JNICALL
-Java_com_jay_glossy_player_NativeEngine_nPlayUrl(JNIEnv *env, jobject thiz, jstring jUrl) {
+Java_com_jay_glossy_ui_player_NativeEngine_nPlayUrl(JNIEnv *env, jobject thiz, jstring jUrl) {
     if (!decoder) {
         LOGE("Engine initialize nahi hua hai!");
         return JNI_FALSE;
