@@ -12,9 +12,10 @@ set_target_properties(ffmpeg PROPERTIES
 # 2. FFmpeg Headers ka rasta
 target_include_directories(ffmpeg INTERFACE ${CMAKE_SOURCE_DIR}/include)
 
-# 3. Tera custom Glossy Engine
+# 3. Tera custom Glossy Engine (Yahan AudioDecoder.cpp add kiya hai)
 add_library(glossy_engine SHARED 
     glossy_engine.cpp 
+    AudioDecoder.cpp
 )
 
 # 4. Google Oboe (Hardware Audio Playback)
