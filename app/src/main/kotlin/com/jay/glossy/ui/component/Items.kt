@@ -501,15 +501,21 @@ fun GridItem(
     fillMaxWidth: Boolean = false,
 ) {
     val gridHeight = currentGridThumbnailHeight()
-    
+    val cardShape = RoundedCornerShape(20.dp)
+    val cardColor = MaterialTheme.colorScheme.surfaceContainerLow
+
     Column(
         modifier = if (fillMaxWidth) {
             modifier
                 .padding(horizontal = 8.dp, vertical = 4.dp)
+                .clip(cardShape)
+                .background(cardColor)
                 .fillMaxWidth()
         } else {
             modifier
                 .padding(horizontal = 8.dp, vertical = 4.dp)
+                .clip(cardShape)
+                .background(cardColor)
                 .width(gridHeight * thumbnailRatio)
         }
     ) {
@@ -524,11 +530,16 @@ fun GridItem(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        title()
+        Box(modifier = Modifier.padding(horizontal = 10.dp)) {
+            title()
+        }
 
         Spacer(modifier = Modifier.height(2.dp))
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 10.dp),
+        ) {
             badges()
             subtitle()
         }

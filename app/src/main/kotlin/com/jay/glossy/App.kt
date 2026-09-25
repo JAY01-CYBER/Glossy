@@ -86,8 +86,10 @@ class App :
         // (bundled asset + cached overlay) is captured, not just the async remote refresh.
         Timber.plant(Timber.DebugTree())
 
-        // Initialize cipher deobfuscator for WEB_REMIX streaming
-        CipherDeobfuscator.initialize(this)
+        // Initialize cipher deobfuscator on background thread to keep app launch non-blocking
+        applicationScope.launch(Dispatchers.IO) {
+            CipherDeobfuscator.initialize(this@App)
+        }
 
         // Pre-read Coil cache size on background to avoid runBlocking in newImageLoader
         applicationScope.launch(Dispatchers.IO) {

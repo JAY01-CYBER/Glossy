@@ -22,6 +22,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -36,6 +37,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -53,6 +55,7 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -76,7 +79,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
@@ -1563,7 +1565,11 @@ fun BottomSheetPlayer(
                             AnimatedContent(
                                 targetState = showInlineLyrics,
                                 label = "Lyrics",
-                                transitionSpec = { fadeIn() togetherWith fadeOut() },
+                                transitionSpec = {
+                                    (fadeIn(animationSpec = tween(300, easing = FastOutSlowInEasing)) +
+                                        scaleIn(initialScale = 0.95f, animationSpec = tween(300, easing = FastOutSlowInEasing)))
+                                        .togetherWith(fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing)))
+                                },
                             ) { showLyrics ->
                                 if (showLyrics) {
                                     InlineLyricsView(
@@ -1623,7 +1629,11 @@ fun BottomSheetPlayer(
                             AnimatedContent(
                                 targetState = showInlineLyrics,
                                 label = "Lyrics",
-                                transitionSpec = { fadeIn() togetherWith fadeOut() },
+                                transitionSpec = {
+                                    (fadeIn(animationSpec = tween(300, easing = FastOutSlowInEasing)) +
+                                        scaleIn(initialScale = 0.95f, animationSpec = tween(300, easing = FastOutSlowInEasing)))
+                                        .togetherWith(fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing)))
+                                },
                             ) { showLyrics ->
                                 if (showLyrics) {
                                     InlineLyricsView(
@@ -1718,9 +1728,11 @@ fun InlineLyricsView(
         }
     }
 
+    // Fast lyrics: no artificial delay — kick off the fetch the moment the
+    // screen shows a song whose lyrics are not in the database yet. The service
+    // normally prefetches this already; this is the instant fallback path.
     LaunchedEffect(mediaMetadata?.id, currentLyrics) {
         if (mediaMetadata != null && currentLyrics == null) {
-            delay(500)
             coroutineScope.launch(Dispatchers.IO) {
                 try {
                     val entryPoint = EntryPointAccessors.fromApplication(
@@ -1767,31 +1779,122 @@ fun InlineLyricsView(
         modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)),
         contentAlignment = Alignment.Center,
     ) {
-        when {
-            lyrics == null -> {
-                ContainedLoadingIndicator()
-            }
-            lyrics == LyricsEntity.LYRICS_NOT_FOUND -> {
-                Text(
-                    text = stringResource(R.string.lyrics_not_found),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                    textAlign = TextAlign.Center,
-                )
-            }
-            else -> {
-                ProvideTextStyle(
-                    value = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = 14.sp,
+        // Buttery-smooth cross-state animation: scale + fade between loading,
+        // not-found and loaded states instead of an abrupt swap.
+        AnimatedContent(
+            targetState =
+                when {
+                    lyrics == null -> LyricsUiState.LOADING
+                    lyrics == LyricsEntity.LYRICS_NOT_FOUND -> LyricsUiState.NOT_FOUND
+                    else -> LyricsUiState.LOADED
+                },
+            transitionSpec = {
+                (fadeIn(animationSpec = tween(280, easing = FastOutSlowInEasing)) +
+                    scaleIn(initialScale = 0.96f, animationSpec = tween(280, easing = FastOutSlowInEasing)))
+                    .togetherWith(
+                        fadeOut(animationSpec = tween(180, easing = FastOutSlowInEasing))
+                    )
+            },
+            label = "LyricsState",
+        ) { state ->
+            when (state) {
+                LyricsUiState.LOADING -> LyricsShimmerPlaceholder()
+                LyricsUiState.NOT_FOUND -> {
+                    Text(
+                        text = stringResource(R.string.lyrics_not_found),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                         textAlign = TextAlign.Center,
-                    ),
-                ) {
-                    Lyrics(
-                        sliderPositionProvider = positionProvider,
-                        modifier = Modifier.padding(horizontal = 24.dp),
-                        showLyrics = showLyrics,
                     )
                 }
+                LyricsUiState.LOADED -> {
+                    ProvideTextStyle(
+                        value = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = 14.sp,
+                            textAlign = TextAlign.Center,
+                        ),
+                    ) {
+                        Lyrics(
+                            sliderPositionProvider = positionProvider,
+                            modifier = Modifier.padding(horizontal = 24.dp),
+                            showLyrics = showLyrics,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private enum class LyricsUiState { LOADING, NOT_FOUND, LOADED }
+
+/** Shimmering placeholder shown while lyrics load — perceived speed instead of a spinner. */
+@Composable
+private fun LyricsShimmerPlaceholder(modifier: Modifier = Modifier) {
+    val transition = rememberInfiniteTransition(label = "lyricsShimmer")
+    val shimmerProgress by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        infiniteRepeatable(
+            animation = tween(1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "lyricsShimmerProgress",
+    )
+    val baseColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)
+    val highlightColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.22f)
+
+    Column(
+        modifier = modifier.fillMaxWidth().padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(18.dp),
+    ) {
+        repeat(6) { index ->
+            val lineFraction = when (index) {
+                0 -> 0.62f
+                1 -> 0.85f
+                2 -> 0.75f
+                3 -> 0.90f
+                4 -> 0.55f
+                else -> 0.70f
+            }
+            val lineAlpha by transition.animateFloat(
+                initialValue = 0.55f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(900, delayMillis = index * 90, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+                label = "lineAlpha$index",
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(lineFraction)
+                    .height(18.dp)
+                    .clip(RoundedCornerShape(9.dp))
+                    .graphicsLayer { alpha = lineAlpha }
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(baseColor, highlightColor, baseColor),
+                            startX = 0f,
+                            endX = 1000f,
+                        ),
+                    ),
+            ) {
+                // Moving highlight band for the shimmer sweep
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .fillMaxWidth(0.4f)
+                        .graphicsLayer {
+                            translationX = shimmerProgress * size.width * 2.2f - size.width * 0.2f
+                        }
+                        .background(
+                            Brush.horizontalGradient(
+                                colors = listOf(Color.Transparent, highlightColor, Color.Transparent),
+                            ),
+                        ),
+                )
             }
         }
     }

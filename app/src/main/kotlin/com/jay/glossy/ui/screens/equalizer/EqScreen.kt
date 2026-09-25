@@ -7,6 +7,7 @@ import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,8 +19,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -29,13 +33,18 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,19 +62,106 @@ import com.jay.glossy.eq.data.SavedEQProfile
 import timber.log.Timber
 
 /**
- * EQ Screen - Manage and select EQ profiles
+ * EQ Screen - Sound FX (ArchiveTune-style system equalizer) and AutoEQ profiles tabs
  */
 @SuppressLint("LocalContextGetResourceValueCall")
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EqScreen(
     viewModel: EQViewModel = hiltViewModel(),
+    soundFxViewModel: SoundFxViewModel = hiltViewModel(),
 ) {
     val navController = LocalNavController.current
-    val state by viewModel.state.collectAsStateWithLifecycle()
-    val context = LocalContext.current
-
-    var showError by remember { mutableStateOf<String?>(null) }
+    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var showAddMenu by remember { mutableStateOf(false) }
+    var launchAutoEqImport by remember { mutableStateOf(false) }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.equalizer_header)) },
+                navigationIcon = {
+                    IconButton(onClick = { navController.navigateUp() }) {
+                        Icon(
+                            painter = painterResource(R.drawable.arrow_back),
+                            contentDescription = null
+                        )
+                    }
+                },
+                actions = {
+                    // The add menu only applies to the AutoEQ profiles tab
+                    if (selectedTab == 1) {
+                        Box {
+                            IconButton(onClick = { showAddMenu = true }) {
+                                Icon(
+                                    painter = painterResource(R.drawable.add),
+                                    contentDescription = stringResource(R.string.import_profile)
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = showAddMenu,
+                                onDismissRequest = { showAddMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.eq_wizard)) },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(R.drawable.discover_tune),
+                                            contentDescription = null
+                                        )
+                                    },
+                                    onClick = {
+                                        showAddMenu = false
+                                        navController.navigate("eq_wizard")
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.import_from_file)) },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(R.drawable.upload),
+                                            contentDescription = null
+                                        )
+                                    },
+                                    onClick = {
+                                        showAddMenu = false
+                                        launchAutoEqImport = true
+                                    }
+                                )
+                            }
+                        }
+                    }
+                },
+            )
+        },
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .padding(paddingValues)
+                .fillMaxWidth()
+        ) {
+            TabRow(selectedTabIndex = selectedTab) {
+                Tab(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    text = { Text(stringResource(R.string.sound_fx)) }
+                )
+                Tab(
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    text = { Text(stringResource(R.string.autoeq_tab)) }
+                )
+            }
+            when (selectedTab) {
+                0 -> SoundFxTab(viewModel = soundFxViewModel)
+                1 -> EqProfilesTab(viewModel = viewModel, onImportClicked = { launchAutoEqImport = true })
+            }
+        }
+    }
+
+    val context = LocalContext.current
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    var showError by remember { mutableStateOf<String?>(null) }
 
     // File picker for custom EQ import
     val filePickerLauncher = rememberLauncherForActivityResult(
@@ -111,27 +207,12 @@ fun EqScreen(
         }
     }
 
-    val activeProfile = state.profiles.find { it.id == state.activeProfileId }
-
-    EqScreenContent(
-        profiles = state.profiles,
-        activeProfileId = state.activeProfileId,
-        activeProfile = activeProfile,
-        onProfileSelected = { viewModel.selectProfile(it) },
-        onNavigateBack = { navController.navigateUp() },
-        showAddMenu = showAddMenu,
-        onAddClicked = { showAddMenu = true },
-        onAddMenuDismissed = { showAddMenu = false },
-        onWizardClicked = {
-            showAddMenu = false
-            navController.navigate("eq_wizard")
-        },
-        onImportClicked = {
-            showAddMenu = false
+    LaunchedEffect(launchAutoEqImport) {
+        if (launchAutoEqImport) {
             filePickerLauncher.launch("text/plain")
-        },
-        onDeleteProfile = { viewModel.deleteProfile(it) }
-    )
+            launchAutoEqImport = false
+        }
+    }
 
     // Error dialog
     if (showError != null) {
@@ -170,93 +251,69 @@ fun EqScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun EqScreenContent(
-    profiles: List<SavedEQProfile>,
-    activeProfileId: String?,
-    activeProfile: SavedEQProfile?,
-    onProfileSelected: (String?) -> Unit,
-    onNavigateBack: () -> Unit,
-    showAddMenu: Boolean,
-    onAddClicked: () -> Unit,
-    onAddMenuDismissed: () -> Unit,
-    onWizardClicked: () -> Unit,
+private fun EqProfilesTab(
+    viewModel: EQViewModel,
     onImportClicked: () -> Unit,
-    onDeleteProfile: (String) -> Unit
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.equalizer_header)) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            painter = painterResource(R.drawable.arrow_back),
-                            contentDescription = null
-                        )
-                    }
-                },
-                actions = {
-                    Box {
-                        IconButton(onClick = onAddClicked) {
-                            Icon(
-                                painter = painterResource(R.drawable.add),
-                                contentDescription = stringResource(R.string.import_profile)
-                            )
-                        }
-                        DropdownMenu(
-                            expanded = showAddMenu,
-                            onDismissRequest = onAddMenuDismissed
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.eq_wizard)) },
-                                leadingIcon = {
-                                    Icon(
-                                        painter = painterResource(R.drawable.discover_tune),
-                                        contentDescription = null
-                                    )
-                                },
-                                onClick = onWizardClicked
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.import_from_file)) },
-                                leadingIcon = {
-                                    Icon(
-                                        painter = painterResource(R.drawable.upload),
-                                        contentDescription = null
-                                    )
-                                },
-                                onClick = onImportClicked
-                            )
-                        }
-                    }
-                }
-            )
-        }
-    ) { paddingValues ->
-        // Profile list
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(bottom = LocalPlayerAwareWindowInsets.current
-                .asPaddingValues().calculateBottomPadding())
-        ) {
+    val navController = LocalNavController.current
+    val state by viewModel.state.collectAsStateWithLifecycle()
+
+    val profiles = state.profiles
+    val activeProfile = state.profiles.find { it.id == state.activeProfileId }
+    val activeProfileId = state.activeProfileId
+    val onProfileSelected: (String?) -> Unit = viewModel::selectProfile
+    val onWizardClicked: () -> Unit = { navController.navigate("eq_wizard") }
+    val onDeleteProfile: (String) -> Unit = viewModel::deleteProfile
+
+    // Profile list
+    LazyColumn(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            end = 16.dp,
+            bottom = LocalPlayerAwareWindowInsets.current
+                .asPaddingValues().calculateBottomPadding() + 16.dp
+        ),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
             // Frequency response graph
             item {
-                EqFrequencyResponseGraph(
-                    bands = activeProfile?.bands ?: emptyList(),
-                    preamp = activeProfile?.preamp ?: 0.0
-                )
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                ) {
+                    EqFrequencyResponseGraph(
+                        bands = activeProfile?.bands ?: emptyList(),
+                        preamp = activeProfile?.preamp ?: 0.0,
+                        modifier = Modifier.padding(0.dp)
+                    )
+                }
             }
 
             // "No Equalization" option (always first)
             item {
-                NoEqualizationItem(
-                    isSelected = activeProfileId == null,
-                    onSelected = { onProfileSelected(null) }
-                )
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (activeProfileId == null) {
+                            MaterialTheme.colorScheme.secondaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surfaceContainerHigh
+                        }
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                ) {
+                    NoEqualizationItem(
+                        isSelected = activeProfileId == null,
+                        onSelected = { onProfileSelected(null) }
+                    )
+                }
             }
 
             // Custom profiles only
@@ -264,12 +321,25 @@ private fun EqScreenContent(
 
             if (customProfiles.isNotEmpty()) {
                 items(customProfiles) { profile ->
-                    EQProfileItem(
-                        profile = profile,
-                        isSelected = activeProfileId == profile.id,
-                        onSelected = { onProfileSelected(profile.id) },
-                        onDelete = { onDeleteProfile(profile.id) }
-                    )
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (activeProfileId == profile.id) {
+                                MaterialTheme.colorScheme.secondaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.surfaceContainerHigh
+                            }
+                        ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                    ) {
+                        EQProfileItem(
+                            profile = profile,
+                            isSelected = activeProfileId == profile.id,
+                            onSelected = { onProfileSelected(profile.id) },
+                            onDelete = { onDeleteProfile(profile.id) }
+                        )
+                    }
                 }
             }
 
@@ -298,7 +368,7 @@ private fun EqScreenContent(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(modifier = Modifier.height(8.dp))
-                            Button(onClick = onAddClicked) {
+                            Button(onClick = onImportClicked) {
                                 Text(stringResource(R.string.import_profile))
                             }
                         }
@@ -306,7 +376,6 @@ private fun EqScreenContent(
                 }
             }
         }
-    }
 }
 
 // --- HELPER COMPOSABLES ---

@@ -12,6 +12,7 @@ import io.ktor.client.request.header
 import io.ktor.client.request.parameter
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.*
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
@@ -90,6 +91,19 @@ object TidalCanvasProvider {
                 val artists = obj["artists"]?.jsonArray
                 val primaryArtist = obj["artist"]?.jsonObject?.get("name")?.jsonPrimitive?.contentOrNull
                     ?: artists?.firstOrNull()?.jsonObject?.get("name")?.jsonPrimitive?.contentOrNull
+                val creditedArtists = buildList {
+                    primaryArtist?.let { add(it) }
+                    artists?.forEach { credited ->
+                        credited.jsonObject["name"]?.jsonPrimitive?.contentOrNull?.let { add(it) }
+                    }
+                }
+
+                // Artist must match too — a title-only check lets a remix,
+                // cover or another artist's similarly named track through,
+                // which paints the wrong song's animated cover.
+                if (artistValidation != null && artistValidation.isNotBlank() &&
+                    creditedArtists.none { it.contains(artistValidation, true) }
+                ) continue
 
                 val albumObj = if (types == "TRACKS") obj["album"]?.jsonObject else obj
                 val videoCover = albumObj?.get("videoCover")?.jsonPrimitive?.contentOrNull
@@ -105,6 +119,10 @@ object TidalCanvasProvider {
                     }
                 }
             }
+        } catch (e: CancellationException) {
+            // A lookup cancelled by a track change must not complete —
+            // otherwise the stale result paints over the new song.
+            throw e
         } catch (e: Exception) { e.printStackTrace() }
         return null
     }

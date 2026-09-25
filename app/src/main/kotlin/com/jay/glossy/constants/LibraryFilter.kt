@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -14,4 +14,5 @@ enum class LibraryFilter {
     PLAYLISTS,
     PODCASTS,
     LIBRARY,
+    SPOTIFY
 }

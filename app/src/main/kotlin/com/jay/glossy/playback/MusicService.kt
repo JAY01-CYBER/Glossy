@@ -104,6 +104,7 @@ import com.jay.glossy.constants.AndroidAutoTargetPlaylistKey
 import com.jay.glossy.constants.AudioNormalizationKey
 import com.jay.glossy.constants.AudioOffload
 import com.jay.glossy.constants.AudioQualityKey
+import com.jay.glossy.constants.CanvasThumbnailAnimationKey
 import com.jay.glossy.constants.AudioTrackPlaybackParamsKey
 import com.jay.glossy.constants.AutoDownloadOnLikeKey
 import com.jay.glossy.constants.AutoLoadMoreKey
@@ -117,6 +118,7 @@ import com.jay.glossy.constants.AutoplayKey
 import com.jay.glossy.constants.CrossfadeDurationKey
 import com.jay.glossy.constants.CrossfadeEnabledKey
 import com.jay.glossy.constants.CrossfadeGaplessKey
+import com.jay.glossy.constants.SoundFxEnabledKey
 import com.jay.glossy.constants.DisableLoadMoreWhenRepeatAllKey
 import com.jay.glossy.constants.DiscordActivityNameKey
 import com.jay.glossy.constants.DiscordActivityTypeKey
@@ -161,7 +163,6 @@ import com.jay.glossy.constants.ResumeOnBluetoothConnectKey
 import com.jay.glossy.constants.ScrobbleDelayPercentKey
 import com.jay.glossy.constants.ScrobbleDelaySecondsKey
 import com.jay.glossy.constants.ScrobbleMinSongDurationKey
-import com.jay.glossy.constants.ShowLyricsKey
 import com.jay.glossy.constants.ShuffleModeKey
 import com.jay.glossy.constants.ShufflePlaylistFirstKey
 import com.jay.glossy.constants.SimilarContent
@@ -193,6 +194,7 @@ import com.jay.glossy.extensions.toMediaItem
 import com.jay.glossy.extensions.toPersistQueue
 import com.jay.glossy.extensions.toQueue
 import com.jay.glossy.lyrics.LyricsHelper
+import com.jay.glossy.ui.player.CanvasResolver
 import com.metrolist.models.PersistPlayerState
 import com.metrolist.models.PersistQueue
 import com.metrolist.models.toMediaMetadata
@@ -287,6 +289,9 @@ class MusicService :
 
     @Inject
     lateinit var eqProfileRepository: EQProfileRepository
+
+    @Inject
+    lateinit var soundFxController: com.jay.glossy.eq.soundfx.PlaybackSoundFxController
 
     @Inject
     lateinit var widgetManager: MetrolistWidgetManager
@@ -709,6 +714,10 @@ class MusicService :
         )
         player = createExoPlayer(prefs = startupPrefs!!)
         player.addListener(this@MusicService)
+
+        // Seed the system sound fx (equalizer/bass/virtualizer/output gain) with
+        // startup prefs; they are applied to effects as soon as the audio session attaches.
+        soundFxController.apply(com.jay.glossy.eq.soundfx.SoundFxSettings.fromPreferences(startupPrefs!!))
         sleepTimer =
             SleepTimer(scope, player) { multiplier ->
                 sleepTimerVolumeMultiplier.value = multiplier
@@ -897,28 +906,88 @@ class MusicService :
             updateWidgetUI(player.isPlaying)
         }
 
-        combine(
-            currentMediaMetadata.distinctUntilChangedBy { it?.id },
-            dataStore.data.map { it[ShowLyricsKey] ?: false }.distinctUntilChanged(),
-        ) { mediaMetadata, showLyrics ->
-            mediaMetadata to showLyrics
-        }.collectLatest(scope) { (mediaMetadata, showLyrics) ->
-            if (showLyrics && mediaMetadata != null && database
-                    .lyrics(mediaMetadata.id)
-                    .first() == null
-            ) {
-                val lyricsWithProvider = lyricsHelper.getLyrics(mediaMetadata)
+        // Fast lyrics: fetch for the current song the moment it starts playing,
+        // regardless of whether the lyrics pane is open, so lyrics are already in
+        // the database when the user opens them.
+        currentMediaMetadata
+            .distinctUntilChangedBy { it?.id }
+            .collectLatest(scope) { mediaMetadata ->
+                if (mediaMetadata != null && database
+                        .lyrics(mediaMetadata.id)
+                        .first() == null
+                ) {
+                    val lyricsWithProvider = lyricsHelper.getLyrics(mediaMetadata)
+                    database.query {
+                        upsert(
+                            LyricsEntity(
+                                id = mediaMetadata.id,
+                                lyrics = lyricsWithProvider.lyrics,
+                                provider = lyricsWithProvider.provider,
+                            ),
+                        )
+                    }
+                }
+            }
+
+        // Prefetch lyrics for the next queued track so the lyrics screen loads
+        // instantly when the song changes.
+        @OptIn(kotlinx.coroutines.FlowPreview::class)
+        currentMediaMetadata
+            .debounce(2000)
+            .distinctUntilChangedBy { it?.id }
+            .collectLatest(scope) { mediaMetadata ->
+                val currentIndex = player.currentMediaItemIndex
+                if (mediaMetadata == null || player.mediaItemCount <= currentIndex + 1) return@collectLatest
+                val nextMetadata = player.getMediaItemAt(currentIndex + 1).metadata ?: return@collectLatest
+                if (database.lyrics(nextMetadata.id).first() != null) return@collectLatest
+                val fetched = lyricsHelper.getLyrics(nextMetadata)
                 database.query {
                     upsert(
                         LyricsEntity(
-                            id = mediaMetadata.id,
-                            lyrics = lyricsWithProvider.lyrics,
-                            provider = lyricsWithProvider.provider,
+                            id = nextMetadata.id,
+                            lyrics = fetched.lyrics,
+                            provider = fetched.provider,
                         ),
                     )
                 }
             }
-        }
+
+        // Prefetch canvas artwork for the current + next track so the animated
+        // background appears instantly instead of popping in late.
+        @OptIn(kotlinx.coroutines.FlowPreview::class)
+        currentMediaMetadata
+            .debounce(1500)
+            .distinctUntilChangedBy { it?.id }
+            .collectLatest(scope) { mediaMetadata ->
+                val canvasEnabled = dataStore.data
+                    .map { it[CanvasThumbnailAnimationKey] ?: false }
+                    .first()
+                if (!canvasEnabled) return@collectLatest
+                val context = applicationContext
+                // Current track (may have missed the instant path)
+                mediaMetadata?.let { current ->
+                    CanvasResolver.prefetch(
+                        context = context,
+                        mediaId = current.id,
+                        songTitle = current.title,
+                        artistName = current.artists.firstOrNull()?.name.orEmpty(),
+                        albumName = current.album?.title.orEmpty(),
+                    )
+                }
+                // Next queued track
+                val currentIndex = player.currentMediaItemIndex
+                if (player.mediaItemCount > currentIndex + 1) {
+                    player.getMediaItemAt(currentIndex + 1).metadata?.let { next ->
+                        CanvasResolver.prefetch(
+                            context = context,
+                            mediaId = next.id,
+                            songTitle = next.title,
+                            artistName = next.artists.firstOrNull()?.name.orEmpty(),
+                            albumName = next.album?.title.orEmpty(),
+                        )
+                    }
+                }
+            }
 
         dataStore.data
             .map { (it[SkipSilenceKey] ?: false) to (it[SkipSilenceInstantKey] ?: false) }
@@ -942,6 +1011,13 @@ class MusicService :
                 }
             }
 
+        dataStore.data
+            .map { com.jay.glossy.eq.soundfx.SoundFxSettings.fromPreferences(it) }
+            .distinctUntilChanged()
+            .collectLatest(scope) { settings ->
+                soundFxController.apply(settings)
+            }
+
         combine(
             currentFormat,
             dataStore.data
@@ -961,9 +1037,11 @@ class MusicService :
         combine(
             dataStore.data.map { it[AudioOffload] ?: false },
             dataStore.data.map { it[CrossfadeEnabledKey] ?: false },
-        ) { offloadPref, crossfadeEnabled ->
-            // Force disable offload if crossfade is enabled to prevent volume ramp issues
-            if (crossfadeEnabled) false else offloadPref
+            dataStore.data.map { it[SoundFxEnabledKey] ?: false },
+        ) { offloadPref, crossfadeEnabled, soundFxEnabled ->
+            // Force disable offload if crossfade is enabled to prevent volume ramp issues,
+            // or while sound fx are enabled — session effects do not run on offloaded audio
+            if (crossfadeEnabled || soundFxEnabled) false else offloadPref
         }.distinctUntilChanged()
             .collectLatest(scope) { useOffload ->
                 player.setOffloadEnabled(useOffload)
@@ -2436,6 +2514,10 @@ class MusicService :
         isAudioEffectSessionOpened = true
         openedAudioEffectSessionId = audioSessionId
 
+        // Attach the system sound fx (equalizer, bass boost, virtualizer,
+        // loudness enhancer) to the live audio session.
+        soundFxController.attach(audioSessionId)
+
         sendBroadcast(
             Intent(android.media.audiofx.AudioEffect.ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION).apply {
                 putExtra(android.media.audiofx.AudioEffect.EXTRA_AUDIO_SESSION, audioSessionId)
@@ -2462,6 +2544,9 @@ class MusicService :
 
             isAudioEffectSessionOpened = false
             openedAudioEffectSessionId = C.AUDIO_SESSION_ID_UNSET
+
+            // Detach the system sound fx from the closing session.
+            soundFxController.release()
         }
 
         if (sessionIdToClose != C.AUDIO_SESSION_ID_UNSET && sessionIdToClose > 0) {

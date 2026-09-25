@@ -1,16 +1,14 @@
-/**
- * Glossy Project (C) 2026
- * Licensed under GPL-3.0 | See git history for contributors
- */
-
 package com.jay.glossy.ui.screens.library
 
 import com.jay.glossy.R
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
@@ -19,7 +17,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import com.jay.glossy.LocalNavController
 import com.jay.glossy.constants.ChipSortTypeKey
 import com.jay.glossy.constants.LibraryFilter
@@ -32,25 +33,44 @@ fun LibraryScreen() {
     var filterType by rememberEnumPreference(ChipSortTypeKey, LibraryFilter.LIBRARY)
 
     val filterContent = @Composable {
-        Row(
-            modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            Spacer(Modifier.width(12.dp))
-            ChipsRow(
-                chips = listOf(
-                    LibraryFilter.PLAYLISTS to stringResource(R.string.filter_playlists),
-                    LibraryFilter.SONGS to stringResource(R.string.filter_songs),
-                    LibraryFilter.ALBUMS to stringResource(R.string.filter_albums),
-                    LibraryFilter.ARTISTS to stringResource(R.string.filter_artists),
-                    LibraryFilter.PODCASTS to stringResource(R.string.filter_podcasts),
-                ),
-                currentValue = filterType,
-                onValueUpdate = {
-                    filterType = if (filterType == it) LibraryFilter.LIBRARY else it
-                },
-                modifier = Modifier.weight(1f),
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, top = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = stringResource(R.string.filter_library),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            Row(
+                modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Spacer(Modifier.width(12.dp))
+                ChipsRow(
+                    chips = listOf(
+                        LibraryFilter.PLAYLISTS to stringResource(R.string.filter_playlists),
+                        LibraryFilter.SPOTIFY to "Spotify",
+                        LibraryFilter.SONGS to stringResource(R.string.filter_songs),
+                        LibraryFilter.ALBUMS to stringResource(R.string.filter_albums),
+                        LibraryFilter.ARTISTS to stringResource(R.string.filter_artists),
+                        LibraryFilter.PODCASTS to stringResource(R.string.filter_podcasts),
+                    ),
+                    currentValue = filterType,
+                    onValueUpdate = {
+                        filterType = if (filterType == it) LibraryFilter.LIBRARY else it
+                    },
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
     }
 
@@ -73,6 +93,10 @@ fun LibraryScreen() {
             LibraryFilter.PODCASTS -> LibraryPodcastsScreen(
                 navController,
                 { filterType = LibraryFilter.LIBRARY },
+            )
+            LibraryFilter.SPOTIFY -> LibrarySpotifyPlaylistsScreen(
+                navController = navController,
+                filterContent = filterContent
             )
         }
     }

@@ -11,6 +11,7 @@ import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -106,7 +107,9 @@ fun CanvasArtworkPlayer(
 
     val exoPlayer = remember(initial) {
         val loadControl = DefaultLoadControl.Builder()
-            .setBufferDurationsMs(500, 5000, 100, 500)
+            // Larger buffer: canvas clips are short loops, so keeping a few
+            // seconds fully buffered avoids mid-loop stutter on slow networks.
+            .setBufferDurationsMs(2000, 15000, 500, 2000)
             .build()
 
         ExoPlayer.Builder(context)
@@ -114,7 +117,12 @@ fun CanvasArtworkPlayer(
             .setLoadControl(loadControl)
             .build()
             .apply {
-                trackSelectionParameters = trackSelectionParameters.buildUpon().setForceHighestSupportedBitrate(true).build()
+                // High-quality canvas: prefer the best video quality available and
+                // only step down if the device reports decoder performance problems.
+                trackSelectionParameters = trackSelectionParameters.buildUpon()
+                    .setMaxVideoBitrate(Int.MAX_VALUE)
+                    .setMinVideoBitrate(1_500_000)
+                    .build()
                 setAudioAttributes(
                     AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(),
                     false
@@ -185,7 +193,7 @@ fun CanvasArtworkPlayer(
 
     val alpha by animateFloatAsState(
         targetValue = if (isVideoReady) 1f else 0f,
-        animationSpec = tween(600),
+        animationSpec = tween(250, easing = FastOutSlowInEasing),
         label = "canvasAlpha"
     )
 
@@ -197,6 +205,7 @@ fun CanvasArtworkPlayer(
                 
                 val textureView = TextureView(viewContext).apply {
                     layoutParams = ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT)
+                    isOpaque = false
                 }
                 addView(textureView)
                 exoPlayer.setVideoTextureView(textureView)

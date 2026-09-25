@@ -1,0 +1,197 @@
+package com.jay.glossy.spotify
+
+import com.google.protobuf.CodedInputStream
+import com.google.protobuf.CodedOutputStream
+import com.jay.glossy.canvas.CanvasArtwork
+import com.jay.glossy.spotifycore.Spotify
+import io.ktor.client.HttpClient
+import io.ktor.client.call.body
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.get
+import io.ktor.client.request.header
+import io.ktor.client.request.parameter
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
+import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.CancellationException
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
+import java.io.ByteArrayOutputStream
+
+/**
+ * Spotify's own Canvas Provider updated to work seamlessly 
+ * with the new spotifycore backend module.
+ */
+object SpotifyCanvasProvider {
+    private const val SEARCH_URL = "https://api.spotify.com/v1/search"
+    private const val PATHFINDER_URL = "https://api-partner.spotify.com/pathfinder/v1/query"
+    private const val CANVAS_URL = "https://spclient.wg.spotify.com/canvaz-cache/v0/canvases"
+
+    private const val PATHFINDER_SEARCH_HASH =
+        "bc1ca2fcd0ba1013a0fc88e6cc4f190af501851e3dafd3e1ef85840297694428"
+
+    private const val SPOTIFY_APP_UA = "Spotify/9.0.34.593 iOS/18.4 (iPhone15,3)"
+
+    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
+    private val client by lazy { HttpClient { install(ContentNegotiation) { json(json) }; expectSuccess = false } }
+    private val CANVAS_URL_REGEX = Regex("""https://[^"'\s - ]+\.cnvs\.mp4""")
+
+    private inline fun <T> runSuspend(block: () -> T): T? =
+        try {
+            block()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            null
+        }
+
+    suspend fun getBySongArtist(song: String, artist: String): CanvasArtwork? {
+        // Now directly using the global access token from our new core module
+        val token = Spotify.accessToken ?: return null
+        
+        val uri = searchViaPathfinder(song, artist, token)
+            ?: searchViaRest(song, artist, token)
+            ?: return null
+            
+        val canvasUrl = fetchCanvasUrl(uri, token) ?: return null
+        return CanvasArtwork(name = song, artist = artist, animated = canvasUrl, videoUrl = canvasUrl)
+    }
+
+    private suspend fun searchViaPathfinder(song: String, artist: String, token: String): String? {
+        val variables = buildJsonObject {
+            put("searchTerm", "$song $artist")
+            put("offset", 0)
+            put("limit", 10)
+            put("numberOfTopResults", 5)
+            put("includeAudiobooks", false)
+            put("includePreReleases", false)
+        }.toString()
+        val extensions = buildJsonObject {
+            putJsonObject("persistedQuery") {
+                put("version", 1)
+                put("sha256Hash", PATHFINDER_SEARCH_HASH)
+            }
+        }.toString()
+
+        val response = runSuspend {
+            client.get(PATHFINDER_URL) {
+                header("Authorization", "Bearer $token")
+                header("App-platform", "WebPlayer")
+                header("User-Agent", SPOTIFY_APP_UA)
+                parameter("operationName", "searchTracks")
+                parameter("variables", variables)
+                parameter("extensions", extensions)
+            }
+        } ?: return null
+        if (response.status.value !in 200..299) return null
+        val body = runSuspend { response.bodyAsText() } ?: return null
+
+        return runCatching {
+            val root = json.parseToJsonElement(body).jsonObject
+            val firstItem = root["data"]?.jsonObject
+                ?.get("searchV2")?.jsonObject
+                ?.get("tracksV2")?.jsonObject
+                ?.get("items")?.jsonArray
+                ?.firstOrNull()
+                ?.jsonObject?.get("item")?.jsonObject
+                ?.get("data")?.jsonObject
+
+            val hitName = firstItem?.get("name")?.jsonPrimitive?.contentOrNull
+            if (hitName != null && !hitName.contains(song, ignoreCase = true)) {
+                return@runCatching null
+            }
+
+            firstItem?.get("uri")?.jsonPrimitive?.contentOrNull
+                ?: firstItem?.get("id")?.jsonPrimitive?.contentOrNull?.let { "spotify:track:$it" }
+        }.getOrNull()
+    }
+
+    private suspend fun searchViaRest(song: String, artist: String, token: String): String? {
+        val response = runSuspend {
+            client.get(SEARCH_URL) {
+                header("Authorization", "Bearer $token")
+                header("User-Agent", SPOTIFY_APP_UA)
+                parameter("q", "$song $artist")
+                parameter("type", "track")
+                parameter("limit", "10")
+            }
+        } ?: return null
+        if (response.status.value !in 200..299) return null
+        val body = runSuspend { response.bodyAsText() } ?: return null
+
+        return runCatching {
+            val tracks = json.parseToJsonElement(body).jsonObject["tracks"]?.jsonObject?.get("items")
+                ?.jsonArray.orEmpty()
+            for (item in tracks) {
+                val track = item.jsonObject
+                val title = track["name"]?.jsonPrimitive?.contentOrNull ?: continue
+                val artists = track["artists"]?.jsonArray
+                    ?.mapNotNull { it.jsonObject["name"]?.jsonPrimitive?.contentOrNull }.orEmpty()
+                if (!title.contains(song, true) || artists.none { it.contains(artist, true) }) continue
+                val uri = track["uri"]?.jsonPrimitive?.contentOrNull ?: continue
+                return uri
+            }
+            null
+        }.getOrNull()
+    }
+
+    private data class CanvasHit(val url: String, val trackUri: String?)
+
+    private suspend fun fetchCanvasUrl(trackUri: String, token: String): String? {
+        val body = ByteArrayOutputStream().also { output ->
+            val coded = CodedOutputStream.newInstance(output)
+            ByteArrayOutputStream().also { nested ->
+                CodedOutputStream.newInstance(nested).apply { writeString(1, trackUri); flush() }
+                    .let { coded.writeByteArray(1, nested.toByteArray()) }
+            }
+            coded.flush()
+        }
+        val response = runSuspend {
+            client.post(CANVAS_URL) {
+                header("Authorization", "Bearer $token")
+                header("Accept", "application/protobuf")
+                header("Accept-Language", "en")
+                header("Content-Type", "application/protobuf")
+                header("User-Agent", SPOTIFY_APP_UA)
+                setBody(body.toByteArray())
+            }
+        } ?: return null
+        if (response.status.value !in 200..299) return null
+        val bytes = runSuspend { response.body<ByteArray>() } ?: return null
+
+        val hits = decodeCanvasResponse(bytes)
+        hits.firstOrNull { it.trackUri == trackUri }?.let { return it.url }
+
+        return hits.firstOrNull()?.url
+            ?: CANVAS_URL_REGEX.find(String(bytes, Charsets.ISO_8859_1))?.value
+    }
+
+    private fun decodeCanvasResponse(bytes: ByteArray): List<CanvasHit> = runCatching {
+        val parsed = mutableListOf<CanvasHit>()
+        val input = CodedInputStream.newInstance(bytes)
+        while (!input.isAtEnd) {
+            val tag = input.readTag()
+            if (tag ushr 3 != 1) { input.skipField(tag); continue }
+            val canvas = CodedInputStream.newInstance(input.readByteArray())
+            var canvasUrl: String? = null
+            var canvasTrackUri: String? = null
+            while (!canvas.isAtEnd) {
+                val canvasTag = canvas.readTag()
+                when (canvasTag ushr 3) {
+                    2 -> canvasUrl = canvas.readString()
+                    5 -> canvasTrackUri = canvas.readString()
+                    else -> canvas.skipField(canvasTag)
+                }
+            }
+            if (!canvasUrl.isNullOrBlank()) parsed += CanvasHit(canvasUrl, canvasTrackUri)
+        }
+        parsed
+    }.getOrElse { emptyList() }
+}

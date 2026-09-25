@@ -185,6 +185,11 @@ jobs:
               if target in content:
                   # Extract text for current version
                   block = content.split(target)[1].split('---v')[0].strip()
+                  
+                  # Auto-convert relative banner link to raw GitHub URL for proper display in Release page
+                  raw_repo_url = 'https://raw.githubusercontent.com/${{ github.repository }}/main'
+                  block = block.replace('./assets/updatebanner/', f'{raw_repo_url}/assets/updatebanner/')
+                  
                   with open('release_notes.md', 'w', encoding='utf-8') as f:
                       f.write(block)
                   sys.exit(0)
@@ -229,6 +234,7 @@ jobs:
           VERSION: ${{ needs.check-version.outputs.new_version }}
           COMMIT_SHA: ${{ github.sha }}
           BRANCH_NAME: ${{ github.ref }}
+          REPO_NAME: ${{ github.repository }}
         run: |
           pip install requests
           cat << 'EOF' > upload_telegram.py
@@ -240,6 +246,10 @@ jobs:
           version = os.environ['VERSION']
           commit_sha = os.environ['COMMIT_SHA'][:7] 
           branch = os.environ['BRANCH_NAME'].replace('refs/heads/', '') 
+          repo_name = os.environ['REPO_NAME']
+          
+          # Dynamic Link Generator for the current version's Banner
+          banner_image_url = f"https://raw.githubusercontent.com/{repo_name}/main/assets/updatebanner/v{version}.jpg"
           
           changelog_text = "No release notes provided."
           if os.path.exists('release_notes.md'):
@@ -247,8 +257,8 @@ jobs:
                   lines = []
                   for line in f:
                       line = line.strip()
-                      # Skip empty lines or the main Header title (e.g., # 🚀 Glossy v0.0.2)
-                      if not line or (line.startswith('#') and 'Glossy' in line):
+                      # Skip empty lines, the main Header title, or the markdown image link (so it doesn't show as ugly text in Telegram)
+                      if not line or (line.startswith('#') and 'Glossy' in line) or line.startswith('!['):
                           continue
                       
                       # Convert Markdown to Telegram HTML format
@@ -270,6 +280,20 @@ jobs:
           # Prevent Telegram caption overflow (Max 1024 chars)
           if len(changelog_text) > 550:
               changelog_text = changelog_text[:540] + "...\n(Read full changelog on GitHub)"
+              
+          # --- NEW: SEND BANNER PHOTO TO TELEGRAM FIRST ---
+          print(f"Sending v{version} banner to Telegram...")
+          photo_caption = f"🚀 <b>Glossy v{version} Released!</b>\n\n🎉 A new update is now available."
+          photo_url = f"https://api.telegram.org/bot{bot_token}/sendPhoto"
+          photo_data = {
+              "chat_id": chat_id,
+              "message_thread_id": topic_id,
+              "photo": banner_image_url,
+              "caption": photo_caption,
+              "parse_mode": "HTML"
+          }
+          requests.post(photo_url, data=photo_data) # Send image (won't crash the APK step if it fails)
+          # -----------------------------------------------
           
           for apk in glob.glob('release_files/*.apk'):
               filename = os.path.basename(apk)
