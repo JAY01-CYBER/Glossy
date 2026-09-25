@@ -1,2 +1,29 @@
+# Tera custom Glossy code
 Lcom/jay/glossy/**;
 HSPLcom/jay/glossy/**;->**(**)**
+
+# Jetpack Compose UI
+Landroidx/compose/foundation/**;
+HSPLandroidx/compose/foundation/**;->**(**)**
+Landroidx/compose/material3/**;
+HSPLandroidx/compose/material3/**;->**(**)**
+Landroidx/compose/ui/**;
+HSPLandroidx/compose/ui/**;->**(**)**
+Landroidx/compose/animation/**;
+HSPLandroidx/compose/animation/**;->**(**)**
+
+# Haze (Glassmorphism Effects)
+Ldev/chrisbanes/haze/**;
+HSPLdev/chrisbanes/haze/**;->**(**)**
+
+# Kyant Backdrop (Liquid Glass)
+Lcom/kyant/backdrop/**;
+HSPLcom/kyant/backdrop/**;->**(**)**
+
+# Coil (Image Loading)
+Lcoil3/**;
+HSPLcoil3/**;->**(**)**
+
+# Media3 / ExoPlayer
+Landroidx/media3/**;
+HSPLandroidx/media3/**;->**(**)**
