@@ -9,7 +9,6 @@
 #include <string>
 #include "AudioDecoder.h"
 
-// FFmpeg headers for avformat_network_init()
 extern "C" {
 #include <libavformat/avformat.h>
 }
@@ -23,7 +22,6 @@ Java_com_jay_glossy_ui_player_NativeEngine_nInitEngine(JNIEnv *env, jobject thiz
         decoder = new AudioDecoder();
     }
     
-    // FFmpeg ke internet aur network components ko on karna
     avformat_network_init();
     LOGD("Glossy Native Engine FFmpeg ke sath Initialize ho gaya!");
     
@@ -38,10 +36,35 @@ Java_com_jay_glossy_ui_player_NativeEngine_nPlayUrl(JNIEnv *env, jobject thiz, j
         return JNI_FALSE;
     }
     
-    // Kotlin ki String ko C++ string me convert karna
     const char *urlStr = env->GetStringUTFChars(jUrl, nullptr);
     std::string url(urlStr);
     env->ReleaseStringUTFChars(jUrl, urlStr);
     
     return decoder->openUrl(url) ? JNI_TRUE : JNI_FALSE;
+}
+
+// ---- NAYE CONTROLS ----
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_jay_glossy_ui_player_NativeEngine_nPause(JNIEnv *env, jobject thiz) {
+    if (decoder != nullptr) {
+        decoder->pause();
+    }
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_jay_glossy_ui_player_NativeEngine_nResume(JNIEnv *env, jobject thiz) {
+    if (decoder != nullptr) {
+        decoder->resume();
+    }
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_jay_glossy_ui_player_NativeEngine_nStop(JNIEnv *env, jobject thiz) {
+    if (decoder != nullptr) {
+        decoder->stop();
+    }
 }
