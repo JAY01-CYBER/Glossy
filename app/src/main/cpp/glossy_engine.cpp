@@ -22,9 +22,7 @@ Java_com_jay_glossy_ui_player_NativeEngine_nInitEngine(JNIEnv *env, jobject thiz
         decoder = new AudioDecoder();
     }
     
-    avformat_network_init();
-    LOGD("Glossy Native Engine FFmpeg ke sath Initialize ho gaya!");
-    
+    LOGD("Glossy Native Engine FFmpeg + Oboe ke sath Initialize ho gaya! 🚀");
     return JNI_TRUE;
 }
 
@@ -32,8 +30,10 @@ extern "C"
 JNIEXPORT jboolean JNICALL
 Java_com_jay_glossy_ui_player_NativeEngine_nPlayUrl(JNIEnv *env, jobject thiz, jstring jUrl) {
     if (!decoder) {
-        LOGE("Engine initialize nahi hua hai!");
-        return JNI_FALSE;
+        decoder = new AudioDecoder();
+    } else {
+        // Naya gaana chalane se pehle purana stop karna zaroori hai
+        decoder->stop(); 
     }
     
     const char *urlStr = env->GetStringUTFChars(jUrl, nullptr);
@@ -42,8 +42,6 @@ Java_com_jay_glossy_ui_player_NativeEngine_nPlayUrl(JNIEnv *env, jobject thiz, j
     
     return decoder->openUrl(url) ? JNI_TRUE : JNI_FALSE;
 }
-
-// ---- NAYE CONTROLS ----
 
 extern "C"
 JNIEXPORT void JNICALL
