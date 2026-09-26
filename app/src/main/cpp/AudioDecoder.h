@@ -32,9 +32,11 @@ public:
     void stop();
     void release();
     
-    // Naye seek aur volume functions
     void seekTo(int64_t positionMs);
     void setVolume(float vol);
+    
+    // Naya function UI ko real-time position dene ke liye
+    int64_t getCurrentPositionMs();
 
     bool shouldInterrupt();
 
@@ -56,10 +58,12 @@ private:
     std::atomic<bool> isPlaying;
     std::atomic<bool> isPaused;
     
-    // Thread-safe variables for seek and volume
     std::atomic<bool> seekRequested{false};
     std::atomic<int64_t> seekTargetMs{0};
     std::atomic<float> volume{1.0f};
+    
+    // Naya variable time track karne ke liye
+    std::atomic<int64_t> currentPositionMs{0};
 
     uint8_t* outBuffer = nullptr;
     
