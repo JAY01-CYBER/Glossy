@@ -222,12 +222,22 @@ class PlayerConnection(
         // 1. Gaana change hone par url seedha engine ko dena
         scope.launch {
             mediaMetadata.collectLatest { metadata ->
+                // Naya gaana aate hi purana STOP kardo taaki NEXT kaam kare
+                nativeEngine.nStop() 
+                
                 metadata?.id?.let { mediaId ->
                     val streamUrl = service.getStreamUrl(mediaId)
                     if (streamUrl != null) {
                         Timber.tag(TAG).d("Glossy Native Engine: Playing URL -> $streamUrl")
                         nativeEngine.nPlayUrl(streamUrl)
-                        service.setMuted(true) // ExoPlayer chup rahega, C++ engine bajega
+                        service.setMuted(true) 
+                        
+                        // State Sync: Agar app open hote hi UI Paused hai, toh aawaz nahi aayegi
+                        if (!isPlaying.value) {
+                            nativeEngine.nPause()
+                        } else {
+                            nativeEngine.nResume()
+                        }
                     }
                 }
             }
@@ -623,6 +633,9 @@ class PlayerConnection(
 
     fun dispose() {
         try {
+            // APP CLOSE HONE PAR AAWAZ STOP KARO!
+            nativeEngine.nStop() 
+            
             attachedPlayer?.removeListener(this)
             attachedPlayer = null
             Timber.tag(TAG).d("PlayerConnection disposed successfully")
