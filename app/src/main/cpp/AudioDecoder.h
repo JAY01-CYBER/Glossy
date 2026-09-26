@@ -5,6 +5,10 @@
 #include <memory>
 #include <android/log.h>
 #include <oboe/Oboe.h>
+#include <thread>
+#include <mutex>
+#include <atomic>
+#include <deque>
 
 extern "C" {
 #include <libavformat/avformat.h>
@@ -17,7 +21,6 @@ extern "C" {
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 
-// Oboe Data Callback inherit karna zaroori hai
 class AudioDecoder : public oboe::AudioStreamDataCallback {
 public:
     AudioDecoder();
@@ -30,7 +33,6 @@ public:
     void stop();
     void release();
 
-    // Ye function Oboe hardware call karega jab usko naya audio data chahiye hoga
     oboe::DataCallbackResult onAudioReady(oboe::AudioStream *audioStream, void *audioData, int32_t numFrames) override;
 
 private:
@@ -40,23 +42,28 @@ private:
     AVPacket* packet = nullptr;
     SwrContext* swrCtx = nullptr; 
 
-    // Oboe Audio Stream
     std::shared_ptr<oboe::AudioStream> audioStream;
 
     int audioStreamIndex = -1;
     int targetSampleRate = 48000;
     int targetChannels = 2; 
 
-    bool isPlaying = false;
-    bool isPaused = false;
+    std::atomic<bool> isPlaying;
+    std::atomic<bool> isPaused;
 
-    // Buffer for holding decoded PCM data
     uint8_t* outBuffer = nullptr;
-    int outBufferSize = 0;
-    int outBufferIndex = 0;
+    
+    // Naya Background Thread & Buffer Variables
+    std::thread decoderThread;
+    std::atomic<bool> isDecoding;
+    std::mutex bufferMutex;
+    std::deque<int16_t> audioBuffer; // Ye tera "Tank" hai
+    
+    // 2 second ka advance buffer (48000 Hz * 2 Channels * 2 Sec)
+    const size_t MAX_BUFFER_SIZE = 48000 * 2 * 2; 
 
-    // Internal decode function
-    int decodeNextFrame();
+    // Naya background function
+    void decodeLoop();
 };
 
 #endif // GLOSSY_AUDIO_DECODER_H
