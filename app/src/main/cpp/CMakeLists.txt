@@ -3,27 +3,21 @@ project("glossy_audio_engine")
 
 set(CMAKE_CXX_STANDARD 17)
 
-# 1. Pre-built FFmpeg ko import karna (GitHub repo se download ki hui single file)
-add_library(ffmpeg SHARED IMPORTED)
-set_target_properties(ffmpeg PROPERTIES 
-    IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/libs/${ANDROID_ABI}/libffmpeg.so
-)
+# 1. Prefab FFmpeg Import karna (Maven Central se)
+find_package(ffmpeg REQUIRED CONFIG)
 
-# 2. FFmpeg Headers ka rasta
-target_include_directories(ffmpeg INTERFACE ${CMAKE_SOURCE_DIR}/include)
-
-# 3. Tera custom Glossy Engine (Yahan AudioDecoder.cpp add kiya hai)
+# 2. Tera custom Glossy Engine
 add_library(glossy_engine SHARED 
     glossy_engine.cpp 
     AudioDecoder.cpp
 )
 
-# 4. Google Oboe (Hardware Audio Playback)
+# 3. Google Oboe (Hardware Audio Playback)
 find_package(oboe REQUIRED CONFIG)
 
-# 5. Sabko ek sath link karna
+# 4. Sabko ek sath link karna
 target_link_libraries(glossy_engine
-    ffmpeg
+    ffmpeg::ffmpeg
     oboe::oboe
     log
     android
