@@ -21,7 +21,6 @@ Java_com_jay_glossy_ui_player_NativeEngine_nInitEngine(JNIEnv *env, jobject thiz
     if (!decoder) {
         decoder = new AudioDecoder();
     }
-    
     LOGD("Glossy Native Engine FFmpeg + Oboe ke sath Initialize ho gaya! 🚀");
     return JNI_TRUE;
 }
@@ -32,7 +31,6 @@ Java_com_jay_glossy_ui_player_NativeEngine_nPlayUrl(JNIEnv *env, jobject thiz, j
     if (!decoder) {
         decoder = new AudioDecoder();
     } else {
-        // Naya gaana chalane se pehle purana stop karna zaroori hai
         decoder->stop(); 
     }
     
@@ -64,5 +62,21 @@ JNIEXPORT void JNICALL
 Java_com_jay_glossy_ui_player_NativeEngine_nStop(JNIEnv *env, jobject thiz) {
     if (decoder != nullptr) {
         decoder->stop();
+    }
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_jay_glossy_ui_player_NativeEngine_nSeekTo(JNIEnv *env, jobject thiz, jlong position_ms) {
+    if (decoder != nullptr) {
+        decoder->seekTo(position_ms);
+    }
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_jay_glossy_ui_player_NativeEngine_nSetVolume(JNIEnv *env, jobject thiz, jfloat vol) {
+    if (decoder != nullptr) {
+        decoder->setVolume(vol);
     }
 }
