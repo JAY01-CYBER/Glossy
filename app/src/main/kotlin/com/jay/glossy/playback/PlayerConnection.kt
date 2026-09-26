@@ -222,7 +222,6 @@ class PlayerConnection(
         // 1. Gaana change hone par url seedha engine ko dena
         scope.launch {
             mediaMetadata.collectLatest { metadata ->
-                // Naya gaana aate hi purana STOP kardo taaki NEXT kaam kare
                 nativeEngine.nStop() 
                 
                 metadata?.id?.let { mediaId ->
@@ -232,7 +231,6 @@ class PlayerConnection(
                         nativeEngine.nPlayUrl(streamUrl)
                         service.setMuted(true) 
                         
-                        // State Sync: Agar app open hote hi UI Paused hai, toh aawaz nahi aayegi
                         if (!isPlaying.value) {
                             nativeEngine.nPause()
                         } else {
@@ -243,7 +241,7 @@ class PlayerConnection(
             }
         }
 
-        // 2. Play/Pause state observe karna (Bluetooth button dabane pe bhi ye sync hoga!)
+        // 2. Play/Pause state observe karna
         scope.launch {
             isPlaying.collectLatest { playing ->
                 if (playing) {
@@ -253,6 +251,16 @@ class PlayerConnection(
                     nativeEngine.nPause()
                     Timber.tag(TAG).d("Glossy Native Engine: Paused")
                 }
+            }
+        }
+
+        // 3. Volume, Mute aur Ducking Sync
+        scope.launch {
+            combine(service.playerVolume, service.isMuted) { vol, muted ->
+                if (muted) 0f else vol
+            }.collectLatest { effectiveVolume ->
+                nativeEngine.nSetVolume(effectiveVolume)
+                Timber.tag(TAG).d("Glossy Native Engine: Volume set to $effectiveVolume")
             }
         }
         // ------------------------------------------------
@@ -416,6 +424,7 @@ class PlayerConnection(
                 castHandler.seekTo(position)
             } else {
                 player.seekTo(position)
+                nativeEngine.nSeekTo(position)
             }
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Error in seekTo")
@@ -452,6 +461,7 @@ class PlayerConnection(
 
             if (player.currentPosition > 3000 || !player.hasPreviousMediaItem()) {
                 player.seekTo(0)
+                nativeEngine.nSeekTo(0)
                 if (player.playbackState == Player.STATE_IDLE || player.playbackState == Player.STATE_ENDED) {
                     player.prepare()
                 }
@@ -633,7 +643,6 @@ class PlayerConnection(
 
     fun dispose() {
         try {
-            // APP CLOSE HONE PAR AAWAZ STOP KARO!
             nativeEngine.nStop() 
             
             attachedPlayer?.removeListener(this)
