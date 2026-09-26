@@ -5,7 +5,6 @@ extern "C" {
 #include <libavutil/dict.h>
 }
 
-// 🛑 NAYA: Jabardasti internet download rokne ka callback
 static int decode_interrupt_cb(void *ctx) {
     AudioDecoder* decoder = static_cast<AudioDecoder*>(ctx);
     return decoder->shouldInterrupt() ? 1 : 0;
@@ -32,31 +31,36 @@ AudioDecoder::~AudioDecoder() {
 }
 
 bool AudioDecoder::shouldInterrupt() {
-    return !isDecoding; // Agar gaana stop ho gaya, toh FFmpeg download turant kaat do
+    return !isDecoding; 
+}
+
+void AudioDecoder::seekTo(int64_t positionMs) {
+    seekTargetMs = positionMs;
+    seekRequested = true;
+}
+
+void AudioDecoder::setVolume(float vol) {
+    volume = vol;
 }
 
 bool AudioDecoder::openUrl(const std::string& url) {
     LOGI("Opening URL in FFmpeg: %s", url.c_str());
 
-    isDecoding = true; // Isko pehle true karna zaroori hai
+    isDecoding = true; 
+    seekRequested = false;
 
-    // 🛑 NAYA: Interrupt callback attach karo taaki Next song pe app freeze na ho
     formatCtx = avformat_alloc_context();
     formatCtx->interrupt_callback.callback = decode_interrupt_cb;
     formatCtx->interrupt_callback.opaque = this;
 
     AVDictionary* options = nullptr;
-    av_dict_set(&options, "user_agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36", 0);
+    av_dict_set(&options, "user_agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36", 0);
     av_dict_set(&options, "protocol_whitelist", "file,http,https,tcp,tls,crypto", 0);
 
     int result = avformat_open_input(&formatCtx, url.c_str(), nullptr, &options);
     av_dict_free(&options);
 
-    if (result != 0) {
-        LOGE("Network error! FFmpeg Error Code: %d", result);
-        return false;
-    }
-
+    if (result != 0) return false;
     if (avformat_find_stream_info(formatCtx, nullptr) < 0) return false;
 
     const AVCodec* codec = nullptr;
@@ -122,7 +126,7 @@ void AudioDecoder::resume() {
 }
 
 void AudioDecoder::stop() {
-    isDecoding = false; // Turant FFmpeg download kill karega
+    isDecoding = false; 
     isPlaying = false;
     isPaused = false;
     
@@ -145,6 +149,23 @@ void AudioDecoder::stop() {
 
 void AudioDecoder::decodeLoop() {
     while (isDecoding) {
+        if (seekRequested) {
+            AVRational timeBaseQ = {1, 1000};
+            int64_t targetPts = av_rescale_q(seekTargetMs.load(), timeBaseQ, formatCtx->streams[audioStreamIndex]->time_base);
+            
+            av_seek_frame(formatCtx, audioStreamIndex, targetPts, AVSEEK_FLAG_BACKWARD);
+            if (codecCtx) {
+                avcodec_flush_buffers(codecCtx);
+            }
+            
+            {
+                std::lock_guard<std::mutex> lock(bufferMutex);
+                audioBuffer.clear();
+            }
+            seekRequested = false;
+            continue; 
+        }
+
         bool isFull = false;
         {
             std::lock_guard<std::mutex> lock(bufferMutex);
@@ -204,6 +225,18 @@ oboe::DataCallbackResult AudioDecoder::onAudioReady(oboe::AudioStream *audioStre
         }
         memset(outputBuffer + available, 0, (samplesNeeded - available) * sizeof(int16_t));
     }
+
+    // Apply Volume and Mute processing
+    float currVol = volume.load();
+    if (currVol != 1.0f) {
+        for (int i = 0; i < samplesNeeded; i++) {
+            float sample = outputBuffer[i] * currVol;
+            if (sample > 32767.0f) sample = 32767.0f;
+            if (sample < -32768.0f) sample = -32768.0f;
+            outputBuffer[i] = static_cast<int16_t>(sample);
+        }
+    }
+
     return oboe::DataCallbackResult::Continue;
 }
 
