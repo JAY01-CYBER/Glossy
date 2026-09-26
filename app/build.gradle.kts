@@ -235,7 +235,7 @@ android {
         compose = true
         buildConfig = true
         resValues = true
-        prefab = true // Prefab enabled for Google Oboe
+        prefab = true // Prefab enabled for Google Oboe and FFmpeg
     }
 
     dependenciesInfo {
@@ -449,6 +449,5 @@ dependencies {
     // C++ Audio Engine Dependencies
     // ==========================================
     implementation("com.google.oboe:oboe:1.8.1")
+    implementation(libs.ffmpeg.ssl)
 }
-
-// Cache bust for spotifycore module update
