@@ -33,6 +33,9 @@ public:
     void stop();
     void release();
 
+    // FFmpeg ko rokne ka hathiyar
+    bool shouldInterrupt();
+
     oboe::DataCallbackResult onAudioReady(oboe::AudioStream *audioStream, void *audioData, int32_t numFrames) override;
 
 private:
@@ -53,16 +56,13 @@ private:
 
     uint8_t* outBuffer = nullptr;
     
-    // Naya Background Thread & Buffer Variables
     std::thread decoderThread;
     std::atomic<bool> isDecoding;
     std::mutex bufferMutex;
-    std::deque<int16_t> audioBuffer; // Ye tera "Tank" hai
+    std::deque<int16_t> audioBuffer;
     
-    // 2 second ka advance buffer (48000 Hz * 2 Channels * 2 Sec)
     const size_t MAX_BUFFER_SIZE = 48000 * 2 * 2; 
 
-    // Naya background function
     void decodeLoop();
 };
 
