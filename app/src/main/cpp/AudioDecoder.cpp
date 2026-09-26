@@ -20,6 +20,7 @@ AudioDecoder::AudioDecoder() {
     isPlaying = false;
     isPaused = false;
     isDecoding = false;
+    currentPositionMs = 0;
 }
 
 AudioDecoder::~AudioDecoder() {
@@ -43,11 +44,16 @@ void AudioDecoder::setVolume(float vol) {
     volume = vol;
 }
 
+int64_t AudioDecoder::getCurrentPositionMs() {
+    return currentPositionMs.load();
+}
+
 bool AudioDecoder::openUrl(const std::string& url) {
     LOGI("Opening URL in FFmpeg: %s", url.c_str());
 
     isDecoding = true; 
     seekRequested = false;
+    currentPositionMs = 0;
 
     formatCtx = avformat_alloc_context();
     formatCtx->interrupt_callback.callback = decode_interrupt_cb;
@@ -151,7 +157,15 @@ void AudioDecoder::decodeLoop() {
     while (isDecoding) {
         if (seekRequested) {
             AVRational timeBaseQ = {1, 1000};
+            int64_t streamStartTime = formatCtx->streams[audioStreamIndex]->start_time;
+            
+            // Time base conversion
             int64_t targetPts = av_rescale_q(seekTargetMs.load(), timeBaseQ, formatCtx->streams[audioStreamIndex]->time_base);
+            
+            // Fix for YouTube stream offset (Aadha gaana skip hone wali problem ka fix)
+            if (streamStartTime != AV_NOPTS_VALUE) {
+                targetPts += streamStartTime;
+            }
             
             av_seek_frame(formatCtx, audioStreamIndex, targetPts, AVSEEK_FLAG_BACKWARD);
             if (codecCtx) {
@@ -162,6 +176,8 @@ void AudioDecoder::decodeLoop() {
                 std::lock_guard<std::mutex> lock(bufferMutex);
                 audioBuffer.clear();
             }
+            
+            currentPositionMs = seekTargetMs.load();
             seekRequested = false;
             continue; 
         }
@@ -184,6 +200,17 @@ void AudioDecoder::decodeLoop() {
         }
 
         if (packet->stream_index == audioStreamIndex) {
+            
+            // Current Time (Milliseconds) track karna UI aur Lyrics ke liye
+            if (packet->pts != AV_NOPTS_VALUE) {
+                int64_t start_time = formatCtx->streams[audioStreamIndex]->start_time;
+                int64_t pts = packet->pts;
+                if (start_time != AV_NOPTS_VALUE) {
+                    pts -= start_time;
+                }
+                currentPositionMs = av_rescale_q(pts, formatCtx->streams[audioStreamIndex]->time_base, {1, 1000});
+            }
+
             ret = avcodec_send_packet(codecCtx, packet);
             if (ret >= 0) {
                 ret = avcodec_receive_frame(codecCtx, frame);
@@ -226,7 +253,6 @@ oboe::DataCallbackResult AudioDecoder::onAudioReady(oboe::AudioStream *audioStre
         memset(outputBuffer + available, 0, (samplesNeeded - available) * sizeof(int16_t));
     }
 
-    // Apply Volume and Mute processing
     float currVol = volume.load();
     if (currVol != 1.0f) {
         for (int i = 0; i < samplesNeeded; i++) {
