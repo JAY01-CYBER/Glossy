@@ -6,8 +6,11 @@ AudioDecoder::AudioDecoder() {
     frame = av_frame_alloc();
     packet = av_packet_alloc();
     
-    // Allocate buffer
     av_samples_alloc(&outBuffer, nullptr, targetChannels, 48000, AV_SAMPLE_FMT_S16, 0);
+    
+    isPlaying = false;
+    isPaused = false;
+    isDecoding = false;
 }
 
 AudioDecoder::~AudioDecoder() {
@@ -21,9 +24,8 @@ AudioDecoder::~AudioDecoder() {
 bool AudioDecoder::openUrl(const std::string& url) {
     LOGI("Opening URL in FFmpeg: %s", url.c_str());
 
-    // NOTE: Agar tera prebuilt FFmpeg bina SSL ke compile hua hai, toh HTTPS links yahan fail ho jayenge.
     if (avformat_open_input(&formatCtx, url.c_str(), nullptr, nullptr) != 0) {
-        LOGE("Network error: URL open nahi hua! (HTTPS issue ho sakta hai)");
+        LOGE("Network error: URL open nahi hua!");
         return false;
     }
 
@@ -57,8 +59,11 @@ bool AudioDecoder::openUrl(const std::string& url) {
 
     if (swr_init(swrCtx) < 0) return false;
 
-    outBufferSize = 0;
-    outBufferIndex = 0;
+    // Naya gaana chalne se pehle purana Tank saaf kar do
+    {
+        std::lock_guard<std::mutex> lock(bufferMutex);
+        audioBuffer.clear();
+    }
 
     // OBOE SETUP
     oboe::AudioStreamBuilder builder;
@@ -73,10 +78,15 @@ bool AudioDecoder::openUrl(const std::string& url) {
     oboe::Result result = builder.openStream(audioStream);
     if (result != oboe::Result::OK) return false;
 
-    audioStream->requestStart();
+    // THREAD AUR OBOE START KARO
     isPlaying = true;
     isPaused = false;
-    LOGI("Audio Stream open aur Oboe start ho gaya! 🎵");
+    isDecoding = true;
+    
+    decoderThread = std::thread(&AudioDecoder::decodeLoop, this);
+    audioStream->requestStart();
+    
+    LOGI("Audio Stream open aur Background Thread start ho gaya! 🎵");
     return true;
 }
 
@@ -97,6 +107,13 @@ void AudioDecoder::resume() {
 void AudioDecoder::stop() {
     isPlaying = false;
     isPaused = false;
+    isDecoding = false; // Thread ko rukne ka signal
+    
+    // Background thread ke puri tarah band hone ka wait karo
+    if (decoderThread.joinable()) {
+        decoderThread.join();
+    }
+
     if (audioStream) {
         audioStream->requestStop();
         audioStream->close();
@@ -105,14 +122,26 @@ void AudioDecoder::stop() {
     release();
 }
 
-// 🔥 BUG FIX: Ab ye function tab tak loop karega jab tak isko asali audio data na mil jaye
-int AudioDecoder::decodeNextFrame() {
-    outBufferSize = 0;
-    outBufferIndex = 0;
+// 🔥 NAYA: Ye function chup-chaap background me tank (audioBuffer) bharta rahega
+void AudioDecoder::decodeLoop() {
+    while (isDecoding) {
+        bool isFull = false;
+        {
+            std::lock_guard<std::mutex> lock(bufferMutex);
+            isFull = (audioBuffer.size() >= MAX_BUFFER_SIZE);
+        }
 
-    while (true) {
+        // Agar tank full hai, toh CPU ko thoda aaram do
+        if (isFull) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            continue;
+        }
+
         int ret = av_read_frame(formatCtx, packet);
-        if (ret < 0) return ret; // End of File ya Error
+        if (ret < 0) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            continue; // Gaana khatam
+        }
 
         if (packet->stream_index == audioStreamIndex) {
             ret = avcodec_send_packet(codecCtx, packet);
@@ -122,51 +151,44 @@ int AudioDecoder::decodeNextFrame() {
                     int out_samples = swr_convert(swrCtx, &outBuffer, frame->nb_samples,
                                                   (const uint8_t**)frame->data, frame->nb_samples);
                     if (out_samples > 0) {
-                        outBufferSize = out_samples * targetChannels * sizeof(int16_t);
-                        av_packet_unref(packet);
-                        return 0; // Success! Audio data mil gaya.
+                        int totalSamples = out_samples * targetChannels;
+                        int16_t* pcmData = (int16_t*)outBuffer;
+                        
+                        // Decode kiya hua data Tank me daal do
+                        std::lock_guard<std::mutex> lock(bufferMutex);
+                        audioBuffer.insert(audioBuffer.end(), pcmData, pcmData + totalSamples);
                     }
                 }
             }
         }
-        // Agar packet audio nahi tha (e.g. cover art), toh usko free karke agla try karo
         av_packet_unref(packet);
     }
-    return -1;
 }
 
-// 🔥 BUG FIX: Infinite loop issue fixed in onAudioReady
+// 🔥 NAYA: Oboe ab seedha tank se aawaz lega bina ruke
 oboe::DataCallbackResult AudioDecoder::onAudioReady(oboe::AudioStream *audioStream, void *audioData, int32_t numFrames) {
     int16_t *outputBuffer = static_cast<int16_t *>(audioData);
-    int framesToFill = numFrames;
-    int framesFilled = 0;
+    int samplesNeeded = numFrames * targetChannels;
 
     if (!isPlaying || isPaused) {
-        memset(audioData, 0, numFrames * targetChannels * sizeof(int16_t));
+        memset(audioData, 0, samplesNeeded * sizeof(int16_t));
         return oboe::DataCallbackResult::Continue;
     }
 
-    while (framesToFill > 0) {
-        if (outBufferIndex >= outBufferSize) {
-            int ret = decodeNextFrame();
-            // Agar gaana khatam ho gaya ya error aaya, toh bache hue buffer ko silence se bhar do
-            if (ret < 0 || outBufferSize == 0) {
-                memset(outputBuffer + (framesFilled * targetChannels), 0, framesToFill * targetChannels * sizeof(int16_t));
-                break; 
-            }
+    std::lock_guard<std::mutex> lock(bufferMutex);
+    
+    // Agar tank me aawaz available hai
+    if (audioBuffer.size() >= samplesNeeded) {
+        std::copy(audioBuffer.begin(), audioBuffer.begin() + samplesNeeded, outputBuffer);
+        audioBuffer.erase(audioBuffer.begin(), audioBuffer.begin() + samplesNeeded);
+    } else {
+        // Agar thoda lag aaya, toh bacha hua data bhej kar silence (0) bhar do taaki app crash na ho
+        int available = audioBuffer.size();
+        if (available > 0) {
+            std::copy(audioBuffer.begin(), audioBuffer.end(), outputBuffer);
+            audioBuffer.clear();
         }
-
-        int bytesAvailable = outBufferSize - outBufferIndex;
-        int framesAvailable = bytesAvailable / (targetChannels * sizeof(int16_t));
-
-        int framesToCopy = std::min(framesToFill, framesAvailable);
-        int bytesToCopy = framesToCopy * targetChannels * sizeof(int16_t);
-
-        memcpy(outputBuffer + (framesFilled * targetChannels), outBuffer + outBufferIndex, bytesToCopy);
-
-        outBufferIndex += bytesToCopy;
-        framesFilled += framesToCopy;
-        framesToFill -= framesToCopy;
+        memset(outputBuffer + available, 0, (samplesNeeded - available) * sizeof(int16_t));
     }
 
     return oboe::DataCallbackResult::Continue;
