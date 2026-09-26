@@ -80,3 +80,13 @@ Java_com_jay_glossy_ui_player_NativeEngine_nSetVolume(JNIEnv *env, jobject thiz,
         decoder->setVolume(vol);
     }
 }
+
+
+extern "C"
+JNIEXPORT jlong JNICALL
+Java_com_jay_glossy_ui_player_NativeEngine_nGetCurrentPosition(JNIEnv *env, jobject thiz) {
+    if (decoder != nullptr) {
+        return decoder->getCurrentPositionMs();
+    }
+    return 0;
+}
