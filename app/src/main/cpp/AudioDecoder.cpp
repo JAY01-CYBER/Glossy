@@ -1,6 +1,11 @@
 #include "AudioDecoder.h"
 #include <algorithm>
 
+// Naya header add kiya dict ke liye
+extern "C" {
+#include <libavutil/dict.h>
+}
+
 AudioDecoder::AudioDecoder() {
     avformat_network_init();
     frame = av_frame_alloc();
@@ -24,10 +29,21 @@ AudioDecoder::~AudioDecoder() {
 bool AudioDecoder::openUrl(const std::string& url) {
     LOGI("Opening URL in FFmpeg: %s", url.c_str());
 
-    if (avformat_open_input(&formatCtx, url.c_str(), nullptr, nullptr) != 0) {
-        LOGE("Network error: URL open nahi hua!");
+    // --- THE FIX: Bypass 403 & Allow HTTPS ---
+    AVDictionary* options = nullptr;
+    av_dict_set(&options, "user_agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36", 0);
+    av_dict_set(&options, "protocol_whitelist", "file,http,https,tcp,tls,crypto", 0);
+
+    int result = avformat_open_input(&formatCtx, url.c_str(), nullptr, &options);
+    
+    // Memory free karna zaroori hai
+    av_dict_free(&options);
+
+    if (result != 0) {
+        LOGE("Network error: URL open nahi hua! FFmpeg Error Code: %d", result);
         return false;
     }
+    // -----------------------------------------
 
     if (avformat_find_stream_info(formatCtx, nullptr) < 0) {
         LOGE("Stream info nahi mili!");
@@ -75,8 +91,8 @@ bool AudioDecoder::openUrl(const std::string& url) {
            ->setSampleRate(targetSampleRate)
            ->setDataCallback(this);
 
-    oboe::Result result = builder.openStream(audioStream);
-    if (result != oboe::Result::OK) return false;
+    oboe::Result res = builder.openStream(audioStream);
+    if (res != oboe::Result::OK) return false;
 
     // THREAD AUR OBOE START KARO
     isPlaying = true;
