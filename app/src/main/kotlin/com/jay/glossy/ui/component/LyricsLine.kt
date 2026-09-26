@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -94,12 +94,6 @@ private fun String.containsRtl(): Boolean {
     return false
 }
 
-/**
- * Splits a string into Unicode grapheme clusters using BreakIterator.
- * This correctly handles Devanagari, Bengali, Arabic, Hangul, emoji, etc.
- * where a single visible glyph is composed of multiple code points (e.g. base
- * consonant + matra + anusvara = one cluster, not three separate chars).
- */
 private fun String.toGraphemeClusters(): List<String> {
     if (isEmpty()) return emptyList()
     val result = mutableListOf<String>()
@@ -158,7 +152,7 @@ internal fun LyricsLine(
             start = when (lyricsTextPosition) { LyricsPosition.LEFT, LyricsPosition.RIGHT -> 11.dp; LyricsPosition.CENTER -> 24.dp },
             end = when (lyricsTextPosition) { LyricsPosition.LEFT, LyricsPosition.RIGHT -> 11.dp; LyricsPosition.CENTER -> 24.dp },
             top = if (item.isBackground) 0.dp else 12.dp,
-            bottom = if (item.isBackground) 2.dp else 12.dp // simplified gap logic
+            bottom = if (item.isBackground) 2.dp else 12.dp
         )
 
     val agentAlignment = when {
@@ -344,20 +338,21 @@ private fun WordLevelLyrics(
     
     var smoothPosition by remember { mutableLongStateOf(currentPositionState + lyricsOffset) }
     
+    // YAHAN PAR CHANGE KIYA GAYA HAI - C++ KA REAL TIME SYNC
     LaunchedEffect(isActiveLine) {
         if (isActiveLine) {
-            var lastPlayerPos = playerConnection.player.currentPosition
+            var lastPlayerPos = playerConnection.realCurrentPosition
             var lastUpdateTime = System.currentTimeMillis()
             while (isActive) {
                 withFrameMillis {
                     val now = System.currentTimeMillis()
-                    val playerPos = playerConnection.player.currentPosition
+                    val playerPos = playerConnection.realCurrentPosition
                     if (playerPos != lastPlayerPos) {
                         lastPlayerPos = playerPos
                         lastUpdateTime = now
                     }
                     val elapsed = now - lastUpdateTime
-                    smoothPosition = lastPlayerPos + lyricsOffset + (if (playerConnection.player.isPlaying) elapsed else 0)
+                    smoothPosition = lastPlayerPos + lyricsOffset + (if (playerConnection.isPlaying.value) elapsed else 0)
                 }
             }
         }
@@ -402,14 +397,8 @@ private fun WordLevelLyrics(
         }.let { data -> data.map { it.first } to data.map { it.second } }
     }
 
-    // Break mainText into grapheme clusters so that multi-codepoint glyphs
-    // (Devanagari/Bengali matras, Arabic ligatures, emoji, etc.) are treated
-    // as single units throughout the animation pipeline.
     val graphemeClusters = remember(mainText) { mainText.toGraphemeClusters() }
     val clusterCount = graphemeClusters.size
-    // For each cluster index, the String offset (Char index) of its first character in mainText.
-    // Required because TextLayoutResult.getBoundingBox/getLineForOffset take
-    // String offsets (UTF-16/Char indices), not cluster indices.
     val clusterCharOffsets = remember(mainText) {
         IntArray(clusterCount).also { offsets ->
             var charOffset = 0
@@ -420,9 +409,6 @@ private fun WordLevelLyrics(
         }
     }
 
-    // wordIdxMap / charInWordMap / wordLenMap are now sized and indexed by
-    // CLUSTER INDEX (not codepoint index) so that each visual glyph unit is
-    // mapped to exactly one word slot.
     val charToWordData = remember(mainText, effectiveWords, isBackground, graphemeClusters, clusterCharOffsets) {
         val wordIdxMap = IntArray(clusterCount) { -1 }
         val charInWordMap = IntArray(clusterCount)
@@ -441,12 +427,9 @@ private fun WordLevelLyrics(
             val indexInMain = mainText.indexOf(rawWordText, currentPos)
             if (indexInMain != -1) {
                 val wordEndInMain = indexInMain + rawWordText.length
-                // Advance clCursor to the first cluster at or after indexInMain
                 while (clCursor < clusterCount && clusterCharOffsets[clCursor] < indexInMain) {
                     clCursor++
                 }
-                val firstClIdx = clCursor
-                // Collect all clusters in the word range [indexInMain, wordEndInMain)
                 val wordClusterIndices = mutableListOf<Int>()
                 while (clCursor < clusterCount && clusterCharOffsets[clCursor] < wordEndInMain) {
                     wordClusterIndices.add(clCursor)
@@ -458,7 +441,6 @@ private fun WordLevelLyrics(
                     charInWordMap[clIdx] = posInWord
                     wordLenMap[clIdx] = wordClusterLen
                 }
-                // Check the cluster at clCursor for a trailing space
                 if (clCursor < clusterCount && clusterCharOffsets[clCursor] == wordEndInMain && 
                     wordEndInMain < mainText.length && mainText[wordEndInMain] == ' ') {
                     val spaceClIdx = clCursor
@@ -504,8 +486,6 @@ private fun WordLevelLyrics(
             )
         }
         
-        // Each layout corresponds to one grapheme cluster (the visual unit),
-        // not one codepoint. Fixes Devanagari/Bengali matra fragmentation.
         val letterLayouts = remember(mainText, lyricStyle) {
             graphemeClusters.map { cluster -> textMeasurer.measure(cluster, lyricStyle) }
         }
@@ -601,8 +581,6 @@ private fun WordLevelLyrics(
                 val lineCurrentPushes = FloatArray(layoutResult.lineCount)
                 val lineTotalPushes = FloatArray(layoutResult.lineCount)
                 
-                // Pre-calculate total pushes per line to handle alignment correctly.
-                // Iterate over cluster indices so each visual glyph unit is one slot.
                 for (i in 0 until clusterCount) {
                     val charOffset = clusterCharOffsets[i]
                     val lineIdx = layoutResult.getLineForOffset(charOffset)
@@ -655,8 +633,6 @@ private fun WordLevelLyrics(
                     lineTotalPushes[lineIdx] += charBounds.width * (charScaleX - 1f)
                 }
 
-                // Main drawing loop: iterate over cluster indices so each visual
-                // glyph (including multi-codepoint Devanagari clusters) is one unit.
                 for (i in 0 until clusterCount) {
                     val charOffset = clusterCharOffsets[i]
                     val lineIdx = layoutResult.getLineForOffset(charOffset)
