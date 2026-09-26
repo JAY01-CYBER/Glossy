@@ -2,9 +2,10 @@
 #define GLOSSY_AUDIO_DECODER_H
 
 #include <string>
+#include <memory>
 #include <android/log.h>
+#include <oboe/Oboe.h>
 
-// FFmpeg C libraries ko C++ me include karne ke liye extern "C" zaroori hai
 extern "C" {
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
@@ -16,43 +17,46 @@ extern "C" {
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 
-class AudioDecoder {
+// Oboe Data Callback inherit karna zaroori hai
+class AudioDecoder : public oboe::AudioStreamDataCallback {
 public:
     AudioDecoder();
     ~AudioDecoder();
 
-    // URL open karke audio stream aur codec dhundhega
     bool openUrl(const std::string& url);
     
-    // Audio packets ko read karke raw PCM me decode karega
-    int decodeFrame(uint8_t** outBuffer);
-    
-    // Naye Playback Controls
     void pause();
     void resume();
     void stop();
-    
     void release();
 
-    int getSampleRate() const { return targetSampleRate; }
-    int getChannelCount() const { return targetChannels; }
+    // Ye function Oboe hardware call karega jab usko naya audio data chahiye hoga
+    oboe::DataCallbackResult onAudioReady(oboe::AudioStream *audioStream, void *audioData, int32_t numFrames) override;
 
 private:
     AVFormatContext* formatCtx = nullptr;
     AVCodecContext* codecCtx = nullptr;
     AVFrame* frame = nullptr;
     AVPacket* packet = nullptr;
-    
     SwrContext* swrCtx = nullptr; 
 
+    // Oboe Audio Stream
+    std::shared_ptr<oboe::AudioStream> audioStream;
+
     int audioStreamIndex = -1;
-    
     int targetSampleRate = 48000;
     int targetChannels = 2; 
 
-    // Playback state track karne ke liye
     bool isPlaying = false;
     bool isPaused = false;
+
+    // Buffer for holding decoded PCM data
+    uint8_t* outBuffer = nullptr;
+    int outBufferSize = 0;
+    int outBufferIndex = 0;
+
+    // Internal decode function
+    int decodeNextFrame();
 };
 
 #endif // GLOSSY_AUDIO_DECODER_H
