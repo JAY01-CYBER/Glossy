@@ -6,15 +6,13 @@ AudioDecoder::AudioDecoder() {
     frame = av_frame_alloc();
     packet = av_packet_alloc();
     
-    // Allocate 1 second buffer for output (48000 samples * 2 channels * 2 bytes)
+    // Allocate buffer
     av_samples_alloc(&outBuffer, nullptr, targetChannels, 48000, AV_SAMPLE_FMT_S16, 0);
 }
 
 AudioDecoder::~AudioDecoder() {
     stop();
-    if (outBuffer) {
-        av_freep(&outBuffer);
-    }
+    if (outBuffer) av_freep(&outBuffer);
     av_frame_free(&frame);
     av_packet_free(&packet);
     avformat_network_deinit();
@@ -23,8 +21,9 @@ AudioDecoder::~AudioDecoder() {
 bool AudioDecoder::openUrl(const std::string& url) {
     LOGI("Opening URL in FFmpeg: %s", url.c_str());
 
+    // NOTE: Agar tera prebuilt FFmpeg bina SSL ke compile hua hai, toh HTTPS links yahan fail ho jayenge.
     if (avformat_open_input(&formatCtx, url.c_str(), nullptr, nullptr) != 0) {
-        LOGE("Network error: URL open nahi hua!");
+        LOGE("Network error: URL open nahi hua! (HTTPS issue ho sakta hai)");
         return false;
     }
 
@@ -43,12 +42,8 @@ bool AudioDecoder::openUrl(const std::string& url) {
     codecCtx = avcodec_alloc_context3(codec);
     avcodec_parameters_to_context(codecCtx, formatCtx->streams[audioStreamIndex]->codecpar);
     
-    if (avcodec_open2(codecCtx, codec, nullptr) < 0) {
-        LOGE("Codec open karne me fail ho gaya!");
-        return false;
-    }
+    if (avcodec_open2(codecCtx, codec, nullptr) < 0) return false;
 
-    // Resampler setup: Kisi bhi audio format ko 48kHz Stereo 16-bit PCM me convert karne ke liye
     swrCtx = swr_alloc();
     av_opt_set_chlayout(swrCtx, "in_chlayout", &codecCtx->ch_layout, 0);
     av_opt_set_int(swrCtx, "in_sample_rate", codecCtx->sample_rate, 0);
@@ -60,15 +55,12 @@ bool AudioDecoder::openUrl(const std::string& url) {
     av_opt_set_int(swrCtx, "out_sample_rate", targetSampleRate, 0);
     av_opt_set_sample_fmt(swrCtx, "out_sample_fmt", AV_SAMPLE_FMT_S16, 0);
 
-    if (swr_init(swrCtx) < 0) {
-        LOGE("Resampler initialize nahi hua!");
-        return false;
-    }
+    if (swr_init(swrCtx) < 0) return false;
 
     outBufferSize = 0;
     outBufferIndex = 0;
 
-    // 🔥 OBOE HARDWARE AUDIO SETUP 🔥
+    // OBOE SETUP
     oboe::AudioStreamBuilder builder;
     builder.setDirection(oboe::Direction::Output)
            ->setPerformanceMode(oboe::PerformanceMode::LowLatency)
@@ -76,20 +68,15 @@ bool AudioDecoder::openUrl(const std::string& url) {
            ->setFormat(oboe::AudioFormat::I16)
            ->setChannelCount(targetChannels)
            ->setSampleRate(targetSampleRate)
-           ->setDataCallback(this); // Engine khud callback lega
+           ->setDataCallback(this);
 
     oboe::Result result = builder.openStream(audioStream);
-    if (result != oboe::Result::OK) {
-        LOGE("Oboe stream kholne me fail: %s", oboe::convertToText(result));
-        return false;
-    }
+    if (result != oboe::Result::OK) return false;
 
-    // Oboe Audio Playback Start!
     audioStream->requestStart();
-    
     isPlaying = true;
     isPaused = false;
-    LOGI("Audio Stream open aur Oboe Hardware Playback start ho gaya! 🎵");
+    LOGI("Audio Stream open aur Oboe start ho gaya! 🎵");
     return true;
 }
 
@@ -97,7 +84,6 @@ void AudioDecoder::pause() {
     if (isPlaying && !isPaused) {
         isPaused = true;
         if (audioStream) audioStream->requestPause();
-        LOGI("Glossy Decoder: Playback PAUSED");
     }
 }
 
@@ -105,7 +91,6 @@ void AudioDecoder::resume() {
     if (isPlaying && isPaused) {
         isPaused = false;
         if (audioStream) audioStream->requestStart();
-        LOGI("Glossy Decoder: Playback RESUMED");
     }
 }
 
@@ -118,37 +103,44 @@ void AudioDecoder::stop() {
         audioStream.reset();
     }
     release();
-    LOGI("Glossy Decoder: Playback STOPPED");
 }
 
+// 🔥 BUG FIX: Ab ye function tab tak loop karega jab tak isko asali audio data na mil jaye
 int AudioDecoder::decodeNextFrame() {
-    int ret = av_read_frame(formatCtx, packet);
-    if (ret < 0) return ret; // End of file or error
+    outBufferSize = 0;
+    outBufferIndex = 0;
 
-    if (packet->stream_index == audioStreamIndex) {
-        ret = avcodec_send_packet(codecCtx, packet);
-        if (ret == 0) {
-            ret = avcodec_receive_frame(codecCtx, frame);
-            if (ret == 0) {
-                // Resample and convert to 16-bit PCM
-                int out_samples = swr_convert(swrCtx, &outBuffer, frame->nb_samples,
-                                              (const uint8_t**)frame->data, frame->nb_samples);
-                outBufferSize = out_samples * targetChannels * sizeof(int16_t);
-                outBufferIndex = 0;
+    while (true) {
+        int ret = av_read_frame(formatCtx, packet);
+        if (ret < 0) return ret; // End of File ya Error
+
+        if (packet->stream_index == audioStreamIndex) {
+            ret = avcodec_send_packet(codecCtx, packet);
+            if (ret >= 0) {
+                ret = avcodec_receive_frame(codecCtx, frame);
+                if (ret >= 0) {
+                    int out_samples = swr_convert(swrCtx, &outBuffer, frame->nb_samples,
+                                                  (const uint8_t**)frame->data, frame->nb_samples);
+                    if (out_samples > 0) {
+                        outBufferSize = out_samples * targetChannels * sizeof(int16_t);
+                        av_packet_unref(packet);
+                        return 0; // Success! Audio data mil gaya.
+                    }
+                }
             }
         }
+        // Agar packet audio nahi tha (e.g. cover art), toh usko free karke agla try karo
+        av_packet_unref(packet);
     }
-    av_packet_unref(packet);
-    return 0;
+    return -1;
 }
 
-// 🔥 YAHI WO FUNCTION HAI JO PHONE KA HARDWARE HAR MILLISECOND CALL KARTA HAI 🔥
+// 🔥 BUG FIX: Infinite loop issue fixed in onAudioReady
 oboe::DataCallbackResult AudioDecoder::onAudioReady(oboe::AudioStream *audioStream, void *audioData, int32_t numFrames) {
     int16_t *outputBuffer = static_cast<int16_t *>(audioData);
     int framesToFill = numFrames;
     int framesFilled = 0;
 
-    // Agar pause hai ya stream read nahi karni, toh shanti (silence) bhejo speaker me
     if (!isPlaying || isPaused) {
         memset(audioData, 0, numFrames * targetChannels * sizeof(int16_t));
         return oboe::DataCallbackResult::Continue;
@@ -156,14 +148,12 @@ oboe::DataCallbackResult AudioDecoder::onAudioReady(oboe::AudioStream *audioStre
 
     while (framesToFill > 0) {
         if (outBufferIndex >= outBufferSize) {
-            // Buffer khali hai, naya data FFmpeg se fetch karo
             int ret = decodeNextFrame();
-            if (ret < 0) {
-                // Gaana khatam
+            // Agar gaana khatam ho gaya ya error aaya, toh bache hue buffer ko silence se bhar do
+            if (ret < 0 || outBufferSize == 0) {
                 memset(outputBuffer + (framesFilled * targetChannels), 0, framesToFill * targetChannels * sizeof(int16_t));
-                break;
+                break; 
             }
-            if (outBufferSize == 0) continue; // Skip video/empty packets
         }
 
         int bytesAvailable = outBufferSize - outBufferIndex;
@@ -172,7 +162,6 @@ oboe::DataCallbackResult AudioDecoder::onAudioReady(oboe::AudioStream *audioStre
         int framesToCopy = std::min(framesToFill, framesAvailable);
         int bytesToCopy = framesToCopy * targetChannels * sizeof(int16_t);
 
-        // FFmpeg Buffer se Oboe Hardware Buffer me copy
         memcpy(outputBuffer + (framesFilled * targetChannels), outBuffer + outBufferIndex, bytesToCopy);
 
         outBufferIndex += bytesToCopy;
@@ -184,16 +173,7 @@ oboe::DataCallbackResult AudioDecoder::onAudioReady(oboe::AudioStream *audioStre
 }
 
 void AudioDecoder::release() {
-    if (swrCtx) {
-        swr_free(&swrCtx);
-        swrCtx = nullptr;
-    }
-    if (codecCtx) {
-        avcodec_free_context(&codecCtx);
-        codecCtx = nullptr;
-    }
-    if (formatCtx) {
-        avformat_close_input(&formatCtx);
-        formatCtx = nullptr;
-    }
+    if (swrCtx) { swr_free(&swrCtx); swrCtx = nullptr; }
+    if (codecCtx) { avcodec_free_context(&codecCtx); codecCtx = nullptr; }
+    if (formatCtx) { avformat_close_input(&formatCtx); formatCtx = nullptr; }
 }
