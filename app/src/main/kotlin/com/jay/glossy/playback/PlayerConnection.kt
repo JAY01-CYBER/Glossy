@@ -68,6 +68,10 @@ class PlayerConnection(
 
     // --- 🚀 GLOSSY NATIVE ENGINE ---
     val nativeEngine = NativeEngine().apply { nInitEngine() }
+    
+    // YE LINE LYRICS UI KO PERFECT SYNC KAREGI
+    val realCurrentPosition: Long
+        get() = nativeEngine.nGetCurrentPosition()
 
     private fun getPlayerSafe(): ExoPlayer {
         check(playerReadinessFlow.value) {
@@ -217,7 +221,6 @@ class PlayerConnection(
 
         // --- 🚀 PRO DEV: NATIVE ENGINE SYNC OBSERVERS ---
         
-        // 1. Gaana change hone par url seedha engine ko dena
         scope.launch {
             mediaMetadata.collectLatest { metadata ->
                 nativeEngine.nStop() 
@@ -238,7 +241,6 @@ class PlayerConnection(
             }
         }
 
-        // 2. Play/Pause state observe karna
         scope.launch {
             isPlaying.collectLatest { playing ->
                 if (playing) {
@@ -251,7 +253,6 @@ class PlayerConnection(
             }
         }
 
-        // 3. Volume, Mute aur Call aane par Ducking Sync
         scope.launch {
             service.engineVolumeFlow.collectLatest { effectiveVolume ->
                 nativeEngine.nSetVolume(effectiveVolume)
@@ -577,6 +578,18 @@ class PlayerConnection(
 
         if (newPlayWhenReady && !wasPlaying) {
             checkAndStartAutomaticSleepTimer()
+        }
+    }
+    
+    // YE LINE SEEKBAR (SLIDER) KO SYNC KAREGI
+    override fun onPositionDiscontinuity(
+        oldPosition: Player.PositionInfo,
+        newPosition: Player.PositionInfo,
+        reason: Int,
+    ) {
+        if (reason == Player.DISCONTINUITY_REASON_SEEK) {
+            nativeEngine.nSeekTo(newPosition.positionMs)
+            Timber.tag(TAG).d("Glossy Native Engine: Seekbar moved to ${newPosition.positionMs} ms")
         }
     }
 
