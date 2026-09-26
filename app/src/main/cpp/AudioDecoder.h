@@ -27,13 +27,15 @@ public:
     ~AudioDecoder();
 
     bool openUrl(const std::string& url);
-    
     void pause();
     void resume();
     void stop();
     void release();
+    
+    // Naye seek aur volume functions
+    void seekTo(int64_t positionMs);
+    void setVolume(float vol);
 
-    // FFmpeg ko rokne ka hathiyar
     bool shouldInterrupt();
 
     oboe::DataCallbackResult onAudioReady(oboe::AudioStream *audioStream, void *audioData, int32_t numFrames) override;
@@ -53,6 +55,11 @@ private:
 
     std::atomic<bool> isPlaying;
     std::atomic<bool> isPaused;
+    
+    // Thread-safe variables for seek and volume
+    std::atomic<bool> seekRequested{false};
+    std::atomic<int64_t> seekTargetMs{0};
+    std::atomic<float> volume{1.0f};
 
     uint8_t* outBuffer = nullptr;
     
