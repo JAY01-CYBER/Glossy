@@ -356,6 +356,7 @@ class MusicService :
 
     lateinit var playerVolume: MutableStateFlow<Float>
     val isMuted = MutableStateFlow(false)
+    val engineVolumeFlow = MutableStateFlow(1f) // <--- Added for C++ engine
     private val sleepTimerVolumeMultiplier = MutableStateFlow(1f)
     private val audioFocusVolumeMultiplier = MutableStateFlow(1f)
 
@@ -382,7 +383,9 @@ class MusicService :
 
     private fun applyEffectiveVolume() {
         if (!::player.isInitialized || isCrossfading) return
-        player.volume = calculateEffectiveVolume()
+        val vol = calculateEffectiveVolume()
+        engineVolumeFlow.value = vol // Asli volume C++ ke liye save karo
+        player.volume = 0f // ExoPlayer ko hamesha ke liye 0 par lock kardo
     }
 
     // ========== GLOSSY AUDIO ROUTING LOGIC ==========
@@ -890,8 +893,9 @@ class MusicService :
                 focusMultiplier = focusMultiplier,
             )
         }.collectLatest(scope) {
+            engineVolumeFlow.value = it // Asli volume C++ ko bhej do
             if (!isCrossfading) {
-                player.volume = it
+                player.volume = 0f // ExoPlayer ko mute hi rakho
             }
         }
 
