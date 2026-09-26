@@ -98,7 +98,6 @@ class PlayerConnection(
     val player: ExoPlayer
         get() = getPlayerSafe()
 
-    /** Tracks whether player initialization completed successfully */
     private val isPlayerInitialized = MutableStateFlow(service.isPlayerReady.value)
 
     val playbackState: MutableStateFlow<Int>
@@ -137,7 +136,6 @@ class PlayerConnection(
                 initialState.third,
             )
 
-        // Track service readiness changes in background.
         scope.launch {
             playerReadinessFlow.collect { ready ->
                 isPlayerInitialized.value = ready
@@ -229,7 +227,6 @@ class PlayerConnection(
                     if (streamUrl != null) {
                         Timber.tag(TAG).d("Glossy Native Engine: Playing URL -> $streamUrl")
                         nativeEngine.nPlayUrl(streamUrl)
-                        service.setMuted(true) 
                         
                         if (!isPlaying.value) {
                             nativeEngine.nPause()
@@ -254,11 +251,9 @@ class PlayerConnection(
             }
         }
 
-        // 3. Volume, Mute aur Ducking Sync
+        // 3. Volume, Mute aur Call aane par Ducking Sync
         scope.launch {
-            combine(service.playerVolume, service.isMuted) { vol, muted ->
-                if (muted) 0f else vol
-            }.collectLatest { effectiveVolume ->
+            service.engineVolumeFlow.collectLatest { effectiveVolume ->
                 nativeEngine.nSetVolume(effectiveVolume)
                 Timber.tag(TAG).d("Glossy Native Engine: Volume set to $effectiveVolume")
             }
