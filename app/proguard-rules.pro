@@ -222,3 +222,9 @@
 ## KMPalette Rules
 -keep class com.kmpalette.** { *; }
 -dontwarn com.kmpalette.**
+
+## Glossy Native Audio Engine (C++ JNI)
+-keep class com.jay.glossy.ui.player.NativeEngine { *; }
+-keepclassmembers class com.jay.glossy.ui.player.NativeEngine {
+    native <methods>;
+}
