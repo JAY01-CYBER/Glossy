@@ -13,8 +13,12 @@ class NativeEngine {
     external fun nInitEngine(): Boolean
     external fun nPlayUrl(url: String): Boolean
     
-    // Naye Pause, Resume, Stop controls
+    // Playback controls
     external fun nPause()
     external fun nResume()
     external fun nStop()
+    
+    // Seek aur Volume controls
+    external fun nSeekTo(positionMs: Long)
+    external fun nSetVolume(volume: Float)
 }
