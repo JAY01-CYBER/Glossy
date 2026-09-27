@@ -1,0 +1,670 @@
+/**
+ * Glossy Project (C) 2026
+ * Licensed under GPL-3.0 | See git history for contributors
+ */
+
+package com.jay.glossy.ui.screens.settings
+
+import android.text.format.Formatter
+import android.widget.Toast
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import coil3.SingletonImageLoader
+import coil3.annotation.DelicateCoilApi
+import coil3.annotation.ExperimentalCoilApi
+import coil3.imageLoader
+import com.jay.glossy.LocalDatabase
+import com.jay.glossy.LocalPlayerAwareWindowInsets
+import com.jay.glossy.LocalPlayerConnection
+import com.jay.glossy.R
+import com.jay.glossy.constants.EnableSongCacheKey
+import com.jay.glossy.constants.MaxCanvasCacheSizeKey
+import com.jay.glossy.constants.MaxImageCacheSizeKey
+import com.jay.glossy.constants.MaxSongCacheSizeKey
+import com.jay.glossy.constants.SmartTrimmerKey
+import com.jay.glossy.constants.CanvasCacheMode
+import com.jay.glossy.constants.CanvasCacheModeKey
+import com.jay.glossy.extensions.tryOrNull
+import com.jay.glossy.extensions.directorySizeBytes 
+import com.jay.glossy.ui.component.ActionPromptDialog
+import com.jay.glossy.ui.component.EnumDialog
+import com.jay.glossy.ui.component.IconButton
+import com.jay.glossy.ui.component.Material3SettingsGroup
+import com.jay.glossy.ui.component.Material3SettingsItem
+import com.jay.glossy.ui.utils.backToMain
+import com.jay.glossy.utils.rememberEnumPreference
+import com.jay.glossy.utils.rememberPreference
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okio.ByteString.Companion.encodeUtf8
+import java.io.File
+import kotlin.math.roundToInt
+
+@OptIn(ExperimentalCoilApi::class, ExperimentalMaterial3Api::class, DelicateCoilApi::class)
+@Composable
+fun StorageSettings(
+    navController: NavController
+) {
+    val context = LocalContext.current
+    val database = LocalDatabase.current
+    val imageDiskCache = context.imageLoader.diskCache ?: return
+    val playerCache = LocalPlayerConnection.current?.service?.playerCache ?: return
+    val downloadCache = LocalPlayerConnection.current?.service?.downloadCache ?: return
+    
+    val downloadCacheDir = remember { context.filesDir.resolve("download") }
+    val playerCacheDir = remember { context.filesDir.resolve("exoplayer") }
+
+    val coroutineScope = rememberCoroutineScope()
+    val songCacheString = stringResource(R.string.song_cache).lowercase()
+    val imageCacheString = stringResource(R.string.image_cache).lowercase()
+    
+    val (smartTrimmer, onSmartTrimmerChange) = rememberPreference(
+        key = SmartTrimmerKey,
+        defaultValue = false
+    )
+    val (maxImageCacheSize, onMaxImageCacheSizeChange) = rememberPreference(
+        key = MaxImageCacheSizeKey,
+        defaultValue = 512
+    )
+    val (maxSongCacheSize, onMaxSongCacheSizeChange) = rememberPreference(
+        key = MaxSongCacheSizeKey,
+        defaultValue = 1024
+    )
+    val (enableSongCache, onEnableSongCacheChange) = rememberPreference(
+        key = EnableSongCacheKey,
+        defaultValue = true
+    )
+
+    val (maxCanvasCacheSize, onMaxCanvasCacheSizeChange) = rememberPreference(
+        key = MaxCanvasCacheSizeKey,
+        defaultValue = 256
+    )
+    var canvasCacheSize by remember { mutableIntStateOf(com.jay.glossy.ui.player.CanvasArtworkPlaybackCache.currentItemCount) }
+    
+    val (canvasCacheMode, onCanvasCacheModeChange) = rememberEnumPreference(
+        key = CanvasCacheModeKey,
+        defaultValue = CanvasCacheMode.VIDEO_AND_URL
+    )
+    var showCanvasCacheModeDialog by remember { mutableStateOf(false) }
+
+    var clearDownloads by remember { mutableStateOf(false) }
+    var clearCacheDialog by remember { mutableStateOf(false) }
+    var clearImageCacheDialog by remember { mutableStateOf(false) }
+    var clearCanvasCacheDialog by remember { mutableStateOf(false) }
+
+    var showCacheWarningDialog by remember { mutableStateOf(false) }
+    var cacheType by remember { mutableStateOf("") }
+    var cacheUsage by remember { mutableLongStateOf(0L) }
+    var onConfirmAction by remember { mutableStateOf<() -> Unit>({}) }
+
+    var imageCacheSize by remember { mutableLongStateOf(imageDiskCache.size) }
+    var playerCacheSize by remember { mutableLongStateOf(0L) }
+    var downloadCacheSize by remember { mutableLongStateOf(0L) }
+
+    val imageCacheProgress by animateFloatAsState(
+        targetValue = (imageCacheSize.toFloat() / (maxImageCacheSize * 1024 * 1024L)).coerceIn(0f, 1f),
+        label = "imageCacheProgress",
+    )
+    val playerCacheProgress by animateFloatAsState(
+        targetValue = (playerCacheSize.toFloat() / (maxSongCacheSize * 1024 * 1024L)).coerceIn(0f, 1f),
+        label = "playerCacheProgress",
+    )
+    val canvasCacheProgress by animateFloatAsState(
+        targetValue = if (maxCanvasCacheSize > 0) (canvasCacheSize.toFloat() / maxCanvasCacheSize).coerceIn(0f, 1f) else 0f,
+        label = "canvasCacheProgress",
+    )
+
+    val isSmartTrimmerAvailable = maxImageCacheSize != 0 || maxSongCacheSize != 0
+    LaunchedEffect(isSmartTrimmerAvailable) {
+        if (!isSmartTrimmerAvailable && smartTrimmer) onSmartTrimmerChange(false)
+    }
+
+    LaunchedEffect(maxImageCacheSize) {
+        SingletonImageLoader.reset()
+        if (maxImageCacheSize == 0) {
+            coroutineScope.launch(Dispatchers.IO) {
+                imageDiskCache.clear()
+            }
+        }
+    }
+    LaunchedEffect(maxSongCacheSize) {
+        if (maxSongCacheSize == 0) {
+            coroutineScope.launch(Dispatchers.IO) {
+                playerCache.keys.forEach { key ->
+                    playerCache.removeResource(key)
+                }
+            }
+        }
+    }
+    
+    LaunchedEffect(maxCanvasCacheSize) {
+        com.jay.glossy.ui.player.CanvasArtworkPlaybackCache.setMaxSize(maxCanvasCacheSize)
+        canvasCacheSize = com.jay.glossy.ui.player.CanvasArtworkPlaybackCache.currentItemCount
+    }
+
+    LaunchedEffect(imageDiskCache) {
+        while (isActive) {
+            delay(500)
+            imageCacheSize = imageDiskCache.size
+        }
+    }
+    
+    LaunchedEffect(playerCache, playerCacheDir) {
+        while (isActive) {
+            delay(500)
+            playerCacheSize = withContext(Dispatchers.IO) {
+                val cacheSpace = tryOrNull { playerCache.cacheSpace } ?: 0L
+                if (cacheSpace == 0L) playerCacheDir.directorySizeBytes() else cacheSpace
+            }
+        }
+    }
+    
+    LaunchedEffect(downloadCache, downloadCacheDir) {
+        while (isActive) {
+            delay(500)
+            downloadCacheSize = withContext(Dispatchers.IO) {
+                val cacheSpace = tryOrNull { downloadCache.cacheSpace } ?: 0L
+                if (cacheSpace == 0L) downloadCacheDir.directorySizeBytes() else cacheSpace
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        while (isActive) {
+            delay(1000)
+            canvasCacheSize = com.jay.glossy.ui.player.CanvasArtworkPlaybackCache.currentItemCount
+        }
+    }
+
+    if (showCanvasCacheModeDialog) {
+        EnumDialog(
+            onDismiss = { showCanvasCacheModeDialog = false },
+            onSelect = {
+                onCanvasCacheModeChange(it)
+                showCanvasCacheModeDialog = false
+            },
+            title = "Canvas Cache Mode",
+            current = canvasCacheMode,
+            values = CanvasCacheMode.entries.toList(),
+            valueText = {
+                when (it) {
+                    CanvasCacheMode.URL_ONLY -> "URLs Only (Saves Storage)"
+                    CanvasCacheMode.VIDEO_AND_URL -> "URLs & Videos (Saves Data, Faster)"
+                }
+            }
+        )
+    }
+
+    if (clearDownloads) {
+        ActionPromptDialog(
+            title = stringResource(R.string.clear_all_downloads),
+            onDismiss = { clearDownloads = false },
+            onConfirm = {
+                coroutineScope.launch(Dispatchers.IO) {
+                    downloadCache.keys.forEach { key ->
+                        downloadCache.removeResource(key)
+                    }
+                }
+                clearDownloads = false
+            },
+            onCancel = { clearDownloads = false },
+            content = {
+                Text(text = stringResource(R.string.clear_downloads_dialog))
+            },
+        )
+    }
+    
+    if (clearCacheDialog) {
+        ActionPromptDialog(
+            title = stringResource(R.string.clear_song_cache),
+            onDismiss = { clearCacheDialog = false },
+            onConfirm = {
+                coroutineScope.launch(Dispatchers.IO) {
+                    playerCache.keys.forEach { key ->
+                        playerCache.removeResource(key)
+                    }
+                }
+                clearCacheDialog = false
+            },
+            onCancel = { clearCacheDialog = false },
+            content = {
+                Text(text = stringResource(R.string.clear_song_cache_dialog))
+            },
+        )
+    }
+    
+    if (clearImageCacheDialog) {
+        ActionPromptDialog(
+            title = stringResource(R.string.clear_image_cache),
+            onDismiss = { clearImageCacheDialog = false },
+            onConfirm = {
+                coroutineScope.launch(Dispatchers.IO) {
+                    val urlsToPreserve = mutableSetOf<String>()
+                    val downloadedSongs =
+                        try {
+                            database.downloadedSongsByNameAsc().first()
+                        } catch (e: Exception) {
+                            emptyList()
+                        }
+                    downloadedSongs.forEach { song ->
+                        song.song.thumbnailUrl?.let { urlsToPreserve.add(it.encodeUtf8().sha256().hex()) }
+                        song.album?.thumbnailUrl?.let { urlsToPreserve.add(it.encodeUtf8().sha256().hex()) }
+                    }
+                    val directory = imageDiskCache.directory.toFile()
+                    if (directory.exists() && directory.isDirectory) {
+                        directory.listFiles()?.forEach { file ->
+                            if (file.isFile && !file.name.startsWith("journal")) {
+                                val isPreserved = urlsToPreserve.any { hash -> file.name.startsWith(hash) }
+                                if (!isPreserved) {
+                                    file.delete()
+                                }
+                            }
+                        }
+                    }
+                    imageDiskCache.clear()
+                }
+                clearImageCacheDialog = false
+            },
+            onCancel = { clearImageCacheDialog = false },
+            content = {
+                Text(text = stringResource(R.string.clear_image_cache_dialog))
+            },
+        )
+    }
+
+    if (clearCanvasCacheDialog) {
+        ActionPromptDialog(
+            title = "Clear Canvas Video Cache",
+            onDismiss = { clearCanvasCacheDialog = false },
+            onConfirm = {
+                com.jay.glossy.ui.player.CanvasArtworkPlaybackCache.clear()
+                canvasCacheSize = 0
+                com.jay.glossy.ui.player.CanvasCacheManager.clearVideoCache(context)
+                Toast.makeText(context, "Canvas cache cleared", Toast.LENGTH_SHORT).show()
+                clearCanvasCacheDialog = false
+            },
+            onCancel = { clearCanvasCacheDialog = false },
+            content = {
+                Text(text = "This will remove all temporarily cached API URLs and MP4 files. Next time you play the song, they will be downloaded again.")
+            },
+        )
+    }
+
+    if (showCacheWarningDialog) {
+        AlertDialog(
+            onDismissRequest = { showCacheWarningDialog = false },
+            title = { Text(stringResource(R.string.cache_size_warning_title)) },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.cache_size_warning_message,
+                        Formatter.formatShortFileSize(context, cacheUsage),
+                        cacheType,
+                    ),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onConfirmAction()
+                        showCacheWarningDialog = false
+                    },
+                ) {
+                    Text(
+                        stringResource(R.string.cache_size_warning_confirm),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCacheWarningDialog = false }) {
+                    Text(stringResource(id = android.R.string.cancel))
+                }
+            },
+        )
+    }
+
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.storage)) },
+                navigationIcon = {
+                    IconButton(
+                        onClick = navController::navigateUp,
+                        onLongClick = navController::backToMain,
+                    ) {
+                        Icon(
+                            painterResource(R.drawable.arrow_back),
+                            contentDescription = null,
+                        )
+                    }
+                },
+            )
+        }
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .windowInsetsPadding(
+                    LocalPlayerAwareWindowInsets.current.only(
+                        WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
+                    ),
+                ),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            
+            item {
+                Material3SettingsGroup(
+                    title = stringResource(R.string.smart_trimmer),
+                    items = listOf(
+                        Material3SettingsItem(
+                            icon = painterResource(R.drawable.manage_search),
+                            title = { Text(stringResource(R.string.smart_trimmer)) },
+                            description = { Text(stringResource(R.string.smart_trimmer_description)) },
+                            trailingContent = {
+                                Switch(
+                                    checked = smartTrimmer && isSmartTrimmerAvailable,
+                                    onCheckedChange = onSmartTrimmerChange,
+                                    enabled = isSmartTrimmerAvailable,
+                                    thumbContent = {
+                                        Icon(
+                                            painter = painterResource(
+                                                id = if (smartTrimmer && isSmartTrimmerAvailable) R.drawable.check else R.drawable.close
+                                            ),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(SwitchDefaults.IconSize)
+                                        )
+                                    }
+                                )
+                            },
+                            onClick = { if (isSmartTrimmerAvailable) onSmartTrimmerChange(!smartTrimmer) }
+                        )
+                    )
+                )
+            }
+
+            item {
+                Material3SettingsGroup(
+                    title = stringResource(R.string.storage),
+                    items = listOf(
+                        Material3SettingsItem(
+                            icon = painterResource(R.drawable.storage),
+                            title = { Text(stringResource(R.string.downloaded_songs)) },
+                            description = {
+                                Text(text = Formatter.formatShortFileSize(context, downloadCacheSize))
+                            },
+                        ),
+                        Material3SettingsItem(
+                            icon = painterResource(R.drawable.clear_all),
+                            title = { Text(stringResource(R.string.clear_all_downloads)) },
+                            onClick = {
+                                clearDownloads = true
+                            },
+                        ),
+                    ),
+                )
+            }
+
+            item {
+                Material3SettingsGroup(
+                    title = stringResource(R.string.song_cache),
+                    items = listOf(
+                        Material3SettingsItem(
+                            icon = painterResource(R.drawable.cached),
+                            title = { Text(stringResource(R.string.enable_song_cache)) },
+                            description = { Text(stringResource(R.string.enable_song_cache_desc)) },
+                            trailingContent = {
+                                Switch(
+                                    checked = enableSongCache,
+                                    onCheckedChange = onEnableSongCacheChange,
+                                    thumbContent = {
+                                        Icon(
+                                            painter = painterResource(
+                                                id = if (enableSongCache) R.drawable.check else R.drawable.close
+                                            ),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(SwitchDefaults.IconSize)
+                                        )
+                                    }
+                                )
+                            },
+                            onClick = { onEnableSongCacheChange(!enableSongCache) }
+                        ),
+                        Material3SettingsItem(
+                            icon = painterResource(R.drawable.cached),
+                            title = { Text(stringResource(R.string.max_song_cache_size)) },
+                            enabled = enableSongCache,
+                            description = {
+                                val songCacheValues =
+                                    remember { listOf(0, 128, 256, 512, 1024, 2048, 4096, 8192, -1) }
+                                Column {
+                                    Text(
+                                        text = when (maxSongCacheSize) {
+                                            0 -> stringResource(R.string.disable)
+                                            -1 -> stringResource(R.string.unlimited)
+                                            else -> Formatter.formatShortFileSize(context, maxSongCacheSize * 1024 * 1024L)
+                                        }
+                                    )
+                                    Slider(
+                                        value = songCacheValues.indexOf(maxSongCacheSize).toFloat(),
+                                        enabled = enableSongCache,
+                                        onValueChange = {
+                                            val newValue = songCacheValues[it.roundToInt()]
+                                            val newLimitInBytes = if (newValue == -1) {
+                                                Long.MAX_VALUE
+                                            } else {
+                                                newValue * 1024 * 1024L
+                                            }
+
+                                            if (newLimitInBytes < playerCacheSize) {
+                                                cacheUsage = playerCacheSize
+                                                cacheType = songCacheString
+                                                onConfirmAction = { onMaxSongCacheSizeChange(newValue) }
+                                                showCacheWarningDialog = true
+                                            } else {
+                                                onMaxSongCacheSizeChange(newValue)
+                                            }
+                                        },
+                                        steps = songCacheValues.size - 2,
+                                        valueRange = 0f..(songCacheValues.size - 1).toFloat(),
+                                    )
+                                    LinearProgressIndicator(
+                                        progress = { playerCacheProgress },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        strokeCap = StrokeCap.Round,
+                                    )
+                                    Spacer(modifier = Modifier.padding(2.dp))
+                                    Text(
+                                        text = if (maxSongCacheSize == -1) {
+                                            Formatter.formatShortFileSize(context, playerCacheSize)
+                                        } else {
+                                            "${Formatter.formatShortFileSize(context, playerCacheSize)} / ${
+                                                Formatter.formatShortFileSize(context, maxSongCacheSize * 1024 * 1024L)
+                                            }"
+                                        },
+                                        style = MaterialTheme.typography.bodyMedium,
+                                    )
+                                }
+                            },
+                        ),
+                        Material3SettingsItem(
+                            icon = painterResource(R.drawable.clear_all),
+                            title = { Text(stringResource(R.string.clear_song_cache)) },
+                            onClick = {
+                                clearCacheDialog = true
+                            },
+                        ),
+                    ),
+                )
+            }
+
+            item {
+                Material3SettingsGroup(
+                    title = stringResource(R.string.image_cache),
+                    items = listOf(
+                        Material3SettingsItem(
+                            icon = painterResource(R.drawable.manage_search),
+                            title = { Text(stringResource(R.string.max_image_cache_size)) },
+                            description = {
+                                val imageCacheValues =
+                                    remember { listOf(0, 128, 256, 512, 1024, 2048, 4096, 8192) }
+                                Column {
+                                    Text(
+                                        text = when (maxImageCacheSize) {
+                                            0 -> stringResource(R.string.disable)
+                                            else -> Formatter.formatShortFileSize(context, maxImageCacheSize * 1024 * 1024L)
+                                        },
+                                    )
+                                    Slider(
+                                        value = imageCacheValues.indexOf(maxImageCacheSize).toFloat(),
+                                        onValueChange = {
+                                            val newValue = imageCacheValues[it.roundToInt()]
+                                            val newLimitInBytes = newValue * 1024 * 1024L
+
+                                            if (newLimitInBytes < imageCacheSize) {
+                                                cacheUsage = imageCacheSize
+                                                cacheType = imageCacheString
+                                                onConfirmAction = { onMaxImageCacheSizeChange(newValue) }
+                                                showCacheWarningDialog = true
+                                            } else {
+                                                onMaxImageCacheSizeChange(newValue)
+                                            }
+                                        },
+                                        steps = imageCacheValues.size - 2,
+                                        valueRange = 0f..(imageCacheValues.size - 1).toFloat(),
+                                    )
+                                    LinearProgressIndicator(
+                                        progress = { imageCacheProgress },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        strokeCap = StrokeCap.Round,
+                                    )
+                                    Spacer(modifier = Modifier.padding(2.dp))
+                                    Text(
+                                        text = "${Formatter.formatShortFileSize(context, imageCacheSize)} / ${
+                                            Formatter.formatShortFileSize(context, maxImageCacheSize * 1024 * 1024L)
+                                        }",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                    )
+                                }
+                            },
+                        ),
+                        Material3SettingsItem(
+                            icon = painterResource(R.drawable.clear_all),
+                            title = { Text(stringResource(R.string.clear_image_cache)) },
+                            onClick = {
+                                clearImageCacheDialog = true
+                            },
+                        ),
+                    ),
+                )
+            }
+
+            item {
+                Material3SettingsGroup(
+                    title = "Canvas Video Cache",
+                    items = listOf(
+                        Material3SettingsItem(
+                            icon = painterResource(R.drawable.cached), 
+                            title = { Text("Canvas Cache Mode") },
+                            description = {
+                                Text(
+                                    when (canvasCacheMode) {
+                                        CanvasCacheMode.URL_ONLY -> "URLs Only (Saves Storage)"
+                                        CanvasCacheMode.VIDEO_AND_URL -> "URLs & Videos (Saves Data, Faster)"
+                                    }
+                                )
+                            },
+                            onClick = { showCanvasCacheModeDialog = true }
+                        ),
+                        Material3SettingsItem(
+                            icon = painterResource(R.drawable.cached),
+                            title = { Text("Max Canvas Items to Remember") },
+                            description = {
+                                val canvasCacheValues = remember { listOf(0, 50, 100, 256, 512, 1024, 2048) }
+                                Column {
+                                    Text(
+                                        text = when (maxCanvasCacheSize) {
+                                            0 -> stringResource(R.string.disable)
+                                            else -> "$maxCanvasCacheSize Items"
+                                        }
+                                    )
+                                    Slider(
+                                        value = canvasCacheValues.indexOf(maxCanvasCacheSize).toFloat().coerceAtLeast(0f),
+                                        onValueChange = {
+                                            val newValue = canvasCacheValues[it.roundToInt()]
+                                            onMaxCanvasCacheSizeChange(newValue)
+                                        },
+                                        steps = canvasCacheValues.size - 2,
+                                        valueRange = 0f..(canvasCacheValues.size - 1).toFloat(),
+                                    )
+                                    LinearProgressIndicator(
+                                        progress = { canvasCacheProgress },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        strokeCap = StrokeCap.Round,
+                                    )
+                                    Spacer(modifier = Modifier.padding(2.dp))
+                                    Text(
+                                        text = "$canvasCacheSize / ${if (maxCanvasCacheSize == 0) 0 else maxCanvasCacheSize} Items",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                    )
+                                }
+                            },
+                        ),
+                        Material3SettingsItem(
+                            icon = painterResource(R.drawable.clear_all),
+                            title = { Text("Clear Canvas Video Cache") },
+                            description = { Text("Free up memory by clearing cached looping videos") },
+                            onClick = {
+                                clearCanvasCacheDialog = true
+                            },
+                        ),
+                    ),
+                )
+            }
+        }
+    }
+}

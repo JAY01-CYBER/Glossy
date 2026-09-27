@@ -1,0 +1,811 @@
+/**
+ * Glossy Project (C) 2026
+ * Licensed under GPL-3.0 | See git history for contributors
+ */
+
+package com.jay.glossy.ui.screens.library
+
+import com.jay.glossy.R
+
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.navigation.NavController
+import androidx.navigation.compose.currentBackStackEntryAsState
+import com.metrolist.innertube.utils.parseCookieString
+import com.jay.glossy.LocalPlayerAwareWindowInsets
+import com.jay.glossy.constants.CONTENT_TYPE_HEADER
+import com.jay.glossy.constants.CONTENT_TYPE_PLAYLIST
+import com.jay.glossy.constants.GridItemSize
+import com.jay.glossy.constants.GridItemsSizeKey
+import com.jay.glossy.constants.GridThumbnailHeight
+import com.jay.glossy.constants.InnerTubeCookieKey
+import com.jay.glossy.constants.LibraryViewType
+import com.jay.glossy.constants.PlaylistSortDescendingKey
+import com.jay.glossy.constants.PlaylistSortType
+import com.jay.glossy.constants.PlaylistSortTypeKey
+import com.jay.glossy.constants.PlaylistViewTypeKey
+import com.jay.glossy.constants.ShowCachedPlaylistKey
+import com.jay.glossy.constants.ShowDownloadedPlaylistKey
+import com.jay.glossy.constants.ShowLikedPlaylistKey
+import com.jay.glossy.constants.ShowTopPlaylistKey
+import com.jay.glossy.constants.ShowUploadedPlaylistKey
+import com.jay.glossy.constants.YtmSyncKey
+import com.jay.glossy.db.entities.Playlist
+import com.jay.glossy.db.entities.PlaylistEntity
+import com.jay.glossy.ui.component.CreatePlaylistDialog
+import com.jay.glossy.ui.component.LibrarySearchEmptyPlaceholder
+import com.jay.glossy.ui.component.LibrarySearchHeader
+import com.jay.glossy.ui.component.LibraryPlaylistGridItem
+import com.jay.glossy.ui.component.LibraryPlaylistListItem
+import com.jay.glossy.constants.ActiveDesignStyle
+import com.jay.glossy.constants.DesignStyle
+import com.jay.glossy.ui.component.GlossyPlaylistListRow
+import com.jay.glossy.ui.component.LocalMenuState
+import com.jay.glossy.ui.component.PlaylistGridItem
+import com.jay.glossy.ui.component.PlaylistListItem
+import com.jay.glossy.ui.component.SortHeader
+import com.jay.glossy.extensions.matchesNormalizedQuery
+import com.jay.glossy.extensions.normalizeForSearch
+import com.jay.glossy.spotify.SpotifyAccountViewModel
+import com.jay.glossy.spotifycore.models.SpotifyPlaylist
+import com.jay.glossy.utils.rememberEnumPreference
+import com.jay.glossy.utils.rememberPreference
+import com.jay.glossy.viewmodels.LibraryPlaylistsViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.util.UUID
+
+private data class VisiblePlaylistItem(
+    val key: String,
+    val playlist: Playlist,
+    val autoPlaylist: Boolean,
+    val route: String? = null,
+)
+
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
+@Composable
+fun LibraryPlaylistsScreen(
+    navController: NavController,
+    filterContent: @Composable () -> Unit,
+    viewModel: LibraryPlaylistsViewModel = hiltViewModel(),
+    initialTextFieldValue: String? = null,
+    allowSyncing: Boolean = true,
+) {
+    val menuState = LocalMenuState.current
+    val haptic = LocalHapticFeedback.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    val coroutineScope = rememberCoroutineScope()
+
+    // The redesigned Library showed a continuous list of rows. It is pinned off
+    // now, so the stored grid/list preference always wins.
+    val newDesign = ActiveDesignStyle == DesignStyle.TEAL
+
+    var viewType by rememberEnumPreference(PlaylistViewTypeKey, LibraryViewType.GRID)
+
+    LaunchedEffect(newDesign) {
+        if (newDesign && viewType != LibraryViewType.LIST) {
+            viewType = LibraryViewType.LIST
+        }
+    }
+    val (sortType, onSortTypeChange) = rememberEnumPreference(
+        PlaylistSortTypeKey,
+        PlaylistSortType.CREATE_DATE
+    )
+    val (sortDescending, onSortDescendingChange) = rememberPreference(
+        PlaylistSortDescendingKey,
+        true
+    )
+    val gridItemSize by rememberEnumPreference(GridItemsSizeKey, GridItemSize.BIG)
+
+    val playlists by viewModel.allPlaylists.collectAsStateWithLifecycle()
+
+    var isSearchActive by rememberSaveable { mutableStateOf(false) }
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val normalizedQuery = remember(searchQuery) { searchQuery.normalizeForSearch() }
+    val filteredPlaylists = remember(playlists, normalizedQuery) {
+        if (normalizedQuery.isBlank()) {
+            playlists
+        } else {
+            playlists.filter { playlist ->
+                matchesNormalizedQuery(normalizedQuery, playlist.playlist.name)
+            }
+        }
+    }
+
+    val topSize by viewModel.topValue.collectAsStateWithLifecycle(initialValue = 50)
+
+    val likedPlaylist =
+        Playlist(
+            playlist = PlaylistEntity(
+                id = UUID.randomUUID().toString(),
+                name = stringResource(R.string.liked)
+            ),
+            songCount = 0,
+            songThumbnails = emptyList(),
+        )
+
+    val downloadPlaylist =
+        Playlist(
+            playlist = PlaylistEntity(
+                id = UUID.randomUUID().toString(),
+                name = stringResource(R.string.offline)
+            ),
+            songCount = 0,
+            songThumbnails = emptyList(),
+        )
+
+    val topPlaylist =
+        Playlist(
+            playlist = PlaylistEntity(
+                id = UUID.randomUUID().toString(),
+                name = stringResource(R.string.my_top) + " $topSize"
+            ),
+            songCount = 0,
+            songThumbnails = emptyList(),
+        )
+
+    val uploadedPlaylist =
+        Playlist(
+            playlist = PlaylistEntity(
+                id = UUID.randomUUID().toString(),
+                name = stringResource(R.string.uploaded_playlist)
+            ),
+            songCount = 0,
+            songThumbnails = emptyList(),
+        )
+
+    val cachedPlaylist =
+        Playlist(
+            playlist = PlaylistEntity(
+                id = UUID.randomUUID().toString(),
+                name = stringResource(R.string.cached_playlist)
+            ),
+            songCount = 0,
+            songThumbnails = emptyList(),
+        )
+
+    val (showLiked) = rememberPreference(ShowLikedPlaylistKey, true)
+    val (showDownloaded) = rememberPreference(ShowDownloadedPlaylistKey, true)
+    val (showTop) = rememberPreference(ShowTopPlaylistKey, true)
+    val (showUploaded) = rememberPreference(ShowUploadedPlaylistKey, true)
+    val (showCached) = rememberPreference(ShowCachedPlaylistKey, true)
+    val showLikedPlaylist = showLiked && matchesNormalizedQuery(normalizedQuery, likedPlaylist.playlist.name)
+    val showDownloadedPlaylist =
+        showDownloaded && matchesNormalizedQuery(normalizedQuery, downloadPlaylist.playlist.name)
+    val showCachedPlaylists = showCached && matchesNormalizedQuery(normalizedQuery, cachedPlaylist.playlist.name)
+    val showTopPlaylists = showTop && matchesNormalizedQuery(normalizedQuery, topPlaylist.playlist.name)
+    val showUploadedPlaylists =
+        showUploaded && matchesNormalizedQuery(normalizedQuery, uploadedPlaylist.playlist.name)
+
+    val visibleResults = remember(
+        filteredPlaylists,
+        showLikedPlaylist,
+        showDownloadedPlaylist,
+        showCachedPlaylists,
+        showTopPlaylists,
+        showUploadedPlaylists,
+        topSize,
+    ) {
+        buildList {
+            if (showLikedPlaylist) {
+                add(
+                    VisiblePlaylistItem(
+                        key = "likedPlaylist",
+                        playlist = likedPlaylist,
+                        autoPlaylist = true,
+                        route = "auto_playlist/liked",
+                    ),
+                )
+            }
+            if (showDownloadedPlaylist) {
+                add(
+                    VisiblePlaylistItem(
+                        key = "downloadedPlaylist",
+                        playlist = downloadPlaylist,
+                        autoPlaylist = true,
+                        route = "auto_playlist/downloaded",
+                    ),
+                )
+            }
+            if (showCachedPlaylists) {
+                add(
+                    VisiblePlaylistItem(
+                        key = "cachedPlaylist",
+                        playlist = cachedPlaylist,
+                        autoPlaylist = true,
+                        route = "cache_playlist/cached",
+                    ),
+                )
+            }
+            if (showTopPlaylists) {
+                add(
+                    VisiblePlaylistItem(
+                        key = "TopPlaylist",
+                        playlist = topPlaylist,
+                        autoPlaylist = true,
+                        route = "top_playlist/$topSize",
+                    ),
+                )
+            }
+            if (showUploadedPlaylists) {
+                add(
+                    VisiblePlaylistItem(
+                        key = "uploadedPlaylist",
+                        playlist = uploadedPlaylist,
+                        autoPlaylist = true,
+                        route = "auto_playlist/uploaded",
+                    ),
+                )
+            }
+
+            filteredPlaylists
+                .distinctBy { it.id }
+                .forEach { playlist ->
+                    add(
+                        VisiblePlaylistItem(
+                            key = playlist.id,
+                            playlist = playlist,
+                            autoPlaylist = false,
+                        ),
+                    )
+                }
+        }
+    }
+
+    val lazyListState = rememberLazyListState()
+    val lazyGridState = rememberLazyGridState()
+
+    // Spotify playlists surface directly in this screen — alongside the auto
+    // and local playlists — whenever the account is connected, instead of
+    // only behind the dedicated Spotify filter chip.
+    val spotifyViewModel: SpotifyAccountViewModel = hiltViewModel()
+    val spotifyAccount by spotifyViewModel.uiState.collectAsStateWithLifecycle()
+    val spotifyPlaylists by spotifyViewModel.playlists.collectAsStateWithLifecycle()
+    val visibleSpotifyPlaylists = remember(spotifyPlaylists, spotifyAccount, normalizedQuery) {
+        if (!spotifyAccount.isAuthenticated) {
+            emptyList()
+        } else {
+            spotifyPlaylists.filter { matchesNormalizedQuery(normalizedQuery, it.name) }
+        }
+    }
+
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val scrollToTop =
+        backStackEntry?.savedStateHandle?.getStateFlow("scrollToTop", false)?.collectAsStateWithLifecycle()
+
+    val (innerTubeCookie) = rememberPreference(InnerTubeCookieKey, "")
+    val isLoggedIn = remember(innerTubeCookie) {
+        "SAPISID" in parseCookieString(innerTubeCookie)
+    }
+
+    val (ytmSync) = rememberPreference(YtmSyncKey, true)
+
+    LaunchedEffect(Unit) {
+        if (ytmSync) {
+            withContext(Dispatchers.IO) {
+                viewModel.sync()
+            }
+        }
+    }
+
+    LaunchedEffect(scrollToTop?.value) {
+        if (scrollToTop?.value == true) {
+            when (viewType) {
+                LibraryViewType.LIST -> lazyListState.animateScrollToItem(0)
+                LibraryViewType.GRID -> lazyGridState.animateScrollToItem(0)
+            }
+            backStackEntry?.savedStateHandle?.set("scrollToTop", false)
+        }
+    }
+
+    var showCreatePlaylistDialog by rememberSaveable { mutableStateOf(false) }
+
+    if (showCreatePlaylistDialog) {
+        CreatePlaylistDialog(
+            onDismiss = { showCreatePlaylistDialog = false },
+            initialTextFieldValue = initialTextFieldValue,
+            allowSyncing = allowSyncing,
+            onPlaylistCreated = { playlistId ->
+                showCreatePlaylistDialog = false
+                navController.navigate("local_playlist/$playlistId")
+            }
+        )
+    }
+
+    val inactivePillGradient = Brush.horizontalGradient(
+        colors = listOf(
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
+        )
+    )
+
+    val headerContent = @Composable {
+        LibrarySearchHeader(
+            isSearchActive = isSearchActive,
+            searchQuery = searchQuery,
+            onSearchQueryChange = viewModel::updateSearchQuery,
+            onBack = {
+                isSearchActive = false
+                viewModel.updateSearchQuery("")
+            },
+            keyboardController = keyboardController,
+            modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp),
+        ) {
+            // Box hata diya gaya hai, seedha SortHeader call kiya jisse naya UI kaam kare
+            SortHeader(
+                sortType = sortType,
+                sortDescending = sortDescending,
+                onSortTypeChange = onSortTypeChange,
+                onSortDescendingChange = onSortDescendingChange,
+                sortTypeText = { sortType ->
+                    when (sortType) {
+                        PlaylistSortType.CREATE_DATE -> R.string.sort_by_create_date
+                        PlaylistSortType.NAME -> R.string.sort_by_name
+                        PlaylistSortType.SONG_COUNT -> R.string.sort_by_song_count
+                        PlaylistSortType.LAST_UPDATED -> R.string.sort_by_last_updated
+                    }
+                },
+            )
+
+            Spacer(Modifier.weight(1f))
+
+            Text(
+                text = pluralStringResource(
+                    R.plurals.n_playlist,
+                    visibleResults.count { !it.autoPlaylist } + visibleSpotifyPlaylists.size,
+                    visibleResults.count { !it.autoPlaylist } + visibleSpotifyPlaylists.size,
+                ),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.padding(end = 12.dp)
+            )
+
+            // Pill shape for Search and Grid
+            Row(
+                modifier = Modifier
+                    .padding(end = 16.dp)
+                    .clip(RoundedCornerShape(50.dp))
+                    .background(inactivePillGradient),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = { isSearchActive = true },
+                    modifier = Modifier.size(40.dp),
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.search),
+                        contentDescription = stringResource(R.string.search),
+                    )
+                }
+
+                IconButton(
+                    onClick = {
+                        viewType = viewType.toggle()
+                    },
+                    modifier = Modifier.size(40.dp),
+                ) {
+                    Icon(
+                        painter =
+                        painterResource(
+                            when (viewType) {
+                                LibraryViewType.LIST -> R.drawable.list
+                                LibraryViewType.GRID -> R.drawable.grid_view
+                            },
+                        ),
+                        contentDescription = stringResource(
+                            when (viewType) {
+                                LibraryViewType.LIST -> R.string.switch_to_grid_view
+                                LibraryViewType.GRID -> R.string.switch_to_list_view
+                            },
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
+    Box(
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        when (viewType) {
+            LibraryViewType.LIST -> {
+                LazyColumn(
+                    state = lazyListState,
+                    contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
+                ) {
+                    item(
+                        key = "filter",
+                        contentType = CONTENT_TYPE_HEADER,
+                    ) {
+                        filterContent()
+                    }
+
+                    item(
+                        key = "header",
+                        contentType = CONTENT_TYPE_HEADER,
+                    ) {
+                        headerContent()
+                    }
+
+                    if (visibleResults.isEmpty()) {
+                        item(key = "empty_placeholder") {
+                            if (searchQuery.isNotBlank()) {
+                                LibrarySearchEmptyPlaceholder(modifier = Modifier.animateItem())
+                            } else {
+                                LibrarySearchEmptyPlaceholder(
+                                    modifier = Modifier.animateItem(),
+                                    icon = R.drawable.playlist_play,
+                                    text = stringResource(R.string.library_playlist_empty),
+                                )
+                            }
+                        }
+                    }
+
+                    val autoPlaylists = visibleResults.filter { it.autoPlaylist }
+                    val regularPlaylists = visibleResults.filter { !it.autoPlaylist }
+
+                    if (newDesign) {
+                        items(
+                            items = autoPlaylists,
+                            key = { "auto_row_${it.key}" },
+                            contentType = { CONTENT_TYPE_PLAYLIST },
+                        ) { item ->
+                            val offline = item.route?.contains("download") == true ||
+                                item.route?.contains("cache") == true
+                            GlossyPlaylistListRow(
+                                playlist = item.playlist,
+                                route = item.route,
+                                subtitle = if (offline) {
+                                    stringResource(
+                                        R.string.glossy_playlist_songs_offline,
+                                        item.playlist.songCount,
+                                    )
+                                } else {
+                                    null
+                                },
+                                modifier = Modifier.animateItem(),
+                            )
+                        }
+
+                        items(
+                            items = regularPlaylists,
+                            key = { it.key },
+                            contentType = { CONTENT_TYPE_PLAYLIST },
+                        ) { item ->
+                            GlossyPlaylistListRow(
+                                playlist = item.playlist,
+                                menuState = menuState,
+                                coroutineScope = coroutineScope,
+                                modifier = Modifier.animateItem(),
+                            )
+                        }
+
+                        items(
+                            items = visibleSpotifyPlaylists,
+                            key = { "spotify_row_${it.id}" },
+                            contentType = { CONTENT_TYPE_PLAYLIST },
+                        ) { playlist ->
+                            GlossyPlaylistListRow(
+                                playlist = playlist.asLibraryPlaylist(),
+                                route = "spotify_playlist/${playlist.id}",
+                                modifier = Modifier.animateItem(),
+                            )
+                        }
+                    } else {
+                    autoPlaylists.chunked(2).forEach { rowItems ->
+                        item(
+                            key = "auto_row_${rowItems.first().key}",
+                            contentType = CONTENT_TYPE_PLAYLIST
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp)
+                                    .animateItem()
+                            ) {
+                                rowItems.forEach { item ->
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        AutoPlaylistGridItem(
+                                            playlist = item.playlist,
+                                            onClick = { item.route?.let(navController::navigate) }
+                                        )
+                                    }
+                                }
+                                if (rowItems.size == 1) {
+                                    Spacer(modifier = Modifier.weight(1f).padding(8.dp))
+                                }
+                            }
+                        }
+                    }
+
+                    items(
+                        items = regularPlaylists,
+                        key = { it.key },
+                        contentType = { CONTENT_TYPE_PLAYLIST },
+                    ) { item ->
+                        LibraryPlaylistListItem(
+                            menuState = menuState,
+                            coroutineScope = coroutineScope,
+                            playlist = item.playlist,
+                            modifier = Modifier.animateItem(),
+                        )
+                    }
+
+                    items(
+                        items = visibleSpotifyPlaylists,
+                        key = { "spotify_row_${it.id}" },
+                        contentType = { CONTENT_TYPE_PLAYLIST },
+                    ) { playlist ->
+                        PlaylistListItem(
+                            playlist = playlist.asLibraryPlaylist(),
+                            badges = {},
+                            modifier = Modifier
+                                .animateItem()
+                                .combinedClickable(
+                                    onClick = { navController.navigate("spotify_playlist/${playlist.id}") },
+                                ),
+                        )
+                    }
+                    }
+                }
+            }
+
+            LibraryViewType.GRID -> {
+                LazyVerticalGrid(
+                    state = lazyGridState,
+                    columns =
+                    GridCells.Adaptive(
+                        minSize = GridThumbnailHeight + if (gridItemSize == GridItemSize.BIG) 24.dp else (-24).dp,
+                    ),
+                    contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
+                ) {
+                    item(
+                        key = "filter",
+                        span = { GridItemSpan(maxLineSpan) },
+                        contentType = CONTENT_TYPE_HEADER,
+                    ) {
+                        filterContent()
+                    }
+
+                    item(
+                        key = "header",
+                        span = { GridItemSpan(maxLineSpan) },
+                        contentType = CONTENT_TYPE_HEADER,
+                    ) {
+                        headerContent()
+                    }
+
+                    if (visibleResults.isEmpty()) {
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            if (searchQuery.isNotBlank()) {
+                                LibrarySearchEmptyPlaceholder(modifier = Modifier.animateItem())
+                            } else {
+                                LibrarySearchEmptyPlaceholder(
+                                    modifier = Modifier.animateItem(),
+                                    icon = R.drawable.playlist_play,
+                                    text = stringResource(R.string.library_playlist_empty),
+                                )
+                            }
+                        }
+                    }
+
+                    items(
+                        items = visibleResults,
+                        key = { it.key },
+                        contentType = { CONTENT_TYPE_PLAYLIST },
+                    ) { item ->
+                        if (item.autoPlaylist) {
+                            AutoPlaylistGridItem(
+                                playlist = item.playlist,
+                                onClick = {
+                                    item.route?.let(navController::navigate)
+                                },
+                                modifier = Modifier.animateItem()
+                            )
+                        } else {
+                            LibraryPlaylistGridItem(
+                                menuState = menuState,
+                                coroutineScope = coroutineScope,
+                                playlist = item.playlist,
+                                modifier = Modifier.animateItem(),
+                            )
+                        }
+                    }
+
+                    items(
+                        items = visibleSpotifyPlaylists,
+                        key = { "spotify_grid_${it.id}" },
+                        contentType = { CONTENT_TYPE_PLAYLIST },
+                    ) { playlist ->
+                        PlaylistGridItem(
+                            playlist = playlist.asLibraryPlaylist(),
+                            fillMaxWidth = true,
+                            badges = {},
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .animateItem()
+                                .combinedClickable(
+                                    onClick = { navController.navigate("spotify_playlist/${playlist.id}") },
+                                ),
+                        )
+                    }
+                }
+            }
+        }
+
+        FloatingActionButton(
+            onClick = { showCreatePlaylistDialog = true },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .windowInsetsPadding(
+                    LocalPlayerAwareWindowInsets.current
+                        .only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal)
+                )
+                .padding(16.dp)
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.add),
+                contentDescription = stringResource(R.string.create_playlist),
+            )
+        }
+    }
+}
+
+@Composable
+private fun AutoPlaylistGridItem(
+    playlist: Playlist,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val title = playlist.playlist.name
+
+    // Saturated two-stop gradient per collection — the old flat pastel washes
+    // read as placeholders next to real artwork cards.
+    val (iconRes, startColor, endColor) = when {
+        title.contains("Liked", ignoreCase = true) || title.contains("पसंद", ignoreCase = true) -> Triple(
+            R.drawable.favorite,
+            Color(0xFFFF5C7A),
+            Color(0xFFD62E56),
+        )
+        title.contains("Offline", ignoreCase = true) || title.contains("Downloaded", ignoreCase = true) -> Triple(
+            R.drawable.download,
+            Color(0xFF6C7BFF),
+            Color(0xFF3646C9),
+        )
+        title.contains("Cached", ignoreCase = true) -> Triple(
+            R.drawable.sync,
+            Color(0xFFA66BFF),
+            Color(0xFF6B37D6),
+        )
+        title.contains("Uploaded", ignoreCase = true) -> Triple(
+            R.drawable.upload,
+            Color(0xFF4CC9B0),
+            Color(0xFF12897B),
+        )
+        title.contains("Top", ignoreCase = true) -> Triple(
+            R.drawable.trending_up,
+            Color(0xFF5B6C7A),
+            Color(0xFF24313B),
+        )
+        else -> Triple(
+            R.drawable.playlist_play,
+            Color(0xFF7C86FF),
+            Color(0xFF3A3F8F),
+        )
+    }
+
+    Box(
+        modifier = modifier
+            .padding(8.dp)
+            .fillMaxWidth()
+            .height(115.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(Brush.linearGradient(colors = listOf(startColor, endColor)))
+            .clickable(onClick = onClick)
+            .padding(14.dp)
+    ) {
+        // Off-corner glow ring; clipped by the card shape so it just peeks in.
+        Box(
+            modifier = Modifier
+                .size(96.dp)
+                .align(Alignment.TopEnd)
+                .offset(x = 30.dp, y = (-28).dp)
+                .background(Color.White.copy(alpha = 0.10f), CircleShape),
+        )
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.22f))
+                .align(Alignment.TopStart),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                painter = painterResource(id = iconRes),
+                contentDescription = title,
+                tint = Color.White,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
+        Text(
+            text = title,
+            color = Color.White,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.align(Alignment.BottomStart)
+        )
+    }
+}
+
+
+
+/**
+ * Adapter so Spotify playlists ride through the same cards as YouTube
+ * playlists — the library shows one consistent playlist grid instead of a
+ * separate Spotify-only section.
+ */
+private fun SpotifyPlaylist.asLibraryPlaylist(): Playlist =
+    Playlist(
+        playlist = PlaylistEntity(id = id, name = name),
+        songCount = tracks?.total ?: 0,
+        songThumbnails = images.map { it.url },
+    )

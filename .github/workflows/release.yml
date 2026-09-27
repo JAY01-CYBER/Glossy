@@ -1,0 +1,327 @@
+name: Bump to new version
+on:
+  push:
+    branches:
+      - "main"
+    paths:
+      - "app/build.gradle.kts"
+  workflow_dispatch:
+
+jobs:
+  check-version:
+    if: "!contains(github.ref, 'refs/tags')"
+    runs-on: ubuntu-latest
+    outputs:
+      version_changed: ${{ steps.check_version.outputs.version_changed }}
+      new_version: ${{ steps.check_version.outputs.new_version }}
+      version_code: ${{ steps.check_version.outputs.version_code }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Check if version changed
+        id: check_version
+        run: |
+          if [ ! -f app/build.gradle.kts ]; then
+            echo "File app/build.gradle.kts does not exist"
+            echo "version_changed=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          NEW_VERSION=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts || echo "")
+          VERSION_CODE=$(grep -oP 'versionCode\s*=\s*\K\d+' app/build.gradle.kts || echo "")
+
+          if [ -z "$NEW_VERSION" ]; then
+            echo "Could not find versionName in app/build.gradle.kts"
+            echo "version_changed=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "Current version: $NEW_VERSION (code: $VERSION_CODE)"
+
+          if git show HEAD^:app/build.gradle.kts > /dev/null 2>&1; then
+            OLD_VERSION=$(git show HEAD^:app/build.gradle.kts | grep -oP 'versionName\s*=\s*"\K[^"]+' || echo "")
+            echo "Previous version: $OLD_VERSION"
+            
+            if [ "$OLD_VERSION" != "$NEW_VERSION" ]; then
+              echo "Version changed from $OLD_VERSION to $NEW_VERSION"
+              echo "version_changed=true" >> $GITHUB_OUTPUT
+              echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+              echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
+            else
+              echo "Version unchanged: $NEW_VERSION"
+              echo "version_changed=false" >> $GITHUB_OUTPUT
+              echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+              echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "First version detected: $NEW_VERSION"
+            echo "version_changed=true" >> $GITHUB_OUTPUT
+            echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+            echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
+          fi
+
+  build:
+    needs: check-version
+    if: needs.check-version.outputs.version_changed == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - variant: foss
+            variantName: Foss
+          - variant: gms
+            variantName: Gms
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          java-version: "21"
+          distribution: "temurin"
+
+      - name: Set Up Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-disabled: true
+          cache-cleanup: on-success
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build and Lint Release APK
+        run: ./gradlew --console=plain clean assemble${{ matrix.variantName }}Release :app:lint${{ matrix.variantName }}Release --warning-mode summary
+        env:
+          GLOSSY_APPLICATION_ID: com.jay.glossy
+          GLOSSY_APP_NAME: Glossy
+          PULL_REQUEST: "false"
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+
+      - name: Sign APK
+        uses: ilharp/sign-android-release@v2.0.0
+        with:
+          releaseDir: app/build/outputs/apk/${{ matrix.variant }}/release/
+          signingKey: ${{ secrets.KEYSTORE }}
+          keyAlias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+          buildToolsVersion: 35.0.0
+
+      - name: Move and rename signed APKs
+        run: |
+          OUTPUT_DIR="app/build/outputs/apk/${{ matrix.variant }}/release"
+          mkdir -p "$OUTPUT_DIR/out"
+
+          SIGNED_APK=$(find "$OUTPUT_DIR" -name "*-signed.apk" -o -name "*-unsigned-signed.apk" | head -1)
+
+          if [ -z "$SIGNED_APK" ]; then
+            echo "No signed APK found for ${{ matrix.variant }}"
+            ls -la "$OUTPUT_DIR"
+            exit 1
+          fi
+
+          if [ "${{ matrix.variant }}" = "gms" ]; then
+            TARGET_NAME="Glossy-with-Google-Cast.apk"
+          else
+            TARGET_NAME="Glossy.apk"
+          fi
+
+          mv "$SIGNED_APK" "$OUTPUT_DIR/out/$TARGET_NAME"
+
+          echo "APK renamed to: $TARGET_NAME"
+          ls -la "$OUTPUT_DIR/out/"
+
+      - name: Upload Signed APKs
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ matrix.variant == 'gms' && 'Glossy-with-Google-Cast' || 'Glossy' }}
+          path: app/build/outputs/apk/${{ matrix.variant }}/release/out/*.apk
+
+  create-release:
+    needs: [check-version, build]
+    if: needs.check-version.outputs.version_changed == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Download all APKs
+        uses: actions/download-artifact@v7
+        with:
+          path: downloaded_artifacts/
+
+      - name: Organize APKs for release
+        run: |
+          echo "Organizing APK files..."
+          mkdir -p release_files
+          find downloaded_artifacts -name "*.apk" -exec cp {} release_files/ \;
+
+      - name: VirusTotal Scan
+        uses: crazy-max/ghaction-virustotal@v4
+        with:
+          vt_api_key: ${{ secrets.VT_API_KEY }}
+          files: release_files/*.apk
+
+      - name: Generate Smart Release Notes
+        run: |
+          python3 -c "
+          import os, sys
+          version = '${{ needs.check-version.outputs.new_version }}'
+          
+          # Parse changelog.md directly using the '---vX.X.X' delimiter
+          if os.path.exists('changelog.md'):
+              with open('changelog.md', 'r', encoding='utf-8') as f:
+                  content = f.read()
+              target = f'---v{version}'
+              if target in content:
+                  # Extract text for current version
+                  block = content.split(target)[1].split('---v')[0].strip()
+                  with open('release_notes.md', 'w', encoding='utf-8') as f:
+                      f.write(block)
+                  sys.exit(0)
+          
+          # Fallback if specific version is not found in changelog
+          os.system('git log $(git describe --tags --abbrev=0 2>/dev/null || echo \"HEAD~10\")..HEAD --pretty=format:\"- %s\" --no-merges | head -10 > release_notes.md')
+          "
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "Released by @${{ github.triggering_actor }}"
+            echo ""
+            cat release_notes.md
+            echo ""
+            echo "### 🛡️ VirusTotal Security Scans"
+            for apk in release_files/*.apk; do
+              filename=$(basename "$apk")
+              sha256=$(sha256sum "$apk" | awk '{print $1}')
+              echo "- [Scan Report for $filename](https://www.virustotal.com/gui/file/$sha256)"
+            done
+          } > attributed_release_notes.md
+
+          gh release create "v${{ needs.check-version.outputs.new_version }}" \
+            --title "${{ needs.check-version.outputs.new_version }}" \
+            --notes-file attributed_release_notes.md \
+            --latest \
+            release_files/*.apk
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Send APKs to Telegram (Premium Layout + Changelog)
+        env:
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TOPIC_ID: ${{ secrets.TELEGRAM_TOPIC_ID }}
+          VERSION: ${{ needs.check-version.outputs.new_version }}
+          COMMIT_SHA: ${{ github.sha }}
+          BRANCH_NAME: ${{ github.ref }}
+        run: |
+          pip install requests
+          cat << 'EOF' > upload_telegram.py
+          import os, glob, requests, re
+          
+          bot_token = os.environ['BOT_TOKEN']
+          chat_id = os.environ['CHAT_ID']
+          topic_id = os.environ['TOPIC_ID']
+          version = os.environ['VERSION']
+          commit_sha = os.environ['COMMIT_SHA'][:7] 
+          branch = os.environ['BRANCH_NAME'].replace('refs/heads/', '') 
+          
+          changelog_text = "No release notes provided."
+          if os.path.exists('release_notes.md'):
+              with open('release_notes.md', 'r', encoding='utf-8') as f:
+                  lines = []
+                  for line in f:
+                      line = line.strip()
+                      # Skip empty lines or the main Header title (e.g., # 🚀 Glossy v0.0.2)
+                      if not line or (line.startswith('#') and 'Glossy' in line):
+                          continue
+                      
+                      # Convert Markdown to Telegram HTML format
+                      if line.startswith('### '):
+                          line = f"<b>{line.replace('### ', '')}</b>"
+                      if line.startswith('* '):
+                          line = f"• {line[2:]}"
+                      elif line.startswith('- '):
+                          line = f"• {line[2:]}"
+                          
+                      # Convert bold **text** to <b>text</b>
+                      line = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', line)
+                      
+                      lines.append(line)
+                  
+                  if lines:
+                      changelog_text = "\n".join(lines)
+          
+          # Prevent Telegram caption overflow (Max 1024 chars)
+          if len(changelog_text) > 550:
+              changelog_text = changelog_text[:540] + "...\n(Read full changelog on GitHub)"
+          
+          for apk in glob.glob('release_files/*.apk'):
+              filename = os.path.basename(apk)
+              
+              size_bytes = os.path.getsize(apk)
+              size_mb = size_bytes / (1024 * 1024)
+              size_str = f"{size_mb:.1f}M"
+              
+              if "Google-Cast" in filename:
+                  variant = "GMS Release"
+              else:
+                  variant = "FOSS Release"
+              
+              caption = (
+                  f"🎧 <b>Glossy Release v{version}</b>\n"
+                  f"───────────────────\n"
+                  f"📱 <b>Variant:</b> {variant}\n"
+                  f"🌿 <b>Branch:</b> <code>{branch}</code>\n"
+                  f"📦 <b>File Size:</b> {size_str}\n"
+                  f"🔗 <b>Commit:</b> <code>{commit_sha}</code>\n"
+                  f"───────────────────\n"
+                  f"📝 <b>Changelog:</b>\n"
+                  f"{changelog_text}\n"
+                  f"───────────────────\n"
+                  f"🚀 <i>Compiled automatically with the latest updates!</i>\n\n"
+                  f"apk provider by @JAY_HU_VAI"
+              )
+              
+              print(f"Uploading {filename} to Telegram...")
+              
+              url = f"https://api.telegram.org/bot{bot_token}/sendDocument"
+              data = {
+                  "chat_id": chat_id,
+                  "message_thread_id": topic_id,
+                  "caption": caption,
+                  "parse_mode": "HTML"
+              }
+              
+              with open(apk, 'rb') as f:
+                  response = requests.post(url, data=data, files={"document": (filename, f)})
+              
+              if response.status_code == 200:
+                  print(f"Successfully uploaded {filename}")
+              else:
+                  print(f"Failed to upload {filename}: {response.text}")
+                  exit(1)
+          EOF
+          python upload_telegram.py
+
+      - name: Update release summary
+        run: |
+          echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: v${{ needs.check-version.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **APKs Built & Sent to TG**: $(ls release_files/*.apk | wc -l)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release URL**: https://github.com/${{ github.repository }}/releases/tag/v${{ needs.check-version.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
