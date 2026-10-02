@@ -386,8 +386,13 @@ class MainActivity : ComponentActivity() {
         listenTogetherManager.initialize()
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            // App loads the stored language as part of the settings it already
+            // reads on IO. Taking that value keeps this off the disk: the read
+            // behind `dataStore[key]` is a runBlocking, and it sat directly on
+            // the cold-start path, before setContent. The fallback is only there
+            // for the first launch that outruns the settings load.
             val locale =
-                dataStore[AppLanguageKey]
+                (App.cachedAppLanguageTag ?: dataStore[AppLanguageKey])
                     ?.takeUnless { it == SYSTEM_DEFAULT }
                     ?.let { Locale.forLanguageTag(it) }
                     ?: Locale.getDefault()
@@ -1072,9 +1077,15 @@ class MainActivity : ComponentActivity() {
                                                 )
                                                 Text(
                                                     text = "Glossy",
+                                                    // Sized past headlineMedium on purpose: the
+                                                    // wordmark is the app's signature, so it leads
+                                                    // the bar rather than sitting level with the
+                                                    // actions beside it.
                                                     style = MaterialTheme.typography.headlineMedium.copy(
                                                         fontFamily = FontFamily(Font(R.font.roundex)),
-                                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                                        fontSize = 34.sp,
+                                                        lineHeight = 40.sp
                                                     ),
                                                     maxLines = 1,
                                                     overflow = TextOverflow.Ellipsis,

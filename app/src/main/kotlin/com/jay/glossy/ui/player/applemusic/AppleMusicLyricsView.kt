@@ -56,6 +56,7 @@ import com.jay.glossy.db.entities.LyricsEntity
 import com.jay.glossy.ui.component.LocalBottomSheetPageState
 import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.component.Lyrics
+import com.jay.glossy.ui.component.GlassBackdrop
 import com.jay.glossy.ui.component.PlayStoreRefreshIndicator
 import com.jay.glossy.ui.utils.ShowOffsetDialog
 import dagger.hilt.android.EntryPointAccessors
@@ -193,13 +194,15 @@ internal fun AppleMusicLyricsView(
             contentAlignment = Alignment.Center
         ) {
             // Premium frosted-glass lyrics panel: blurred artwork backdrop + dark
-            // scrim, shared with the other player designs via LyricsGlassBackdrop.
+            // scrim, shared with the other player designs via GlassBackdrop. The
+            // backdrop fades in down the panel, so the blur builds up from the
+            // header above instead of starting at a hard edge.
             val lyricsArtworkUrl = remember(mediaMetadata?.thumbnailUrl) {
                 mediaMetadata?.thumbnailUrl?.toHighRes()
             }
-            com.jay.glossy.ui.player.LyricsGlassBackdrop(
+            GlassBackdrop(
                 thumbnailUrl = lyricsArtworkUrl,
-                shape = 28.dp,
+                shape = RoundedCornerShape(28.dp),
                 modifier = Modifier.fillMaxSize(),
             )
             Box(

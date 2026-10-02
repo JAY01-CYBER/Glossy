@@ -105,6 +105,7 @@ import com.jay.glossy.constants.AudioNormalizationKey
 import com.jay.glossy.constants.AudioOffload
 import com.jay.glossy.constants.AudioQualityKey
 import com.jay.glossy.constants.CanvasOnMobileDataKey
+import com.jay.glossy.constants.CanvasPreloadKey
 import com.jay.glossy.constants.CanvasThumbnailAnimationKey
 import com.jay.glossy.constants.AudioTrackPlaybackParamsKey
 import com.jay.glossy.constants.AutoDownloadOnLikeKey
@@ -119,7 +120,6 @@ import com.jay.glossy.constants.AutoplayKey
 import com.jay.glossy.constants.CrossfadeDurationKey
 import com.jay.glossy.constants.CrossfadeEnabledKey
 import com.jay.glossy.constants.CrossfadeGaplessKey
-import com.jay.glossy.constants.SoundFxEnabledKey
 import com.jay.glossy.constants.DisableLoadMoreWhenRepeatAllKey
 import com.jay.glossy.constants.DiscordActivityNameKey
 import com.jay.glossy.constants.DiscordActivityTypeKey
@@ -196,6 +196,8 @@ import com.jay.glossy.extensions.toMediaItem
 import com.jay.glossy.extensions.toPersistQueue
 import com.jay.glossy.extensions.toQueue
 import com.jay.glossy.lyrics.LyricsHelper
+import com.jay.glossy.ui.player.CanvasPrefetcher
+import com.jay.glossy.ui.player.isMobileDataConnection
 import com.jay.glossy.ui.player.CanvasResolver
 import com.metrolist.models.PersistPlayerState
 import com.metrolist.models.PersistQueue
@@ -966,36 +968,54 @@ class MusicService :
             .debounce(1500)
             .distinctUntilChangedBy { it?.id }
             .collectLatest(scope) { mediaMetadata ->
-                val (canvasEnabled, canvasOnMobileData) = dataStore.data
+                val (canvasEnabled, canvasOnMobileData, canvasPreload) = dataStore.data
                     .map {
-                        (it[CanvasThumbnailAnimationKey] ?: false) to (it[CanvasOnMobileDataKey] ?: false)
+                        Triple(
+                            it[CanvasThumbnailAnimationKey] ?: false,
+                            it[CanvasOnMobileDataKey] ?: true,
+                            it[CanvasPreloadKey] ?: true,
+                        )
                     }
                     .first()
                 if (!canvasEnabled) return@collectLatest
-                // A canvas is a looping video download: keep the prefetch off
-                // metered connections unless the user allowed mobile data.
-                if (connectivityManager.isActiveNetworkMetered && !canvasOnMobileData) return@collectLatest
+                // A canvas is a looping video download. The user can keep the
+                // prefetch off mobile data, which is opt-in: canvases load on
+                // mobile data unless that switch is turned off. Decided by
+                // transport, so Wi-Fi the system flagged as metered — or a
+                // network still coming up — is not mistaken for mobile data.
+                if (!canvasOnMobileData && applicationContext.isMobileDataConnection()) return@collectLatest
                 val context = applicationContext
+                // Handed to the app-scoped prefetcher rather than resolved here:
+                // this collector is cancelled the moment the track changes, which
+                // used to take the lookup with it — so the prefetch for the song
+                // that had just started was the one that got dropped. The
+                // prefetcher also fills the player's video cache, so the change
+                // lands on a canvas that is already half downloaded.
                 // Current track (may have missed the instant path)
                 mediaMetadata?.let { current ->
-                    CanvasResolver.prefetch(
+                    CanvasPrefetcher.request(
                         context = context,
                         mediaId = current.id,
                         songTitle = current.title,
                         artistName = current.artists.firstOrNull()?.name.orEmpty(),
                         albumName = current.album?.title.orEmpty(),
+                        warmVideo = canvasPreload,
+                        allowMetered = canvasOnMobileData,
                     )
                 }
-                // Next queued track
+                // Next queued track — the one whose canvas has to be ready when
+                // the user skips, which is the whole point of warming it.
                 val currentIndex = player.currentMediaItemIndex
                 if (player.mediaItemCount > currentIndex + 1) {
                     player.getMediaItemAt(currentIndex + 1).metadata?.let { next ->
-                        CanvasResolver.prefetch(
+                        CanvasPrefetcher.request(
                             context = context,
                             mediaId = next.id,
                             songTitle = next.title,
                             artistName = next.artists.firstOrNull()?.name.orEmpty(),
                             albumName = next.album?.title.orEmpty(),
+                            warmVideo = canvasPreload,
+                            allowMetered = canvasOnMobileData,
                         )
                     }
                 }
@@ -1057,7 +1077,11 @@ class MusicService :
         combine(
             dataStore.data.map { it[AudioOffload] ?: false },
             dataStore.data.map { it[CrossfadeEnabledKey] ?: false },
-            dataStore.data.map { it[SoundFxEnabledKey] ?: false },
+            // Read the effective sound fx state, not the raw switch: the
+            // one-tap audio boost turns the effects on without touching
+            // SoundFxEnabledKey, and a boost that offload swallowed would be
+            // silent.
+            dataStore.data.map { com.jay.glossy.eq.soundfx.SoundFxSettings.fromPreferences(it).enabled },
             dataStore.data.map { it[SpatialAudioKey] ?: false },
         ) { offloadPref, crossfadeEnabled, soundFxEnabled, spatialAudio ->
             // Force disable offload if crossfade is enabled to prevent volume ramp issues,

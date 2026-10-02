@@ -10,6 +10,7 @@ import com.jay.glossy.R
 
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animate
@@ -327,25 +328,31 @@ inline fun ListItem(
     showDivider: Boolean = false,
 ) {
     val contentColor = MaterialTheme.colorScheme.onSurface
-    val cardShape = RoundedCornerShape(20.dp)
-    val cardColor = if (isSelected == true) {
-        MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
-    } else {
-        MaterialTheme.colorScheme.surfaceContainerLow
-    }
+    // Soft ghost tile: an ordinary row draws nothing at all and the list reads
+    // as a list. The tonal fill is reserved for rows that earned one — the
+    // playing row and rows picked in selection mode — and it fades in rather
+    // than snapping, so the highlight feels like it is settling onto the row.
+    val tileColor by animateColorAsState(
+        when {
+            isSelected == true -> MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+            isActive -> MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
+            else -> Color.Transparent
+        },
+        label = "listTileGhost",
+    )
 
     Column(modifier = modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp)
-                .clip(cardShape)
-                .background(cardColor)
+                .padding(horizontal = 6.dp, vertical = 3.dp)
+                .clip(ListTileShape)
+                .background(tileColor)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .padding(vertical = 10.dp, horizontal = 14.dp)
+                    .padding(vertical = 9.dp, horizontal = 12.dp)
                     .fillMaxWidth()
             ) {
                 if (leadingContent != null) {
@@ -506,10 +513,23 @@ fun ListItem(
 // ------------------------------------------------------------------------
 
 /**
- * One shared artwork geometry so grid cards and list rows round identically
- * everywhere they are used.
+ * One shared artwork geometry so grid cards round identically everywhere they
+ * are used.
  */
 private val CardThumbnailShape = RoundedCornerShape(20.dp)
+
+/**
+ * The ghost-tile silhouette every list row shares: the same soft corner
+ * language as the grid cards, a step tighter because it spans the whole row.
+ */
+@PublishedApi
+internal val ListTileShape = RoundedCornerShape(16.dp)
+
+/**
+ * Artwork corners inside a list row — tighter than the grid's 20 dp, so the
+ * cover stays the quiet half of a row that no longer has a card to lean on.
+ */
+private val ListThumbnailShape = RoundedCornerShape(12.dp)
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -668,7 +688,7 @@ fun SongListItem(
     showInLibraryIcon: Boolean = false,
     showDownloadIcon: Boolean = true,
     subtitleOverride: String? = null,
-    thumbnailShape: Shape = CardThumbnailShape,
+    thumbnailShape: Shape = ListThumbnailShape,
     badges: @Composable RowScope.() -> Unit = {
         if (song.song.explicit) {
             Icon.Explicit()
@@ -991,7 +1011,7 @@ fun AlbumListItem(
             thumbnailUrl = album.album.thumbnailUrl,
             isActive = isActive,
             isPlaying = isPlaying,
-            shape = CardThumbnailShape,
+            shape = ListThumbnailShape,
             modifier = Modifier.fillMaxSize()
         )
     },
@@ -1176,7 +1196,7 @@ fun PlaylistListItem(
                     modifier = Modifier.size(24.dp)
                 )
             },
-            shape = CardThumbnailShape
+            shape = ListThumbnailShape
         )
     },
     trailingContent = trailingContent,
@@ -1335,7 +1355,7 @@ fun MediaMetadataListItem(
                 isSelected = isSelected,
                 isActive = isActive,
                 isPlaying = isPlaying,
-                shape = CardThumbnailShape,
+                shape = ListThumbnailShape,
                 modifier = Modifier.fillMaxSize()
             )
         },
@@ -1361,7 +1381,7 @@ fun YouTubeListItem(
     isSwipeable: Boolean = true,
     showDivider: Boolean = false,
     trailingContent: @Composable RowScope.() -> Unit = {},
-    thumbnailShape: Shape = if (item is ArtistItem) CircleShape else RoundedCornerShape(14.dp),
+    thumbnailShape: Shape = if (item is ArtistItem) CircleShape else ListThumbnailShape,
     badges: @Composable RowScope.() -> Unit = {
         if (item.explicit) {
             Text(
@@ -1396,29 +1416,30 @@ fun YouTubeListItem(
     val contentColor = MaterialTheme.colorScheme.onBackground
     val subtitleColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f) 
 
+    // Same ghost tile as the base ListItem — this row used to keep its own
+    // filled card and a hairline border, which is exactly the look the rebuild
+    // retired. It now draws nothing until it is playing or selected.
+    val tileColor by animateColorAsState(
+        when {
+            isSelected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+            isActive -> MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
+            else -> Color.Transparent
+        },
+        label = "youTubeListTileGhost",
+    )
+
     val content: @Composable () -> Unit = {
         Column(modifier = modifier.fillMaxWidth()) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 10.dp, vertical = 3.dp)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(
-                        if (isSelected || isActive) {
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
-                        } else {
-                            MaterialTheme.colorScheme.surfaceContainerLow
-                        }
-                    )
-                    .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
-                        shape = RoundedCornerShape(18.dp),
-                    )
+                    .padding(horizontal = 6.dp, vertical = 3.dp)
+                    .clip(ListTileShape)
+                    .background(tileColor)
             ) {
                 Row(
                     modifier = Modifier
-                        .padding(vertical = 6.dp, horizontal = 12.dp)
+                        .padding(vertical = 8.dp, horizontal = 12.dp)
                         .fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -2282,39 +2303,19 @@ object Icon {
 
 @Composable
 fun AppleMusicVisualizer(modifier: Modifier = Modifier, color: Color = Color.White) {
-    val infiniteTransition = rememberInfiniteTransition(label = "visualizer")
-    
-    val anim1 by infiniteTransition.animateFloat(
-        initialValue = 0.3f, targetValue = 1.0f,
-        animationSpec = infiniteRepeatable(tween(400, easing = LinearEasing), RepeatMode.Reverse),
-        label = "bar1"
-    )
-    val anim2 by infiniteTransition.animateFloat(
-        initialValue = 1.0f, targetValue = 0.4f,
-        animationSpec = infiniteRepeatable(tween(300, easing = LinearEasing), RepeatMode.Reverse),
-        label = "bar2"
-    )
-    val anim3 by infiniteTransition.animateFloat(
-        initialValue = 0.5f, targetValue = 0.9f,
-        animationSpec = infiniteRepeatable(tween(500, easing = LinearEasing), RepeatMode.Reverse),
-        label = "bar3"
-    )
-    val anim4 by infiniteTransition.animateFloat(
-        initialValue = 0.8f, targetValue = 0.2f,
-        animationSpec = infiniteRepeatable(tween(350, easing = LinearEasing), RepeatMode.Reverse),
-        label = "bar4"
-    )
-
-    Row(
+    // This used to run its own four-bar animation through `fillMaxHeight`,
+    // which is a relayout *and* a recomposition on every frame — on the one
+    // surface that is on screen for the whole song. It now rides the shared
+    // [PlayingBars], which pushes the same motion through layer transforms only.
+    PlayingBars(
+        isPlaying = true,
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(3.dp), 
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(modifier = Modifier.width(4.dp).fillMaxHeight(anim1).clip(RoundedCornerShape(50)).background(color))
-        Box(modifier = Modifier.width(4.dp).fillMaxHeight(anim2).clip(RoundedCornerShape(50)).background(color))
-        Box(modifier = Modifier.width(4.dp).fillMaxHeight(anim3).clip(RoundedCornerShape(50)).background(color))
-        Box(modifier = Modifier.width(4.dp).fillMaxHeight(anim4).clip(RoundedCornerShape(50)).background(color))
-    }
+        color = color,
+        barCount = 4,
+        barWidth = 3.dp,
+        barSpacing = 3.dp,
+        barHeight = 22.dp,
+    )
 }
 
 // 🔥 TIP APPLIED: Fast Hardware Accelerated Shadows

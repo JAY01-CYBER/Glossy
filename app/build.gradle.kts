@@ -9,6 +9,9 @@ import org.gradle.api.tasks.TaskAction
 import org.gradle.process.ExecOperations
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.net.URI
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.Properties
 import javax.inject.Inject
 
@@ -19,6 +22,18 @@ if (localPropertiesFile.exists()) {
 }
 
 val baseApplicationId = "com.jay.glossy"
+
+/**
+ * When this build was configured, shown in Settings next to the version.
+ *
+ * versionCode and versionName are identical for every local build, so there was
+ * no way to tell from inside the app which build of a given version was
+ * actually installed — which made "I rebuilt it, why does nothing look
+ * different?" an unanswerable question. The configuration cache is off in this
+ * project, so this is re-evaluated on every build and each APK carries a
+ * different stamp.
+ */
+val buildStamp = SimpleDateFormat("d MMM HH:mm", Locale.US).format(Date())
 val applicationIdOverride = System.getenv("GLOSSY_APPLICATION_ID")?.takeIf { it.isNotBlank() }
 val appNameOverride = System.getenv("GLOSSY_APP_NAME")?.takeIf { it.isNotBlank() }
 val debugKeystorePathOverride = System.getenv("GLOSSY_DEBUG_KEYSTORE_PATH")?.takeIf { it.isNotBlank() }
@@ -100,8 +115,9 @@ android {
         applicationId = applicationIdOverride ?: baseApplicationId
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.0.3"
+        versionCode = 5
+        versionName = "0.0.5"
+        buildConfigField("String", "BUILD_STAMP", "\"$buildStamp\"")
         resValue("string", "app_name", appNameOverride ?: "Glossy")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -174,6 +190,12 @@ android {
             isShrinkResources = true
             isCrunchPngs = false
             isDebuggable = false
+            val releaseStorePassword = System.getenv("STORE_PASSWORD")
+            val releaseKeyAlias = System.getenv("KEY_ALIAS")
+            val releaseKeyPassword = System.getenv("KEY_PASSWORD")
+            if (releaseStorePassword != null && releaseKeyAlias != null && releaseKeyPassword != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
@@ -305,6 +327,23 @@ tasks.configureEach {
 
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
+}
+
+// The Compose compiler cannot infer stability for types from another module, so
+// the innertube models — the payload of every list row — are declared stable by
+// hand. See compose-stability.conf; without it those rows are unskippable and
+// every LazyColumn re-runs them on unrelated state changes.
+//
+// Run with -PglossyComposeReports to write the per-class skippability reports to
+// build/compose_reports/, which is how a change like this is checked.
+val composeReportsRequested = providers.gradleProperty("glossyComposeReports").isPresent
+
+composeCompiler {
+    stabilityConfigurationFiles.add(layout.projectDirectory.file("compose-stability.conf"))
+    if (composeReportsRequested) {
+        reportsDestination.set(layout.buildDirectory.dir("compose_reports"))
+        metricsDestination.set(layout.buildDirectory.dir("compose_metrics"))
+    }
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {

@@ -93,7 +93,12 @@ private data class Contributor(
     val githubUrl: String = "https://github.com/$githubHandle",
     val sponsorUrl: String? = null,
     val polygon: RoundedPolygon? = null,
-    val favoriteSongVideoId: String? = null
+    val favoriteSongVideoId: String? = null,
+    /**
+     * A portrait bundled with the build, used instead of [avatarUrl] when set.
+     * It renders offline and never changes under us when the GitHub avatar does.
+     */
+    val avatarRes: Int? = null,
 )
 
 private data class CommunityLink(
@@ -109,6 +114,25 @@ private val leadDeveloper = Contributor(
     githubHandle = "JAY01-CYBER",
     polygon = MaterialShapes.Cookie9Sided,
     favoriteSongVideoId = "Mh2JWGWvy_Y"
+)
+
+/**
+ * Glossy's own developers — everyone working on the app itself, shown in their
+ * own group directly under the lead developer's card.
+ *
+ * Chikku's portrait ships with the build ([R.drawable.dev_chikku]) rather than
+ * being pulled from GitHub, so the row shows the face we were given, offline,
+ * and the avatar cannot drift when the GitHub account's picture changes. Their
+ * GitHub profile is still the handle-derived link, so tapping the row opens
+ * https://github.com/izybro110-gif.
+ */
+private val developers = listOf(
+    Contributor(
+        name = "Chikku",
+        roleRes = R.string.credits_developer,
+        githubHandle = "izybro110-gif",
+        avatarRes = R.drawable.dev_chikku,
+    ),
 )
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -166,6 +190,8 @@ private fun ContributorAvatar(
     modifier: Modifier = Modifier,
     shape: Shape = CircleShape,
     contentDescription: String? = null,
+    /** A bundled portrait; when set it wins over [avatarUrl]. */
+    avatarRes: Int? = null,
     onClick: (() -> Unit)? = null
 ) {
     val fallback = painterResource(R.drawable.about_icon)
@@ -177,15 +203,24 @@ private fun ContributorAvatar(
         color = MaterialTheme.colorScheme.surfaceContainerHighest,
         tonalElevation = 4.dp,
     ) {
-        AsyncImage(
-            model = avatarUrl,
-            contentDescription = contentDescription,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
-            placeholder = fallback,
-            fallback = fallback,
-            error = fallback,
-        )
+        if (avatarRes != null) {
+            Image(
+                painter = painterResource(avatarRes),
+                contentDescription = contentDescription,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else {
+            AsyncImage(
+                model = avatarUrl,
+                contentDescription = contentDescription,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+                placeholder = fallback,
+                fallback = fallback,
+                error = fallback,
+            )
+        }
     }
 }
 
@@ -416,6 +451,72 @@ fun AboutScreen(
 
         Spacer(Modifier.height(32.dp))
         
+        // Glossy's own developers, directly under the lead developer's card.
+        Material3SettingsGroup(
+            title = stringResource(R.string.credits_glossy_devs),
+            items = developers.map { contributor ->
+                Material3SettingsItem(
+                    leadingContent = {
+                        var clickCount by remember(contributor.name) { mutableIntStateOf(0) }
+                        ContributorAvatar(
+                            avatarUrl = contributor.avatarUrl,
+                            avatarRes = contributor.avatarRes,
+                            sizeDp = 48,
+                            shape = contributor.polygon?.toShape() ?: CircleShape,
+                            contentDescription = contributor.name,
+                            onClick = {
+                                handleEasterEggClick(
+                                    clickCount = clickCount,
+                                    favoriteSongVideoId = contributor.favoriteSongVideoId,
+                                    coroutineScope = coroutineScope,
+                                    snackbarHostState = snackbarHostState,
+                                    playerConnection = playerConnection,
+                                    wannaPlayStr = wannaPlayStr,
+                                    yeahStr = yeahStr,
+                                    onCountUpdate = { clickCount = it }
+                                )
+                            }
+                        )
+                    },
+                    title = { Text(text = contributor.name, fontWeight = FontWeight.SemiBold) },
+                    description = { Text(stringResource(contributor.roleRes)) },
+                    trailingContent = {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (contributor.sponsorUrl != null) {
+                                Surface(
+                                    onClick = { uriHandler.openUri(contributor.sponsorUrl) },
+                                    shape = CircleShape,
+                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.buymeacoffee),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                            Icon(
+                                painter = painterResource(R.drawable.github),
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
+                    onClick = { uriHandler.openUri(contributor.githubUrl) }
+                )
+            }
+        )
+
+        Spacer(Modifier.height(32.dp))
+
         // Collaborators section
         Material3SettingsGroup(
             title = "Metrolist Devs",

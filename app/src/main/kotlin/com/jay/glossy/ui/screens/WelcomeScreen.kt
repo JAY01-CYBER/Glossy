@@ -4,8 +4,8 @@
  *
  * Onboarding. Three steps on one violet backdrop:
  *
- *  1. the sign-in screen (brand mark, tagline, "Continue with Google" and
- *     "Continue as a guest" on a light card),
+ *  1. the sign-in screen — [GlossyLoginScreen]: the full-bleed violet design
+ *     with the holographic key art and Google / guest / cookie-token entries,
  *  2. the guest nickname step,
  *  3. the community page — Instagram, Discord and Telegram — which ends with
  *     "Next" and hands the user over to Home.
@@ -88,13 +88,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jay.glossy.R
-import com.jay.glossy.constants.AccountNameKey
 import com.jay.glossy.constants.CommunityChannel
 import com.jay.glossy.constants.GuestNameKey
 import com.jay.glossy.constants.InnerTubeCookieKey
 import com.jay.glossy.constants.PendingCommunityIntroKey
-import com.jay.glossy.ui.component.FloatingGlassArt
-import com.jay.glossy.ui.component.GlassFullScreenProps
 import com.jay.glossy.ui.component.GlossyDotsIndicator
 import com.jay.glossy.ui.theme.GlossyDimens
 import com.jay.glossy.ui.theme.GlossyOnboardingPalette
@@ -115,6 +112,7 @@ private const val KEY_ART_RES_NAME = "login_bg"
 fun GlossyWelcomeScreen(
     onSetupComplete: (String) -> Unit,
     onGoogleLoginClick: () -> Unit,
+    onTokenClick: () -> Unit,
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -204,15 +202,14 @@ fun GlossyWelcomeScreen(
                 }
             },
             label = "WelcomeTransition",
-            modifier = Modifier
-                .fillMaxSize()
-                .systemBarsPadding(),
+            modifier = Modifier.fillMaxSize(),
         ) { state ->
             when (state) {
                 WelcomeState.INTRO -> {
-                    IntroSection(
-                        onGuestClick = { currentState = WelcomeState.GUEST_INPUT },
+                    GlossyLoginScreen(
                         onGoogleClick = onGoogleLoginClick,
+                        onGuestClick = { currentState = WelcomeState.GUEST_INPUT },
+                        onTokenClick = onTokenClick,
                     )
                 }
 
@@ -408,32 +405,6 @@ private fun GlossyMark(markSize: Dp = 88.dp) {
     }
 }
 
-/** Translucent tagline pill drawn over the backdrop. */
-@Composable
-private fun TaglineChip(text: String) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(GlossyDimens.CornerPill))
-            .background(GlossyOnboardingPalette.ChipFill)
-            .border(
-                width = 1.dp,
-                color = GlossyOnboardingPalette.ChipBorder,
-                shape = RoundedCornerShape(GlossyDimens.CornerPill),
-            )
-            .padding(horizontal = 18.dp, vertical = 8.dp),
-    ) {
-        Text(
-            text = text,
-            color = GlossyOnboardingPalette.OnChip,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Medium,
-            letterSpacing = 0.4.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
-
 /** Filled violet action, used for Primary/Next. */
 @Composable
 private fun OnboardingPrimaryButton(
@@ -469,42 +440,6 @@ private fun OnboardingPrimaryButton(
     }
 }
 
-/** Quiet action that sits next to [OnboardingPrimaryButton] on the light card. */
-@Composable
-private fun OnboardingSecondaryButton(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    leading: (@Composable () -> Unit)? = null,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(54.dp)
-            .clip(RoundedCornerShape(GlossyDimens.CornerPill))
-            .background(GlossyOnboardingPalette.CardSecondary)
-            .border(
-                width = 1.dp,
-                color = GlossyOnboardingPalette.CardBorder,
-                shape = RoundedCornerShape(GlossyDimens.CornerPill),
-            )
-            .clickable(onClick = onClick),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (leading != null) {
-            leading()
-            Spacer(Modifier.width(10.dp))
-        }
-        Text(
-            text = text,
-            color = GlossyOnboardingPalette.OnCard,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-        )
-    }
-}
-
 /** Small round glassy icon action, used to step back. */
 @Composable
 private fun OnboardingBackButton(onClick: () -> Unit) {
@@ -524,123 +459,6 @@ private fun OnboardingBackButton(onClick: () -> Unit) {
     }
 }
 
-// ============================================================================
-// Step 1 — sign in
-// ============================================================================
-
-@Composable
-private fun IntroSection(
-    onGuestClick: () -> Unit,
-    onGoogleClick: () -> Unit,
-) {
-    val (accountName) = rememberPreference(AccountNameKey, defaultValue = "")
-    val firstName =
-        remember(accountName) {
-            accountName.trim().substringBefore(' ').takeIf { it.isNotBlank() }
-        }
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        IntroGlassArt()
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = GlossyDimens.ScreenPadding),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Spacer(Modifier.weight(1f))
-
-            GlossyMark()
-
-            Spacer(Modifier.height(26.dp))
-
-            TaglineChip(text = stringResource(R.string.glossy_tagline))
-
-            Spacer(Modifier.height(18.dp))
-
-            Text(
-                text = if (firstName != null) {
-                    stringResource(R.string.glossy_welcome_back, firstName)
-                } else {
-                    stringResource(R.string.glossy_welcome_title)
-                },
-                color = GlossyOnboardingPalette.OnBackdrop,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-            )
-
-            Spacer(Modifier.height(10.dp))
-
-            Text(
-                text = stringResource(R.string.glossy_welcome_subtitle),
-                color = GlossyOnboardingPalette.OnBackdropMuted,
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 8.dp),
-            )
-
-            Spacer(Modifier.weight(1f))
-
-            // The two ways in: sign in with Google, or stay a guest. There is no
-            // cookie/token entry point here any more — a pasted cookie is an
-            // advanced, account-settings affair and does not belong on the first
-            // screen a new user ever sees.
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(28.dp),
-                color = GlossyOnboardingPalette.Card,
-                border = BorderStroke(1.dp, GlossyOnboardingPalette.CardBorder),
-                shadowElevation = 8.dp,
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    OnboardingPrimaryButton(
-                        text = stringResource(R.string.glossy_continue_google),
-                        onClick = onGoogleClick,
-                        leading = {
-                            Icon(
-                                painter = painterResource(R.drawable.login),
-                                contentDescription = null,
-                                tint = GlossyOnboardingPalette.OnPrimary,
-                                modifier = Modifier.size(18.dp),
-                            )
-                        },
-                    )
-                    OnboardingSecondaryButton(
-                        text = stringResource(R.string.glossy_continue_guest),
-                        onClick = onGuestClick,
-                        leading = {
-                            Icon(
-                                painter = painterResource(R.drawable.person),
-                                contentDescription = null,
-                                tint = GlossyOnboardingPalette.OnCard,
-                                modifier = Modifier.size(18.dp),
-                            )
-                        },
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(28.dp))
-        }
-    }
-}
-
-/**
- * The sign-in screen's floating glass props — a play tile, a spiral disc, a
- * lightning bolt and a cassette — laid out like the product key art. They sit
- * behind the content, drifting slowly, and are purely decorative.
- */
-@Composable
-private fun IntroGlassArt(modifier: Modifier = Modifier) {
-    FloatingGlassArt(
-        modifier = modifier.fillMaxSize(),
-        props = GlassFullScreenProps,
-    )
-}
 
 // ============================================================================
 // Step 2 — guest nickname
@@ -659,6 +477,7 @@ private fun GuestInputSection(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .systemBarsPadding()
             .imePadding()
             .padding(horizontal = GlossyDimens.ScreenPadding),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -826,6 +645,7 @@ private fun CommunitySection(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .systemBarsPadding()
             .padding(horizontal = GlossyDimens.ScreenPadding),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {

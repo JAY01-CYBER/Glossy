@@ -71,13 +71,20 @@ object SpotifyCanvasProvider {
             ?: Spotify.accessToken?.takeIf { it.isNotBlank() }
             ?: return null
         
-        val uri = searchViaPathfinder(song, artist, token)
-            ?: searchViaRest(song, artist, token)
-            ?: return null
-            
+        val uri = resolveTrackUri(song, artist, token) ?: return null
+
         val canvasUrl = fetchCanvasUrl(uri, token) ?: return null
         return CanvasArtwork(name = song, artist = artist, animated = canvasUrl, videoUrl = canvasUrl)
     }
+
+    /**
+     * “Which Spotify track is this song?” — the persisted-query search first,
+     * the public REST search as backup. Used for canvases and, identically, by
+     * [com.jay.glossy.lyrics.SpotifyLyricsProvider]: one answer to that question
+     * is enough, and both features should trust the same track.
+     */
+    internal suspend fun resolveTrackUri(song: String, artist: String, token: String): String? =
+        searchViaPathfinder(song, artist, token) ?: searchViaRest(song, artist, token)
 
     /**
      * Current + previously-known hash for the search operation, so one stale

@@ -7,14 +7,11 @@ package com.jay.glossy.ui.theme
 
 import com.jay.glossy.R
 import android.graphics.Bitmap
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
@@ -35,7 +32,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import com.jay.glossy.constants.ActiveDesignStyle
 import com.jay.glossy.constants.AppFont
 import com.jay.glossy.constants.DesignStyle
-import com.jay.glossy.constants.DynamicColorEnabledKey
 import com.jay.glossy.constants.SelectedFontKey
 import com.jay.glossy.utils.rememberPreference
 
@@ -76,14 +72,12 @@ fun MetrolistTheme(
         if (useNewDesign) glossTypography(base) else base
     }
 
-    val (dynamicColorEnabled) = rememberPreference(DynamicColorEnabledKey, defaultValue = false)
-    val useSystemDynamicColor =
-        !useNewDesign && dynamicColorEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-
+    // Dynamic colour (Material You wallpaper sampling) was removed: it only ever
+    // applied to the classic look, which the design style no longer uses, and a
+    // wallpaper palette fought the seed colour every other surface is built
+    // from. The scheme now always comes from the chosen seed colour.
     val baseColorScheme = when {
         useNewDesign -> glossyDarkColorScheme()
-        useSystemDynamicColor ->
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         else ->
             rememberDynamicColorScheme(
                 seedColor = themeColor,
@@ -103,8 +97,12 @@ fun MetrolistTheme(
 
     // The redesigned surfaces (Settings and the Glossy components it is built
     // from) read these tokens instead of hardcoded colours, so they follow the
-    // theme: near-black in dark mode, near-white in light mode.
+    // theme: near-black in dark mode, near-white in light mode. Under the
+    // Materialistic style they are derived from the Material 3 scheme instead,
+    // so every screen repaints tonally from the seed colour.
+    val materialistic = ActiveDesignStyle == DesignStyle.MATERIALISTIC
     val glossyColors = when {
+        materialistic -> materialisticColors(colorScheme)
         !darkTheme -> GlossyColors.Light
         pureBlack -> GlossyColors.PureBlack
         else -> GlossyColors.Dark

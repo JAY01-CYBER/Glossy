@@ -10,7 +10,9 @@ import com.jay.glossy.R
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
@@ -49,8 +51,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -70,6 +71,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults.LoadingInd
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -101,6 +103,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jay.glossy.LocalNavController
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -130,6 +135,7 @@ import com.jay.glossy.constants.GridThumbnailHeight
 import com.jay.glossy.constants.InnerTubeCookieKey
 import com.jay.glossy.constants.ListItemHeight
 import com.jay.glossy.constants.ListThumbnailSize
+import com.jay.glossy.constants.QuickPickCaptionHeight
 import com.jay.glossy.constants.QuickPickShape
 import com.jay.glossy.constants.QuickPickShapeKey
 import com.jay.glossy.constants.ActiveDesignStyle
@@ -162,6 +168,7 @@ import com.jay.glossy.ui.component.GreetingSection
 import com.jay.glossy.ui.component.HideOnScrollFAB
 import com.jay.glossy.ui.component.LocalBottomSheetPageState
 import com.jay.glossy.ui.component.LocalMenuState
+import com.jay.glossy.ui.component.MaterialQuickPickTile
 import com.jay.glossy.ui.screens.MoodAndGenresButton
 import com.jay.glossy.ui.screens.MoodAndGenresButtonHeight
 import com.jay.glossy.ui.component.NavigationTitle
@@ -181,6 +188,12 @@ import com.jay.glossy.ui.menu.YouTubeAlbumMenu
 import com.jay.glossy.ui.menu.YouTubeArtistMenu
 import com.jay.glossy.ui.menu.YouTubePlaylistMenu
 import com.jay.glossy.ui.menu.YouTubeSongMenu
+import com.jay.glossy.ui.player.CanvasPrefetcher
+import com.jay.glossy.ui.player.PlayerCanvasArtwork
+import com.jay.glossy.ui.player.rememberCanvasCornerSize
+import com.jay.glossy.ui.player.rememberCanvasOnMobileData
+import com.jay.glossy.ui.player.rememberCanvasPreloadEnabled
+import com.jay.glossy.ui.player.rememberSpotlightCanvasEnabled
 import com.jay.glossy.ui.utils.SnapLayoutInfoProvider
 import com.jay.glossy.ui.utils.resize
 import com.jay.glossy.utils.joinByBullet
@@ -196,7 +209,15 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.min
-import kotlin.random.Random@Composable
+import kotlin.random.Random/**
+ * The home feed's section lockup: an accent rule, the eyebrow that says what
+ * the section is for, the display-scale title, and — when the section leads
+ * somewhere — the arrow chip that opens it.
+ *
+ * Every home section draws through this, so the feed reads as one system rather
+ * than a stack of unrelated carousels.
+ */
+@Composable
 fun SimpSectionHeader(
     subtitle: String, 
     title: String,
@@ -210,23 +231,26 @@ fun SimpSectionHeader(
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        SectionRule(hasEyebrow = subtitle.isNotEmpty())
+
         Column(modifier = Modifier.weight(1f)) {
             if (subtitle.isNotEmpty()) {
                 Text(
                     text = subtitle.uppercase(),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
+                    fontSize = 10.5.sp,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary,
-                    letterSpacing = 1.5.sp,
+                    letterSpacing = 1.3.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(modifier = Modifier.height(3.dp))
+                Spacer(modifier = Modifier.height(2.dp))
             }
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.ExtraBold,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = (-0.4).sp,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -236,18 +260,228 @@ fun SimpSectionHeader(
             Surface(
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                modifier = Modifier.size(32.dp),
+                modifier = Modifier.size(34.dp),
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         painter = painterResource(R.drawable.arrow_forward),
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(16.dp),
+                        modifier = Modifier.size(17.dp),
                     )
                 }
             }
         }
+    }
+}
+
+/**
+ * The accent rule that opens a section lockup: as tall as the text block beside
+ * it, longer where the block carries an eyebrow above the title.
+ */
+@Composable
+fun SectionRule(hasEyebrow: Boolean) {
+    Box(
+        modifier = Modifier
+            .padding(end = 11.dp)
+            .width(3.dp)
+            .height(if (hasEyebrow) 28.dp else 20.dp)
+            .clip(RoundedCornerShape(3.dp))
+            .background(MaterialTheme.colorScheme.primary),
+    )
+}
+
+/**
+ * The animated layer for the Spotlight card that is actually in view.
+ *
+ * This is the only card in the strip that owns a decoder — the next one only
+ * warms the URL cache ([SpotlightCanvasPrefetch]), so a strip you flick through
+ * never leaves a player parked on every card. The clip fades in on its first
+ * decoded frame, and while it buffers the cover underneath is the poster.
+ *
+ * It goes through the same canvas path the player uses ([PlayerCanvasArtwork])
+ * instead of a second, slightly different one. That path consults the playback
+ * cache before looking anything up, retries a lookup that actually failed,
+ * remembers a song that genuinely has no canvas, and — the fix for cards that
+ * stayed still forever — keeps the clip's `videoUrl` as a fallback when the
+ * animated URL does not play. The card does *not* follow playback, though: it
+ * passes its own "is the app in front" flag, because a carousel animates songs
+ * that are not the one playing.
+ */
+@Composable
+private fun SpotlightCanvasLayer(
+    item: SongItem,
+    modifier: Modifier = Modifier,
+) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // A looping video in a list that is off screen is pure battery, so the card
+    // stops decoding the moment the app is backgrounded.
+    var appVisible by remember { mutableStateOf(true) }
+    DisposableEffect(lifecycleOwner) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_STOP -> appVisible = false
+                    Lifecycle.Event.ON_START -> appVisible = true
+                    else -> {}
+                }
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    val artistName = remember(item.id) { item.artists.joinToArtistString(" & ") { it.name } }
+    PlayerCanvasArtwork(
+        mediaId = item.id,
+        title = item.title,
+        artist = artistName,
+        album = item.album?.name.orEmpty(),
+        isPlaying = appVisible,
+        modifier = modifier,
+    )
+}
+
+/**
+ * Prepares a card's canvas without playing it: the provider lookup runs on the
+ * app-scoped [CanvasPrefetcher], and, when preloading is on, the clip's opening
+ * bytes land in the same cache the player reads from.
+ *
+ * Draws nothing and creates no decoder. It deliberately does *not* resolve
+ * inside this card's composition the way the layer does: that version was
+ * cancelled by the very swipe it was meant to prepare for, so the card it was
+ * warming arrived cold anyway.
+ */
+@Composable
+private fun SpotlightCanvasPrefetch(
+    item: SongItem,
+    warmVideo: Boolean,
+    allowMetered: Boolean,
+) {
+    val context = LocalContext.current
+    val artistName = remember(item.id) { item.artists.joinToArtistString(" & ") { it.name } }
+
+    LaunchedEffect(item.id, artistName, warmVideo, allowMetered) {
+        CanvasPrefetcher.request(
+            context = context,
+            mediaId = item.id,
+            songTitle = item.title,
+            artistName = artistName,
+            albumName = item.album?.name ?: "",
+            warmVideo = warmVideo,
+            allowMetered = allowMetered,
+        )
+    }
+}
+
+/** The regions the chart card offers; India is the market this build is for. */
+private val ChartRegions = listOf("Global", "India", "US", "UK", "Japan", "Korea")
+
+/**
+ * The chart entry point: what it opens, where the data is from, and the region
+ * picker itself as chips. The card it replaces was a label centred on an empty
+ * 140dp slab, which spent a lot of the fold saying nothing.
+ */
+@Composable
+private fun ChartCard(
+    region: String,
+    onRegionChange: (String) -> Unit,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val shape = RoundedCornerShape(24.dp)
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(46.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.TrendingUp,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.glossy_explore_charts),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = stringResource(R.string.glossy_charts_caption),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Icon(
+                painter = painterResource(R.drawable.arrow_forward),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+
+        LazyRow(
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(7.dp),
+        ) {
+            items(items = ChartRegions, key = { it }) { name ->
+                RegionChip(
+                    name = name,
+                    selected = name == region,
+                    onClick = { onRegionChange(name) },
+                )
+            }
+        }
+    }
+}
+
+/** One region in the chart card's picker. */
+@Composable
+private fun RegionChip(name: String, selected: Boolean, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(percent = 50))
+            .background(
+                if (selected) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.surfaceVariant
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 13.dp, vertical = 7.dp),
+    ) {
+        Text(
+            text = name,
+            fontSize = 11.5.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = if (selected) MaterialTheme.colorScheme.onPrimary
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+        )
     }
 }
 
@@ -917,6 +1151,14 @@ fun HomeScreen(
                     positionInLayout = { layoutSize, itemSize -> (layoutSize * horizontalLazyGridItemWidthFactor / 2f - itemSize / 2f) },
                 )
             }
+            // Quick picks draws two compact tiles per row, so it snaps a tile at
+            // a time to the screen margin instead of centring one.
+            val quickPicksPageSnapLayoutInfoProvider = remember(quickPicksLazyGridState) {
+                SnapLayoutInfoProvider(
+                    lazyGridState = quickPicksLazyGridState,
+                    positionInLayout = { _, _ -> 0f },
+                )
+            }
             val forgottenFavoritesSnapLayoutInfoProvider = remember(forgottenFavoritesLazyGridState) {
                 SnapLayoutInfoProvider(
                     lazyGridState = forgottenFavoritesLazyGridState,
@@ -1143,11 +1385,32 @@ fun HomeScreen(
                             Column(modifier = Modifier.animateItem().fillMaxWidth().padding(bottom = 24.dp)) {
                                 SimpSectionHeader(subtitle = "HANDPICKED FOR YOU", title = "Featured Spotlight")
                                 val pagerState = rememberPagerState(pageCount = { spotlightItems.size })
+                                // Animated canvases for the featured cards, on by
+                                // default and governed by the "Spotlight Canvas"
+                                // switch. The page that has settled plays, and the
+                                // one after it is resolved ahead of time so the
+                                // next card is already moving when it arrives —
+                                // never the whole strip at once, which would mean
+                                // a decoder per card.
+                                val spotlightCanvasEnabled = rememberSpotlightCanvasEnabled()
+                                // The card's shape comes from Appearance's canvas
+                                // corner control, the same value the player uses
+                                // while a canvas is showing.
+                                val spotlightCanvasCorner = rememberCanvasCornerSize()
+                                val spotlightPreload = rememberCanvasPreloadEnabled()
+                                val canvasOnMobileData = rememberCanvasOnMobileData()
+                                val settledSpotlightPage = pagerState.settledPage
+                                // The page the user has dragged towards, which is
+                                // the one that has to be ready when the swipe
+                                // lands — it becomes `settled` only after the
+                                // animation is over, far too late to start
+                                // looking for a canvas then.
+                                val activeSpotlightPage = pagerState.currentPage
                                 HorizontalPager(
                                     state = pagerState,
                                     contentPadding = PaddingValues(horizontal = 32.dp),
                                     pageSpacing = 16.dp,
-                                    modifier = Modifier.fillMaxWidth().height(240.dp)
+                                    modifier = Modifier.fillMaxWidth().height(252.dp)
                                 ) { page ->
                                     val item = spotlightItems[page]
                                     val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
@@ -1158,7 +1421,7 @@ fun HomeScreen(
                                         modifier = Modifier
                                             .fillMaxSize()
                                             .graphicsLayer { scaleX = scaleFactor; scaleY = scaleFactor; alpha = alphaFactor }
-                                            .clip(RoundedCornerShape(24.dp))
+                                            .clip(RoundedCornerShape(spotlightCanvasCorner))
                                             .combinedClickable(
                                                 onClick = {
                                                     if (!isListenTogetherGuest) {
@@ -1181,6 +1444,39 @@ fun HomeScreen(
                                             },
                                             contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()
                                         )
+                                        // Moving artwork over the still: the still
+                                        // stays visible while the clip buffers,
+                                        // and remains the fallback when the song
+                                        // has no canvas at all. Exactly one card
+                                        // owns a decoder — the settled one — and
+                                        // the card after it is only warmed.
+                                        if (spotlightCanvasEnabled) {
+                                            // Exactly one card owns a decoder —
+                                            // the settled one — so a strip you
+                                            // flick through never leaves a
+                                            // player parked on every card. Its
+                                            // two neighbours are prepared
+                                            // instead: URL resolved, and their
+                                            // opening bytes in the player's
+                                            // cache, so either of them can
+                                            // start on its first frame.
+                                            when (page) {
+                                                settledSpotlightPage ->
+                                                    SpotlightCanvasLayer(
+                                                        item = item,
+                                                        modifier = Modifier.fillMaxSize(),
+                                                    )
+
+                                                activeSpotlightPage + 1,
+                                                activeSpotlightPage + 2,
+                                                ->
+                                                    SpotlightCanvasPrefetch(
+                                                        item = item,
+                                                        warmVideo = spotlightPreload,
+                                                        allowMetered = canvasOnMobileData,
+                                                    )
+                                            }
+                                        }
                                         Box(
                                             modifier = Modifier.fillMaxSize().background(
                                                 Brush.verticalGradient(
@@ -1189,13 +1485,37 @@ fun HomeScreen(
                                                 )
                                             )
                                         )
-                                        Column(modifier = Modifier.align(Alignment.BottomStart).padding(20.dp).padding(end = 64.dp)) {
-                                            Text(text = item.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        // Title block clears both the play pill and the
+                                        // dots below it, so a long song name never runs
+                                        // under either.
+                                        Column(modifier = Modifier.align(Alignment.BottomStart).padding(start = 20.dp, end = 116.dp, bottom = 62.dp)) {
+                                            Surface(
+                                                shape = RoundedCornerShape(percent = 50),
+                                                color = Color.White.copy(alpha = 0.22f),
+                                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.34f)),
+                                            ) {
+                                                Text(
+                                                    text = stringResource(R.string.glossy_featured).uppercase(),
+                                                    fontSize = 9.5.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    letterSpacing = 1.2.sp,
+                                                    color = Color.White,
+                                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(9.dp))
+                                            Text(text = item.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                             Spacer(modifier = Modifier.height(4.dp))
-                                            Text(text = item.artists.joinToArtistString(" & ") { it.name }, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.75f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                            Text(text = item.artists.joinToArtistString(" & ") { it.name }, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.78f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                                         }
-                                        Box(
-                                            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp).size(52.dp).background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
+                                        // Labelled rather than a bare circle: on a hero card
+                                        // nobody has to guess what the triangle does.
+                                        Row(
+                                            modifier = Modifier
+                                                .align(Alignment.BottomEnd)
+                                                .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                                                .clip(RoundedCornerShape(percent = 50))
+                                                .background(Color.White)
                                                 .clickable {
                                                     if (!isListenTogetherGuest) {
                                                         playerConnection.playQueue(
@@ -1203,11 +1523,62 @@ fun HomeScreen(
                                                             else ListQueue(title = item.title, items = listOf(item.toMediaItem()))
                                                         )
                                                     }
-                                                },
-                                            contentAlignment = Alignment.Center
+                                                }
+                                                .padding(start = 7.dp, end = 16.dp, top = 7.dp, bottom = 7.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                                         ) {
-                                            Icon(painter = painterResource(R.drawable.play), contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(26.dp))
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(26.dp)
+                                                    .clip(CircleShape)
+                                                    .background(MaterialTheme.colorScheme.primary),
+                                                contentAlignment = Alignment.Center,
+                                            ) {
+                                                Icon(
+                                                    painter = painterResource(R.drawable.play),
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                                    modifier = Modifier.size(15.dp),
+                                                )
+                                            }
+                                            Text(
+                                                text = stringResource(R.string.play),
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = Color(0xFF15171C),
+                                                maxLines = 1,
+                                            )
                                         }
+                                    }
+                                }
+
+                                // Pager dots: the hero card reserves room for them
+                                // below the title, and which card of the strip is
+                                // showing is otherwise invisible.
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 12.dp),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    repeat(spotlightItems.size) { index ->
+                                        val active = pagerState.currentPage == index
+                                        Box(
+                                            modifier = Modifier
+                                                .padding(horizontal = 3.dp)
+                                                .height(6.dp)
+                                                .width(if (active) 18.dp else 6.dp)
+                                                .clip(CircleShape)
+                                                .background(
+                                                    if (active) {
+                                                        MaterialTheme.colorScheme.primary
+                                                    } else {
+                                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+                                                    }
+                                                ),
+                                        )
                                     }
                                 }
                             }
@@ -1353,52 +1724,126 @@ fun HomeScreen(
                         }
 
                         HomeSection.Charts -> {
+                            val openCharts = { navController.navigate("youtube_browse/FEmusic_charts") }
                             item(key = "charts_header", contentType = "section_header") {
-                                var expanded by remember { mutableStateOf(false) }
-                                val countries = listOf("Global", "India", "United States", "United Kingdom", "Japan", "South Korea")
-                                var selectedCountry by rememberSaveable { mutableStateOf(countries[1]) }
-                                Row(
-                                    modifier = Modifier.animateItem().fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), 
-                                    horizontalArrangement = Arrangement.SpaceBetween, 
-                                    verticalAlignment = Alignment.Bottom
-                                ) {
-                                    SimpSectionHeader(subtitle = "WHAT IS BEST CHOICE TODAY", title = "Chart")
-                                    Box(modifier = Modifier.padding(bottom = 8.dp)) {
-                                        androidx.compose.material3.Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f), modifier = Modifier.clip(RoundedCornerShape(16.dp)).clickable { expanded = true }) {
-                                            Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                                Text(text = selectedCountry, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSecondaryContainer)
-                                                Spacer(modifier = Modifier.width(4.dp))
-                                                Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(20.dp))
-                                            }
-                                        }
-                                        androidx.compose.material3.DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant)) {
-                                            countries.forEach { country -> androidx.compose.material3.DropdownMenuItem(text = { Text(country) }, onClick = { selectedCountry = country; expanded = false }) }
-                                        }
-                                    }
+                                Box(modifier = Modifier.animateItem()) {
+                                    SimpSectionHeader(
+                                        subtitle = "WHAT IS BEST CHOICE TODAY",
+                                        title = "Chart",
+                                        onClick = openCharts,
+                                    )
                                 }
                             }
                             item(key = "charts_content", contentType = "charts") {
-                                Card(modifier = Modifier.animateItem().fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).height(140.dp).clickable { navController.navigate("youtube_browse/FEmusic_charts") }, shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            Icon(imageVector = Icons.Default.TrendingUp, contentDescription = null, modifier = Modifier.size(36.dp), tint = MaterialTheme.colorScheme.primary)
-                                            Spacer(modifier = Modifier.height(12.dp))
-                                            Text(text = "Explore Charts", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                        }
-                                    }
-                                }
+                                // The region lives here now: the picker is chips in the
+                                // card, so the header above it owns no state.
+                                var region by rememberSaveable { mutableStateOf(ChartRegions[1]) }
+                                ChartCard(
+                                    region = region,
+                                    onRegionChange = { region = it },
+                                    onClick = openCharts,
+                                    modifier = Modifier.animateItem(),
+                                )
                                 Spacer(modifier = Modifier.height(24.dp))
                             }
                         }
 
                         HomeSection.QuickPicks -> {
                             quickPicks?.takeIf { it.isNotEmpty() }?.let { quickPicksList ->
+                                val materialistic = ActiveDesignStyle == DesignStyle.MATERIALISTIC
                                 item(key = "quick_picks_title", contentType = "section_header") {
-                                    SimpSectionHeader(subtitle = "LET'S START WITH A RADIO", title = "Quick picks", modifier = Modifier.animateItem())
+                                    if (materialistic) {
+                                        val quickPicksTitle = stringResource(R.string.quick_picks)
+                                        Box(modifier = Modifier.animateItem()) {
+                                            NavigationTitle(
+                                                title = quickPicksTitle,
+                                                label = "MADE FOR YOU",
+                                                onPlayAllClick = if (!isListenTogetherGuest) {
+                                                    {
+                                                        playerConnection.playQueue(
+                                                            ListQueue(
+                                                                title = quickPicksTitle,
+                                                                items = quickPicksList.map { it.toMediaItem() },
+                                                            )
+                                                        )
+                                                    }
+                                                } else null,
+                                            )
+                                        }
+                                    } else {
+                                        SimpSectionHeader(subtitle = "LET'S START WITH A RADIO", title = "Quick picks", modifier = Modifier.animateItem())
+                                    }
                                 }
 
                                 item(key = "quick_picks_list", contentType = "quick_picks") {
-                                    if (newDesign) {
+                                    if (materialistic) {
+                                        // Art-forward: a large square of artwork per
+                                        // pick with the name captioned underneath,
+                                        // two to a row. The artwork is the shelf, so it
+                                        // takes the whole width of its column and the
+                                        // shelf is only two rows deep — at this size
+                                        // four rows would be a screen of its own. The
+                                        // remaining picks are one swipe away, and the
+                                        // grid is padded rather than given content
+                                        // padding so a snapped page keeps the screen
+                                        // margins instead of hugging the edge.
+                                        val rowsCount = 2
+                                        val rowSpacing = 10.dp
+                                        val tileSpacing = 12.dp
+                                        val pagePadding = 16.dp
+                                        // The two tiles and the gap between them,
+                                        // split evenly — so the pair fills exactly the
+                                        // width the rows below the shelf use.
+                                        val tileWidth =
+                                            (maxWidth - pagePadding * 2 - tileSpacing) / 2
+                                        // The artwork is square, so the row's height is
+                                        // the tile's width plus its caption — the same
+                                        // two numbers the tile itself is built from.
+                                        val tileHeight = tileWidth + QuickPickCaptionHeight
+                                        LazyHorizontalGrid(
+                                            state = quickPicksLazyGridState,
+                                            rows = GridCells.Fixed(rowsCount),
+                                            flingBehavior = rememberSnapFlingBehavior(quickPicksPageSnapLayoutInfoProvider),
+                                            horizontalArrangement = Arrangement.spacedBy(tileSpacing),
+                                            verticalArrangement = Arrangement.spacedBy(rowSpacing),
+                                            modifier = Modifier
+                                                .animateItem()
+                                                .fillMaxWidth()
+                                                .padding(horizontal = pagePadding)
+                                                .height(tileHeight * rowsCount + rowSpacing * (rowsCount - 1)),
+                                        ) {
+                                            itemsIndexed(
+                                                items = quickPicksList,
+                                                key = { _, item -> "home_quickpick_${item.id}" },
+                                                contentType = { _, _ -> "song_item" },
+                                            ) { _, originalSong ->
+                                                val song by database.song(originalSong.id).collectAsStateWithLifecycle(initialValue = originalSong)
+                                                val currentSong = song as Song
+                                                MaterialQuickPickTile(
+                                                    song = currentSong,
+                                                    isActive = currentSong.id == mediaMetadata?.id,
+                                                    isPlaying = isPlaying,
+                                                    onClick = {
+                                                        if (!isListenTogetherGuest) {
+                                                            if (currentSong.id == mediaMetadata?.id) {
+                                                                playerConnection.togglePlayPause()
+                                                            } else {
+                                                                playerConnection.playQueue(
+                                                                    if (autoRadioQueue) YouTubeQueue.radio(currentSong.toMediaMetadata())
+                                                                    else ListQueue(title = currentSong.title, items = listOf(currentSong.toMediaItem()))
+                                                                )
+                                                            }
+                                                        }
+                                                    },
+                                                    onLongClick = {
+                                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                        menuState.show { SongMenu(originalSong = currentSong, onDismiss = menuState::dismiss) }
+                                                    },
+                                                    modifier = Modifier.width(tileWidth),
+                                                )
+                                            }
+                                        }
+                                    } else if (newDesign) {
                                         // 2-column grid of compact rows: 44dp swatch,
                                         // title and artist inside one subtle card.
                                         LazyHorizontalGrid(

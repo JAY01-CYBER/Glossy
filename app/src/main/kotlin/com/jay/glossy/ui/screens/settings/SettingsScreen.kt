@@ -81,12 +81,9 @@ import com.jay.glossy.constants.AudioNormalizationKey
 import com.jay.glossy.constants.CommunityChannel
 import com.jay.glossy.constants.DarkModeKey
 import com.jay.glossy.constants.DownloadOverWifiOnlyKey
-import com.jay.glossy.constants.DynamicColorEnabledKey
 import com.jay.glossy.constants.InnerTubeCookieKey
 import com.jay.glossy.constants.SelectedThemeColorKey
 import com.jay.glossy.constants.SkipSilenceKey
-import com.jay.glossy.ui.component.FloatingGlassArt
-import com.jay.glossy.ui.component.GlassBannerProps
 import com.jay.glossy.ui.component.GlossyBrandTile
 import com.jay.glossy.ui.component.GlossyEyebrow
 import com.jay.glossy.ui.component.GlossyInitialAvatar
@@ -108,7 +105,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 
 /** Height of the decorative glass band at the top of the list. */
-private val GlassHeaderHeight = 200.dp
 
 /** Side inset of the whole settings list, matching the settings sub-screens. */
 private val ListInset = 16.dp
@@ -154,10 +150,6 @@ fun SettingsScreen(
     val (selectedThemeColorInt) = rememberPreference(
         SelectedThemeColorKey,
         defaultValue = DefaultThemeColor.toArgb()
-    )
-    val (dynamicColor, onDynamicColorChange) = rememberPreference(
-        DynamicColorEnabledKey,
-        defaultValue = false
     )
     val (audioNormalization, onAudioNormalizationChange) = rememberPreference(
         AudioNormalizationKey,
@@ -252,19 +244,6 @@ fun SettingsScreen(
                 bottom = 40.dp,
             ),
         ) {
-            // ---- Glass props ---------------------------------------------
-            // The same four props as the sign-in art, drifting over a shallow
-            // band. Decorative only, and it sits above the account card so the
-            // settings screen opens on the app's own key art.
-            item(key = "glass_art") {
-                FloatingGlassArt(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(GlassHeaderHeight),
-                    props = GlassBannerProps,
-                )
-            }
-
             // ---- Account --------------------------------------------------
             item(key = "account_card") {
                 Material3SettingsGroup(
@@ -314,13 +293,6 @@ fun SettingsScreen(
                             title = stringResource(R.string.theme),
                             value = themeValue,
                             onClick = { navController.navigate("settings/appearance/theme") },
-                        ),
-                        toggleRow(
-                            icon = R.drawable.palette,
-                            title = stringResource(R.string.glossy_dynamic_color),
-                            subtitle = stringResource(R.string.glossy_dynamic_color_desc),
-                            checked = dynamicColor,
-                            onCheckedChange = onDynamicColorChange,
                         ),
                         navRow(
                             icon = R.drawable.gradient,
@@ -581,6 +553,20 @@ fun SettingsScreen(
                         color = GlossyPalette.TextMuted,
                         letterSpacing = 0.8.sp,
                         textAlign = TextAlign.Center,
+                    )
+                    // Which build of that version this is, and which app it is.
+                    // versionCode and versionName are the same for every local
+                    // build, so without this there was no way to tell from
+                    // inside the app whether a freshly built APK had actually
+                    // reached the phone — or whether the app being opened was
+                    // even the APK that was built.
+                    Text(
+                        text = "${BuildConfig.APPLICATION_ID} · built ${BuildConfig.BUILD_STAMP}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = GlossyPalette.TextMuted,
+                        letterSpacing = 0.8.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(top = 2.dp),
                     )
                 }
             }

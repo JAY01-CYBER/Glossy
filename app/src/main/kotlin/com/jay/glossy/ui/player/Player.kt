@@ -180,6 +180,8 @@ import com.jay.glossy.constants.SleepTimerFadeOutKey
 import com.jay.glossy.constants.SleepTimerStopAfterCurrentSongKey
 import com.jay.glossy.constants.SliderStyle
 import com.jay.glossy.constants.SliderStyleKey
+import com.jay.glossy.constants.MiniLyricsStyle
+import com.jay.glossy.constants.MiniLyricsStyleKey
 import com.jay.glossy.constants.ShowLyricsOnPlayerKey
 import com.jay.glossy.constants.SquigglySliderKey
 import com.jay.glossy.constants.ThumbnailCornerRadius
@@ -193,6 +195,7 @@ import com.metrolist.models.MediaMetadata
 import com.jay.glossy.ui.component.BlurredArtworkBackdrop
 import com.jay.glossy.ui.component.BottomSheet
 import com.jay.glossy.ui.component.BottomSheetState
+import com.jay.glossy.ui.component.GlassBackdrop
 import com.jay.glossy.ui.component.LocalBottomSheetPageState
 import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.component.Lyrics
@@ -252,6 +255,7 @@ fun BottomSheetPlayer(
 
     val (hidePlayerThumbnail, onHidePlayerThumbnailChange) = rememberPreference(HidePlayerThumbnailKey, false)
     val showLyricsOnPlayer by rememberPreference(ShowLyricsOnPlayerKey, defaultValue = false)
+    val (miniLyricsStyle) = rememberEnumPreference(MiniLyricsStyleKey, defaultValue = MiniLyricsStyle.CLASSIC)
     val (hideStatusBarOnFullscreen) = rememberPreference(HideStatusBarOnFullscreenKey, false)
     val cropAlbumArt by rememberPreference(CropAlbumArtKey, false)
 
@@ -544,7 +548,9 @@ fun BottomSheetPlayer(
     // out of the shared queue-peek strip — otherwise it sits under their dock
     // repeating the same Queue / Lyrics / Repeat controls a second time.
     val actualPeekHeight =
-        if (playerStyle.name == "WAVY" || playerStyle.name == "VINYL") {
+        if (playerStyle.name == "WAVY" || playerStyle.name == "VINYL" ||
+            playerStyle.name == "CAPSULE" || playerStyle.name == "CINEMATIC"
+        ) {
             0.dp
         } else {
             QueuePeekHeight
@@ -562,9 +568,31 @@ fun BottomSheetPlayer(
     // so this colour paints the band above the player's own background. The
     // fully custom designs have their own base colour, and leaving the theme's
     // surfaceContainer there is what produced the two-tone strip at the top.
+    // Capsule's background comes from the artwork, so the strip the sheet paints
+    // above the content has to be that gradient's own first stop — anything fixed
+    // here would show as a band across the top. With Blur / Gradient / Mesh
+    // picked the design steps aside and the sheet paints those instead.
+    val capsuleGradient =
+        if (playerStyle.name == "CAPSULE") {
+            capsuleGradientStops(
+                animatedArtworkColors(
+                    rememberArtworkPalette(
+                        mediaId = mediaMetadata?.id,
+                        thumbnailUrl = mediaMetadata?.thumbnailUrl,
+                        fallback = CapsuleFallbackColors,
+                    ),
+                ),
+            )
+        } else {
+            null
+        }
+
     val styleBackground = when {
         playerStyle.name == "VINYL" && playerBackground != PlayerBackgroundStyle.DEFAULT -> null
         playerStyle.name == "VINYL" -> Color(0xFF1B1712)
+        playerStyle.name == "CAPSULE" ->
+            if (playerBackground == PlayerBackgroundStyle.DEFAULT) capsuleGradient?.firstOrNull() else null
+        playerStyle.name == "CINEMATIC" -> Color.Black
         playerStyle.name == "APPLE_MUSIC" -> Color(0xFF121212)
         else -> null
     }
@@ -668,6 +696,27 @@ fun BottomSheetPlayer(
             )
         } else if (playerStyle.name == "VINYL") {
             VinylNowPlaying(
+                bottomSheetState = state,
+                position = { effectivePosition },
+                duration = duration,
+                onOpenQueue = { scope.launch { queueSheetState.expandSoft() } },
+                bottomInset = queueSheetState.collapsedBound,
+                modifier = Modifier.fillMaxSize(),
+            )
+            queueOverlay()
+        } else if (playerStyle.name == "CAPSULE") {
+            CapsuleNowPlaying(
+                bottomSheetState = state,
+                position = { effectivePosition },
+                duration = duration,
+                backgroundStops = capsuleGradient ?: capsuleGradientStops(CapsuleFallbackColors),
+                onOpenQueue = { scope.launch { queueSheetState.expandSoft() } },
+                bottomInset = queueSheetState.collapsedBound,
+                modifier = Modifier.fillMaxSize(),
+            )
+            queueOverlay()
+        } else if (playerStyle.name == "CINEMATIC") {
+            CinematicNowPlaying(
                 bottomSheetState = state,
                 position = { effectivePosition },
                 duration = duration,
@@ -1577,11 +1626,26 @@ fun BottomSheetPlayer(
                                         sliderPositionProvider = sliderPositionProvider,
                                         modifier = Modifier.animateContentSize(),
                                         isPlayerExpanded = isExpandedProvider,
-                                        isLandscape = true,
-                                        isListenTogetherGuest = isListenTogetherGuest,
-                                    )
-                                }
+                                    isLandscape = true,
+                                    isListenTogetherGuest = isListenTogetherGuest,
+                                )
                             }
+
+                            // Canvas-glow mini lyrics go on the artwork itself,
+                            // low, so the design keeps the height it had: this
+                            // artwork is the canvas, and the line belongs on it.
+                            if (showLyricsOnPlayer && !showInlineLyrics && miniLyricsStyle == MiniLyricsStyle.CANVAS_GLOW) {
+                                PlayerCanvasGlowLyrics(
+                                    mediaMetadata = mediaMetadata,
+                                    positionProvider = { effectivePosition },
+                                    onExpand = { showInlineLyrics = true },
+                                    modifier = Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .fillMaxWidth()
+                                        .padding(bottom = 6.dp),
+                                )
+                            }
+                        }
                         }
 
                         Column(
@@ -1593,7 +1657,7 @@ fun BottomSheetPlayer(
                         ) {
                             Spacer(Modifier.weight(1f))
 
-                            if (showLyricsOnPlayer && !showInlineLyrics) {
+                            if (showLyricsOnPlayer && !showInlineLyrics && miniLyricsStyle == MiniLyricsStyle.CLASSIC) {
                                 PlayerSyncedLyricsView(
                                     mediaMetadata = mediaMetadata,
                                     positionProvider = { effectivePosition },
@@ -1653,9 +1717,24 @@ fun BottomSheetPlayer(
                                     )
                                 }
                             }
+
+                            // Canvas-glow mini lyrics go on the artwork itself,
+                            // low, so the design keeps the height it had: this
+                            // artwork is the canvas, and the line belongs on it.
+                            if (showLyricsOnPlayer && !showInlineLyrics && miniLyricsStyle == MiniLyricsStyle.CANVAS_GLOW) {
+                                PlayerCanvasGlowLyrics(
+                                    mediaMetadata = mediaMetadata,
+                                    positionProvider = { effectivePosition },
+                                    onExpand = { showInlineLyrics = true },
+                                    modifier = Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .fillMaxWidth()
+                                        .padding(bottom = 6.dp),
+                                )
+                            }
                         }
 
-                        if (showLyricsOnPlayer && !showInlineLyrics) {
+                        if (showLyricsOnPlayer && !showInlineLyrics && miniLyricsStyle == MiniLyricsStyle.CLASSIC) {
                             PlayerSyncedLyricsView(
                                 mediaMetadata = mediaMetadata,
                                 positionProvider = { effectivePosition },
@@ -1792,9 +1871,11 @@ fun InlineLyricsView(
     ) {
         // Apple Music-style frosted glass: the artwork blurred behind the text,
         // so the full-screen lyrics view looks the same in every player design.
-        LyricsGlassBackdrop(
+        // The backdrop fades in down the panel, so the blur builds up from the
+        // track details above instead of starting at a hard edge.
+        GlassBackdrop(
             thumbnailUrl = mediaMetadata?.thumbnailUrl?.toHighRes(),
-            shape = 12.dp,
+            shape = RoundedCornerShape(12.dp),
             modifier = Modifier.fillMaxSize(),
         )
         // Buttery-smooth cross-state animation: scale + fade between loading,

@@ -25,13 +25,6 @@ sealed class Screens(
         route = "home"
     )
 
-    object Explore : Screens(
-        titleId = R.string.glossy_explore,
-        iconIdInactive = R.drawable.explore_outlined,
-        iconIdActive = R.drawable.album,
-        route = "explore"
-    )
-
     object Mix : Screens(
         titleId = R.string.mix,
         iconIdInactive = R.drawable.radio, 
@@ -62,10 +55,15 @@ sealed class Screens(
 
     companion object {
         /**
-         * The bottom bar of the new design: Home · Explore · Mix · Library.
-         * Search moved into the Home header, and Listen Together stays in the
-         * top bar; both screens are still reachable through their routes.
+         * The bottom bar of the new design: Home · Mix · Library. Search sits in
+         * the Home header and as the floating bar's own pill, and Listen
+         * Together stays in the top bar; all three are still reachable through
+         * their routes.
+         *
+         * Explore is deliberately not here any more: its charts, moods and new
+         * releases all live on Home, so the tab only ever opened a second way to
+         * the same browse endpoints.
          */
-        val MainScreens = listOf(Home, Explore, Mix, Library)
+        val MainScreens = listOf(Home, Mix, Library)
     }
 }

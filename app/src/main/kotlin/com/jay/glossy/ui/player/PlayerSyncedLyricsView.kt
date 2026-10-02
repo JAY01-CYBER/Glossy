@@ -63,16 +63,20 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.jay.glossy.R
 import com.jay.glossy.LocalDatabase
 import com.jay.glossy.ui.player.applemusic.toHighRes
+import com.jay.glossy.ui.component.GlassBackdrop
 import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.constants.PlayerHorizontalPadding
 import com.jay.glossy.db.entities.LyricsEntity
+import com.jay.glossy.lyrics.LyricsEntry
 import com.jay.glossy.lyrics.LyricsUtils
 import com.jay.glossy.lyrics.lyricsTextLooksSynced
 import com.metrolist.models.MediaMetadata
@@ -91,6 +95,19 @@ private const val LYRICS_LOOKAHEAD_LINES = 1
 
 /** Outward breathing room the glass card gets around the lyrics text. */
 private val GLASS_BLEED = 12.dp
+
+/**
+ * Height of the strip's content box — deliberately constant.
+ *
+ * The strip is a sibling of the artwork in every player design, so whatever
+ * height it asks for is height the artwork does not get. That made the artwork
+ * slide up and down the whole time lyrics were on: a line that wrapped onto a
+ * second row grew the strip, [AnimatedContent] animated its own size on every
+ * line change, and the loading / "no lyrics" states were yet another height.
+ * Every state is now centred inside this one height, so the artwork above keeps
+ * the exact same size from the first lyric of a song to the last.
+ */
+private val LYRICS_STRIP_CONTENT_HEIGHT = 52.dp
 
 /**
  * Grows a backdrop beyond its parent's bounds. The lyrics text has to keep the
@@ -122,11 +139,28 @@ private fun Modifier.backdropBleed(
         },
     )
 
-/** How often the active line is re-resolved while playback runs. */
-private const val LYRICS_TICK_MS = 100L
+/**
+ * How often the active line is re-resolved while playback runs.
+ *
+ * Halved from 100 ms for the same reason the clock below is smoothed: at 100 ms
+ * the strip could sit on the old line for a whole tick after the buffer that
+ * proved the line had changed. Resolving an index is a couple of comparisons
+ * and only writes the state when the answer actually differs, so the extra
+ * polls cost nothing.
+ */
+private const val LYRICS_TICK_MS = 50L
 
-/** Plain (untimed) lyrics show this many lines before the hint. */
-private const val PLAIN_PREVIEW_LINES = 5
+/**
+ * Longest the last published position may be extrapolated before it is treated
+ * as frozen rather than merely late.
+ *
+ * A player that has stalled (a buffer underrun, a decoder being rebuilt for the
+ * canvas) stops publishing; without a ceiling the clock would keep walking away
+ * from the audio and the lyrics would drift further out of sync the longer the
+ * stall lasted.
+ */
+private const val LYRICS_CLOCK_MAX_EXTRAPOLATION_MS = 1_000L
+
 
 @Composable
 fun PlayerSyncedLyricsView(
@@ -143,7 +177,144 @@ fun PlayerSyncedLyricsView(
      */
     horizontalPadding: androidx.compose.ui.unit.Dp = PlayerHorizontalPadding,
 ) {
-    val playerConnection = LocalPlayerConnection.current ?: return
+    val preview =
+        rememberPlayerLyricsPreview(
+            mediaMetadata = mediaMetadata,
+            positionProvider = positionProvider,
+        )
+
+    val expandInteraction = remember { MutableInteractionSource() }
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = horizontalPadding)
+            // Clearance for the glass card's outward bleed: without it the card
+            // extends over the song title that sits directly below the strip.
+            .padding(bottom = 14.dp)
+            .then(
+                if (onExpand != null) {
+                    Modifier.clickable(
+                        interactionSource = expandInteraction,
+                        indication = null,
+                        onClick = onExpand,
+                    )
+                } else {
+                    Modifier
+                },
+            ),
+    ) {
+        // Apple Music-style frosted card behind the strip. It bleeds outward
+        // instead of the text taking inner padding, so the lines keep the exact
+        // left edge they share with the song title below.
+        if (preview.hasLyrics) {
+            GlassBackdrop(
+                thumbnailUrl = mediaMetadata?.thumbnailUrl?.toHighRes(),
+                shape = RoundedCornerShape(18.dp),
+                artworkAlpha = 0.35f,
+                scrim = Brush.verticalGradient(
+                    listOf(
+                        Color.Black.copy(alpha = 0.30f),
+                        Color.Black.copy(alpha = 0.45f),
+                    ),
+                ),
+                border = Color.White.copy(alpha = 0.08f),
+                modifier = Modifier.matchParentSize().backdropBleed(horizontal = GLASS_BLEED),
+            )
+        }
+        Box(
+            modifier = Modifier.fillMaxWidth().height(LYRICS_STRIP_CONTENT_HEIGHT),
+            contentAlignment = Alignment.Center,
+        ) {
+        when {
+            preview.isLoading -> LyricsLinePlaceholder()
+
+            !preview.hasLyrics -> LyricsNotFoundLine()
+
+            !preview.synced -> PlainLyricsPreview(line = preview.plainLine, accent = accent)
+
+            else -> {
+                AnimatedContent(
+                    targetState = preview.activeIndex,
+                    contentAlignment = Alignment.Center,
+                    transitionSpec = {
+                        (slideInVertically(
+                            animationSpec = tween(320, easing = FastOutSlowInEasing),
+                            initialOffsetY = { it / 2 },
+                        ) + fadeIn(tween(320)))
+                            .togetherWith(
+                                slideOutVertically(
+                                    animationSpec = tween(200, easing = FastOutSlowInEasing),
+                                    targetOffsetY = { -it / 2 },
+                                ) + fadeOut(tween(200)),
+                            )
+                    },
+                    label = "playerSyncedLyrics",
+                ) { index ->
+                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        for (offset in 0..LYRICS_LOOKAHEAD_LINES) {
+                            val line = preview.lines.getOrNull(index + offset) ?: continue
+                            val isActive = offset == 0
+                            // One line per row, with the line height pinned: a
+                            // wrapped row would change the row's height, and
+                            // rows of different heights are exactly what used
+                            // to push the artwork around mid-song.
+                            Text(
+                                text = line.text,
+                                color = when {
+                                    isActive -> Color.White
+                                    else -> Color.White.copy(alpha = 0.5f)
+                                },
+                                fontSize = if (isActive) 19.sp else 15.sp,
+                                lineHeight = if (isActive) 24.sp else 19.sp,
+                                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        }
+    }
+}
+
+/**
+ * Lyrics as every on-screen player surface needs them: the lines themselves,
+ * which of them is being sung, and the "still loading" / "no lyrics" / "no
+ * timings" answers.
+ *
+ * Two quite different surfaces draw this — the frosted strip under the artwork
+ * ([PlayerSyncedLyricsView]) and the glow painted on the artwork itself
+ * ([PlayerCanvasGlowLyrics]) — and they must agree, to the line, on what is
+ * being sung. Resolution therefore lives here rather than being written twice:
+ * the on-demand fetch, the untimed-entry upgrade, the parse and the ticking
+ * clock are all one implementation, and what a surface chooses to draw is its
+ * own business.
+ */
+internal class PlayerLyricsPreview(
+    val isLoading: Boolean,
+    val hasLyrics: Boolean,
+    /** True when the entry carries timings and can actually be followed. */
+    val synced: Boolean,
+    val lines: List<LyricsEntry>,
+    val activeIndex: Int,
+    val plainLine: String,
+)
+
+@Composable
+internal fun rememberPlayerLyricsPreview(
+    mediaMetadata: MediaMetadata?,
+    positionProvider: () -> Long,
+): PlayerLyricsPreview {
+    val playerConnection = LocalPlayerConnection.current
+    // Nothing is bound yet, so there is no song to follow: both surfaces read
+    // this as "loading" and stay empty rather than showing a stale line.
+    if (playerConnection == null) {
+        return remember { PlayerLyricsPreview(true, false, false, emptyList(), -1, "") }
+    }
+
     val currentLyrics by playerConnection.currentLyrics.collectAsStateWithLifecycle(initialValue = null)
     val currentSong by playerConnection.currentSong.collectAsStateWithLifecycle(initialValue = null)
     val context = LocalContext.current
@@ -178,7 +349,10 @@ fun PlayerSyncedLyricsView(
                     context.applicationContext,
                     com.jay.glossy.di.LyricsHelperEntryPoint::class.java,
                 )
-                val fetched = entryPoint.lyricsHelper().getLyrics(metadata)
+                // An upgrade has to bypass the caches: they hold the untimed
+                // text this pass exists to replace, so a cached answer would be
+                // handed straight back and nothing would ever change.
+                val fetched = entryPoint.lyricsHelper().getLyrics(metadata, forceRefresh = upgradeUntimed)
                 // Only overwrite when the retry actually found something timed;
                 // otherwise the existing entry stays and no upgrade happens.
                 if (!missing && !lyricsTextLooksSynced(fetched.lyrics)) return@launch
@@ -203,16 +377,17 @@ fun PlayerSyncedLyricsView(
     val timedLines = remember(parsedLines) { if (parsedLines.size >= 2) parsedLines else emptyList() }
     val synced = timedLines.isNotEmpty()
     // Providers that only return plain text previously rendered as an empty
-    // strip; show the opening lines with an honest hint instead.
-    val plainLines = remember(lyricsText, synced) {
+    // strip; show the opening line with an honest hint instead. Just the one
+    // line: the strip is a fixed height (see [LYRICS_STRIP_CONTENT_HEIGHT]) and
+    // the hint has to fit in it next to the lyric.
+    val plainLine = remember(lyricsText, synced) {
         if (!synced && hasLyrics && lyricsText != null) {
             lyricsText.lineSequence()
                 .map { it.trim() }
-                .filter { it.isNotEmpty() }
-                .take(PLAIN_PREVIEW_LINES)
-                .toList()
+                .firstOrNull { it.isNotEmpty() }
+                .orEmpty()
         } else {
-            emptyList()
+            ""
         }
     }
 
@@ -227,137 +402,115 @@ fun PlayerSyncedLyricsView(
             currentIndex = -1
             return@LaunchedEffect
         }
+        // The clock is re-extrapolated here rather than read raw, and this is
+        // what puts the line on the word being sung.
+        //
+        // A player does not report a continuously moving position. It publishes
+        // a fresh, authoritative one every audio buffer or so — a few hundred
+        // milliseconds apart — and between publications the value the app holds
+        // is simply frozen at the last one. Following that number directly made
+        // every line change *after* its word: the offset was whatever slice of a
+        // buffer the tick happened to land on. The full lyrics view has always
+        // compensated for this; the mini lyrics did not, so the two disagreed by
+        // up to a buffer and the strip drifted late against the audio.
+        //
+        // So: keep the last published position and the moment it arrived, and
+        // every tick move forward from there by the wall time since. A genuinely
+        // new position re-anchors the pair, which also covers seeks and skips
+        // for free. Reading the raw value at each tick costs nothing on top of
+        // the poll the caller's provider already does.
+        var anchor = currentPositionProvider()
+        var anchorAt = System.currentTimeMillis()
         while (isActive) {
-            val position = currentPositionProvider() + lyricsOffset
+            val now = System.currentTimeMillis()
+            val published = currentPositionProvider()
+            if (published != anchor) {
+                anchor = published
+                anchorAt = now
+            }
+            // Extrapolation only helps while the audio is actually running: a
+            // paused player has published its final position and must stay on
+            // it, and a stalled one must not be walked away from.
+            val elapsed =
+                if (playerConnection.player.isPlaying) {
+                    (now - anchorAt).coerceIn(0L, LYRICS_CLOCK_MAX_EXTRAPOLATION_MS)
+                } else {
+                    0L
+                }
+            val position = anchor + elapsed + lyricsOffset
             val index = LyricsUtils.findCurrentLineIndex(timedLines, position)
-                .coerceIn(0, timedLines.lastIndex)
             if (index != currentIndex) currentIndex = index
             delay(LYRICS_TICK_MS)
         }
     }
 
-    val expandInteraction = remember { MutableInteractionSource() }
-
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = horizontalPadding)
-            // Clearance for the glass card's outward bleed: without it the card
-            // extends over the song title that sits directly below the strip.
-            .padding(bottom = 14.dp)
-            .then(
-                if (onExpand != null) {
-                    Modifier.clickable(
-                        interactionSource = expandInteraction,
-                        indication = null,
-                        onClick = onExpand,
-                    )
-                } else {
-                    Modifier
-                },
-            ),
-    ) {
-        // Apple Music-style frosted card behind the strip. It bleeds outward
-        // instead of the text taking inner padding, so the lines keep the exact
-        // left edge they share with the song title below.
-        if (hasLyrics) {
-            LyricsGlassBackdrop(
-                thumbnailUrl = mediaMetadata?.thumbnailUrl?.toHighRes(),
-                shape = 18.dp,
-                artworkAlpha = 0.35f,
-                scrim = Brush.verticalGradient(
-                    listOf(
-                        Color.Black.copy(alpha = 0.30f),
-                        Color.Black.copy(alpha = 0.45f),
-                    ),
-                ),
-                border = Color.White.copy(alpha = 0.08f),
-                modifier = Modifier.matchParentSize().backdropBleed(horizontal = GLASS_BLEED),
+    val preview =
+        remember(lyricsText, hasLyrics, synced, timedLines, currentIndex, plainLine) {
+            PlayerLyricsPreview(
+                isLoading = lyricsText == null,
+                hasLyrics = hasLyrics,
+                synced = synced,
+                lines = timedLines,
+                activeIndex = currentIndex,
+                plainLine = plainLine,
             )
         }
-        Box(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-        when {
-            lyricsText == null -> LyricsLinePlaceholder()
-
-            !hasLyrics -> Unit
-
-            !synced -> PlainLyricsPreview(lines = plainLines, accent = accent)
-
-            else -> {
-                AnimatedContent(
-                    targetState = currentIndex,
-                    transitionSpec = {
-                        (slideInVertically(
-                            animationSpec = tween(320, easing = FastOutSlowInEasing),
-                            initialOffsetY = { it / 2 },
-                        ) + fadeIn(tween(320)))
-                            .togetherWith(
-                                slideOutVertically(
-                                    animationSpec = tween(200, easing = FastOutSlowInEasing),
-                                    targetOffsetY = { -it / 2 },
-                                ) + fadeOut(tween(200)),
-                            )
-                    },
-                    label = "playerSyncedLyrics",
-                ) { index ->
-                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        for (offset in 0..LYRICS_LOOKAHEAD_LINES) {
-                            val line = timedLines.getOrNull(index + offset) ?: continue
-                            val isActive = offset == 0
-                            Text(
-                                text = line.text,
-                                color = when {
-                                    isActive -> Color.White
-                                    else -> Color.White.copy(alpha = 0.5f)
-                                },
-                                fontSize = if (isActive) 19.sp else 15.sp,
-                                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-                    }
-                }
-            }
-        }
-        }
-    }
+    return preview
 }
 
 /**
- * Untimed lyrics: the opening lines plus a hint saying why they do not move.
+ * Untimed lyrics: the opening line plus a hint saying why it does not move.
  * Better than a block that silently sits on the first line forever.
+ *
+ * Two rows only, because the strip's box is a fixed height: a five-line block
+ * used to add a visible slab of height the moment a song's lyrics turned out
+ * to be untimed, which moved the artwork above it.
  */
 @Composable
 private fun PlainLyricsPreview(
-    lines: List<String>,
+    line: String,
     accent: Color,
     modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        verticalArrangement = Arrangement.spacedBy(3.dp),
     ) {
-        lines.forEachIndexed { index, line ->
-            Text(
-                text = line,
-                color = Color.White.copy(alpha = if (index == 0) 0.95f else 0.45f),
-                fontSize = if (index == 0) 17.sp else 14.sp,
-                fontWeight = if (index == 0) FontWeight.Bold else FontWeight.Normal,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
         Text(
-            text = "Lyrics aren't time-synced",
+            text = line,
+            color = Color.White.copy(alpha = 0.95f),
+            fontSize = 17.sp,
+            lineHeight = 22.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = stringResource(R.string.lyrics_not_time_synced),
             color = accent.copy(alpha = 0.85f),
-            fontSize = 11.sp,
+            fontSize = 12.sp,
+            lineHeight = 16.sp,
             maxLines = 1,
         )
     }
+}
+
+/**
+ * Shown when a song has no lyrics at all. The strip keeps its height rather
+ * than collapsing, so the artwork does not grow back into the space mid-song;
+ * a muted line explains the empty room instead of leaving a blank band.
+ */
+@Composable
+private fun LyricsNotFoundLine(modifier: Modifier = Modifier) {
+    Text(
+        text = stringResource(R.string.lyrics_not_found),
+        color = Color.White.copy(alpha = 0.45f),
+        fontSize = 13.sp,
+        lineHeight = 17.sp,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier.fillMaxWidth(),
+    )
 }
 
 /** Skeleton shown while lyrics are still being fetched. */

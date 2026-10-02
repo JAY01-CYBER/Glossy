@@ -17,6 +17,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -123,7 +124,10 @@ fun GlossySectionTitle(
 // Chips and tabs
 // ============================================================================
 
-/** Full pill filter chip: teal when selected, dark neutral when not. */
+/**
+ * Full pill filter chip: the accent when selected, a tonal neutral with a
+ * hairline outline when not — the Material 3 filter-chip form.
+ */
 @Composable
 fun GlossyChip(
     text: String,
@@ -135,10 +139,16 @@ fun GlossyChip(
         targetValue = if (active) GlossyPalette.Accent else GlossyPalette.Chip,
         label = "glossyChipContainer",
     )
+    // Captured before the draw phase: the palette reads are composition-only.
+    val outline = GlossyPalette.ChipOutline
+    val shape = RoundedCornerShape(GlossyDimens.CornerPill)
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(GlossyDimens.CornerPill))
+            .clip(shape)
             .background(container)
+            .then(
+                if (active) Modifier else Modifier.border(1.dp, outline, shape),
+            )
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center,
@@ -373,6 +383,59 @@ fun GlossySearchDock(
             background = GlossyPalette.Row,
             elevation = 6.dp,
             onClick = onDownloadsClick,
+        )
+    }
+}
+
+/**
+ * One shortcut in the library's quick-access strip: a raised square icon card
+ * with its label underneath. Four of these fit the 360dp fold, which is what
+ * lets Liked, Downloads, History and Stats be one tap from the very top of the
+ * library instead of buried in a three-dot menu.
+ */
+@Composable
+fun GlossyQuickTile(
+    icon: Int,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val shape = RoundedCornerShape(18.dp)
+    val tileColor = GlossyPalette.Row
+    val tint = GlossyPalette.Accent
+    Column(
+        modifier = modifier.clickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = ripple(color = GlossyPalette.Accent),
+            onClick = onClick,
+        ),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(54.dp)
+                .shadow(elevation = 6.dp, shape = shape, clip = false)
+                .clip(shape)
+                .background(tileColor),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painter = painterResource(icon),
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(22.dp),
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Medium,
+            color = GlossyPalette.TextSecondary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
         )
     }
 }

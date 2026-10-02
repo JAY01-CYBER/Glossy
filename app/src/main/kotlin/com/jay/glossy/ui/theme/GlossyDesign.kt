@@ -46,6 +46,11 @@ data class GlossyColors(
     val miniBar: Color,
     /** Inactive chip / pill fill. */
     val chip: Color,
+    /**
+     * Hairline around an inactive chip. The Material 3 skin outlines its filter
+     * chips; the hand-tuned palettes do too, one step up from the chip fill.
+     */
+    val chipOutline: Color,
     /** Hairline border and divider. */
     val border: Color,
     /** Brand accent: active states, progress, highlights. */
@@ -58,6 +63,14 @@ data class GlossyColors(
     val textMuted: Color,
     /** Slightly translucent accent, for tonal tiles and focused rows. */
     val accentSoft: Color,
+    /**
+     * Behind the home header. The hand-tuned design washes a gradient of
+     * [accent] over the page and leaves this transparent; a tonal skin fills it
+     * with a solid container instead — see [materialisticColors].
+     */
+    val headerBand: Color,
+    /** Text and icons sitting on [headerBand]. */
+    val onHeaderBand: Color,
 ) {
     companion object {
         val Dark = GlossyColors(
@@ -66,6 +79,7 @@ data class GlossyColors(
             row = Color(0xFF1B1B1B),
             miniBar = Color(0xFF1E1E1E),
             chip = Color(0xFF232323),
+            chipOutline = Color(0xFF2A2A2A),
             border = Color(0xFF2A2A2A),
             accent = Color(0xFF1D9E75),
             onAccent = Color(0xFF04342C),
@@ -74,6 +88,8 @@ data class GlossyColors(
             textLow = Color(0xFF7A7A7A),
             textMuted = Color(0xFF5F5F5F),
             accentSoft = Color(0x261D9E75),
+            headerBand = Color.Transparent,
+            onHeaderBand = Color(0xFF1D9E75),
         )
 
         val Light = GlossyColors(
@@ -82,6 +98,7 @@ data class GlossyColors(
             row = Color(0xFFFFFFFF),
             miniBar = Color(0xFFFFFFFF),
             chip = Color(0xFFEDEDF2),
+            chipOutline = Color(0xFFE3E3EA),
             border = Color(0xFFE3E3EA),
             accent = Color(0xFF1D9E75),
             onAccent = Color(0xFF04342C),
@@ -90,6 +107,8 @@ data class GlossyColors(
             textLow = Color(0xFF8A8F9A),
             textMuted = Color(0xFFA6ABB6),
             accentSoft = Color(0x1F1D9E75),
+            headerBand = Color.Transparent,
+            onHeaderBand = Color(0xFF1D9E75),
         )
 
         val PureBlack = Dark.copy(
@@ -98,10 +117,40 @@ data class GlossyColors(
             row = Color(0xFF0C0C0C),
             miniBar = Color(0xFF0C0C0C),
             chip = Color(0xFF171717),
+            chipOutline = Color(0xFF242424),
             border = Color(0xFF242424),
         )
     }
 }
+
+/**
+ * The "Materialistic" skin: the same token model as [GlossyColors], but every
+ * colour is read from the Material 3 scheme rather than hand-picked.
+ *
+ * Surfaces become the tonal container levels, the accent becomes the primary
+ * role, and the home header turns into an opaque `primaryContainer` band
+ * instead of a gradient wash. Nothing about the screens' layout changes — they
+ * simply repaint from the user's seed colour in both light and dark mode, and
+ * pick up Material You wallpaper theming on Android 12+.
+ */
+fun materialisticColors(scheme: ColorScheme): GlossyColors = GlossyColors(
+    page = scheme.surface,
+    player = scheme.surface,
+    row = scheme.surfaceContainerLow,
+    miniBar = scheme.surfaceContainer,
+    chip = scheme.surfaceContainerHighest,
+    chipOutline = scheme.outline,
+    border = scheme.outlineVariant,
+    accent = scheme.primary,
+    onAccent = scheme.onPrimary,
+    textPrimary = scheme.onSurface,
+    textSecondary = scheme.onSurfaceVariant,
+    textLow = scheme.onSurfaceVariant.copy(alpha = 0.75f),
+    textMuted = scheme.onSurfaceVariant.copy(alpha = 0.55f),
+    accentSoft = scheme.primaryContainer,
+    headerBand = scheme.primaryContainer,
+    onHeaderBand = scheme.onPrimaryContainer,
+)
 
 /** Tokens of the design system for the theme currently in composition. */
 val LocalGlossyColors = staticCompositionLocalOf { GlossyColors.Dark }
@@ -138,6 +187,11 @@ object GlossyPalette {
         @Composable
         @ReadOnlyComposable
         get() = LocalGlossyColors.current.chip
+
+    val ChipOutline: Color
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalGlossyColors.current.chipOutline
 
     val Border: Color
         @Composable
@@ -178,6 +232,16 @@ object GlossyPalette {
         @Composable
         @ReadOnlyComposable
         get() = LocalGlossyColors.current.accentSoft
+
+    val HeaderBand: Color
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalGlossyColors.current.headerBand
+
+    val OnHeaderBand: Color
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalGlossyColors.current.onHeaderBand
 }
 
 /**

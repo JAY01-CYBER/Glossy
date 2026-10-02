@@ -9,6 +9,7 @@ import com.jay.glossy.R
 
 object LyricsProviderRegistry {
     private val providerMap = mapOf(
+        "Spotify" to SpotifyLyricsProvider,
         "BetterLyrics" to BetterLyricsProvider,
         "Paxsenix" to PaxsenixLyricsProvider,
         "LrcLib" to LrcLibLyricsProvider,
@@ -45,6 +46,7 @@ object LyricsProviderRegistry {
 
     fun getDefaultProviderOrder(): List<String> = listOf(
         "NetEase",
+        "Spotify",
         "Musixmatch",
         "YouLyPlus",
         "Unison",

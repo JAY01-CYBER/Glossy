@@ -113,7 +113,9 @@ import com.jay.glossy.ui.component.Material3MenuGroup
 import com.jay.glossy.ui.component.Material3MenuItemData
 import com.jay.glossy.ui.component.NewAction
 import com.jay.glossy.ui.component.NewActionGrid
+import com.jay.glossy.ui.component.getAudioBoostLabel
 import com.jay.glossy.ui.player.SleepTimerPrompt
+import com.jay.glossy.utils.rememberEnumPreference
 import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.jayaudioutils.AudioDeviceBottomSheet
 import com.jay.glossy.jayaudioutils.getConnectedBluetoothDeviceName
@@ -163,6 +165,24 @@ fun PlayerMenu(
     }
     var showSleepTimerDialog by rememberSaveable { mutableStateOf(false) }
     val (showLyricsOnPlayer, onShowLyricsOnPlayerChange) = rememberPreference(ShowLyricsOnPlayerKey, defaultValue = false)
+
+    // The one-tap loudness boost, reachable without a trip to Settings.
+    val (audioBoost, onAudioBoostChange) = rememberEnumPreference(
+        com.jay.glossy.constants.AudioBoostLevelKey,
+        defaultValue = com.jay.glossy.eq.soundfx.AudioBoostLevel.OFF,
+    )
+    var showAudioBoostDialog by rememberSaveable { mutableStateOf(false) }
+
+    if (showAudioBoostDialog) {
+        com.jay.glossy.ui.component.AudioBoostDialog(
+            current = audioBoost,
+            onDismiss = { showAudioBoostDialog = false },
+            onSelect = {
+                onAudioBoostChange(it)
+                showAudioBoostDialog = false
+            },
+        )
+    }
 
     if (showSleepTimerDialog) {
         SleepTimerPrompt(onDismiss = { showSleepTimerDialog = false })
@@ -612,6 +632,18 @@ fun PlayerMenu(
                 Material3MenuGroup(
                     items =
                         listOf(
+                            Material3MenuItemData(
+                                icon = { PlayerMenuTonalTile(iconRes = R.drawable.volume_up) },
+                                title = { Text(text = stringResource(R.string.audio_boost)) },
+                                description = {
+                                    Text(
+                                        if (audioBoost.isOn) getAudioBoostLabel(audioBoost)
+                                        else stringResource(R.string.audio_boost_desc)
+                                    )
+                                },
+                                cardColors = if (audioBoost.isOn) menuActiveRowColors() else menuRowColors(),
+                                onClick = { showAudioBoostDialog = true },
+                            ),
                             Material3MenuItemData(
                                 icon = { PlayerMenuTonalTile(iconRes = R.drawable.equalizer) },
                                 title = { Text(text = stringResource(R.string.equalizer)) },
