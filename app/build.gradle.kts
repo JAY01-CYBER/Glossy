@@ -9,6 +9,7 @@ import org.gradle.api.tasks.TaskAction
 import org.gradle.process.ExecOperations
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.net.URI
+import java.time.Instant
 import java.util.Properties
 import javax.inject.Inject
 
@@ -119,6 +120,13 @@ android {
         buildConfigField("String", "LASTFM_SECRET", "\"$lastFmSecret\"")
         buildConfigField("String", "ARCHITECTURE", "\"universal\"")
         buildConfigField("Long", "DISCORD_APP_ID", "1447278780795064401L")
+
+        // Shown on the About screen so a freshly built APK can be told apart from
+        // the one already installed: versionCode/versionName are identical for
+        // every local build, so without this there was no way to verify from
+        // inside the app which build is actually running. A new stamp on every
+        // build is the point — accept the BuildConfig recompilation trade-off.
+        buildConfigField("String", "BUILD_STAMP", "\"${Instant.now()}\"")
     }
 
     flavorDimensions += listOf("variant")
