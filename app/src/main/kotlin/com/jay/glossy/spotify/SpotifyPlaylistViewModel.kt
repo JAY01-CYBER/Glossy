@@ -5,10 +5,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.common.collect.ImmutableList
-<<<<<<< HEAD
-=======
-import com.jay.glossy.spotifycore.Spotify
->>>>>>> origin/main
 import com.jay.glossy.spotifycore.models.SpotifyPlaylist
 import com.jay.glossy.spotifycore.models.SpotifyTrack
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -28,10 +24,7 @@ import javax.inject.Inject
 class SpotifyPlaylistViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val resolveSpotifyPlaylistDownloads: ResolveSpotifyPlaylistDownloadsUseCase,
-<<<<<<< HEAD
     private val library: SpotifyLibraryRepository,
-=======
->>>>>>> origin/main
 ) : ViewModel() {
     private val playlistId: String = savedStateHandle.get<String>("playlistId").orEmpty()
 
@@ -65,7 +58,6 @@ class SpotifyPlaylistViewModel @Inject constructor(
             )
         }
         reloadJob = viewModelScope.launch(Dispatchers.IO) {
-<<<<<<< HEAD
             // Whatever was saved for this playlist is the screen's first frame.
             // Offline that is the whole playlist; online the live copy replaces
             // it within a moment. Without this, opening a playlist offline was
@@ -87,30 +79,16 @@ class SpotifyPlaylistViewModel @Inject constructor(
                         tracks = detail.tracks,
                         isLoading = false,
                     )
-=======
-            try {
-                val playlistRes = Spotify.playlist(playlistId).getOrThrow()
-                val tracksRes = Spotify.playlistTracks(playlistId).getOrThrow().items.mapNotNull { it.track }
-                _uiState.value = SpotifyPlaylistUiState(
-                    playlist = playlistRes,
-                    tracks = tracksRes,
-                    isLoading = false,
-                )
->>>>>>> origin/main
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Throwable) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-<<<<<<< HEAD
                         // A saved copy with tracks already answers the question;
                         // an error line under it would only be noise. A header
                         // with no tracks yet still gets the real message.
                         errorMessage = if (it.tracks.isNotEmpty()) null else (error.message ?: "Failed to load playlist"),
-=======
-                        errorMessage = error.message ?: "Failed to load playlist",
->>>>>>> origin/main
                     )
                 }
             }

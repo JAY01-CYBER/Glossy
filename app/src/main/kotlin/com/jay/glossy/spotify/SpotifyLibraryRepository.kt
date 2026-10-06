@@ -14,10 +14,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-<<<<<<< HEAD
 import kotlinx.serialization.Serializable
-=======
->>>>>>> origin/main
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import com.jay.glossy.spotifycore.Spotify
@@ -36,7 +33,6 @@ val SpotifyAccessTokenExpiresAtKey = longPreferencesKey("spotify_token_expires_a
 val SpotifyAccountNameKey = stringPreferencesKey("spotify_account_name")
 val SpotifyLibraryPlaylistsCacheKey = stringPreferencesKey("spotify_library_playlists_cache")
 
-<<<<<<< HEAD
 /**
  * A playlist with the tracks the last online visit loaded, kept so the
  * playlist screen has something to draw when there is no network. The list
@@ -55,8 +51,6 @@ private const val SpotifyPlaylistDetailCachePrefix = "spotify_playlist_detail_"
 private fun spotifyPlaylistDetailKey(playlistId: String) =
     stringPreferencesKey("$SpotifyPlaylistDetailCachePrefix$playlistId")
 
-=======
->>>>>>> origin/main
 @Singleton
 class SpotifyLibraryRepository @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -73,7 +67,6 @@ class SpotifyLibraryRepository @Inject constructor(
     private val tokenRefreshMutex = Mutex()
     private val spotifyCacheJson = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
-<<<<<<< HEAD
     /**
      * Whether a Spotify session exists at all, without touching the network.
      *
@@ -133,8 +126,6 @@ class SpotifyLibraryRepository @Inject constructor(
         }
     }
 
-=======
->>>>>>> origin/main
     // NAYA FUNCTION: Instant load from cache
     suspend fun restoreCachedPlaylists() = withContext(Dispatchers.IO) {
         if (_playlists.value.isNotEmpty()) return@withContext
@@ -252,14 +243,11 @@ class SpotifyLibraryRepository @Inject constructor(
 
     suspend fun logout() = withContext(Dispatchers.IO) {
         context.safeDataStoreEdit { prefs ->
-<<<<<<< HEAD
             // The saved playlist details are named after their playlist, so
             // they are found by prefix rather than by key.
             prefs.asMap().keys
                 .filter { it.name.startsWith(SpotifyPlaylistDetailCachePrefix) }
                 .forEach { prefs.remove(it) }
-=======
->>>>>>> origin/main
             prefs.remove(SpotifySpDcKey)
             prefs.remove(SpotifyAccessTokenKey)
             prefs.remove(SpotifyAccessTokenExpiresAtKey)

@@ -14,7 +14,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
-<<<<<<< HEAD
 /**
  * One LRC stamp: one or two minute digits and an optional fraction of one to
  * three digits, after `.` (or `:`, which a few community files use).
@@ -33,10 +32,6 @@ private const val LRC_STAMP_INLINE = "\\[\\d{1,2}:\\d{2}(?:[.:]\\d{1,3})?\\]"
 // Group 1 is the run of timestamps, group 2 the lyric text.
 val LINE_REGEX = "((?:$LRC_STAMP_INLINE ?)+)(.*)".toRegex()
 val TIME_REGEX = LRC_STAMP_PATTERN.toRegex()
-=======
-val LINE_REGEX = "((\\[\\d\\d:\\d\\d\\.\\d{2,3}\\] ?)+)(.*)".toRegex()
-val TIME_REGEX = "\\[(\\d\\d):(\\d\\d)\\.(\\d{2,3})\\]".toRegex()
->>>>>>> origin/main
 
 // Regex for rich sync format: [MM:SS.mm]<MM:SS.mm> word <MM:SS.mm> word ...
 private val RICH_SYNC_LINE_REGEX = "\\[(\\d{1,2}):(\\d{2})\\.(\\d{2,3})\\](.*)".toRegex()
@@ -459,11 +454,7 @@ object LyricsUtils {
 
         val decodedLyrics = decodeHtmlEntities(unescapedLyrics)
 
-<<<<<<< HEAD
         val lines = normalizeLrcLineBreaks(decodedLyrics).lines()
-=======
-        val lines = decodedLyrics.lines()
->>>>>>> origin/main
             .filter { 
                 it.isNotBlank() || it.trim().startsWith("[") || it.trim().startsWith("<")
             }
@@ -475,7 +466,6 @@ object LyricsUtils {
             RICH_SYNC_WORD_REGEX.containsMatchIn(line)
         }
 
-<<<<<<< HEAD
         // Files whose only timing tags sit on individual words (`<mm:ss.xx>`)
         // carry no line-level stamp at all, so the standard LRC parser produced
         // no timed entries for them and the lyrics fell back to plain text that
@@ -586,16 +576,6 @@ object LyricsUtils {
         }
 
     /**
-=======
-        return if (isRichSync) {
-            parseRichSyncLyrics(lines)
-        } else {
-            parseStandardLyrics(lines)
-        }
-    }
-
-    /**
->>>>>>> origin/main
      * Parse rich sync lyrics format: [MM:SS.mm]<MM:SS.mm> word <MM:SS.mm> word ...
      * This format provides word-by-word timing for karaoke-style highlighting
      */
@@ -893,11 +873,7 @@ object LyricsUtils {
     private fun parseLine(line: String, words: List<WordTimestamp>? = null): List<LyricsEntry>? {
         val matchResult = LINE_REGEX.matchEntire(line.trim()) ?: return null
         val times = matchResult.groupValues[1]
-<<<<<<< HEAD
         var text = matchResult.groupValues[2]
-=======
-        var text = matchResult.groupValues[3]
->>>>>>> origin/main
         val timeMatchResults = TIME_REGEX.findAll(times)
 
         // Parse agent marker {agent:v1}
@@ -918,7 +894,6 @@ object LyricsUtils {
                 val min = timeMatchResult.groupValues[1].toLong()
                 val sec = timeMatchResult.groupValues[2].toLong()
                 val milString = timeMatchResult.groupValues[3]
-<<<<<<< HEAD
                 // The fraction is milliseconds scaled to its own width, so one
                 // digit means tenths and two mean hundredths — reading a
                 // one-digit fraction as plain milliseconds put the line 270ms
@@ -928,11 +903,6 @@ object LyricsUtils {
                     1 -> milString.toLong() * 100
                     2 -> milString.toLong() * 10
                     else -> milString.toLong()
-=======
-                var mil = milString.toLong()
-                if (milString.length == 2) {
-                    mil *= 10
->>>>>>> origin/main
                 }
                 val time = min * DateUtils.MINUTE_IN_MILLIS + sec * DateUtils.SECOND_IN_MILLIS + mil
                 LyricsEntry(time, text, words, agent = agent, isBackground = isBackground)

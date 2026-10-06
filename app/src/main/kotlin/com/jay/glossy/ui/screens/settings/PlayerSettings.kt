@@ -37,10 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.jay.glossy.BuildConfig
 import com.jay.glossy.LocalPlayerAwareWindowInsets
-<<<<<<< HEAD
 import com.jay.glossy.constants.AudioBoostLevelKey
-=======
->>>>>>> origin/main
 import com.jay.glossy.constants.AudioNormalizationKey
 import com.jay.glossy.constants.AudioOffload
 import com.jay.glossy.constants.AudioTrackPlaybackParamsKey
@@ -71,25 +68,17 @@ import com.jay.glossy.constants.ShufflePlaylistFirstKey
 import com.jay.glossy.constants.SimilarContent
 import com.jay.glossy.constants.SkipSilenceInstantKey
 import com.jay.glossy.constants.SkipSilenceKey
-<<<<<<< HEAD
 import com.jay.glossy.constants.SpatialAudioKey
 import com.jay.glossy.constants.StopMusicOnTaskClearKey
 import com.jay.glossy.constants.VarispeedKey
 import com.jay.glossy.eq.soundfx.AudioBoostLevel
 import com.jay.glossy.ui.component.AudioBoostDialog
-=======
-import com.jay.glossy.constants.StopMusicOnTaskClearKey
-import com.jay.glossy.constants.VarispeedKey
->>>>>>> origin/main
 import com.jay.glossy.ui.component.DefaultDialog
 import com.jay.glossy.ui.component.EnumDialog
 import com.jay.glossy.ui.component.IconButton
 import com.jay.glossy.ui.component.Material3SettingsGroup
 import com.jay.glossy.ui.component.Material3SettingsItem
-<<<<<<< HEAD
 import com.jay.glossy.ui.component.getAudioBoostLabel
-=======
->>>>>>> origin/main
 import com.jay.glossy.ui.utils.backToMain
 import com.jay.glossy.utils.rememberEnumPreference
 import com.jay.glossy.utils.rememberPreference
@@ -144,7 +133,6 @@ fun PlayerSettings(
         AudioNormalizationKey,
         defaultValue = true
     )
-<<<<<<< HEAD
     val (spatialAudio, onSpatialAudioChange) = rememberPreference(
         SpatialAudioKey,
         defaultValue = false
@@ -157,8 +145,6 @@ fun PlayerSettings(
         AudioBoostLevelKey,
         defaultValue = AudioBoostLevel.OFF,
     )
-=======
->>>>>>> origin/main
 
     val (loudnessLevel, onLoudnessLevelChange) = rememberEnumPreference(
         LoudnessLevelKey,
@@ -263,7 +249,6 @@ fun PlayerSettings(
         mutableStateOf(false)
     }
 
-<<<<<<< HEAD
     var showAudioBoostDialog by remember {
         mutableStateOf(false)
     }
@@ -279,8 +264,6 @@ fun PlayerSettings(
         )
     }
 
-=======
->>>>>>> origin/main
     if (showAudioQualityDialog) {
         EnumDialog(
             onDismiss = { showAudioQualityDialog = false },
@@ -497,7 +480,6 @@ fun PlayerSettings(
                     ))
                 }
                 add(Material3SettingsItem(
-<<<<<<< HEAD
                     icon = painterResource(R.drawable.spatial_audio),
                     title = { Text(stringResource(R.string.spatial_audio)) },
                     description = { Text(stringResource(R.string.spatial_audio_desc)) },
@@ -541,8 +523,6 @@ fun PlayerSettings(
                     onClick = { showAudioBoostDialog = true }
                 ))
                 add(Material3SettingsItem(
-=======
->>>>>>> origin/main
                     icon = painterResource(R.drawable.graphic_eq),
                     title = { Text(stringResource(R.string.audio_offload)) },
                     description = {

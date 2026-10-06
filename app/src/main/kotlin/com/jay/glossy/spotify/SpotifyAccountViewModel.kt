@@ -31,7 +31,6 @@ class SpotifyAccountViewModel @Inject constructor(
             // Screen khulte hi turant purani cached list load kar do
             repository.restoreCachedPlaylists()
             
-<<<<<<< HEAD
             // Phir background mein naya session/token restore karke playlists refresh karo.
             // A refresh failing is not a logout: offline it always fails, and
             // the playlists saved on the device are still the user's. What the
@@ -43,14 +42,6 @@ class SpotifyAccountViewModel @Inject constructor(
             
             // Fails silently offline, keeping the cached list that was just restored.
             if (connected) repository.refreshPlaylists()
-=======
-            // Phir background mein naya session/token restore karke playlists refresh karo
-            val isAuth = repository.restoreSession()
-            val name = context.dataStore.data.first()[SpotifyAccountNameKey].orEmpty()
-            _uiState.update { it.copy(isAuthenticated = isAuth, accountName = name, isLoading = false) }
-            
-            if (isAuth) repository.refreshPlaylists()
->>>>>>> origin/main
         }
     }
 

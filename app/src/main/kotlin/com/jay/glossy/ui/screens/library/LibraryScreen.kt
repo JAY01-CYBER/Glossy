@@ -2,12 +2,9 @@ package com.jay.glossy.ui.screens.library
 
 import com.jay.glossy.R
 
-<<<<<<< HEAD
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-=======
->>>>>>> origin/main
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,7 +12,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-<<<<<<< HEAD
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -91,36 +87,11 @@ fun LibraryScreen() {
             }
         )
     }
-=======
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import com.jay.glossy.LocalNavController
-import com.jay.glossy.constants.ChipSortTypeKey
-import com.jay.glossy.constants.LibraryFilter
-import com.jay.glossy.ui.component.ChipsRow
-import com.jay.glossy.utils.rememberEnumPreference
-
-@Composable
-fun LibraryScreen() {
-    val navController = LocalNavController.current
-    var filterType by rememberEnumPreference(ChipSortTypeKey, LibraryFilter.LIBRARY)
->>>>>>> origin/main
 
     val filterContent = @Composable {
         Column(
             modifier = Modifier.fillMaxWidth(),
         ) {
-<<<<<<< HEAD
             // Lockup: accent rule, eyebrow and title — the same shape the home
             // sections use, so the library reads as part of the same page.
             Row(
@@ -239,42 +210,6 @@ fun LibraryScreen() {
                 NewPlaylistCard(onClick = { showCreatePlaylistDialog = true })
             } else {
                 Spacer(Modifier.height(10.dp))
-=======
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, top = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    text = stringResource(R.string.filter_library),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-            Row(
-                modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Spacer(Modifier.width(12.dp))
-                ChipsRow(
-                    chips = listOf(
-                        LibraryFilter.PLAYLISTS to stringResource(R.string.filter_playlists),
-                        LibraryFilter.SPOTIFY to "Spotify",
-                        LibraryFilter.SONGS to stringResource(R.string.filter_songs),
-                        LibraryFilter.ALBUMS to stringResource(R.string.filter_albums),
-                        LibraryFilter.ARTISTS to stringResource(R.string.filter_artists),
-                        LibraryFilter.PODCASTS to stringResource(R.string.filter_podcasts),
-                    ),
-                    currentValue = filterType,
-                    onValueUpdate = {
-                        filterType = if (filterType == it) LibraryFilter.LIBRARY else it
-                    },
-                    modifier = Modifier.weight(1f),
-                )
->>>>>>> origin/main
             }
         }
     }
@@ -306,7 +241,6 @@ fun LibraryScreen() {
         }
     }
 }
-<<<<<<< HEAD
 
 /**
  * "Create a playlist" as a card with the dashed plus tile as its leading slot.
@@ -349,5 +283,3 @@ private fun NewPlaylistCard(onClick: () -> Unit) {
         }
     }
 }
-=======
->>>>>>> origin/main

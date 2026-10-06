@@ -7,7 +7,6 @@ package com.jay.glossy.lyrics
 
 import com.jay.glossy.R
 
-<<<<<<< HEAD
 /**
  * Whether raw lyrics text can actually be followed, that is, whether
  * [LyricsUtils.parseLyrics] finds at least one timed line in it.
@@ -23,17 +22,4 @@ import com.jay.glossy.R
 fun lyricsTextLooksSynced(lyrics: String?): Boolean {
     if (lyrics.isNullOrBlank()) return false
     return LyricsUtils.parseLyrics(lyrics).isNotEmpty()
-=======
-private val LRC_TIMESTAMP_HINT = Regex("""\[\d{1,2}:\d{2}""")
-
-/**
- * Whether raw lyrics text appears to be time-synced (LRC-style), including when a BOM or
- * leading blank lines precede the first `[mm:ss.xx]` tag.
- */
-fun lyricsTextLooksSynced(lyrics: String?): Boolean {
-    if (lyrics.isNullOrBlank()) return false
-    val t = lyrics.trim().removePrefix("\uFEFF").trimStart()
-    if (t.startsWith('[')) return true
-    return LRC_TIMESTAMP_HINT.containsMatchIn(t.take(4096))
->>>>>>> origin/main
 }

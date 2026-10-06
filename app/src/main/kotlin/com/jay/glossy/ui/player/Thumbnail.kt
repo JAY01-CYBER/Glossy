@@ -8,10 +8,7 @@ package com.jay.glossy.ui.player
 import com.jay.glossy.R
 
 import androidx.compose.animation.AnimatedVisibility
-<<<<<<< HEAD
 import androidx.compose.animation.core.animateDpAsState
-=======
->>>>>>> origin/main
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -27,10 +24,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-<<<<<<< HEAD
-=======
-import androidx.compose.foundation.layout.aspectRatio
->>>>>>> origin/main
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -47,7 +40,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-<<<<<<< HEAD
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -55,11 +47,6 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-=======
-import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.Stable
->>>>>>> origin/main
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.collectAsState
@@ -72,18 +59,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-<<<<<<< HEAD
 import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.shadow.Shadow
-=======
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.graphicsLayer
->>>>>>> origin/main
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -93,10 +74,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
-<<<<<<< HEAD
 import androidx.compose.ui.unit.DpOffset
-=======
->>>>>>> origin/main
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -122,10 +100,7 @@ import com.jay.glossy.constants.PlayerStyleKey
 import com.jay.glossy.constants.SeekExtraSeconds
 import com.jay.glossy.constants.SwipeThumbnailKey
 import com.jay.glossy.constants.ThumbnailCornerRadius
-<<<<<<< HEAD
 import com.jay.glossy.constants.ThumbnailShadowKey
-=======
->>>>>>> origin/main
 import com.jay.glossy.listentogether.RoomRole
 import com.jay.glossy.ui.component.CastButton
 import com.jay.glossy.utils.rememberEnumPreference
@@ -175,7 +150,6 @@ private fun calculateThumbnailDimensions(
     )
 }
 
-<<<<<<< HEAD
 /**
  * Blur radius of the artwork's cast shadow (Appearance → "Thumbnail shadow").
  *
@@ -233,8 +207,6 @@ internal fun Modifier.artworkDropShadow(
             ),
     )
 
-=======
->>>>>>> origin/main
 @Stable
 private fun getMediaItems(
     player: Player,
@@ -336,7 +308,6 @@ object CanvasArtworkPlaybackCache {
         schedulePersist()
     }
 
-<<<<<<< HEAD
     /**
      * Drops one song's entry. Used when the canvas check refuses what the cache
      * holds — a clip for another song, or a URL that has stopped serving — so
@@ -348,8 +319,6 @@ object CanvasArtworkPlaybackCache {
         if (map.remove(mediaId) != null) schedulePersist()
     }
 
-=======
->>>>>>> origin/main
     @Synchronized
     fun clear() {
         map.clear()
@@ -443,10 +412,7 @@ fun Thumbnail(
     val swipeThumbnail = swipeThumbnailPref && !isListenTogetherGuest
     val hidePlayerThumbnail by rememberPreference(HidePlayerThumbnailKey, false)
     val cropAlbumArt by rememberPreference(CropAlbumArtKey, false)
-<<<<<<< HEAD
     val thumbnailShadow by rememberPreference(ThumbnailShadowKey, true)
-=======
->>>>>>> origin/main
     
     val playerBackground by rememberEnumPreference(
         key = PlayerBackgroundStyleKey,
@@ -599,7 +565,6 @@ fun Thumbnail(
                         var skipMultiplier by remember { mutableIntStateOf(1) }
                         var lastTapTime by remember { mutableLongStateOf(0L) }
 
-<<<<<<< HEAD
                         BoxWithConstraints(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -629,17 +594,6 @@ fun Thumbnail(
                                             Modifier
                                         },
                                     )
-=======
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center 
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = PlayerHorizontalPadding)
-                                    .aspectRatio(1f)
->>>>>>> origin/main
                                     .pointerInput(swipeThumbnail) {
                                         if (!swipeThumbnail) return@pointerInput
                                         var totalDrag = 0f
@@ -682,7 +636,6 @@ fun Thumbnail(
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
-<<<<<<< HEAD
                                 // While the canvas is the layer on show, the slot
                                 // takes its shape from Appearance's canvas corner
                                 // control; with the canvas off the artwork keeps
@@ -697,14 +650,6 @@ fun Thumbnail(
                                         .fillMaxSize()
                                         .clip(artworkShape)
                                 ) {
-=======
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .clip(RoundedCornerShape(dimensions.cornerRadius))
-                                ) {
-                                    val (canvasThumbnailAnimation) = rememberPreference(CanvasThumbnailAnimationKey, defaultValue = false)
->>>>>>> origin/main
                                     var canvasVideoReady by remember { mutableStateOf(false) }
                                     val artworkAlpha by animateFloatAsState(
                                         targetValue = if (canvasVideoReady) 0f else 1f,
@@ -826,7 +771,6 @@ fun Thumbnail(
     }
 }
 
-<<<<<<< HEAD
 /**
  * How many times a canvas lookup is attempted while the surface stays on
  * screen, before it settles for its still artwork.
@@ -849,8 +793,6 @@ private const val CanvasLookupRetryDelayMillis = 2_000L
 /** Ceiling for that doubling. */
 private const val MaxCanvasLookupRetryDelayMillis = 16_000L
 
-=======
->>>>>>> origin/main
 @Composable
 private fun CanvasLayer(
     item: MediaItem,
@@ -858,7 +800,6 @@ private fun CanvasLayer(
     onVideoReady: (Boolean) -> Unit = {},
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
-<<<<<<< HEAD
     val isPlaying by playerConnection.isPlaying.collectAsState()
     val canvasArtwork =
         rememberCanvasArtwork(
@@ -868,25 +809,6 @@ private fun CanvasLayer(
             album = item.mediaMetadata.albumTitle?.toString() ?: "",
             onVideoReady = onVideoReady,
         )
-=======
-    val context = LocalContext.current
-    val isPlaying by playerConnection.isPlaying.collectAsState()
-
-    var canvasArtwork by remember(item.mediaId) { mutableStateOf<CanvasArtwork?>(null) }
-
-    LaunchedEffect(item.mediaId) {
-        onVideoReady(false)
-        // Playback cache is checked inside CanvasResolver; style-aware providers
-        // (Glossy / ArchiveTune / Both) are selected per the user preference.
-        canvasArtwork = CanvasResolver.resolve(
-            context = context,
-            mediaId = item.mediaId,
-            songTitle = item.mediaMetadata.title?.toString() ?: "",
-            artistName = item.mediaMetadata.artist?.toString() ?: "",
-            albumName = item.mediaMetadata.albumTitle?.toString() ?: "",
-        )
-    }
->>>>>>> origin/main
 
     canvasArtwork?.let { artwork ->
         CanvasArtworkPlayer(
@@ -899,7 +821,6 @@ private fun CanvasLayer(
     }
 }
 
-<<<<<<< HEAD
 /**
  * The same animated canvas for a caller that only holds metadata — the Capsule
  * and Cinematic designs, which draw their own artwork instead of going through
@@ -1012,8 +933,6 @@ private fun rememberCanvasArtwork(
     return canvasArtwork
 }
 
-=======
->>>>>>> origin/main
 @Composable
 private fun ThumbnailHeader(
     queueTitle: String?,
@@ -1083,10 +1002,7 @@ private fun ThumbnailItem(
     modifier: Modifier = Modifier,
 ) {
     val incrementalSeekSkipEnabled by rememberPreference(SeekExtraSeconds, defaultValue = false)
-<<<<<<< HEAD
     val thumbnailShadow by rememberPreference(ThumbnailShadowKey, true)
-=======
->>>>>>> origin/main
     var skipMultiplier by remember { mutableIntStateOf(1) }
     var lastTapTime by remember { mutableLongStateOf(0L) }
 
@@ -1101,7 +1017,6 @@ private fun ThumbnailItem(
                         .fillMaxSize()
                 }
             )
-<<<<<<< HEAD
             // The offscreen layer has to sit *above* the horizontal padding.
             // An offscreen layer is allocated at its node's bounds, so with the
             // padding inside it the buffer came out exactly as wide as the
@@ -1112,12 +1027,6 @@ private fun ThumbnailItem(
                 compositingStrategy = CompositingStrategy.Offscreen
             }
             .padding(horizontal = PlayerHorizontalPadding)
-=======
-            .padding(horizontal = PlayerHorizontalPadding)
-            .graphicsLayer {
-                compositingStrategy = CompositingStrategy.Offscreen
-            }
->>>>>>> origin/main
             .pointerInput(Unit) {
                 detectTapGestures(
                     onDoubleTap = { offset ->
@@ -1150,7 +1059,6 @@ private fun ThumbnailItem(
             },
         contentAlignment = Alignment.Center
     ) {
-<<<<<<< HEAD
         val canvasThumbnailAnimation = rememberCanvasEnabled()
         val artworkShape =
             RoundedCornerShape(
@@ -1168,14 +1076,6 @@ private fun ThumbnailItem(
                 )
                 .clip(artworkShape)
         ) {
-=======
-        Box(
-            modifier = Modifier
-                .size(dimensions.thumbnailSize)
-                .clip(RoundedCornerShape(dimensions.cornerRadius))
-        ) {
-            val (canvasThumbnailAnimation) = rememberPreference(CanvasThumbnailAnimationKey, defaultValue = false)
->>>>>>> origin/main
             var canvasVideoReady by remember { mutableStateOf(false) }
             val artworkAlpha by animateFloatAsState(
                 targetValue = if (canvasVideoReady) 0f else 1f,

@@ -164,10 +164,6 @@ import com.jay.glossy.lyrics.LyricsUtils.romanizeCyrillic
 import com.jay.glossy.lyrics.LyricsUtils.romanizeHindi
 import com.jay.glossy.lyrics.LyricsUtils.romanizeJapanese
 import com.jay.glossy.lyrics.LyricsUtils.romanizeKorean
-<<<<<<< HEAD
-=======
-import com.jay.glossy.lyrics.lyricsTextLooksSynced
->>>>>>> origin/main
 import com.jay.glossy.ui.component.shimmer.ShimmerHost
 import com.jay.glossy.ui.component.shimmer.TextPlaceholder
 import com.jay.glossy.ui.screens.settings.DarkMode
@@ -263,7 +259,6 @@ fun OriginalLyrics(
 
     val enabledLanguages = decodedList.filter { (_, checked) -> checked }.map { (lang, _) -> lang }
 
-<<<<<<< HEAD
     // The parser is the only authority on whether these lyrics are timed, and it
     // is asked exactly once. Three places used to answer that question — this
     // list, `isSynced`, and the ticker below — and two of them asked a different
@@ -285,14 +280,6 @@ fun OriginalLyrics(
                 emptyList()
             } else if (parsedEntries.isNotEmpty()) {
                 val parsedLines = parsedEntries
-=======
-    val lines =
-        remember(lyrics, scope) {
-            if (lyrics == null || lyrics == LYRICS_NOT_FOUND) {
-                emptyList()
-            } else if (lyrics.startsWith("[")) {
-                val parsedLines = parseLyrics(lyrics)
->>>>>>> origin/main
 
                 parsedLines
                     .map { entry ->
@@ -386,13 +373,9 @@ fun OriginalLyrics(
                 }
             }
         }
-<<<<<<< HEAD
     // The same parse `lines` was built from, so the "time-synced" announcement
     // can never contradict the list the player is actually reading.
     val isSynced = parsedEntries.isNotEmpty()
-=======
-    val isSynced = remember(lyrics) { lyricsTextLooksSynced(lyrics) }
->>>>>>> origin/main
 
     // State for translation status
     val translationStatus by LyricsTranslationHelper.status.collectAsStateWithLifecycle()
@@ -589,7 +572,6 @@ fun OriginalLyrics(
         selectedIndices.clear()
     }
 
-<<<<<<< HEAD
     LaunchedEffect(lyrics, parsedEntries) {
         // Gated on the parse rather than on the first character. This used to
         // refuse to start for any payload that did not literally open with '[',
@@ -598,10 +580,6 @@ fun OriginalLyrics(
         // keys off that index — had nothing to follow. That is the whole of
         // "the lyrics show but never move".
         if (parsedEntries.isEmpty()) {
-=======
-    LaunchedEffect(lyrics) {
-        if (lyrics.isNullOrEmpty() || !lyrics.startsWith("[")) {
->>>>>>> origin/main
             currentLineIndex = -1
             return@LaunchedEffect
         }
@@ -852,7 +830,6 @@ fun OriginalLyrics(
         } else {
             LazyColumn(
                 state = lazyListState,
-<<<<<<< HEAD
                 // Only the status bar, then straight into the first line.
                 //
                 // The top inset used to be a third of the viewport, which
@@ -866,12 +843,6 @@ fun OriginalLyrics(
                     WindowInsets.systemBars
                         .only(WindowInsetsSides.Top)
                         .add(WindowInsets(bottom = maxHeight / 2))
-=======
-                contentPadding =
-                    WindowInsets.systemBars
-                        .only(WindowInsetsSides.Top)
-                        .add(WindowInsets(top = maxHeight / 3, bottom = maxHeight / 2))
->>>>>>> origin/main
                         .asPaddingValues(),
                 modifier =
                     Modifier

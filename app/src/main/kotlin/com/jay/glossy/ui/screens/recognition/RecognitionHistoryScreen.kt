@@ -24,11 +24,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-<<<<<<< HEAD
-=======
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
->>>>>>> origin/main
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -243,7 +238,6 @@ private fun RecognitionHistoryItem(
 ) {
     val dateFormatter = remember { DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm") }
 
-<<<<<<< HEAD
     // Ghost tile, same treatment every other list row in the app gets:
     // no card fill at rest, the same 16 dp tile silhouette the shared list
     // items use, and the ripple is the only thing that lights it up.
@@ -254,29 +248,12 @@ private fun RecognitionHistoryItem(
                 .padding(horizontal = 6.dp, vertical = 3.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .clickable { onClick() },
-=======
-    Card(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-                .clickable { onClick() },
-        shape = RoundedCornerShape(ThumbnailCornerRadius),
-        colors =
-            CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-            ),
->>>>>>> origin/main
     ) {
         Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
-<<<<<<< HEAD
                     .padding(vertical = 9.dp, horizontal = 12.dp),
-=======
-                    .padding(12.dp),
->>>>>>> origin/main
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // Album art

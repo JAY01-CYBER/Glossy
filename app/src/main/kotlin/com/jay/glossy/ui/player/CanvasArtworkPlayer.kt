@@ -17,22 +17,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
-<<<<<<< HEAD
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-=======
->>>>>>> origin/main
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.database.StandaloneDatabaseProvider
-<<<<<<< HEAD
 import androidx.media3.datasource.DataSource
-=======
->>>>>>> origin/main
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
@@ -45,15 +39,11 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import com.jay.glossy.constants.CanvasCacheMode
 import com.jay.glossy.constants.CanvasCacheModeKey
 import com.jay.glossy.utils.rememberEnumPreference
-<<<<<<< HEAD
 import kotlinx.coroutines.delay
-=======
->>>>>>> origin/main
 import okhttp3.OkHttpClient
 import java.io.File
 import java.util.Locale
 
-<<<<<<< HEAD
 /** How many times a canvas that errors mid-track is prepared again. */
 private const val MaxCanvasRetries = 3
 
@@ -98,8 +88,6 @@ private const val SurfaceSettleMillis = 1_500L
  */
 private enum class CanvasForegroundState { FOREGROUND, BACKGROUND }
 
-=======
->>>>>>> origin/main
 object CanvasCacheManager {
     private var videoCache: SimpleCache? = null
     private var okHttpClient: OkHttpClient? = null
@@ -121,7 +109,6 @@ object CanvasCacheManager {
         File(context.filesDir, "canvas_video_cache").deleteRecursively()
     }
 
-<<<<<<< HEAD
     /**
      * The network source the player (and the prefetcher's cache writer) both
      * read through. Shared so a canvas is fetched over one client, with one set
@@ -137,13 +124,6 @@ object CanvasCacheManager {
 
     fun getMediaSourceFactory(context: Context, enableVideoCache: Boolean): DefaultMediaSourceFactory {
         val upstreamFactory = getUpstreamDataSourceFactory(context)
-=======
-    fun getMediaSourceFactory(context: Context, enableVideoCache: Boolean): DefaultMediaSourceFactory {
-        if (okHttpClient == null) {
-            okHttpClient = OkHttpClient.Builder().build()
-        }
-        val upstreamFactory = DefaultDataSource.Factory(context, OkHttpDataSource.Factory(okHttpClient!!))
->>>>>>> origin/main
 
         return if (enableVideoCache) {
             val cacheDataSourceFactory = CacheDataSource.Factory()
@@ -173,7 +153,6 @@ fun CanvasArtworkPlayer(
     
     var currentUrl by remember(initial) { mutableStateOf(initial) }
     var isVideoReady by remember(initial) { mutableStateOf(false) }
-<<<<<<< HEAD
     // A canvas that errors part-way through a track used to stay dead for the
     // rest of the song (one black frame while the static artwork stayed faded
     // out). Retrying re-prepares the same URL a bounded number of times, and
@@ -206,9 +185,6 @@ fun CanvasArtworkPlayer(
     // callbacks only, never from composition, so it stays out of recomposition.
     var surfaceSettleUntil by remember(initial) { mutableLongStateOf(0L) }
 
-=======
-    
->>>>>>> origin/main
     // YAHAN FIX KIYA: Video ka aspect ratio track karne ke liye variable add kiya
     var videoAspectRatio by remember(initial) { mutableFloatStateOf(1f) }
 
@@ -233,18 +209,12 @@ fun CanvasArtworkPlayer(
             .apply {
                 // High-quality canvas: prefer the best video quality available and
                 // only step down if the device reports decoder performance problems.
-<<<<<<< HEAD
                 // There is deliberately no minimum bitrate here: canvas loops are
                 // tiny files (often well under a megabit), so a floor would simply
                 // refuse the only rendition a clip exists in and the canvas would
                 // never draw a frame.
                 trackSelectionParameters = trackSelectionParameters.buildUpon()
                     .setMaxVideoBitrate(Int.MAX_VALUE)
-=======
-                trackSelectionParameters = trackSelectionParameters.buildUpon()
-                    .setMaxVideoBitrate(Int.MAX_VALUE)
-                    .setMinVideoBitrate(1_500_000)
->>>>>>> origin/main
                     .build()
                 setAudioAttributes(
                     AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(),
@@ -261,7 +231,6 @@ fun CanvasArtworkPlayer(
         exoPlayer.playWhenReady = isPlaying
     }
 
-<<<<<<< HEAD
     DisposableEffect(lifecycleOwner, exoPlayer) {
         // Adding an observer replays the events the owner has already reached,
         // so the flag (not the event) decides whether this was a real return to
@@ -326,17 +295,11 @@ fun CanvasArtworkPlayer(
                     return
                 }
 
-=======
-    DisposableEffect(exoPlayer, primary, fallback) {
-        val listener = object : Player.Listener {
-            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
->>>>>>> origin/main
                 val next = if (currentUrl == primary) fallback else null
                 if (!next.isNullOrBlank()) {
                     currentUrl = next
                     isVideoReady = false
                     onVideoReady(false)
-<<<<<<< HEAD
                 } else if (retriesUsed < MaxCanvasRetries) {
                     retriesUsed++
                     isVideoReady = false
@@ -367,11 +330,6 @@ fun CanvasArtworkPlayer(
                 // the canvas in here would show an empty surface, so the claim
                 // waits for a first frame that lands on a live window.
                 if (foregroundState == CanvasForegroundState.BACKGROUND) return
-=======
-                }
-            }
-            override fun onRenderedFirstFrame() {
->>>>>>> origin/main
                 isVideoReady = true
                 onVideoReady(true)
             }
@@ -392,7 +350,6 @@ fun CanvasArtworkPlayer(
         onDispose { exoPlayer.removeListener(listener) }
     }
 
-<<<<<<< HEAD
     LaunchedEffect(currentUrl, exoPlayer, reloadTick, videoViewGeneration) {
         if (reloadTick > 0) delay(CanvasRetryDelayMillis)
         // Back from the background: the clip deserves the retry budget again —
@@ -400,9 +357,6 @@ fun CanvasArtworkPlayer(
         if (videoViewGeneration > 0 && foregroundState == CanvasForegroundState.FOREGROUND) {
             retriesUsed = 0
         }
-=======
-    LaunchedEffect(currentUrl, exoPlayer) {
->>>>>>> origin/main
         val normalizedUrl = currentUrl.trim()
         val mimeType = if (normalizedUrl.contains(".m3u8", true) || normalizedUrl.lowercase(Locale.ROOT).split('?').first().endsWith(".m3u8")) {
             MimeTypes.APPLICATION_M3U8
@@ -430,7 +384,6 @@ fun CanvasArtworkPlayer(
         label = "canvasAlpha"
     )
 
-<<<<<<< HEAD
     // Keyed on the generation: after a trip to the background the whole view is
     // rebuilt rather than reused, because the old TextureView's SurfaceTexture
     // died with the Activity's window. A fresh view is attached and handed to
@@ -467,27 +420,4 @@ fun CanvasArtworkPlayer(
             modifier = modifier.alpha(alpha),
         )
     }
-=======
-    AndroidView(
-        factory = { viewContext ->
-            AspectRatioFrameLayout(viewContext).apply {
-                layoutParams = ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT)
-                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                
-                val textureView = TextureView(viewContext).apply {
-                    layoutParams = ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT)
-                    isOpaque = false
-                }
-                addView(textureView)
-                exoPlayer.setVideoTextureView(textureView)
-                setBackgroundColor(android.graphics.Color.TRANSPARENT)
-            }
-        },
-        update = { view ->
-            // YAHAN FIX KIYA: AndroidView ko video ka asli ratio pass karna jisse wo stretch na ho!
-            view.setAspectRatio(videoAspectRatio)
-        },
-        modifier = modifier.alpha(alpha),
-    )
->>>>>>> origin/main
 }

@@ -43,10 +43,7 @@ import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.R
 import com.jay.glossy.ui.component.IconButton
-<<<<<<< HEAD
 import com.jay.glossy.ui.player.CanvasResolver
-=======
->>>>>>> origin/main
 import com.jay.glossy.ui.utils.backToMain
 import kotlinx.coroutines.launch
 
@@ -124,7 +121,6 @@ fun SpotifyTokenLoginScreen(navController: NavController) {
                         tokenStatus = null
                         scope.launch {
                             tokenStatus = SpotifySession.saveAndValidateToken(context, tokenInput.trim())
-<<<<<<< HEAD
                             if (tokenStatus == "Spotify connected") {
                                 // A fourth provider can answer from now on, so
                                 // every "this song has no canvas" the pipeline
@@ -135,9 +131,6 @@ fun SpotifyTokenLoginScreen(navController: NavController) {
                                 CanvasResolver.invalidateCredentials()
                                 connected = true
                             }
-=======
-                            if (tokenStatus == "Spotify connected") connected = true
->>>>>>> origin/main
                             checkingToken = false
                         }
                     },
@@ -204,13 +197,10 @@ fun SpotifyTokenLoginScreen(navController: NavController) {
                 onClick = {
                     scope.launch {
                         SpotifySession.clear(context)
-<<<<<<< HEAD
                         // Spotify drops out of the race, so any clip it was
                         // the one serving is no longer answerable. Cleared with
                         // the sign-in case so both directions re-ask.
                         CanvasResolver.invalidateCredentials()
-=======
->>>>>>> origin/main
                         connected = false
                         tokenInput = ""
                         tokenStatus = null

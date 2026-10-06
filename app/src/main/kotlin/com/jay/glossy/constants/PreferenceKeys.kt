@@ -17,7 +17,6 @@ import java.time.ZoneOffset
 
 val EnableHighRefreshRateKey = booleanPreferencesKey("enableHighRefreshRate")
 val EnableLandscapeScalingKey = booleanPreferencesKey("enableLandscapeScaling")
-<<<<<<< HEAD
 
 /**
  * Turns off the app's ambient, always-running animations — the mini player's
@@ -30,8 +29,6 @@ val EnableLandscapeScalingKey = booleanPreferencesKey("enableLandscapeScaling")
  * `rememberAmbientMotionEnabled`.
  */
 val ReduceMotionKey = booleanPreferencesKey("reduceMotion")
-=======
->>>>>>> origin/main
 val DynamicThemeKey = booleanPreferencesKey("dynamicTheme")
 val SelectedThemeColorKey = intPreferencesKey("selectedThemeColor")
 val DarkModeKey = stringPreferencesKey("darkMode")
@@ -46,7 +43,6 @@ enum class MiniPlayerBackgroundStyle {
     BLUR,
     GRADIENT,
     PURE_BLACK,
-<<<<<<< HEAD
 
     /** Drifting, pulsing artwork-palette glow behind the mini player. */
     GLOW,
@@ -67,9 +63,6 @@ enum class MiniPlayerPlayingAnimation {
 
     /** Three small notes that float out of the indicator and fade away. */
     NOTES,
-=======
-    ANIMATED_MESH,
->>>>>>> origin/main
 }
 
 val DensityScaleKey = floatPreferencesKey("density_scale_factor")
@@ -112,7 +105,6 @@ enum class PlayerStyle {
     MODERN,
     WAVY,
     VIVI_NEW,
-<<<<<<< HEAD
     APPLE_MUSIC,
 
     /** Spinning vinyl record with the animated canvas rendered on the disc. */
@@ -123,9 +115,6 @@ enum class PlayerStyle {
 
     /** Full-bleed album artwork behind glass controls. */
     CINEMATIC
-=======
-    APPLE_MUSIC
->>>>>>> origin/main
 }
 
 val MiniPlayerStyleKey = stringPreferencesKey("miniPlayerStyle")
@@ -133,7 +122,6 @@ val MiniPlayerStyleKey = stringPreferencesKey("miniPlayerStyle")
 enum class MiniPlayerStyle {
     LEGACY,
     MODERN,
-<<<<<<< HEAD
     GLOSSY_SPECIAL,
 
     /** The teal design system's compact bar with a teal progress hairline. */
@@ -200,15 +188,11 @@ enum class DesignStyle {
     companion object {
         fun fromValue(value: String?): DesignStyle = entries.find { it.name == value } ?: TEAL
     }
-=======
-    GLOSSY_SPECIAL
->>>>>>> origin/main
 }
 
 val UseNewMiniPlayerDesignKey = booleanPreferencesKey("useNewMiniPlayerDesign")
 val HidePlayerThumbnailKey = booleanPreferencesKey("hidePlayerThumbnail")
 val CropAlbumArtKey = booleanPreferencesKey("cropAlbumArt")
-<<<<<<< HEAD
 
 /**
  * Drops a shadow under the album artwork in the player and the mini player.
@@ -216,8 +200,6 @@ val CropAlbumArtKey = booleanPreferencesKey("cropAlbumArt")
  * colour is only honoured from API 28 up.
  */
 val ThumbnailShadowKey = booleanPreferencesKey("thumbnailShadow")
-=======
->>>>>>> origin/main
 val SeekExtraSeconds = booleanPreferencesKey("seekExtraSeconds")
 val PauseOnMute = booleanPreferencesKey("pauseOnMute")
 val ResumeOnBluetoothConnectKey = booleanPreferencesKey("resumeOnBluetoothConnect")
@@ -232,7 +214,6 @@ val AlarmEntriesKey = stringPreferencesKey("alarmEntries")
 val DeveloperModeKey = booleanPreferencesKey("developerMode")
 val CanvasThumbnailAnimationKey = booleanPreferencesKey("canvasThumbnailAnimation")
 
-<<<<<<< HEAD
 /**
  * Animated canvases on the home screen's Featured Spotlight carousel.
  *
@@ -329,8 +310,6 @@ enum class MiniLyricsAnimationStyle {
     APPLE,
 }
 
-=======
->>>>>>> origin/main
 /** Which canvas provider strategy to use for animated artwork. */
 val CanvasStyleKey = stringPreferencesKey("canvasStyle")
 enum class CanvasStyle {
@@ -367,7 +346,6 @@ val ContentLanguageKey = stringPreferencesKey("contentLanguage")
 val ContentCountryKey = stringPreferencesKey("contentCountry")
 val EnableKugouKey = booleanPreferencesKey("enableKugou")
 val EnableLrcLibKey = booleanPreferencesKey("enableLrclib")
-<<<<<<< HEAD
 
 /**
  * Lyrics from the logged-in Spotify account. Off by default: it only does
@@ -375,8 +353,6 @@ val EnableLrcLibKey = booleanPreferencesKey("enableLrclib")
  * of whatever it fetches.
  */
 val EnableSpotifyLyricsKey = booleanPreferencesKey("enableSpotifyLyrics")
-=======
->>>>>>> origin/main
 val EnableBetterLyricsKey = booleanPreferencesKey("enableBetterLyrics")
 val EnablePaxsenixKey = booleanPreferencesKey("enablePaxsenix")
 val EnableLyricsPlus = booleanPreferencesKey("enableLyricsPlus")
@@ -425,12 +401,9 @@ val SkipSilenceKey = booleanPreferencesKey("skipSilence")
 val SkipSilenceInstantKey = booleanPreferencesKey("skipSilenceInstant")
 val AudioNormalizationKey = booleanPreferencesKey("audioNormalization")
 
-<<<<<<< HEAD
 /** Mid/side stereo widening ("Spatial Audio") applied in the audio sink. */
 val SpatialAudioKey = booleanPreferencesKey("spatialAudio")
 
-=======
->>>>>>> origin/main
 val LoudnessLevelKey = stringPreferencesKey("loudnessLevel")
 
 enum class LoudnessLevel(
@@ -456,7 +429,6 @@ val SoundFxVirtualizerStrengthKey = intPreferencesKey("soundFxVirtualizerStrengt
 val SoundFxAutoHeadroomKey = booleanPreferencesKey("soundFxAutoHeadroom")
 val SoundFxProfilesJsonKey = stringPreferencesKey("soundFxProfilesJson")
 
-<<<<<<< HEAD
 /**
  * The one-tap loudness boost, stored as the name of a
  * [com.jay.glossy.eq.soundfx.AudioBoostLevel]. It is not a separate audio
@@ -467,8 +439,6 @@ val SoundFxProfilesJsonKey = stringPreferencesKey("soundFxProfilesJson")
  */
 val AudioBoostLevelKey = stringPreferencesKey("audioBoostLevel")
 
-=======
->>>>>>> origin/main
 val AutoLoadMoreKey = booleanPreferencesKey("autoLoadMore")
 val AutoRadioQueueKey = booleanPreferencesKey("autoRadioQueue")
 val DisableLoadMoreWhenRepeatAllKey = booleanPreferencesKey("disableLoadMoreWhenRepeatAll")
@@ -532,23 +502,17 @@ val ListenTogetherAutoApprovalKey = booleanPreferencesKey("listenTogetherAutoApp
 val ListenTogetherAutoApproveSuggestionsKey = booleanPreferencesKey("listenTogetherAutoApproveSuggestions")
 val ListenTogetherSyncVolumeKey = booleanPreferencesKey("listenTogetherSyncVolume")
 val ListenTogetherBlockedUsersKey = stringPreferencesKey("listenTogetherBlockedUsers")
-<<<<<<< HEAD
 val ListenTogetherPendingActionsKey = stringPreferencesKey("listenTogetherPendingActions")
-=======
->>>>>>> origin/main
 val ListenTogetherInTopBarKey = booleanPreferencesKey("listenTogetherInTopBar")
 
 val ListenTogetherSessionTokenKey = stringPreferencesKey("listenTogetherSessionToken")
 val ListenTogetherRoomCodeKey = stringPreferencesKey("listenTogetherRoomCode")
-<<<<<<< HEAD
 
 /**
  * After a Listen Together reconnect, ask the host for the current state again
  * (instead of trusting the state snapshot that arrived with the event).
  */
 val ListenTogetherSmartResyncKey = booleanPreferencesKey("listenTogetherSmartResync")
-=======
->>>>>>> origin/main
 val ListenTogetherUserIdKey = stringPreferencesKey("listenTogetherUserId")
 val ListenTogetherIsHostKey = booleanPreferencesKey("listenTogetherIsHost")
 val ListenTogetherSessionTimestampKey = longPreferencesKey("listenTogetherSessionTimestamp")

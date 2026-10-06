@@ -22,10 +22,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-<<<<<<< HEAD
 import androidx.compose.foundation.layout.heightIn
-=======
->>>>>>> origin/main
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -61,7 +58,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
-<<<<<<< HEAD
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.jay.glossy.LocalPlayerAwareWindowInsets
@@ -77,15 +73,6 @@ import com.jay.glossy.constants.CanvasOnMobileDataKey
 import com.jay.glossy.constants.CanvasPreloadKey
 import com.jay.glossy.constants.CanvasThumbnailAnimationKey
 import com.jay.glossy.constants.SpotlightCanvasKey
-=======
-import androidx.navigation.NavController
-import com.jay.glossy.LocalPlayerAwareWindowInsets
-import com.jay.glossy.constants.CanvasStyle
-import com.jay.glossy.constants.CanvasStyleKey
-import com.jay.glossy.constants.BackgroundBlurEnabledKey
-import com.jay.glossy.constants.BackgroundBlurStrengthKey
-import com.jay.glossy.constants.CanvasThumbnailAnimationKey
->>>>>>> origin/main
 import com.jay.glossy.constants.ChipSortTypeKey
 import com.jay.glossy.constants.CropAlbumArtKey
 import com.jay.glossy.constants.DefaultOpenTabKey
@@ -99,10 +86,7 @@ import com.jay.glossy.constants.ExperimentalLyricsKey
 import com.jay.glossy.constants.GridItemSize
 import com.jay.glossy.constants.GridItemsSizeKey
 import com.jay.glossy.constants.HidePlayerThumbnailKey
-<<<<<<< HEAD
 import com.jay.glossy.constants.ReduceMotionKey
-=======
->>>>>>> origin/main
 import com.jay.glossy.constants.HideStatusBarOnFullscreenKey
 import com.jay.glossy.constants.LibraryFilter
 import com.jay.glossy.constants.ListenTogetherInTopBarKey
@@ -116,7 +100,6 @@ import com.jay.glossy.constants.LyricsTextPositionKey
 import com.jay.glossy.constants.LyricsTextSizeKey
 import com.jay.glossy.constants.MiniPlayerBackgroundStyle
 import com.jay.glossy.constants.MiniPlayerBackgroundStyleKey
-<<<<<<< HEAD
 import com.jay.glossy.constants.MiniPlayerPlayingAnimation
 import com.jay.glossy.constants.MiniPlayerPlayingAnimationKey
 import com.jay.glossy.constants.MiniPlayerStyle
@@ -124,9 +107,6 @@ import com.jay.glossy.constants.MiniLyricsStyle
 import com.jay.glossy.constants.MiniLyricsStyleKey
 import com.jay.glossy.constants.MiniLyricsAnimationStyle
 import com.jay.glossy.constants.MiniLyricsAnimationStyleKey
-=======
-import com.jay.glossy.constants.MiniPlayerStyle
->>>>>>> origin/main
 import com.jay.glossy.constants.MiniPlayerStyleKey
 import com.jay.glossy.constants.PlayerBackgroundStyle
 import com.jay.glossy.constants.PlayerBackgroundStyleKey
@@ -146,10 +126,7 @@ import com.jay.glossy.constants.SlimNavBarKey
 import com.jay.glossy.constants.SquigglySliderKey
 import com.jay.glossy.constants.SwipeSensitivityKey
 import com.jay.glossy.constants.SwipeThumbnailKey
-<<<<<<< HEAD
 import com.jay.glossy.constants.ThumbnailShadowKey
-=======
->>>>>>> origin/main
 import com.jay.glossy.constants.SwipeToRemoveSongKey
 import com.jay.glossy.constants.SwipeToSongKey
 import com.jay.glossy.constants.UseNewMiniPlayerDesignKey
@@ -166,7 +143,6 @@ import com.jay.glossy.ui.component.EnumDialog
 import com.jay.glossy.ui.component.IconButton
 import com.jay.glossy.ui.component.Material3SettingsGroup
 import com.jay.glossy.ui.component.Material3SettingsItem
-<<<<<<< HEAD
 import com.jay.glossy.ui.component.NowPlayingAnimationPreview
 import com.jay.glossy.ui.component.PlayerSliderTrack
 import com.jay.glossy.ui.component.SquigglySlider
@@ -174,11 +150,6 @@ import com.jay.glossy.ui.component.WavySlider
 import com.jay.glossy.ui.component.rememberDefaultReduceMotion
 import com.jay.glossy.ui.player.CanvasDiagnostics
 import com.jay.glossy.ui.player.CanvasUrlHealth
-=======
-import com.jay.glossy.ui.component.PlayerSliderTrack
-import com.jay.glossy.ui.component.SquigglySlider
-import com.jay.glossy.ui.component.WavySlider
->>>>>>> origin/main
 import com.jay.glossy.ui.theme.DefaultThemeColor
 import com.jay.glossy.ui.theme.PlayerSliderColors
 import com.jay.glossy.ui.utils.backToMain
@@ -231,7 +202,6 @@ fun AppearanceSettings(
     val (selectedFontValue) = rememberPreference(SelectedFontKey, defaultValue = AppFont.SYSTEM.value)
     val currentFont = AppFont.fromValue(selectedFontValue)
 
-<<<<<<< HEAD
     // Ambient motion. Low-RAM phones start with this already on, which is what
     // "support in low end devices" means here — nobody has to hunt for it.
     val (reduceMotion, onReduceMotionChange) = rememberPreference(
@@ -239,8 +209,6 @@ fun AppearanceSettings(
         defaultValue = rememberDefaultReduceMotion(),
     )
 
-=======
->>>>>>> origin/main
     val (playerStyle, onPlayerStyleChange) = rememberEnumPreference(
         com.jay.glossy.constants.PlayerStyleKey, 
         defaultValue = com.jay.glossy.constants.PlayerStyle.MODERN
@@ -265,7 +233,6 @@ fun AppearanceSettings(
         defaultValue = MiniPlayerStyle.MODERN
     )
     var showMiniPlayerStyleDialog by rememberSaveable { mutableStateOf(false) }
-<<<<<<< HEAD
 
     val (miniPlayerPlayingAnimation, onMiniPlayerPlayingAnimationChange) =
         rememberEnumPreference(
@@ -273,8 +240,6 @@ fun AppearanceSettings(
             defaultValue = MiniPlayerPlayingAnimation.BARS,
         )
     var showMiniPlayerPlayingAnimationDialog by rememberSaveable { mutableStateOf(false) }
-=======
->>>>>>> origin/main
         
     val (hidePlayerThumbnail, onHidePlayerThumbnailChange) =
         rememberPreference(
@@ -286,14 +251,11 @@ fun AppearanceSettings(
             CropAlbumArtKey,
             defaultValue = false,
         )
-<<<<<<< HEAD
     val (thumbnailShadow, onThumbnailShadowChange) =
         rememberPreference(
             ThumbnailShadowKey,
             defaultValue = true,
         )
-=======
->>>>>>> origin/main
     val (playerBackground, onPlayerBackgroundChange) =
         rememberEnumPreference(
             PlayerBackgroundStyleKey,
@@ -307,7 +269,6 @@ fun AppearanceSettings(
             defaultValue = false, // DEFAULT OFF RAKHA HAI MANGI HUI TAZA
         )
 
-<<<<<<< HEAD
     // Its own switch, on by default: the Spotlight carousel is a browsing
     // surface, so a user who keeps the full-screen player backdrop off can still
     // have the featured cards moving.
@@ -317,14 +278,11 @@ fun AppearanceSettings(
             defaultValue = true,
         )
 
-=======
->>>>>>> origin/main
     val (canvasStyle, onCanvasStyleChange) =
         rememberEnumPreference(
             CanvasStyleKey,
             defaultValue = CanvasStyle.ALL,
         )
-<<<<<<< HEAD
 
     // On by default: turning canvases on should give the user canvases, not
     // canvases-only-on-Wi-Fi. The switch is there for anyone who wants to keep
@@ -361,10 +319,6 @@ fun AppearanceSettings(
         )
     var showCanvasCornerDialog by rememberSaveable { mutableStateOf(false) }
 
-=======
-    var showCanvasStyleDialog by rememberSaveable { mutableStateOf(false) }
-
->>>>>>> origin/main
     val (defaultOpenTab, onDefaultOpenTabChange) =
         rememberEnumPreference(
             DefaultOpenTabKey,
@@ -412,7 +366,6 @@ fun AppearanceSettings(
     val (quickPicksStyle, onQuickPicksStyleChange) = rememberEnumPreference(QuickPicksStyleKey, defaultValue = QuickPicksStyle.GRID)
     var showQuickPicksStyleDialog by rememberSaveable { mutableStateOf(false) }
 
-<<<<<<< HEAD
     val (miniLyricsStyle, onMiniLyricsStyleChange) =
         rememberEnumPreference(MiniLyricsStyleKey, defaultValue = MiniLyricsStyle.CLASSIC)
     var showMiniLyricsStyleDialog by rememberSaveable { mutableStateOf(false) }
@@ -421,8 +374,6 @@ fun AppearanceSettings(
         rememberEnumPreference(MiniLyricsAnimationStyleKey, defaultValue = MiniLyricsAnimationStyle.FADE)
     var showMiniLyricsAnimationStyleDialog by rememberSaveable { mutableStateOf(false) }
 
-=======
->>>>>>> origin/main
     val (quickPickShape, onQuickPickShapeChange) =
         rememberEnumPreference(
             QuickPickShapeKey,
@@ -557,13 +508,10 @@ fun AppearanceSettings(
             onSelect = {
                 onCanvasStyleChange(it)
                 com.jay.glossy.ui.player.CanvasResolver.invalidateStyle()
-<<<<<<< HEAD
                 // A different engine answers differently, so everything the
                 // preloader remembered about "this song has no canvas" is now
                 // worth retrying.
                 com.jay.glossy.ui.player.CanvasPrefetcher.reset()
-=======
->>>>>>> origin/main
                 showCanvasStyleDialog = false
             },
             title = "Canvas Style",
@@ -581,13 +529,10 @@ fun AppearanceSettings(
         )
     }
 
-<<<<<<< HEAD
     if (showCanvasCheckDialog) {
         CanvasCheckDialog(onDismiss = { showCanvasCheckDialog = false })
     }
 
-=======
->>>>>>> origin/main
     if (showPlayerStyleDialog) {
         EnumDialog(
             onDismiss = { showPlayerStyleDialog = false },
@@ -605,18 +550,14 @@ fun AppearanceSettings(
                     com.jay.glossy.constants.PlayerStyle.WAVY -> "Glossy Wavy (New!)"
                     com.jay.glossy.constants.PlayerStyle.VIVI_NEW -> "Vivi Old Design"
                     com.jay.glossy.constants.PlayerStyle.APPLE_MUSIC -> "Apple Music (Premium)"
-<<<<<<< HEAD
                     com.jay.glossy.constants.PlayerStyle.VINYL -> "Vinyl (Turntable)"
                     com.jay.glossy.constants.PlayerStyle.CAPSULE -> "Capsule (Maroon)"
                     com.jay.glossy.constants.PlayerStyle.CINEMATIC -> "Cinematic (Full-Bleed)"
-=======
->>>>>>> origin/main
                 }
             },
         )
     }
     
-<<<<<<< HEAD
     if (showMiniPlayerPlayingAnimationDialog) {
         EnumDialog(
             onDismiss = { showMiniPlayerPlayingAnimationDialog = false },
@@ -637,8 +578,6 @@ fun AppearanceSettings(
         )
     }
 
-=======
->>>>>>> origin/main
     if (showMiniPlayerStyleDialog) {
         EnumDialog(
             onDismiss = { showMiniPlayerStyleDialog = false },
@@ -654,10 +593,7 @@ fun AppearanceSettings(
                     MiniPlayerStyle.LEGACY -> "Legacy (Old Style)"
                     MiniPlayerStyle.MODERN -> "Modern (Default)"
                     MiniPlayerStyle.GLOSSY_SPECIAL -> "Glossy Special Edition"
-<<<<<<< HEAD
                     MiniPlayerStyle.STUDIO -> "Studio"
-=======
->>>>>>> origin/main
                 }
             },
         )
@@ -683,7 +619,6 @@ fun AppearanceSettings(
         )
     }
 
-<<<<<<< HEAD
     if (showMiniLyricsStyleDialog) {
         EnumDialog(
             onDismiss = { showMiniLyricsStyleDialog = false },
@@ -742,8 +677,6 @@ fun AppearanceSettings(
         )
     }
 
-=======
->>>>>>> origin/main
     if (showQuickPickShapeDialog) {
         EnumDialog(
             onDismiss = { showQuickPickShapeDialog = false },
@@ -989,11 +922,7 @@ fun AppearanceSettings(
                     MiniPlayerBackgroundStyle.BLUR -> stringResource(R.string.player_background_blur)
                     MiniPlayerBackgroundStyle.GRADIENT -> stringResource(R.string.gradient)
                     MiniPlayerBackgroundStyle.PURE_BLACK -> stringResource(R.string.pure_black)
-<<<<<<< HEAD
                     MiniPlayerBackgroundStyle.GLOW -> "Glow (animated)"
-=======
-                    MiniPlayerBackgroundStyle.ANIMATED_MESH -> "Animated Mesh"
->>>>>>> origin/main
                 }
             },
         )
@@ -1471,7 +1400,6 @@ fun AppearanceSettings(
                     )
                     add(
                         Material3SettingsItem(
-<<<<<<< HEAD
                             icon = painterResource(R.drawable.slow_motion_video),
                             title = { Text(stringResource(R.string.reduce_animation_title)) },
                             description = { Text(stringResource(R.string.reduce_animation_desc)) },
@@ -1496,8 +1424,6 @@ fun AppearanceSettings(
                     )
                     add(
                         Material3SettingsItem(
-=======
->>>>>>> origin/main
                             icon = painterResource(R.drawable.fullscreen),
                             title = { Text(stringResource(R.string.enable_landscape_scaling)) },
                             description = { Text(stringResource(R.string.enable_landscape_scaling_desc)) },
@@ -1610,10 +1536,7 @@ fun AppearanceSettings(
                                     MiniPlayerStyle.LEGACY -> "Legacy (Old Style)"
                                     MiniPlayerStyle.MODERN -> "Modern (Default)"
                                     MiniPlayerStyle.GLOSSY_SPECIAL -> "Glossy Special Edition"
-<<<<<<< HEAD
                                     MiniPlayerStyle.STUDIO -> "Studio"
-=======
->>>>>>> origin/main
                                 }
                             )
                         },
@@ -1622,7 +1545,6 @@ fun AppearanceSettings(
                 )
                 add(
                     Material3SettingsItem(
-<<<<<<< HEAD
                         icon = painterResource(R.drawable.equalizer),
                         title = { Text("Playing Animation") },
                         description = {
@@ -1641,8 +1563,6 @@ fun AppearanceSettings(
                 )
                 add(
                     Material3SettingsItem(
-=======
->>>>>>> origin/main
                         icon = painterResource(R.drawable.gradient),
                         title = {
                             Text(
@@ -1665,11 +1585,7 @@ fun AppearanceSettings(
                                         MiniPlayerBackgroundStyle.BLUR -> stringResource(R.string.player_background_blur)
                                         MiniPlayerBackgroundStyle.GRADIENT -> stringResource(R.string.gradient)
                                         MiniPlayerBackgroundStyle.PURE_BLACK -> stringResource(R.string.pure_black)
-<<<<<<< HEAD
                                                             MiniPlayerBackgroundStyle.GLOW -> "Glow (animated)"
-=======
-                                        MiniPlayerBackgroundStyle.ANIMATED_MESH -> "Animated Mesh"
->>>>>>> origin/main
                                     }
                                 },
                                 color = if (miniPlayerStyle == MiniPlayerStyle.LEGACY) {
@@ -1704,19 +1620,15 @@ fun AppearanceSettings(
                                     com.jay.glossy.constants.PlayerStyle.WAVY -> "Glossy Wavy (New!)"
                                     com.jay.glossy.constants.PlayerStyle.VIVI_NEW -> "Vivi Old Design"
                                     com.jay.glossy.constants.PlayerStyle.APPLE_MUSIC -> "Apple Music (Premium)"
-<<<<<<< HEAD
                                     com.jay.glossy.constants.PlayerStyle.VINYL -> "Vinyl (Turntable)"
                                     com.jay.glossy.constants.PlayerStyle.CAPSULE -> "Capsule (Maroon)"
                                     com.jay.glossy.constants.PlayerStyle.CINEMATIC -> "Cinematic (Full-Bleed)"
-=======
->>>>>>> origin/main
                                 }
                             )
                         },
                         onClick = { showPlayerStyleDialog = true },
                     ),
                     Material3SettingsItem(
-<<<<<<< HEAD
                         icon = painterResource(R.drawable.lyrics),
                         title = { Text(stringResource(R.string.mini_lyrics_style)) },
                         description = {
@@ -1747,8 +1659,6 @@ fun AppearanceSettings(
                         onClick = { showMiniLyricsAnimationStyleDialog = true },
                     ),
                     Material3SettingsItem(
-=======
->>>>>>> origin/main
                         icon = painterResource(R.drawable.gradient),
                         title = { Text(stringResource(R.string.player_background_style)) },
                         description = {
@@ -1808,7 +1718,6 @@ fun AppearanceSettings(
                         onClick = { onCropAlbumArtChange(!cropAlbumArt) },
                     ),
                     Material3SettingsItem(
-<<<<<<< HEAD
                         icon = painterResource(R.drawable.hide_image),
                         title = { Text(stringResource(R.string.thumbnail_shadow)) },
                         description = { Text(stringResource(R.string.thumbnail_shadow_desc)) },
@@ -1831,8 +1740,6 @@ fun AppearanceSettings(
                         onClick = { onThumbnailShadowChange(!thumbnailShadow) },
                     ),
                     Material3SettingsItem(
-=======
->>>>>>> origin/main
                         icon = painterResource(R.drawable.palette),
                         title = { Text(stringResource(R.string.player_buttons_style)) },
                         description = {
@@ -1874,7 +1781,6 @@ fun AppearanceSettings(
                         },
                         onClick = { showSliderOptionDialog = true },
                     ),
-<<<<<<< HEAD
                     // One switch for the whole canvas feature: the player
                     // artwork, the Apple Music design and the Featured cards
                     // all follow it. Off means nothing is resolved, downloaded
@@ -1884,13 +1790,6 @@ fun AppearanceSettings(
                         icon = painterResource(R.drawable.play), 
                         title = { Text("Canvas Background") },
                         description = { Text("Animated looping artwork on the player and the Featured cards") },
-=======
-                    // YAHAN MERA CANVAS KA TOGGLE ADD KIYA HAI
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.play), 
-                        title = { Text("Canvas Background") },
-                        description = { Text("Play short looping videos on thumbnail like Apple Music") },
->>>>>>> origin/main
                         trailingContent = {
                             Switch(
                                 checked = canvasThumbnailAnimation,
@@ -1908,7 +1807,6 @@ fun AppearanceSettings(
                         },
                         onClick = { onCanvasThumbnailAnimationChange(!canvasThumbnailAnimation) }
                     ),
-<<<<<<< HEAD
                     // The carousel switch sits outside the Canvas Background
                     // gate on purpose: it stands on its own, so it is offered
                     // even when the full-screen backdrop is off.
@@ -2065,46 +1963,6 @@ fun AppearanceSettings(
                             onClick = { onSwipeThumbnailChange(!swipeThumbnail) },
                         ),
                     ) +
-=======
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.play),
-                        title = { Text("Canvas Style") },
-                        description = {
-                            Text(
-                                when (canvasStyle) {
-                                    CanvasStyle.ALL -> "All Providers (fastest — races all sources)"
-                                    CanvasStyle.GLOSSY -> "Glossy (Tidal + Apple Music)"
-                                    CanvasStyle.ARCHIVE_TUNE -> "ArchiveTune (BetterLyrics)"
-                                    CanvasStyle.BOTH -> "Both (ArchiveTune first, Glossy fallback)"
-                                    CanvasStyle.SPOTIFY -> "Spotify Canvas"
-                                }
-                            )
-                        },
-                        onClick = { showCanvasStyleDialog = true }
-                    ),
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.swipe),
-                        title = { Text(stringResource(R.string.enable_swipe_thumbnail)) },
-                        trailingContent = {
-                            Switch(
-                                checked = swipeThumbnail,
-                                onCheckedChange = onSwipeThumbnailChange,
-                                thumbContent = {
-                                    Icon(
-                                        painter =
-                                            painterResource(
-                                                id = if (swipeThumbnail) R.drawable.check else R.drawable.close,
-                                            ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize),
-                                    )
-                                },
-                            )
-                        },
-                        onClick = { onSwipeThumbnailChange(!swipeThumbnail) },
-                    ),
-                ) +
->>>>>>> origin/main
                     if (swipeThumbnail) {
                         listOf(
                             Material3SettingsItem(
@@ -2193,7 +2051,6 @@ fun AppearanceSettings(
             }
         }
 
-<<<<<<< HEAD
         if (showCanvasCornerDialog) {
             DefaultDialog(
                 onDismiss = { showCanvasCornerDialog = false },
@@ -2241,8 +2098,6 @@ fun AppearanceSettings(
             }
         }
 
-=======
->>>>>>> origin/main
         Spacer(modifier = Modifier.height(27.dp))
 
         Material3SettingsGroup(
@@ -2831,7 +2686,6 @@ enum class PlayerTextAlignment {
     SIDED,
     CENTER,
 }
-<<<<<<< HEAD
 
 /**
  * The one-line report the Canvas check row shows: what the last lookup did and
@@ -2962,5 +2816,3 @@ private fun canvasHealthLabelResource(health: CanvasUrlHealth): Int =
         CanvasUrlHealth.UNPLAYABLE -> R.string.canvas_check_health_unplayable
         CanvasUrlHealth.UNKNOWN -> R.string.canvas_check_health_unknown
     }
-=======
->>>>>>> origin/main

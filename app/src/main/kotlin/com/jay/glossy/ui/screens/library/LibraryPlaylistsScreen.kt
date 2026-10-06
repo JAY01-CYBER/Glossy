@@ -31,10 +31,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-<<<<<<< HEAD
 import androidx.compose.foundation.layout.offset
-=======
->>>>>>> origin/main
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -63,10 +60,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-<<<<<<< HEAD
 import androidx.compose.ui.text.style.TextOverflow
-=======
->>>>>>> origin/main
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -98,23 +92,17 @@ import com.jay.glossy.ui.component.LibrarySearchEmptyPlaceholder
 import com.jay.glossy.ui.component.LibrarySearchHeader
 import com.jay.glossy.ui.component.LibraryPlaylistGridItem
 import com.jay.glossy.ui.component.LibraryPlaylistListItem
-<<<<<<< HEAD
 import com.jay.glossy.constants.ActiveDesignStyle
 import com.jay.glossy.constants.DesignStyle
 import com.jay.glossy.ui.component.GlossyPlaylistListRow
-=======
->>>>>>> origin/main
 import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.component.PlaylistGridItem
 import com.jay.glossy.ui.component.PlaylistListItem
 import com.jay.glossy.ui.component.SortHeader
 import com.jay.glossy.extensions.matchesNormalizedQuery
 import com.jay.glossy.extensions.normalizeForSearch
-<<<<<<< HEAD
 import com.jay.glossy.spotify.SpotifyAccountViewModel
 import com.jay.glossy.spotifycore.models.SpotifyPlaylist
-=======
->>>>>>> origin/main
 import com.jay.glossy.utils.rememberEnumPreference
 import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.viewmodels.LibraryPlaylistsViewModel
@@ -144,7 +132,6 @@ fun LibraryPlaylistsScreen(
 
     val coroutineScope = rememberCoroutineScope()
 
-<<<<<<< HEAD
     // The redesigned Library showed a continuous list of rows. It is pinned off
     // now, so the stored grid/list preference always wins.
     val newDesign = ActiveDesignStyle == DesignStyle.TEAL
@@ -156,9 +143,6 @@ fun LibraryPlaylistsScreen(
             viewType = LibraryViewType.LIST
         }
     }
-=======
-    var viewType by rememberEnumPreference(PlaylistViewTypeKey, LibraryViewType.GRID)
->>>>>>> origin/main
     val (sortType, onSortTypeChange) = rememberEnumPreference(
         PlaylistSortTypeKey,
         PlaylistSortType.CREATE_DATE
@@ -327,7 +311,6 @@ fun LibraryPlaylistsScreen(
     val lazyListState = rememberLazyListState()
     val lazyGridState = rememberLazyGridState()
 
-<<<<<<< HEAD
     // Spotify playlists surface directly in this screen — alongside the auto
     // and local playlists — whenever the account is connected, instead of
     // only behind the dedicated Spotify filter chip.
@@ -342,8 +325,6 @@ fun LibraryPlaylistsScreen(
         }
     }
 
-=======
->>>>>>> origin/main
     val backStackEntry by navController.currentBackStackEntryAsState()
     val scrollToTop =
         backStackEntry?.savedStateHandle?.getStateFlow("scrollToTop", false)?.collectAsStateWithLifecycle()
@@ -427,13 +408,8 @@ fun LibraryPlaylistsScreen(
             Text(
                 text = pluralStringResource(
                     R.plurals.n_playlist,
-<<<<<<< HEAD
                     visibleResults.count { !it.autoPlaylist } + visibleSpotifyPlaylists.size,
                     visibleResults.count { !it.autoPlaylist } + visibleSpotifyPlaylists.size,
-=======
-                    visibleResults.count { !it.autoPlaylist },
-                    visibleResults.count { !it.autoPlaylist },
->>>>>>> origin/main
                 ),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.secondary,
@@ -524,7 +500,6 @@ fun LibraryPlaylistsScreen(
                     val autoPlaylists = visibleResults.filter { it.autoPlaylist }
                     val regularPlaylists = visibleResults.filter { !it.autoPlaylist }
 
-<<<<<<< HEAD
                     if (newDesign) {
                         items(
                             items = autoPlaylists,
@@ -573,8 +548,6 @@ fun LibraryPlaylistsScreen(
                             )
                         }
                     } else {
-=======
->>>>>>> origin/main
                     autoPlaylists.chunked(2).forEach { rowItems ->
                         item(
                             key = "auto_row_${rowItems.first().key}",
@@ -613,7 +586,6 @@ fun LibraryPlaylistsScreen(
                             modifier = Modifier.animateItem(),
                         )
                     }
-<<<<<<< HEAD
 
                     items(
                         items = visibleSpotifyPlaylists,
@@ -631,8 +603,6 @@ fun LibraryPlaylistsScreen(
                         )
                     }
                     }
-=======
->>>>>>> origin/main
                 }
             }
 
@@ -697,7 +667,6 @@ fun LibraryPlaylistsScreen(
                             )
                         }
                     }
-<<<<<<< HEAD
 
                     items(
                         items = visibleSpotifyPlaylists,
@@ -716,8 +685,6 @@ fun LibraryPlaylistsScreen(
                                 ),
                         )
                     }
-=======
->>>>>>> origin/main
                 }
             }
         }
@@ -747,7 +714,6 @@ private fun AutoPlaylistGridItem(
     modifier: Modifier = Modifier
 ) {
     val title = playlist.playlist.name
-<<<<<<< HEAD
 
     // Saturated two-stop gradient per collection — the old flat pastel washes
     // read as placeholders next to real artwork cards.
@@ -781,45 +747,11 @@ private fun AutoPlaylistGridItem(
             R.drawable.playlist_play,
             Color(0xFF7C86FF),
             Color(0xFF3A3F8F),
-=======
-    
-    val (iconRes, iconTint, gradientColors) = when {
-        title.contains("Liked", ignoreCase = true) || title.contains("पसंद", ignoreCase = true) -> Triple(
-            R.drawable.favorite, 
-            Color(0xFFD32F2F),
-            listOf(Color(0xFFFCE3E3), Color(0xFFF3E5F5))
-        )
-        title.contains("Offline", ignoreCase = true) || title.contains("Downloaded", ignoreCase = true) -> Triple(
-            R.drawable.download, 
-            Color(0xFF1976D2),
-            listOf(Color(0xFFE3F2FD), Color(0xFFF3E5F5))
-        )
-        title.contains("Cached", ignoreCase = true) -> Triple(
-            R.drawable.sync, 
-            Color(0xFF5E35B1),
-            listOf(Color(0xFFEDE7F6), Color(0xFFF3E5F5))
-        )
-        title.contains("Uploaded", ignoreCase = true) -> Triple(
-            R.drawable.upload,
-            Color(0xFF1976D2),
-            listOf(Color(0xFFE3F2FD), Color(0xFFF3E5F5))
-        )
-        title.contains("Top", ignoreCase = true) -> Triple(
-            R.drawable.trending_up, 
-            Color(0xFF455A64),
-            listOf(Color(0xFFF5F5F5), Color(0xFFE8EAF6))
-        )
-        else -> Triple(
-            R.drawable.playlist_play,
-            Color(0xFF1E1E1E),
-            listOf(Color(0xFFF5F5F5), Color(0xFFE8EAF6))
->>>>>>> origin/main
         )
     }
 
     Box(
         modifier = modifier
-<<<<<<< HEAD
             .padding(8.dp)
             .fillMaxWidth()
             .height(115.dp)
@@ -836,32 +768,17 @@ private fun AutoPlaylistGridItem(
                 .offset(x = 30.dp, y = (-28).dp)
                 .background(Color.White.copy(alpha = 0.10f), CircleShape),
         )
-=======
-            .padding(8.dp) 
-            .fillMaxWidth()
-            .height(115.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .background(Brush.linearGradient(colors = gradientColors))
-            .clickable(onClick = onClick)
-            .padding(14.dp)
-    ) {
->>>>>>> origin/main
         Box(
             modifier = Modifier
                 .size(38.dp)
                 .clip(CircleShape)
-<<<<<<< HEAD
                 .background(Color.White.copy(alpha = 0.22f))
-=======
-                .background(Color.White)
->>>>>>> origin/main
                 .align(Alignment.TopStart),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 painter = painterResource(id = iconRes),
                 contentDescription = title,
-<<<<<<< HEAD
                 tint = Color.White,
                 modifier = Modifier.size(20.dp)
             )
@@ -874,23 +791,10 @@ private fun AutoPlaylistGridItem(
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-=======
-                tint = iconTint,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-        
-        Text(
-            text = title,
-            color = Color(0xFF1E1E1E),
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Medium,
->>>>>>> origin/main
             modifier = Modifier.align(Alignment.BottomStart)
         )
     }
 }
-<<<<<<< HEAD
 
 
 
@@ -905,5 +809,3 @@ private fun SpotifyPlaylist.asLibraryPlaylist(): Playlist =
         songCount = tracks?.total ?: 0,
         songThumbnails = images.map { it.url },
     )
-=======
->>>>>>> origin/main

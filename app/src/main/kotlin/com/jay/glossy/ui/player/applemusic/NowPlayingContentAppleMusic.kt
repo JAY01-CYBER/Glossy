@@ -45,10 +45,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-<<<<<<< HEAD
 import androidx.compose.ui.unit.sp
-=======
->>>>>>> origin/main
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -64,12 +61,9 @@ import com.jay.glossy.R
 import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.canvas.CanvasArtwork
 import com.jay.glossy.constants.CanvasThumbnailAnimationKey
-<<<<<<< HEAD
 import com.jay.glossy.constants.MiniLyricsStyle
 import com.jay.glossy.constants.MiniLyricsStyleKey
 import com.jay.glossy.constants.ShowLyricsOnPlayerKey
-=======
->>>>>>> origin/main
 import com.jay.glossy.extensions.metadata
 import com.jay.glossy.ui.component.BottomSheetState
 import com.jay.glossy.ui.component.LocalBottomSheetPageState
@@ -78,15 +72,11 @@ import com.jay.glossy.ui.menu.PlayerMenu
 import com.jay.glossy.ui.player.CanvasArtworkPlaybackCache
 import com.jay.glossy.ui.player.CanvasArtworkPlayer
 import com.jay.glossy.ui.player.CanvasResolver
-<<<<<<< HEAD
 import com.jay.glossy.ui.player.PlayerCanvasGlowLyrics
 import com.jay.glossy.ui.player.PlayerSyncedLyricsView
 import com.jay.glossy.ui.player.rememberCanvasEnabled
 import com.jay.glossy.ui.utils.ShowMediaInfo
 import com.jay.glossy.utils.rememberEnumPreference
-=======
-import com.jay.glossy.ui.utils.ShowMediaInfo
->>>>>>> origin/main
 import com.jay.glossy.utils.rememberPreference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -191,15 +181,9 @@ fun NowPlayingContentAppleMusic(
                     .build(),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-<<<<<<< HEAD
                 modifier = Modifier.fillMaxSize().blur(180.dp)
             )
             Box(modifier = Modifier.fillMaxSize().alpha(0.72f).background(backdropBrush))
-=======
-                modifier = Modifier.fillMaxSize().blur(80.dp)
-            )
-            Box(modifier = Modifier.fillMaxSize().alpha(0.62f).background(backdropBrush))
->>>>>>> origin/main
         }
 
         Crossfade(targetState = viewState, animationSpec = tween(300), label = "AppleMusicView") { view ->
@@ -270,12 +254,9 @@ private fun AppleMusicMainView(
     duration: Long
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
-<<<<<<< HEAD
     val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
     val showLyricsOnPlayer by rememberPreference(ShowLyricsOnPlayerKey, defaultValue = false)
     val (miniLyricsStyle) = rememberEnumPreference(MiniLyricsStyleKey, defaultValue = MiniLyricsStyle.CLASSIC)
-=======
->>>>>>> origin/main
     val mediaItemsData by remember(
         playerConnection.player.currentMediaItemIndex,
         playerConnection.player.shuffleModeEnabled
@@ -330,7 +311,6 @@ private fun AppleMusicMainView(
                 track = track,
                 isCurrentPage = isCurrentPage,
                 artworkZoneHeightDp = artworkZoneHeightDp,
-<<<<<<< HEAD
                 // The glow style paints the lyric on the artwork, so the page
                 // that owns the artwork draws it — and only the current page,
                 // so a swipe never leaves a stale line on a neighbouring cover.
@@ -338,8 +318,6 @@ private fun AppleMusicMainView(
                     showLyricsOnPlayer && miniLyricsStyle == MiniLyricsStyle.CANVAS_GLOW,
                 positionProvider = { position },
                 onExpandLyrics = { onSelectView(AppleMusicView.LYRICS) },
-=======
->>>>>>> origin/main
                 onCanvasReady = { /* Managed internally */ }
             )
         }
@@ -355,7 +333,6 @@ private fun AppleMusicMainView(
                         bottomContentHeightDp = with(localDensity) { coords.size.height.toDp().value.toInt() }
                     }
             ) {
-<<<<<<< HEAD
                 // The glow line is anchored to the artwork's lower edge and is
                 // meant to sit right on top of the title, so the gap above the
                 // title row collapses to almost nothing for that style; the
@@ -366,9 +343,6 @@ private fun AppleMusicMainView(
                         else 20.dp
                     )
                 )
-=======
-                Spacer(modifier = Modifier.height(20.dp))
->>>>>>> origin/main
                 // 🛠️ FIX: Passed viewState here so it reaches AppleMusicHeaderActions
                 AppleMusicMainTitleRow(
                     viewState = viewState, 
@@ -376,7 +350,6 @@ private fun AppleMusicMainView(
                     bottomSheetState = bottomSheetState
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-<<<<<<< HEAD
                 if (showLyricsOnPlayer && miniLyricsStyle == MiniLyricsStyle.CLASSIC) {
                     PlayerSyncedLyricsView(
                         mediaMetadata = mediaMetadata,
@@ -386,8 +359,6 @@ private fun AppleMusicMainView(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                 }
-=======
->>>>>>> origin/main
                 AppleMusicBottomCluster(
                     viewState = viewState,
                     onSelectView = onSelectView,
@@ -407,29 +378,21 @@ private fun AppleMusicArtworkPage(
     track: MediaItem?,
     isCurrentPage: Boolean,
     artworkZoneHeightDp: Int,
-<<<<<<< HEAD
     /** True when the chosen mini lyrics style draws on the artwork itself. */
     showGlowLyrics: Boolean,
     positionProvider: () -> Long,
     onExpandLyrics: () -> Unit,
-=======
->>>>>>> origin/main
     onCanvasReady: (Boolean) -> Unit
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
     
-<<<<<<< HEAD
     // The animated canvas follows the single "Canvas Background" switch, the
     // same one that drives the player artwork and the app backdrop, so turning
     // it off never leaves a canvas playing on this screen. CanvasResolver still
     // honours the global Canvas Style setting, so the engine stays selectable.
     val canvasEnabled = rememberCanvasEnabled()
     val tryShowCanvas = canvasEnabled && isCurrentPage && track?.mediaId == mediaMetadata?.id
-=======
-    val (canvasThumbnailAnimation) = rememberPreference(CanvasThumbnailAnimationKey, defaultValue = false)
-    val tryShowCanvas = canvasThumbnailAnimation && isCurrentPage && track?.mediaId == mediaMetadata?.id
->>>>>>> origin/main
 
     var isVideoPlaying by remember { mutableStateOf(false) }
 
@@ -510,7 +473,6 @@ private fun AppleMusicArtworkPage(
                         onCanvasReady(false)
                     }
                 }
-<<<<<<< HEAD
 
                 // Canvas-glow mini lyrics, low on the artwork itself: this
                 // design's artwork already runs to the title row, so the line
@@ -544,8 +506,6 @@ private fun AppleMusicArtworkPage(
                             .fillMaxWidth(),
                     )
                 }
-=======
->>>>>>> origin/main
             }
         } else if (track != null) {
             Box(
@@ -591,7 +551,6 @@ private fun AppleMusicCanvasLayer(
     var canvasArtwork by remember(mediaId) { mutableStateOf<CanvasArtwork?>(null) }
 
     LaunchedEffect(mediaId) {
-<<<<<<< HEAD
         // One retry: a lookup that lands while a provider is still minting its
         // credentials otherwise leaves the track without a canvas for good.
         var found: CanvasArtwork? = null
@@ -613,16 +572,6 @@ private fun AppleMusicCanvasLayer(
             attempt++
         }
         canvasArtwork = found
-=======
-        canvasArtwork = CanvasResolver.resolve(
-            context = context,
-            mediaId = mediaId,
-            songTitle = track?.mediaMetadata?.title?.toString() ?: mediaMetadata?.title ?: "",
-            artistName = track?.mediaMetadata?.artist?.toString()
-                ?: mediaMetadata?.artists?.joinToString { it.name } ?: "",
-            albumName = track?.mediaMetadata?.albumTitle?.toString() ?: mediaMetadata?.album?.title ?: "",
-        )
->>>>>>> origin/main
     }
 
     canvasArtwork?.let { artwork ->
@@ -649,15 +598,11 @@ private fun AppleMusicMainTitleRow(
     val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
     
     Row(
-<<<<<<< HEAD
         // AppleMusicGutter, not a literal: the canvas-glow mini lyrics above this
         // row are drawn over full-bleed artwork and pad themselves by the same
         // value to line their words up with the name. Keeping both on the one
         // constant is what makes them share an edge.
         modifier = Modifier.fillMaxWidth().padding(horizontal = AppleMusicGutter),
-=======
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
->>>>>>> origin/main
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {

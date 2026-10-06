@@ -1,10 +1,7 @@
 package com.jay.glossy.applecanvas
 
 import com.jay.glossy.canvas.CanvasArtwork
-<<<<<<< HEAD
 import com.jay.glossy.canvas.CanvasLookupUnavailable
-=======
->>>>>>> origin/main
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.okhttp.OkHttp
@@ -76,16 +73,12 @@ object AppleMusicCanvasProvider {
                 parameter("extend", "editorialVideo")
                 parameter("include", "albums")
             }
-<<<<<<< HEAD
             if (response.status != HttpStatusCode.OK) {
                 // Without this, an expired token or a 429 reads as "Apple has
                 // no canvas for this song" and the song is remembered as
                 // canvas-less for the session.
                 throw CanvasLookupUnavailable("Apple Music answered HTTP ${response.status.value}")
             }
-=======
-            if (response.status != HttpStatusCode.OK) return null
->>>>>>> origin/main
 
             val root = response.body<JsonObject>()
             val results = root["results"]?.jsonObject?.get(type)?.jsonObject?.get("data")?.jsonArray ?: return null
@@ -119,15 +112,10 @@ object AppleMusicCanvasProvider {
             // Never swallow cancellation — a lookup cancelled by a track change
             // must not complete and paint the previous song's artwork.
             throw e
-<<<<<<< HEAD
         } catch (e: CanvasLookupUnavailable) {
             throw e
         } catch (e: Exception) {
             throw CanvasLookupUnavailable("Apple Music lookup failed", e)
-=======
-        } catch (e: Exception) {
-            null
->>>>>>> origin/main
         }
     }
 

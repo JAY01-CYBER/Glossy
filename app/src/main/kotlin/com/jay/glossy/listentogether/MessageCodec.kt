@@ -240,15 +240,11 @@ class MessageCodec(
                     position = positionForAction,
                     trackInfo = pb.takeIf { it.hasTrackInfo() }?.trackInfo?.let { protoToTrackInfo(it) },
                     insertNext = pb.insertNext.takeIf { it },
-<<<<<<< HEAD
                     // proto3 gives a repeated field no presence, so "the host sent
                     // no queue" and "the host sent an empty queue" both arrive as
                     // an empty list. Report the first as null, which is what the
                     // nullable field on the payload has always meant.
                     queue = pb.queueList.map { protoToTrackInfo(it) }.takeIf { it.isNotEmpty() },
-=======
-                    queue = pb.queueList.map { protoToTrackInfo(it) },
->>>>>>> origin/main
                     queueTitle = pb.queueTitle.takeIf { it.isNotEmpty() },
                     volume = pb.volume.takeIf { pb.action == PlaybackActions.SET_VOLUME },
                     serverTime = pb.serverTime.takeIf { it > 0 },
@@ -283,7 +279,6 @@ class MessageCodec(
                     isPlaying = pb.isPlaying,
                     position = pb.position,
                     lastUpdate = pb.lastUpdate,
-<<<<<<< HEAD
                     // Neither of these has presence on the wire, so an omitted
                     // field decodes to an empty list / 0f. Passing that through as
                     // "the host said empty / the host said zero" is what used to
@@ -293,10 +288,6 @@ class MessageCodec(
                     // SET_VOLUME action, which still carries a real 0f.
                     queue = pb.queueList.map { protoToTrackInfo(it) }.takeIf { it.isNotEmpty() },
                     volume = pb.volume.takeIf { it > 0f },
-=======
-                    queue = pb.queueList.map { protoToTrackInfo(it) },
-                    volume = pb.volume,
->>>>>>> origin/main
                     revision = pb.revision,
                 )
             }

@@ -13,17 +13,13 @@ import com.metrolist.innertube.models.WatchEndpoint
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-<<<<<<< HEAD
 import timber.log.Timber
-=======
->>>>>>> origin/main
 
 object YouTubeLyricsProvider : LyricsProvider {
     override val name = "YouTube Music"
 
     override fun isEnabled(context: Context) = true
 
-<<<<<<< HEAD
     private val stampRegex = Regex("""\[\d{1,2}:\d{2}(?:[.:]\d{1,3})?\]""")
 
     private var loggedRawPayload = false
@@ -46,8 +42,6 @@ object YouTubeLyricsProvider : LyricsProvider {
             )
     }
 
-=======
->>>>>>> origin/main
     override suspend fun getLyrics(
         context: Context,
         id: String,
@@ -58,22 +52,14 @@ object YouTubeLyricsProvider : LyricsProvider {
     ): Result<String> = withContext(Dispatchers.IO) {
         try {
             val nextResult = YouTube.next(WatchEndpoint(videoId = id)).getOrThrow()
-<<<<<<< HEAD
             val lyrics =
-=======
-            Result.success(
->>>>>>> origin/main
                 YouTube
                     .lyrics(
                         endpoint = nextResult.lyricsEndpoint
                             ?: throw IllegalStateException("Lyrics endpoint not found"),
                     ).getOrThrow() ?: throw IllegalStateException("Lyrics unavailable")
-<<<<<<< HEAD
             logRawPayloadOnce(lyrics)
             Result.success(lyrics)
-=======
-            )
->>>>>>> origin/main
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Result.failure(e)

@@ -46,10 +46,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-<<<<<<< HEAD
-=======
-import kotlinx.coroutines.runBlocking
->>>>>>> origin/main
 import kotlinx.coroutines.withContext
 import okhttp3.Credentials
 import timber.log.Timber
@@ -135,7 +131,6 @@ class App :
         val locale = Locale.getDefault()
         val languageTag = locale.language
 
-<<<<<<< HEAD
         // Published for MainActivity, which has to set the locale before its
         // first frame. The read behind `dataStore[key]` is a runBlocking, so
         // without this the locale was resolved by stalling the main thread on
@@ -143,8 +138,6 @@ class App :
         // read above is already happening, so sharing its answer is free.
         cachedAppLanguageTag = settings[AppLanguageKey]
 
-=======
->>>>>>> origin/main
         ArtistConjunctions.conjunctions = listOf(
             R.string.and,
         ).mapNotNull { id ->
@@ -311,18 +304,12 @@ class App :
     private var cachedCoilCacheSize: Int? = null
 
     override fun newImageLoader(context: PlatformContext): ImageLoader {
-<<<<<<< HEAD
         // Nothing on this path may block. It runs on whichever thread first asks
         // Coil for an image — usually the main one — and sizing the cache used to
         // be a runBlocking DataStore read, so the first image of a session could
         // stall on disk. onCreate pre-reads the value on IO; until it lands, the
         // default here is the same one the preference itself falls back to.
         val cacheSize = cachedCoilCacheSize ?: DefaultImageCacheSizeMb
-=======
-        val cacheSize = cachedCoilCacheSize ?: runBlocking {
-            dataStore.data.map { it[MaxImageCacheSizeKey] ?: 512 }.first()
-        }
->>>>>>> origin/main
         return ImageLoader
             .Builder(this)
             .apply {
@@ -352,7 +339,6 @@ class App :
     }
 
     companion object {
-<<<<<<< HEAD
         /** The Coil disk cache size used until the stored preference is known. */
         private const val DefaultImageCacheSizeMb = 512
 
@@ -368,8 +354,6 @@ class App :
         var cachedAppLanguageTag: String? = null
             private set
 
-=======
->>>>>>> origin/main
         suspend fun forgetAccount(context: Context) {
             Timber.d("forgetAccount: Starting logout process")
 

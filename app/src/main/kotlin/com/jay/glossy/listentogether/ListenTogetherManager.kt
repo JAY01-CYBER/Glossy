@@ -1448,15 +1448,11 @@ class ListenTogetherManager
                 currentTrack = state.currentTrack,
                 isPlaying = state.isPlaying,
                 position = state.position,
-<<<<<<< HEAD
                 // A snapshot that carries no queue says nothing about it, so keep
                 // the queue the room already knows instead of rebuilding it from
                 // the current track alone and silently dropping the guest's
                 // upcoming songs.
                 queue = state.queue ?: roomState.value?.queue,
-=======
-                queue = state.queue,
->>>>>>> origin/main
                 effectiveAtServerTime = state.lastUpdate,
                 bypassBuffer = true, // Manual sync: bypass buffer
             )

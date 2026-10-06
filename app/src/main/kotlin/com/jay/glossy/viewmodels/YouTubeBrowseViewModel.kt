@@ -13,10 +13,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.filterYoutubeShorts
-<<<<<<< HEAD
 import com.metrolist.innertube.models.YouTubeLocale
-=======
->>>>>>> origin/main
 import com.metrolist.innertube.pages.BrowseResult
 import com.jay.glossy.constants.HideExplicitKey
 import com.jay.glossy.constants.HideVideoSongsKey
@@ -39,10 +36,7 @@ constructor(
 ) : ViewModel() {
     private val browseId = savedStateHandle.get<String>("browseId")!!
     private val params = savedStateHandle.get<String>("params")
-<<<<<<< HEAD
     private val region = savedStateHandle.get<String>("region")
-=======
->>>>>>> origin/main
 
     val result = MutableStateFlow<BrowseResult?>(null)
 
@@ -51,7 +45,6 @@ constructor(
             val hideExplicit = context.dataStore.get(HideExplicitKey, false)
             val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
             val hideYoutubeShorts = context.dataStore.get(HideYoutubeShortsKey, false)
-<<<<<<< HEAD
             
             // For charts, temporarily set locale based on selected region
             val originalLocale = YouTube.locale
@@ -70,8 +63,6 @@ constructor(
                 )
             }
             
-=======
->>>>>>> origin/main
             YouTube
                 .browse(browseId, params)
                 .onSuccess {
@@ -82,14 +73,11 @@ constructor(
                 }.onFailure {
                     reportException(it)
                 }
-<<<<<<< HEAD
             
             // Restore original locale
             if (browseId == "FEmusic_charts" && region != null) {
                 YouTube.locale = originalLocale
             }
-=======
->>>>>>> origin/main
         }
     }
 }

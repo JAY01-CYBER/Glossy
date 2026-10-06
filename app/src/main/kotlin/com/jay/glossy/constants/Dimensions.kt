@@ -29,7 +29,6 @@ val AppBarHeight = 64.dp
 
 val ListItemHeight = 64.dp
 val SuggestionItemHeight = 56.dp
-<<<<<<< HEAD
 
 /**
  * Home "Quick picks": the caption block under a tile's artwork — the title row,
@@ -42,8 +41,6 @@ val SuggestionItemHeight = 56.dp
  */
 val QuickPickCaptionHeight = 46.dp
 
-=======
->>>>>>> origin/main
 val SearchFilterHeight = 48.dp
 val ListThumbnailSize = 48.dp
 val SmallGridThumbnailHeight = 104.dp

@@ -111,10 +111,7 @@ import com.jay.glossy.ui.component.ExpressivePullToRefreshBox
 import com.jay.glossy.ui.component.IconButton
 import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.component.SpotifyTrackListItem
-<<<<<<< HEAD
 import com.jay.glossy.ui.menu.YouTubeSongMenu
-=======
->>>>>>> origin/main
 import com.jay.glossy.ui.utils.HeaderDownloadItem
 import com.jay.glossy.ui.utils.HeaderDownloadState
 import com.jay.glossy.ui.utils.backToMain
@@ -169,10 +166,7 @@ fun SpotifyPlaylistScreen(
     val systemBarsTopPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp
     val snackbarHostState = remember { SnackbarHostState() }
     val downloadActionFailedMessage = "Download failed"
-<<<<<<< HEAD
     val trackLookupFailedMessage = "Couldn't find this track on YouTube Music"
-=======
->>>>>>> origin/main
     val latestDownloads by rememberUpdatedState(downloads)
 
     val downloadState = remember(state.downloadItems, downloads) {
@@ -213,12 +207,9 @@ fun SpotifyPlaylistScreen(
 
     var isSearching by rememberSaveable { mutableStateOf(false) }
     var resolvingTrackId by remember { mutableStateOf<String?>(null) }
-<<<<<<< HEAD
     // Set while the overflow menu is looking the track up on YouTube Music, so
     // the row answers the tap instead of looking like it swallowed it.
     var resolvingMenuTrackId by remember { mutableStateOf<String?>(null) }
-=======
->>>>>>> origin/main
     var query by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
     val focusRequester = remember { FocusRequester() }
 
@@ -345,17 +336,12 @@ fun SpotifyPlaylistScreen(
                     isActive = trackIsActive || trackIsResolving,
                     isPlaying = isPlaying && !trackIsResolving,
                     trailingContent = {
-<<<<<<< HEAD
                         if (trackIsResolving || resolvingMenuTrackId == track.id) {
-=======
-                        if (trackIsResolving) {
->>>>>>> origin/main
                             CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                         } else if (inSelectMode) {
                             Checkbox(checked = track.id in selection, onCheckedChange = onCheckedChange)
                         } else {
                             IconButton(
-<<<<<<< HEAD
                                 onClick = {
                                     // The menu reads off the real YouTube match, so
                                     // the track is resolved once and then handed to
@@ -375,9 +361,6 @@ fun SpotifyPlaylistScreen(
                                         }
                                     }
                                 },
-=======
-                                onClick = {}, 
->>>>>>> origin/main
                                 onLongClick = {}, 
                                 modifier = Modifier.size(48.dp)
                             ) {

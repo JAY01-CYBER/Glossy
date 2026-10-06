@@ -13,7 +13,6 @@
  * Results are cached per mediaId in CanvasArtworkPlaybackCache so switching
  * songs back and forth is instant. Also exposes prefetch() so the service and
  * the player can warm the cache before the user even opens the player.
-<<<<<<< HEAD
  *
  * Every answer a provider gives passes the canvas check ([CanvasVerifier])
  * before it can be used — it has to belong to the song that was asked for, and
@@ -22,8 +21,6 @@
  * is the difference between "the first thing that came back" and "the first
  * thing that came back *for this song*". What the check decided is recorded in
  * [CanvasDiagnostics], which is what the Settings row reports.
-=======
->>>>>>> origin/main
  */
 
 package com.jay.glossy.ui.player
@@ -32,10 +29,7 @@ import android.content.Context
 import com.jay.glossy.applecanvas.AppleMusicCanvasProvider
 import com.jay.glossy.canvas.BetterLyricsCanvasProvider
 import com.jay.glossy.canvas.CanvasArtwork
-<<<<<<< HEAD
 import com.jay.glossy.canvas.CanvasLookupUnavailable
-=======
->>>>>>> origin/main
 import com.jay.glossy.canvas.TidalCanvasProvider
 import com.jay.glossy.constants.CanvasStyle
 import com.jay.glossy.constants.CanvasStyleKey
@@ -52,15 +46,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-<<<<<<< HEAD
 import java.util.Collections
-=======
->>>>>>> origin/main
 import java.util.Locale
 
 object CanvasResolver {
     private val styleMutex = Mutex()
-<<<<<<< HEAD
 
     /** How many "this song has no canvas" answers are remembered at once. */
     private const val DefinitiveMissLimit = 512
@@ -140,8 +130,6 @@ object CanvasResolver {
         val storefront: String,
     )
 
-=======
->>>>>>> origin/main
     @Volatile
     private var cachedStyle: CanvasStyle? = null
 
@@ -152,18 +140,13 @@ object CanvasResolver {
                 .map { prefs ->
                     prefs[CanvasStyleKey]?.let { stored ->
                         CanvasStyle.entries.firstOrNull { it.name == stored }
-<<<<<<< HEAD
                     } ?: CanvasStyle.ALL
-=======
-                    } ?: CanvasStyle.GLOSSY
->>>>>>> origin/main
                 }
                 .first()
                 .also { cachedStyle = it }
         }
     }
 
-<<<<<<< HEAD
     /**
      * Invalidate the memoized style — call after the user changes the setting.
      *
@@ -201,11 +184,6 @@ object CanvasResolver {
     fun invalidateCredentials() {
         synchronized(definitiveMisses) { definitiveMisses.clear() }
         CanvasPrefetcher.reset()
-=======
-    /** Invalidate the memoized style — call after the user changes the setting. */
-    fun invalidateStyle() {
-        cachedStyle = null
->>>>>>> origin/main
     }
 
     /**
@@ -224,17 +202,10 @@ object CanvasResolver {
 
         val style = currentStyle(context)
 
-<<<<<<< HEAD
-=======
-        // Instant path: playback cache first
-        CanvasArtworkPlaybackCache.get(mediaId)?.let { return@withContext it }
-
->>>>>>> origin/main
         val normalizedTitle = normalizeCanvasSongTitle(songTitle)
         val normalizedArtist = normalizeCanvasArtistName(artistName)
         if (normalizedTitle.isBlank() || normalizedArtist.isBlank()) return@withContext null
 
-<<<<<<< HEAD
         val startedAt = System.currentTimeMillis()
         val answers = mutableListOf<CanvasDiagnostics.Answer>()
         // The application context is held only for the duration of one lookup:
@@ -245,33 +216,10 @@ object CanvasResolver {
                 context = context.applicationContext,
                 mediaId = mediaId,
                 title = normalizedTitle,
-=======
-        val fetched = when (style) {
-            CanvasStyle.ARCHIVE_TUNE -> fetchArchiveTune(normalizedTitle, normalizedArtist, storefront)
-
-            CanvasStyle.GLOSSY -> fetchGlossy(normalizedTitle, normalizedArtist, albumName, storefront)
-
-            CanvasStyle.BOTH ->
-                fetchArchiveTune(normalizedTitle, normalizedArtist, storefront)
-                    ?: fetchGlossy(normalizedTitle, normalizedArtist, albumName, storefront)
-
-            CanvasStyle.SPOTIFY ->
-                SpotifySession.token(context)?.let {
-                    SpotifyCanvasProvider.getBySongArtist(normalizedTitle, normalizedArtist)
-                }
-                    // Spotify rarely has canvases for every track; fall back to the
-                    // Glossy engine so an animated canvas still shows instead of nothing.
-                    ?: fetchGlossy(normalizedTitle, normalizedArtist, albumName, storefront)
-
-            CanvasStyle.ALL -> raceAllProviders(
-                context = context,
-                song = normalizedTitle,
->>>>>>> origin/main
                 artist = normalizedArtist,
                 album = albumName,
                 storefront = storefront,
             )
-<<<<<<< HEAD
 
         // Instant path: playback cache first — and still checked. A cached
         // entry can be a clip the song was never really a match for (written
@@ -450,16 +398,6 @@ object CanvasResolver {
     private suspend fun spotifyCredentials(context: Context): SpotifySession.CanvasCredentials? =
         SpotifySession.canvasCredentials(context)
 
-=======
-        }
-
-        if (fetched != null) {
-            CanvasArtworkPlaybackCache.put(mediaId, fetched)
-        }
-        fetched
-    }
-
->>>>>>> origin/main
     /** Warm the playback cache for a song (used for prefetching the next track). */
     suspend fun prefetch(
         context: Context,
@@ -480,7 +418,6 @@ object CanvasResolver {
         }
     }
 
-<<<<<<< HEAD
     private suspend fun fetchArchiveTune(
         query: CanvasQuery,
         answers: MutableList<CanvasDiagnostics.Answer>,
@@ -677,100 +614,6 @@ object CanvasResolver {
             answers += CanvasDiagnostics.Answer(provider, CanvasDiagnostics.Verdict.FAILED)
             null
         }
-=======
-    private suspend fun fetchArchiveTune(song: String, artist: String, storefront: String): CanvasArtwork? =
-        BetterLyricsCanvasProvider.getBySongArtist(song, artist, storefront)
-            ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
-
-    /**
-     * ALL style: fire every provider at once (Spotify, ArchiveTune/BetterLyrics,
-     * Tidal, Apple Music) and return the first animated canvas that answers.
-     * Losers are cancelled the moment a winner lands, so this costs no more
-     * than the fastest provider instead of the sum of all four.
-     */
-    private suspend fun raceAllProviders(
-        context: Context,
-        song: String,
-        artist: String,
-        album: String,
-        storefront: String,
-    ): CanvasArtwork? = coroutineScope {
-        val results = Channel<CanvasArtwork?>(Channel.UNLIMITED)
-        val jobs = listOf(
-            launch {
-                val value = try {
-                    SpotifySession.token(context)?.let {
-                        SpotifyCanvasProvider.getBySongArtist(song, artist)
-                    }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    null
-                }
-                results.send(value?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() })
-            },
-            launch {
-                val value = try {
-                    fetchArchiveTune(song, artist, storefront)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    null
-                }
-                results.send(value)
-            },
-            launch {
-                val value = try {
-                    TidalCanvasProvider.getBySongArtist(song, artist, album)
-                        ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    null
-                }
-                results.send(value)
-            },
-            launch {
-                val value = try {
-                    if (album.isNotBlank()) {
-                        AppleMusicCanvasProvider.getByAlbumArtist(album, artist, storefront)
-                            ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
-                    } else {
-                        null
-                    } ?: AppleMusicCanvasProvider.getBySongArtist(song, artist, album, storefront)
-                        ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    null
-                }
-                results.send(value)
-            },
-        )
-        var winner: CanvasArtwork? = null
-        var answered = 0
-        while (answered < jobs.size && winner == null) {
-            val value = results.receive()
-            answered++
-            if (value != null) winner = value
-        }
-        jobs.forEach { it.cancel() }
-        winner
-    }
-
-    private suspend fun fetchGlossy(song: String, artist: String, album: String, storefront: String): CanvasArtwork? {
-        val tidal = TidalCanvasProvider.getBySongArtist(song, artist, album)
-            ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
-        if (tidal != null) return tidal
-        return (if (album.isNotBlank()) {
-            AppleMusicCanvasProvider.getByAlbumArtist(album, artist, storefront)
-                ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
-        } else {
-            null
-        }) ?: AppleMusicCanvasProvider.getBySongArtist(song, artist, album, storefront)
-            ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
-    }
->>>>>>> origin/main
 
     fun defaultStorefront(): String {
         val country = Locale.getDefault().country

@@ -18,39 +18,18 @@ import androidx.activity.result.contract.ActivityResultContracts
 import android.widget.Toast
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.animateContentSize
-<<<<<<< HEAD
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-=======
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
->>>>>>> origin/main
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
-<<<<<<< HEAD
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-=======
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.fillMaxHeight
->>>>>>> origin/main
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -62,18 +41,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-<<<<<<< HEAD
 import androidx.compose.material.icons.filled.Check
-=======
->>>>>>> origin/main
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-<<<<<<< HEAD
 import androidx.compose.material3.CardDefaults
-=======
->>>>>>> origin/main
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
@@ -83,10 +56,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-<<<<<<< HEAD
 import androidx.compose.material3.Slider
-=======
->>>>>>> origin/main
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -106,12 +76,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-<<<<<<< HEAD
-=======
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onSizeChanged
->>>>>>> origin/main
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -127,10 +91,7 @@ import androidx.media3.common.PlaybackParameters
 import androidx.media3.exoplayer.offline.Download
 import androidx.media3.exoplayer.offline.DownloadRequest
 import androidx.media3.exoplayer.offline.DownloadService
-<<<<<<< HEAD
 import coil3.compose.AsyncImage
-=======
->>>>>>> origin/main
 import com.metrolist.innertube.YouTube
 import com.jay.glossy.LocalNavController
 import com.jay.glossy.LocalDatabase
@@ -138,10 +99,7 @@ import com.jay.glossy.LocalDownloadUtil
 import com.jay.glossy.LocalListenTogetherManager
 import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.constants.ListItemHeight
-<<<<<<< HEAD
 import com.jay.glossy.constants.ShowLyricsOnPlayerKey
-=======
->>>>>>> origin/main
 import com.jay.glossy.constants.VarispeedKey
 import com.jay.glossy.listentogether.ConnectionState
 import com.jay.glossy.listentogether.ListenTogetherEvent
@@ -151,7 +109,6 @@ import com.jay.glossy.db.entities.Song
 import com.jay.glossy.db.entities.SpeedDialItem
 import com.jay.glossy.ui.component.BottomSheetState
 import com.jay.glossy.ui.component.ListDialog
-<<<<<<< HEAD
 import com.jay.glossy.ui.component.Material3MenuGroup
 import com.jay.glossy.ui.component.Material3MenuItemData
 import com.jay.glossy.ui.component.NewAction
@@ -159,9 +116,6 @@ import com.jay.glossy.ui.component.NewActionGrid
 import com.jay.glossy.ui.component.getAudioBoostLabel
 import com.jay.glossy.ui.player.SleepTimerPrompt
 import com.jay.glossy.utils.rememberEnumPreference
-=======
-import com.jay.glossy.ui.shapes.RoundedStarShape
->>>>>>> origin/main
 import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.jayaudioutils.AudioDeviceBottomSheet
 import com.jay.glossy.jayaudioutils.getConnectedBluetoothDeviceName
@@ -171,12 +125,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.log2
 import kotlin.math.pow
 import kotlin.math.round
-<<<<<<< HEAD
 import kotlin.math.roundToInt
-=======
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
->>>>>>> origin/main
 
 @Composable
 fun PlayerMenu(
@@ -207,7 +156,6 @@ fun PlayerMenu(
     val download by LocalDownloadUtil.current.getDownload(mediaMetadata.id).collectAsStateWithLifecycle(initialValue = null)
     val isPinned by database.speedDialDao.isPinned(mediaMetadata.id).collectAsStateWithLifecycle(initialValue = false)
 
-<<<<<<< HEAD
     // The queue-peek strip is the only place Shuffle and the sleep timer used to
     // live on a full-screen player design, and that strip is gone on the custom
     // designs — so surface both here instead of dropping them.
@@ -240,8 +188,6 @@ fun PlayerMenu(
         SleepTimerPrompt(onDismiss = { showSleepTimerDialog = false })
     }
 
-=======
->>>>>>> origin/main
     val artists = remember(mediaMetadata.artists) { mediaMetadata.artists.filter { it.id != null } }
 
     var showChoosePlaylistDialog by rememberSaveable { mutableStateOf(false) }
@@ -312,11 +258,7 @@ fun PlayerMenu(
     if (showSpeedDialog) SpeedDialog(onDismiss = { showSpeedDialog = false })
     
     // Live Active Audio Device Name tracking logic
-<<<<<<< HEAD
     var activeDeviceName by remember { mutableStateOf(context.getString(R.string.phone_speaker)) }
-=======
-    var activeDeviceName by remember { mutableStateOf("Phone Speaker") }
->>>>>>> origin/main
     var isBluetoothActive by remember { mutableStateOf(false) }
 
     DisposableEffect(Unit) {
@@ -327,17 +269,10 @@ fun PlayerMenu(
                     activeDeviceName = btName
                     isBluetoothActive = true
                 } else if (isWiredHeadphoneConnected(context)) {
-<<<<<<< HEAD
                     activeDeviceName = context.getString(R.string.wired_headphones)
                     isBluetoothActive = false
                 } else {
                     activeDeviceName = context.getString(R.string.phone_speaker)
-=======
-                    activeDeviceName = "Wired Headphones"
-                    isBluetoothActive = false
-                } else {
-                    activeDeviceName = "Phone Speaker"
->>>>>>> origin/main
                     isBluetoothActive = false
                 }
             }
@@ -356,17 +291,10 @@ fun PlayerMenu(
             activeDeviceName = btName
             isBluetoothActive = true
         } else if (isWiredHeadphoneConnected(context)) {
-<<<<<<< HEAD
             activeDeviceName = context.getString(R.string.wired_headphones)
             isBluetoothActive = false
         } else {
             activeDeviceName = context.getString(R.string.phone_speaker)
-=======
-            activeDeviceName = "Wired Headphones"
-            isBluetoothActive = false
-        } else {
-            activeDeviceName = "Phone Speaker"
->>>>>>> origin/main
             isBluetoothActive = false
         }
 
@@ -386,74 +314,29 @@ fun PlayerMenu(
         if (isQueueTrigger != true) {
             item {
                 Column(modifier = Modifier.fillMaxWidth()) {
-<<<<<<< HEAD
                     PlayerMenuNowPlayingHeader(
                         mediaMetadata = mediaMetadata,
                         castDeviceName = if (isCasting) castDeviceName else null,
-=======
-                    // Show Cast indicator when casting
-                    if (isCasting && castDeviceName != null) {
-                        Row(
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.cast),
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp),
-                                tint = MaterialTheme.colorScheme.primary,
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text(
-                                text = stringResource(R.string.casting_to, castDeviceName ?: ""),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                    }
-
-                    // ========================================================
-                    // PREMIUM ANIMATED AUDIO OUTPUT SELECTOR BUTTON
-                    // ========================================================
-                    ViviStyleAudioDeviceButton(
-                        deviceName = if (isCasting) castDeviceName ?: "Cast Device" else activeDeviceName,
-                        isCasting = isCasting,
-                        isBluetoothActive = isBluetoothActive,
-                        onClick = { showAudioDeviceBottomSheet = true }
->>>>>>> origin/main
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-<<<<<<< HEAD
                     PlayerMenuAudioCard(
                         deviceName = if (isCasting) castDeviceName ?: stringResource(R.string.cast_device) else activeDeviceName,
                         isCasting = isCasting,
                         isBluetoothActive = isBluetoothActive,
                         onDeviceClick = { showAudioDeviceBottomSheet = true },
-=======
-                    // ========================================================
-                    // PREMIUM DARK VOLUME SLIDER PILL 
-                    // ========================================================
-                    MenuVolumeControlRow(
->>>>>>> origin/main
                         volume = if (isCasting) castVolume else playerVolume.value,
                         onVolumeChange = { volume ->
                             if (isCasting) castHandler?.setVolume(volume)
                             else playerConnection.service.playerVolume.value = volume
-<<<<<<< HEAD
                         },
-=======
-                        }
->>>>>>> origin/main
                     )
                 }
             }
         }
 
         item {
-<<<<<<< HEAD
             // Quick actions, laid out with the same Material 3 action grid the
             // rest of the app's menus use.
             NewActionGrid(
@@ -802,50 +685,11 @@ fun PlayerMenu(
                                 },
                             ),
                         ),
-=======
-            // Quick Actions: Radio, Add to Playlist, Copy Link
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                if (!isListenTogetherGuest) {
-                    ViviStyleMenuAction(
-                        icon = R.drawable.radio,
-                        text = stringResource(R.string.start_radio),
-                        modifier = Modifier.weight(1f),
-                        onClick = {
-                            Toast.makeText(context, context.getString(R.string.starting_radio), Toast.LENGTH_SHORT).show()
-                            playerConnection.startRadioSeamlessly()
-                            onDismiss()
-                        }
-                    )
-                }
-                
-                ViviStyleMenuAction(
-                    icon = R.drawable.playlist_add,
-                    text = "Add to pla...",
-                    modifier = Modifier.weight(1f),
-                    onClick = { showChoosePlaylistDialog = true }
-                )
-                
-                ViviStyleMenuAction(
-                    icon = R.drawable.link,
-                    text = stringResource(R.string.copy_link),
-                    modifier = Modifier.weight(1f),
-                    onClick = {
-                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                        val clip = android.content.ClipData.newPlainText("Song Link", "https://music.youtube.com/watch?v=${mediaMetadata.id}")
-                        clipboard.setPrimaryClip(clip)
-                        Toast.makeText(context, R.string.link_copied, Toast.LENGTH_SHORT).show()
-                        onDismiss()
-                    }
->>>>>>> origin/main
                 )
             }
         }
 
         item {
-<<<<<<< HEAD
             // More: the track's technical details.
             PlayerMenuSectionLabel(text = stringResource(R.string.menu_section_more))
 
@@ -864,196 +708,6 @@ fun PlayerMenu(
                         ),
                     ),
             )
-=======
-            // Group: Artist, Album, Library, Speed Dial
-            val isPodcast = mediaMetadata.album?.let { !it.id.startsWith("MPREb_") } ?: false
-            
-            ViviStyleMenuGroup {
-                if (artists.isNotEmpty() && !isPodcast) {
-                    ViviStyleMenuItem(
-                        title = stringResource(R.string.view_artist),
-                        subtitle = mediaMetadata.artists.joinToString { it.name },
-                        iconRes = R.drawable.artist,
-                        onClick = {
-                            if (mediaMetadata.artists.size == 1) {
-                                navController.navigate("artist/${mediaMetadata.artists[0].id}")
-                                playerBottomSheetState.collapseSoft()
-                                onDismiss()
-                            } else {
-                                showSelectArtistDialog = true
-                            }
-                        }
-                    )
-                }
-                
-                if (mediaMetadata.album != null) {
-                    ViviStyleMenuItem(
-                        title = stringResource(if (isPodcast) R.string.view_podcast else R.string.view_album),
-                        subtitle = mediaMetadata.album.title,
-                        iconRes = if (isPodcast) R.drawable.mic else R.drawable.album,
-                        onClick = {
-                            if (isPodcast) navController.navigate("online_podcast/${mediaMetadata.album.id}")
-                            else navController.navigate("album/${mediaMetadata.album.id}")
-                            playerBottomSheetState.collapseSoft()
-                            onDismiss()
-                        }
-                    )
-                }
-                
-                val isInLibrary = librarySong?.song?.inLibrary != null
-                ViviStyleMenuItem(
-                    title = stringResource(if (isInLibrary) R.string.remove_from_library else R.string.add_to_library),
-                    iconRes = if (isInLibrary) R.drawable.library_add_check else R.drawable.library_add,
-                    onClick = {
-                        playerConnection.toggleLibrary()
-                        onDismiss()
-                    }
-                )
-                
-                ViviStyleMenuItem(
-                    title = if (isPinned) stringResource(R.string.unpin_from_speed_dial) else stringResource(R.string.pin_to_speed_dial),
-                    iconRes = if (isPinned) R.drawable.remove else R.drawable.add,
-                    onClick = {
-                        coroutineScope.launch(Dispatchers.IO) {
-                            if (isPinned) database.speedDialDao.delete(mediaMetadata.id)
-                            else database.speedDialDao.insert(SpeedDialItem.fromYTItem(mediaMetadata.toYTItem()))
-                        }
-                        onDismiss()
-                    }
-                )
-            }
-        }
-
-        item {
-            // Group: Download
-            ViviStyleMenuGroup {
-                when (download?.state) {
-                    Download.STATE_COMPLETED -> {
-                        ViviStyleMenuItem(
-                            title = stringResource(R.string.remove_download),
-                            iconRes = R.drawable.offline,
-                            onClick = { DownloadService.sendRemoveDownload(context, ExoDownloadService::class.java, mediaMetadata.id, false) }
-                        )
-                    }
-                    Download.STATE_QUEUED, Download.STATE_DOWNLOADING -> {
-                        ViviStyleMenuItem(
-                            title = stringResource(R.string.downloading),
-                            icon = {
-                                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onSecondaryContainer)
-                            },
-                            onClick = { DownloadService.sendRemoveDownload(context, ExoDownloadService::class.java, mediaMetadata.id, false) }
-                        )
-                    }
-                    else -> {
-                        ViviStyleMenuItem(
-                            title = stringResource(R.string.action_download),
-                            iconRes = R.drawable.download,
-                            onClick = {
-                                database.transaction { insert(mediaMetadata) }
-                                val downloadRequest = DownloadRequest.Builder(mediaMetadata.id, mediaMetadata.id.toUri())
-                                    .setCustomCacheKey(mediaMetadata.id)
-                                    .setData(mediaMetadata.title.toByteArray())
-                                    .build()
-                                DownloadService.sendAddDownload(context, ExoDownloadService::class.java, downloadRequest, false)
-                            }
-                        )
-                    }
-                }
-            }
-        }
-
-        item {
-            // Group: Listen Together
-            val pendingCount = pendingSuggestions.size
-            ViviStyleMenuGroup {
-                ViviStyleMenuItem(
-                    title = stringResource(R.string.listen_together),
-                    iconRes = R.drawable.group,
-                    trailingContent = if (pendingCount > 0) {
-                        {
-                            Surface(
-                                shape = CircleShape,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(24.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text(text = pendingCount.toString(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimary)
-                                }
-                            }
-                        }
-                    } else null,
-                    onClick = { showListenTogetherDialog = true }
-                )
-                
-                if (isListenTogetherGuest) {
-                    ViviStyleMenuItem(
-                        title = stringResource(R.string.resync),
-                        iconRes = R.drawable.replay,
-                        onClick = {
-                            listenTogetherManager?.requestSync()
-                            onDismiss()
-                        }
-                    )
-                }
-            }
-        }
-
-        item {
-            // Group: Details, EQ, Advanced
-            ViviStyleMenuGroup {
-                ViviStyleMenuItem(
-                    title = stringResource(R.string.details),
-                    subtitle = stringResource(R.string.details_desc),
-                    iconRes = R.drawable.info,
-                    onClick = {
-                        onShowDetailsDialog()
-                        onDismiss()
-                    }
-                )
-                
-                if (isQueueTrigger != true) {
-                    ViviStyleMenuItem(
-                        title = stringResource(R.string.equalizer),
-                        subtitle = stringResource(R.string.equalizer_desc),
-                        iconRes = R.drawable.equalizer,
-                        onClick = {
-                            navController.navigate("equalizer")
-                            onDismiss()
-                        }
-                    )
-                    
-                    ViviStyleMenuItem(
-                        title = stringResource(R.string.system_equalizer),
-                        subtitle = stringResource(R.string.system_equalizer_desc),
-                        iconRes = R.drawable.graphic_eq,
-                        onClick = {
-                            val audioSessionId = playerConnection.player.audioSessionId
-                            if (audioSessionId != C.AUDIO_SESSION_ID_UNSET && audioSessionId > 0) {
-                                val intent = Intent(AudioEffect.ACTION_DISPLAY_AUDIO_EFFECT_CONTROL_PANEL).apply {
-                                    putExtra(AudioEffect.EXTRA_AUDIO_SESSION, audioSessionId)
-                                    putExtra(AudioEffect.EXTRA_PACKAGE_NAME, context.packageName)
-                                    putExtra(AudioEffect.EXTRA_CONTENT_TYPE, AudioEffect.CONTENT_TYPE_MUSIC)
-                                }
-                                if (intent.resolveActivity(context.packageManager) != null) {
-                                    systemEqLauncher.launch(intent)
-                                }
-                            }
-                            onDismiss()
-                        }
-                    )
-                    
-                    ViviStyleMenuItem(
-                        title = stringResource(R.string.advanced),
-                        subtitle = stringResource(R.string.advanced_desc),
-                        iconRes = R.drawable.tune,
-                        onClick = {
-                            if (!varispeedMode) showPitchTempoDialog = true
-                            else showSpeedDialog = true
-                        }
-                    )
-                }
-            }
->>>>>>> origin/main
         }
     }
     
@@ -1066,7 +720,6 @@ fun PlayerMenu(
 }
 
 // ============================================================================
-<<<<<<< HEAD
 // MATERIAL 3 MENU PIECES
 // ============================================================================
 
@@ -1312,322 +965,10 @@ private fun PlayerMenuVolumeRow(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.End,
             modifier = Modifier.width(44.dp),
-=======
-// PREMIUM VIVI STYLE COMPONENTS (Matching the screenshot perfectly)
-// ============================================================================
-
-@Composable
-fun ViviStyleAudioDeviceButton(deviceName: String, isCasting: Boolean, isBluetoothActive: Boolean, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.96f else 1f, 
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
-        label = "deviceScale"
-    )
-
-    Surface(
-        onClick = onClick,
-        shape = CircleShape, // Fully Pill Shaped
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        interactionSource = interactionSource,
-        modifier = Modifier.fillMaxWidth().height(72.dp).graphicsLayer(scaleX = scale, scaleY = scale)
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                val scallopShape = RoundedStarShape(sides = 8, curve = 0.10, rotation = 0f)
-                Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(scallopShape) // Awesome Wavy Shape
-                        .background(MaterialTheme.colorScheme.surface),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(
-                            if (isCasting) R.drawable.cast_connected
-                            else if (isBluetoothActive) R.drawable.headset_applemusic 
-                            else R.drawable.speaker_apple
-                        ),
-                        contentDescription = "Audio Device",
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text(
-                        text = if (isCasting) stringResource(R.string.casting_to, "") else "Audio Output",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
-                    )
-                    Text(
-                        text = deviceName,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-            Icon(
-                imageVector = Icons.Filled.ExpandMore,
-                contentDescription = "Change Device",
-                tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                modifier = Modifier.size(24.dp)
-            )
-        }
-    }
-}
-
-@Composable
-fun MenuVolumeControlRow(
-    volume: Float,
-    onVolumeChange: (Float) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var currentValue by rememberSaveable { mutableFloatStateOf(volume) }
-
-    LaunchedEffect(volume) {
-        currentValue = volume
-    }
-
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(72.dp),
-        shape = CircleShape,
-        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f), // Darker pill look
-    ) {
-        Box(contentAlignment = Alignment.CenterStart) {
-            val animatedVolumeFraction by animateFloatAsState(
-                targetValue = currentValue,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioNoBouncy,
-                    stiffness = Spring.StiffnessMediumLow
-                ),
-                label = "VolumeFillAnimation"
-            )
-
-            val widthState = remember { mutableFloatStateOf(0f) }
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .onSizeChanged { widthState.floatValue = it.width.toFloat() }
-                    .pointerInput(Unit) {
-                        detectTapGestures { offset ->
-                            val percent = (offset.x / widthState.floatValue).coerceIn(0f, 1f)
-                            currentValue = percent
-                            onVolumeChange(percent)
-                        }
-                    }
-                    .pointerInput(Unit) {
-                        detectDragGestures { change, _ ->
-                            change.consume()
-                            val percent = (change.position.x / widthState.floatValue).coerceIn(0f, 1f)
-                            currentValue = percent
-                            onVolumeChange(percent)
-                        }
-                    }
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .fillMaxWidth(animatedVolumeFraction)
-                        .background(MaterialTheme.colorScheme.secondaryContainer) // Lighter fill
-                )
-            }
-
-            Row(
-                modifier = Modifier.fillMaxSize(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically, 
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier.padding(start = 14.dp) // Adjusted padding for star shape
-                ) {
-                    val scallopShape = RoundedStarShape(sides = 8, curve = 0.10, rotation = 0f)
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(scallopShape) // Apply wavy star shape to volume icon
-                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.2f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            painter = painterResource(if (currentValue > 0) R.drawable.volume_up else R.drawable.volume_off),
-                            contentDescription = null,
-                            tint = if (currentValue > 0.15f) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.surface,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                }
-                
-                Box(
-                    modifier = Modifier
-                        .padding(end = 24.dp)
-                        .size(8.dp)
-                        .background(
-                            color = if (currentValue > 0.9f) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
-                            shape = CircleShape
-                        )
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun ViviStyleMenuAction(icon: Int, text: String, modifier: Modifier, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.92f else 1f, 
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
-        label = "btnScale"
-    )
-
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
-        interactionSource = interactionSource,
-        modifier = modifier.aspectRatio(0.9f).graphicsLayer(scaleX = scale, scaleY = scale)
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxSize().padding(8.dp)
-        ) {
-            Icon(
-                painter = painterResource(icon), 
-                contentDescription = null, 
-                modifier = Modifier.size(28.dp), 
-                tint = MaterialTheme.colorScheme.onSecondaryContainer
-            )
-            Spacer(Modifier.height(12.dp))
-            Text(
-                text = text, 
-                style = MaterialTheme.typography.labelMedium, 
-                color = MaterialTheme.colorScheme.onSecondaryContainer, 
-                maxLines = 1, 
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center
-            )
-        }
-    }
-}
-
-@Composable
-fun ViviStyleMenuGroup(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    Surface(
-        shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
-        modifier = modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-            content = content
->>>>>>> origin/main
         )
     }
 }
 
-<<<<<<< HEAD
-=======
-@Composable
-fun ViviStyleMenuItem(
-    title: String,
-    subtitle: String? = null,
-    iconRes: Int? = null,
-    icon: (@Composable () -> Unit)? = null,
-    trailingContent: (@Composable () -> Unit)? = null,
-    onClick: () -> Unit
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.97f else 1f, 
-        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessLow),
-        label = "rowScale"
-    )
-
-    Surface(
-        onClick = onClick,
-        color = Color.Transparent,
-        interactionSource = interactionSource,
-        modifier = Modifier
-            .fillMaxWidth()
-            .graphicsLayer(scaleX = scale, scaleY = scale)
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(horizontal = 20.dp, vertical = 14.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val scallopShape = RoundedStarShape(sides = 8, curve = 0.10, rotation = 0f)
-            
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(scallopShape) // Apply wavy star shape to menu icons
-                    .background(MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.08f)),
-                contentAlignment = Alignment.Center
-            ) {
-                if (iconRes != null) {
-                    Icon(
-                        painter = painterResource(iconRes),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                        modifier = Modifier.size(22.dp)
-                    )
-                } else if (icon != null) {
-                    icon()
-                }
-            }
-            
-            Spacer(modifier = Modifier.width(16.dp))
-            
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (subtitle != null) {
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.75f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-            
-            if (trailingContent != null) {
-                Spacer(modifier = Modifier.width(12.dp))
-                trailingContent()
-            }
-        }
-    }
-}
-
->>>>>>> origin/main
 // ============================================================================
 // EXISTING DIALOG COMPONENTS
 // ============================================================================

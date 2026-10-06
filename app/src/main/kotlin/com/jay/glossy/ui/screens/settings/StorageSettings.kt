@@ -322,13 +322,10 @@ fun StorageSettings(
                 com.jay.glossy.ui.player.CanvasArtworkPlaybackCache.clear()
                 canvasCacheSize = 0
                 com.jay.glossy.ui.player.CanvasCacheManager.clearVideoCache(context)
-<<<<<<< HEAD
                 // The preloader remembers which songs it has already resolved
                 // and which clips it has warmed; both answers just became
                 // wrong.
                 com.jay.glossy.ui.player.CanvasPrefetcher.reset()
-=======
->>>>>>> origin/main
                 Toast.makeText(context, "Canvas cache cleared", Toast.LENGTH_SHORT).show()
                 clearCanvasCacheDialog = false
             },

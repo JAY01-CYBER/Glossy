@@ -18,18 +18,12 @@ object SpotifyPlaybackResolver {
     private const val CACHE_MAX_SIZE = 512
 
     private val mutex = Mutex()
-<<<<<<< HEAD
     private val cache = object : LinkedHashMap<String, SongItem>(CACHE_MAX_SIZE, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, SongItem>?): Boolean = size > CACHE_MAX_SIZE
-=======
-    private val cache = object : LinkedHashMap<String, MediaMetadata>(CACHE_MAX_SIZE, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, MediaMetadata>?): Boolean = size > CACHE_MAX_SIZE
->>>>>>> origin/main
     }
 
     suspend fun resolveToMediaItem(track: SpotifyTrack): MediaItem? = resolveToMetadata(track)?.toMediaItem()
 
-<<<<<<< HEAD
     suspend fun resolveToMetadata(track: SpotifyTrack): MediaMetadata? =
         resolveToSongItem(track)?.let { best ->
             val bestMetadata = best.toMediaMetadata()
@@ -50,9 +44,6 @@ object SpotifyPlaybackResolver {
      * cached and the metadata is derived from it.
      */
     suspend fun resolveToSongItem(track: SpotifyTrack): SongItem? = withContext(Dispatchers.IO) {
-=======
-    suspend fun resolveToMetadata(track: SpotifyTrack): MediaMetadata? = withContext(Dispatchers.IO) {
->>>>>>> origin/main
         mutex.withLock {
             cache[track.id]?.let { return@withContext it }
         }
@@ -65,11 +56,7 @@ object SpotifyPlaybackResolver {
         val candidates = searchResult.items
             .filterIsInstance<SongItem>()
             .distinctBy { it.id }
-<<<<<<< HEAD
 
-=======
-        
->>>>>>> origin/main
         if (candidates.isEmpty()) return@withContext null
 
         val precomputed = mutex.withLock {
@@ -90,7 +77,6 @@ object SpotifyPlaybackResolver {
                 )
             }.maxByOrNull { it.second }
         } ?: return@withContext null
-<<<<<<< HEAD
 
         if (score < MIN_MATCH_THRESHOLD) return@withContext null
 
@@ -98,22 +84,5 @@ object SpotifyPlaybackResolver {
             cache[track.id] = best
         }
         best
-=======
-        
-        if (score < MIN_MATCH_THRESHOLD) return@withContext null
-
-        val bestMetadata = best.toMediaMetadata()
-        val metadata = bestMetadata.copy(
-            thumbnailUrl = SpotifyMapper.getTrackThumbnail(track) ?: best.thumbnail,
-            duration = if (track.durationMs > 0) track.durationMs / 1000 else best.duration ?: -1,
-            explicit = track.explicit || best.explicit,
-            album = track.album?.let { MediaMetadata.Album(id = it.id, title = it.name) } ?: bestMetadata.album
-        )
-
-        mutex.withLock {
-            cache[track.id] = metadata
-        }
-        metadata
->>>>>>> origin/main
     }
 }

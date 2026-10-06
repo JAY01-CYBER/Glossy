@@ -18,10 +18,6 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-<<<<<<< HEAD
-=======
-import androidx.compose.foundation.layout.height
->>>>>>> origin/main
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -34,10 +30,6 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-<<<<<<< HEAD
-=======
-import androidx.compose.foundation.shape.CircleShape
->>>>>>> origin/main
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -60,10 +52,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-<<<<<<< HEAD
-=======
-import androidx.compose.ui.graphics.Color
->>>>>>> origin/main
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLocale
@@ -88,24 +76,13 @@ import com.jay.glossy.constants.LibraryViewType
 import com.jay.glossy.constants.MixSortDescendingKey
 import com.jay.glossy.constants.MixSortType
 import com.jay.glossy.constants.MixSortTypeKey
-<<<<<<< HEAD
 import com.jay.glossy.constants.ShowDownloadedPlaylistKey
 import com.jay.glossy.constants.ShowLikedPlaylistKey
-=======
-import com.jay.glossy.constants.ShowCachedPlaylistKey
-import com.jay.glossy.constants.ShowDownloadedPlaylistKey
-import com.jay.glossy.constants.ShowLikedPlaylistKey
-import com.jay.glossy.constants.ShowTopPlaylistKey
->>>>>>> origin/main
 import com.jay.glossy.constants.ShowUploadedPlaylistKey
 import com.jay.glossy.constants.YtmSyncKey
 import com.jay.glossy.db.entities.Album
 import com.jay.glossy.db.entities.Artist
 import com.jay.glossy.db.entities.Playlist
-<<<<<<< HEAD
-=======
-import com.jay.glossy.db.entities.PlaylistEntity
->>>>>>> origin/main
 import com.jay.glossy.db.entities.Song
 import com.jay.glossy.extensions.matchesNormalizedQuery
 import com.jay.glossy.extensions.normalizeForSearch
@@ -117,10 +94,7 @@ import com.jay.glossy.ui.component.AlbumListItem
 import com.jay.glossy.ui.component.ArtistGridItem
 import com.jay.glossy.ui.component.ArtistListItem
 import com.jay.glossy.ui.component.CreatePlaylistDialog
-<<<<<<< HEAD
 import com.jay.glossy.ui.component.LibraryQuickCards
-=======
->>>>>>> origin/main
 import com.jay.glossy.ui.component.LibrarySearchEmptyPlaceholder
 import com.jay.glossy.ui.component.LibrarySearchHeader
 import com.jay.glossy.ui.component.LocalMenuState
@@ -141,10 +115,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.Collator
 import java.time.LocalDateTime
-<<<<<<< HEAD
-=======
-import java.util.UUID
->>>>>>> origin/main
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -195,84 +165,12 @@ fun LibraryMixScreen(
         }
     }
 
-<<<<<<< HEAD
     // The coloured quick-access strip is the only place these three collections
     // are surfaced on this tab, so their show/hide preferences drive it
     // directly. Cached and My Top 50 live on the Playlists tab instead.
     val (showLiked) = rememberPreference(ShowLikedPlaylistKey, true)
     val (showDownloaded) = rememberPreference(ShowDownloadedPlaylistKey, true)
     val (showUploaded) = rememberPreference(ShowUploadedPlaylistKey, true)
-=======
-    val topSize by viewModel.topValue.collectAsStateWithLifecycle(initialValue = 50)
-    val likedPlaylist =
-        Playlist(
-            playlist =
-                PlaylistEntity(
-                    id = UUID.randomUUID().toString(),
-                    name = stringResource(R.string.liked),
-                ),
-            songCount = 0,
-            songThumbnails = emptyList(),
-        )
-
-    val downloadPlaylist =
-        Playlist(
-            playlist =
-                PlaylistEntity(
-                    id = UUID.randomUUID().toString(),
-                    name = stringResource(R.string.offline),
-                ),
-            songCount = 0,
-            songThumbnails = emptyList(),
-        )
-
-    val topPlaylist =
-        Playlist(
-            playlist =
-                PlaylistEntity(
-                    id = UUID.randomUUID().toString(),
-                    name = stringResource(R.string.my_top) + " $topSize",
-                ),
-            songCount = 0,
-            songThumbnails = emptyList(),
-        )
-
-    val cachedPlaylist =
-        Playlist(
-            playlist =
-                PlaylistEntity(
-                    id = UUID.randomUUID().toString(),
-                    name = stringResource(R.string.cached_playlist),
-                ),
-            songCount = 0,
-            songThumbnails = emptyList(),
-        )
-
-    val uploadedPlaylist =
-        Playlist(
-            playlist =
-                PlaylistEntity(
-                    id = UUID.randomUUID().toString(),
-                    name = stringResource(R.string.uploaded_playlist),
-                ),
-            songCount = 0,
-            songThumbnails = emptyList(),
-        )
-
-    val (showLiked) = rememberPreference(ShowLikedPlaylistKey, true)
-    val (showDownloaded) = rememberPreference(ShowDownloadedPlaylistKey, true)
-    val (showTop) = rememberPreference(ShowTopPlaylistKey, true)
-    val (showCached) = rememberPreference(ShowCachedPlaylistKey, true)
-    val (showUploaded) = rememberPreference(ShowUploadedPlaylistKey, true)
-    
-    val showLikedPlaylist = showLiked && matchesNormalizedQuery(normalizedQuery, likedPlaylist.playlist.name)
-    val showDownloadedPlaylist =
-        showDownloaded && matchesNormalizedQuery(normalizedQuery, downloadPlaylist.playlist.name)
-    val showTopPlaylists = showTop && matchesNormalizedQuery(normalizedQuery, topPlaylist.playlist.name)
-    val showUploadedPlaylists =
-        showUploaded && matchesNormalizedQuery(normalizedQuery, uploadedPlaylist.playlist.name)
-    val showCachedPlaylists = showCached && matchesNormalizedQuery(normalizedQuery, cachedPlaylist.playlist.name)
->>>>>>> origin/main
 
     val albums = viewModel.albums.collectAsStateWithLifecycle()
     val artist = viewModel.artists.collectAsStateWithLifecycle()
@@ -532,7 +430,6 @@ fun LibraryMixScreen(
                     }
 
                     item(
-<<<<<<< HEAD
                         key = "quick_cards",
                         contentType = CONTENT_TYPE_HEADER,
                     ) {
@@ -547,51 +444,12 @@ fun LibraryMixScreen(
                     }
 
                     item(
-=======
->>>>>>> origin/main
                         key = "header",
                         contentType = CONTENT_TYPE_HEADER,
                     ) {
                         headerContent()
                     }
 
-<<<<<<< HEAD
-=======
-                    val activeAutoPlaylists = buildList {
-                        if (showLikedPlaylist) add(likedPlaylist to "auto_playlist/liked")
-                        if (showDownloadedPlaylist) add(downloadPlaylist to "auto_playlist/downloaded")
-                        if (showCachedPlaylists) add(cachedPlaylist to "cache_playlist/cached")
-                        if (showTopPlaylists) add(topPlaylist to "top_playlist/$topSize")
-                        if (showUploadedPlaylists) add(uploadedPlaylist to "auto_playlist/uploaded")
-                    }
-
-                    activeAutoPlaylists.chunked(2).forEach { rowItems ->
-                        item(
-                            key = "auto_row_${rowItems.first().first.playlist.name}",
-                            contentType = CONTENT_TYPE_PLAYLIST
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 8.dp)
-                                    .animateItem()
-                            ) {
-                                rowItems.forEach { (playlist, route) ->
-                                    Box(modifier = Modifier.weight(1f)) {
-                                        AutoPlaylistGridItem(
-                                            playlist = playlist,
-                                            onClick = { navController.navigate(route) }
-                                        )
-                                    }
-                                }
-                                if (rowItems.size == 1) {
-                                    Spacer(modifier = Modifier.weight(1f).padding(8.dp))
-                                }
-                            }
-                        }
-                    }
-
->>>>>>> origin/main
                     if (groupedPlaylists.isNotEmpty()) {
                         item(key = "header_playlists", contentType = CONTENT_TYPE_HEADER) {
                             SectionHeader(title = "Playlists")
@@ -748,19 +606,7 @@ fun LibraryMixScreen(
                         }
                     }
 
-<<<<<<< HEAD
                     if (filteredItems.isEmpty() && searchQuery.isNotBlank()) {
-=======
-                    if (
-                        filteredItems.isEmpty() &&
-                        !showLikedPlaylist &&
-                        !showDownloadedPlaylist &&
-                        !showCachedPlaylists &&
-                        !showTopPlaylists &&
-                        !showUploadedPlaylists &&
-                        searchQuery.isNotBlank()
-                    ) {
->>>>>>> origin/main
                         item(key = "empty_search_result") {
                             LibrarySearchEmptyPlaceholder(modifier = Modifier.animateItem())
                         }
@@ -786,7 +632,6 @@ fun LibraryMixScreen(
                     }
 
                     item(
-<<<<<<< HEAD
                         key = "quick_cards",
                         span = { GridItemSpan(maxLineSpan) },
                         contentType = CONTENT_TYPE_HEADER,
@@ -802,8 +647,6 @@ fun LibraryMixScreen(
                     }
 
                     item(
-=======
->>>>>>> origin/main
                         key = "header",
                         span = { GridItemSpan(maxLineSpan) },
                         contentType = CONTENT_TYPE_HEADER,
@@ -811,74 +654,6 @@ fun LibraryMixScreen(
                         headerContent()
                     }
 
-<<<<<<< HEAD
-=======
-                    if (showLikedPlaylist) {
-                        item(
-                            key = "likedPlaylist",
-                            contentType = { CONTENT_TYPE_PLAYLIST },
-                        ) {
-                            AutoPlaylistGridItem(
-                                playlist = likedPlaylist,
-                                onClick = { navController.navigate("auto_playlist/liked") },
-                                modifier = Modifier.animateItem()
-                            )
-                        }
-                    }
-
-                    if (showDownloadedPlaylist) {
-                        item(
-                            key = "downloadedPlaylist",
-                            contentType = { CONTENT_TYPE_PLAYLIST },
-                        ) {
-                            AutoPlaylistGridItem(
-                                playlist = downloadPlaylist,
-                                onClick = { navController.navigate("auto_playlist/downloaded") },
-                                modifier = Modifier.animateItem()
-                            )
-                        }
-                    }
-
-                    if (showCachedPlaylists) {
-                        item(
-                            key = "cachedPlaylist",
-                            contentType = { CONTENT_TYPE_PLAYLIST },
-                        ) {
-                            AutoPlaylistGridItem(
-                                playlist = cachedPlaylist,
-                                onClick = { navController.navigate("cache_playlist/cached") },
-                                modifier = Modifier.animateItem()
-                            )
-                        }
-                    }
-
-                    if (showTopPlaylists) {
-                        item(
-                            key = "TopPlaylist",
-                            contentType = { CONTENT_TYPE_PLAYLIST },
-                        ) {
-                            AutoPlaylistGridItem(
-                                playlist = topPlaylist,
-                                onClick = { navController.navigate("top_playlist/$topSize") },
-                                modifier = Modifier.animateItem()
-                            )
-                        }
-                    }
-
-                    if (showUploadedPlaylists) {
-                        item(
-                            key = "uploadedPlaylist",
-                            contentType = { CONTENT_TYPE_PLAYLIST },
-                        ) {
-                            AutoPlaylistGridItem(
-                                playlist = uploadedPlaylist,
-                                onClick = { navController.navigate("auto_playlist/uploaded") },
-                                modifier = Modifier.animateItem()
-                            )
-                        }
-                    }
-
->>>>>>> origin/main
                     if (groupedPlaylists.isNotEmpty()) {
                         item(key = "header_playlists_grid", span = { GridItemSpan(maxLineSpan) }, contentType = CONTENT_TYPE_HEADER) {
                             SectionHeader(title = "Playlists")
@@ -1004,19 +779,7 @@ fun LibraryMixScreen(
                         }
                     }
 
-<<<<<<< HEAD
                     if (filteredItems.isEmpty() && searchQuery.isNotBlank()) {
-=======
-                    if (
-                        filteredItems.isEmpty() &&
-                        !showLikedPlaylist &&
-                        !showDownloadedPlaylist &&
-                        !showCachedPlaylists &&
-                        !showTopPlaylists &&
-                        !showUploadedPlaylists &&
-                        searchQuery.isNotBlank()
-                    ) {
->>>>>>> origin/main
                         item(
                             key = "empty_search_result",
                             span = { GridItemSpan(maxLineSpan) },
@@ -1069,83 +832,3 @@ private fun SectionHeader(title: String) {
             .padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 8.dp)
     )
 }
-<<<<<<< HEAD
-=======
-
-@Composable
-private fun AutoPlaylistGridItem(
-    playlist: Playlist,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val title = playlist.playlist.name
-    
-    val (iconRes, iconTint, gradientColors) = when {
-        title.contains("Liked", ignoreCase = true) || title.contains("पसंद", ignoreCase = true) -> Triple(
-            R.drawable.favorite, 
-            Color(0xFFD32F2F),
-            listOf(Color(0xFFFCE3E3), Color(0xFFF3E5F5))
-        )
-        title.contains("Offline", ignoreCase = true) || title.contains("Downloaded", ignoreCase = true) -> Triple(
-            R.drawable.download, 
-            Color(0xFF1976D2),
-            listOf(Color(0xFFE3F2FD), Color(0xFFF3E5F5))
-        )
-        title.contains("Cached", ignoreCase = true) -> Triple(
-            R.drawable.sync, 
-            Color(0xFF5E35B1),
-            listOf(Color(0xFFEDE7F6), Color(0xFFF3E5F5))
-        )
-        title.contains("Uploaded", ignoreCase = true) -> Triple(
-            R.drawable.upload,
-            Color(0xFF1976D2),
-            listOf(Color(0xFFE3F2FD), Color(0xFFF3E5F5))
-        )
-        title.contains("Top", ignoreCase = true) -> Triple(
-            R.drawable.trending_up, 
-            Color(0xFF455A64),
-            listOf(Color(0xFFF5F5F5), Color(0xFFE8EAF6))
-        )
-        else -> Triple(
-            R.drawable.playlist_play,
-            Color(0xFF1E1E1E),
-            listOf(Color(0xFFF5F5F5), Color(0xFFE8EAF6))
-        )
-    }
-
-    Box(
-        modifier = modifier
-            .padding(8.dp) 
-            .fillMaxWidth()
-            .height(115.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .background(Brush.linearGradient(colors = gradientColors))
-            .clickable(onClick = onClick)
-            .padding(14.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(38.dp)
-                .clip(CircleShape)
-                .background(Color.White)
-                .align(Alignment.TopStart),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                painter = painterResource(id = iconRes),
-                contentDescription = title,
-                tint = iconTint,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-        
-        Text(
-            text = title,
-            color = Color(0xFF1E1E1E),
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.align(Alignment.BottomStart)
-        )
-    }
-}
->>>>>>> origin/main

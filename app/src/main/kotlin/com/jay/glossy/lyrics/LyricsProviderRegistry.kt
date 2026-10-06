@@ -6,17 +6,11 @@
 package com.jay.glossy.lyrics
 
 import com.jay.glossy.R
-<<<<<<< HEAD
 import java.util.Locale
 
 object LyricsProviderRegistry {
     private val providerMap = mapOf(
         "Spotify" to SpotifyLyricsProvider,
-=======
-
-object LyricsProviderRegistry {
-    private val providerMap = mapOf(
->>>>>>> origin/main
         "BetterLyrics" to BetterLyricsProvider,
         "Paxsenix" to PaxsenixLyricsProvider,
         "LrcLib" to LrcLibLyricsProvider,
@@ -44,7 +38,6 @@ object LyricsProviderRegistry {
         if (orderString.isBlank()) {
             return getDefaultProviderOrder()
         }
-<<<<<<< HEAD
         // Two separators have shipped: the priority screen serialises with ","
         // while an older migration wrote ";". Splitting on only the comma made
         // a semicolon-joined order parse to a single unknown token, which was
@@ -62,21 +55,12 @@ object LyricsProviderRegistry {
     fun serializeProviderOrder(providers: List<String>): String {
         // The comma is the canonical separator: every writer must agree on it,
         // or deserialization has to guess which format it is reading.
-=======
-        return orderString.split(",").map { it.trim() }.filter { it in providerNames }
-    }
-
-    fun serializeProviderOrder(providers: List<String>): String {
->>>>>>> origin/main
         return providers.filter { it in providerNames }.joinToString(",")
     }
 
     fun getDefaultProviderOrder(): List<String> = listOf(
         "NetEase",
-<<<<<<< HEAD
         "Spotify",
-=======
->>>>>>> origin/main
         "Musixmatch",
         "YouLyPlus",
         "Unison",
