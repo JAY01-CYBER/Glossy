@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glossy · bug-fix round — what changed</title>
+<style>
+  :root{
+    --bg:#0a0a0c; --card:#15151a; --card2:#1d1d24; --line:#2a2a33;
+    --text:#eceaf2; --dim:#9a97a8; --dimmer:#6b6878;
+    --accent:#b9a4ff; --good:#66e0a3; --bad:#ff6b81; --warn:#ffcc66;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:34px 22px 90px}
+  header.top{border-bottom:1px solid var(--line);padding-bottom:22px;margin-bottom:30px}
+  h1{font-size:25px;margin:0 0 8px;letter-spacing:-.02em;font-weight:650}
+  .sub{color:var(--dim);font-size:14.5px;max-width:780px}
+  .pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11.5px;font-weight:600;
+    letter-spacing:.04em;text-transform:uppercase;background:#241f33;color:var(--accent);border:1px solid #372e50;margin-bottom:14px}
+  .fix{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;margin:0 0 22px}
+  .fix h2{font-size:17.5px;margin:0 0 6px;letter-spacing:-.01em;font-weight:640;display:flex;align-items:center;gap:10px}
+  .num{width:26px;height:26px;border-radius:9px;background:#2b2440;color:var(--accent);
+    display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex:none}
+  .symptom{color:var(--warn);font-size:13.5px;margin:0 0 10px 36px}
+  .why{color:var(--dim);font-size:14px;margin:0 0 14px 36px;max-width:820px}
+  .why b{color:var(--text);font-weight:600}
+  .ba{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-left:36px}
+  @media (max-width:860px){.ba{grid-template-columns:1fr}}
+  .side{background:var(--card2);border:1px solid #23232c;border-radius:14px;overflow:hidden}
+  .side .hd{padding:9px 13px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid #23232c}
+  .side.before .hd{color:#ff9aa9;background:#2a161b}
+  .side.after .hd{color:var(--good);background:#12271f}
+  pre{margin:0;padding:13px;overflow:auto;font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .del{color:#ff9aa9;background:rgba(255,107,129,.09);display:block}
+  .ins{color:#8ff0bd;background:rgba(102,224,163,.09);display:block}
+  .pl{color:var(--dimmer);display:block}
+  .files{margin:14px 0 0 36px;display:flex;flex-wrap:wrap;gap:7px}
+  .file{font:12px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#20202a;border:1px solid #2c2c38;
+    color:var(--dim);border-radius:8px;padding:4px 9px}
+  .file b{color:var(--text);font-weight:600}
+  footer{margin-top:34px;padding-top:18px;border-top:1px solid var(--line);color:var(--dimmer);font-size:13px}
+  .chk{color:var(--good);font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div class="pill">Before build · review changes</div>
+  <h1>Five bugs, five fixes</h1>
+  <p class="sub">Everything below is already on disk and compiles (<code>:app:compileFossReleaseKotlin</code> ✓).
+  Nothing was built yet — this page is the preview you asked for. Say the word and the FOSS release APK is next.</p>
+</header>
+
+<!-- 1 -->
+<section class="fix">
+  <h2><span class="num">1</span>“Jay” username flash for ~2 s on app open</h2>
+  <p class="symptom">Opening the app showed a personal name in the home greeting for a couple of seconds, then swapped to your real name.</p>
+  <p class="why">The home header had a <b>hardcoded developer name as its last-resort fallback</b>, and the ViewModel starts the account name as
+  <b>“Guest”</b> while the real name is fetched over the network. So the fallback chain landed on the hardcoded name every cold start until
+  the network answered. Now the greeting is seeded instantly from the account name <b>saved at login</b>, the hardcoded name is gone,
+  and a failed lookup can no longer downgrade a saved name to “Guest”.</p>
+  <div class="ba">
+    <div class="side before"><div class="hd">Before</div><pre><span class="pl">HomeScreen.kt — greeting fallback</span><span class="del">else -&gt; "Jay Chaudhary"</span><span class="pl">HomeViewModel.kt</span><span class="del">val accountName = MutableStateFlow("Guest")</span><span class="pl">// network fills it in later…</span></pre></div>
+    <div class="side after"><div class="hd">After</div><pre><span class="pl">HomeScreen.kt — neutral placeholder</span><span class="ins">else -&gt; "Guest"</span><span class="pl">HomeViewModel.kt — seeded from storage</span><span class="ins">dataStore.get(AccountNameKey)  → accountName</span><span class="pl">// no flash, real name refreshes it</span></pre></div>
+  </div>
+  <div class="files">
+    <span class="file"><b>HomeScreen.kt</b></span>
+    <span class="file"><b>HomeViewModel.kt</b></span>
+  </div>
+</section>
+
+<!-- 2 -->
+<section class="fix">
+  <h2><span class="num">2</span>Lyrics ignored the priority list</h2>
+  <p class="symptom">Reordering providers in Settings → Lyrics priority had no effect; the default order kept winning.</p>
+  <p class="why">Two separators have shipped over time: the priority screen writes <b>commas</b>, but the old SimpMusic migration wrote
+  <b>semicolons</b>. The registry only split on the comma, so a semicolon-joined order parsed to a single unknown token, got filtered away,
+  and the resolver silently fell back to the default order. The migration also failed to actually remove SimpMusic from comma-joined strings.
+  Now both sides accept both separators and normalise to the canonical comma.</p>
+  <div class="ba">
+    <div class="side before"><div class="hd">Before</div><pre><span class="pl">LyricsProviderRegistry.kt</span><span class="del">orderString.split(",")</span><span class="pl">  .filter { it in providerNames }</span><span class="pl">// "A;B;C" → 1 token → dropped → defaults</span></pre></div>
+    <div class="side after"><div class="hd">After</div><pre><span class="pl">LyricsProviderRegistry.kt</span><span class="ins">orderString.split(';', ',')</span><span class="ins">  .mapNotNull { byLowercase[it] }</span><span class="pl">// both formats honoured, case-insensitive</span></pre></div>
+  </div>
+  <div class="files">
+    <span class="file"><b>LyricsProviderRegistry.kt</b></span>
+    <span class="file"><b>MainActivity.kt</b> · migration normalises to “,”</span>
+  </div>
+</section>
+
+<!-- 3 -->
+<section class="fix">
+  <h2><span class="num">3</span>Spotify lyrics stopped loading after a while</h2>
+  <p class="symptom">Spotify lyrics worked right after signing in, then answered “nothing found” for the rest of the session.</p>
+  <p class="why">The provider read the raw <b>library token, which lapses shortly after login</b> — and nothing re-mints it while music plays.
+  The canvas resolver already knew this (its comment describes the exact failure) but the fix lived privately there. The resolution
+  (expiry check → fresh web-player re-mint → fallback) is now shared via <b>SpotifySession.freshAccessToken()</b>, used by both the lyrics
+  provider and the canvas resolver — so they can never disagree again.</p>
+  <div class="ba">
+    <div class="side before"><div class="hd">Before</div><pre><span class="pl">SpotifyLyricsProvider.kt</span><span class="del">val token = Spotify.accessToken</span><span class="del">    ?: return failure("Not signed in")</span><span class="pl">// stale token ⇒ 401/429 ⇒ "no lyrics"</span></pre></div>
+    <div class="side after"><div class="hd">After</div><pre><span class="pl">SpotifyLyricsProvider.kt</span><span class="ins">val token = SpotifySession</span><span class="ins">    .freshAccessToken(context)</span><span class="pl">// expiry-checked + re-minted, shared</span></pre></div>
+  </div>
+  <div class="files">
+    <span class="file"><b>SpotifyLyricsProvider.kt</b></span>
+    <span class="file"><b>SpotifySession.kt</b> · new freshAccessToken()</span>
+    <span class="file"><b>CanvasResolver.kt</b> · delegates to it</span>
+  </div>
+</section>
+
+<!-- 4 -->
+<section class="fix">
+  <h2><span class="num">4</span>Lyrics sometimes never followed the song</h2>
+  <p class="symptom">Some songs showed lyrics that never moved (raw <code>&lt;00:12.34&gt;</code> tags visible), and occasionally the view opened parked at the end of the song during its first seconds.</p>
+  <p class="why"><b>Two separate causes.</b> (a) The lyrics pipeline used a regex hint (<code>[mm:ss</code>) to decide whether to parse — but word-timed payloads
+  (Spotify/Musixmatch rich format) carry no line stamps at all, so they were dumped into the plain-text fallback with their tags still in the text.
+  The real parser now makes that call, exactly like every other lyrics surface. (b) The full-screen view’s scroll target is
+  <code>rememberSaveable</code>, so a restored index from the previous song could survive into the next one when the lyrics object was identical —
+  it now resets per <b>media id</b>, so every song starts from its beginning.</p>
+  <div class="ba">
+    <div class="side before"><div class="hd">Before</div><pre><span class="pl">LyricsViewModel.kt</span><span class="del">val isLrc = timestampRegex…</span><span class="del">if (isLrc) parseLyrics(lyrics) else emptyList()</span><span class="pl">// word-timed lyrics ⇒ fallback ⇒ frozen</span><span class="pl">ExperimentalLyrics.kt</span><span class="del">LaunchedEffect(lyrics, lines) { reset }</span></pre></div>
+    <div class="side after"><div class="hd">After</div><pre><span class="pl">LyricsViewModel.kt</span><span class="ins">val parsedLines = LyricsUtils.parseLyrics(lyrics)</span><span class="pl">// parser decides — word-timed now follows</span><span class="pl">ExperimentalLyrics.kt</span><span class="ins">LaunchedEffect(lyrics, lines, mediaMetadata?.id)</span><span class="pl">// always start at the top of a new song</span></pre></div>
+  </div>
+  <div class="files">
+    <span class="file"><b>LyricsViewModel.kt</b></span>
+    <span class="file"><b>ExperimentalLyrics.kt</b></span>
+  </div>
+</section>
+
+<!-- 5 -->
+<section class="fix">
+  <h2><span class="num">5</span>Canvases that used to load stopped loading</h2>
+  <p class="symptom">A song’s animated canvas sometimes never appeared again — even after changing the Canvas style in Settings.</p>
+  <p class="why">The resolver remembers <b>“this song has no canvas”</b> to avoid re-asking every provider — but that memory survived a
+  <b>style change</b>, while the answer absolutely depends on the style (a Spotify-only miss can be a hit under Glossy, especially after fix #3).
+  The per-song miss memory is now cleared whenever the style is invalidated, so changing style re-asks instead of staying silent for the rest of the session.</p>
+  <div class="ba">
+    <div class="side before"><div class="hd">Before</div><pre><span class="pl">CanvasResolver.kt</span><span class="del">fun invalidateStyle() {</span><span class="del">    cachedStyle = null</span><span class="del">}</span><span class="pl">// old "no canvas" misses kept forever</span></pre></div>
+    <div class="side after"><div class="hd">After</div><pre><span class="pl">CanvasResolver.kt</span><span class="ins">fun invalidateStyle() {</span><span class="ins">    cachedStyle = null</span><span class="ins">    definitiveMisses.clear()</span><span class="ins">}</span><span class="pl">// style change ⇒ providers asked again</span></pre></div>
+  </div>
+  <div class="files">
+    <span class="file"><b>CanvasResolver.kt</b></span>
+  </div>
+</section>
+
+<footer>
+  <span class="chk">✓</span> Compile check passed: <code>:app:compileFossReleaseKotlin</code> — 0 errors (only pre-existing warnings).
+  &nbsp;·&nbsp; 9 files touched, nothing else staged or committed.
+  &nbsp;·&nbsp; Next: build <code>assembleFossRelease</code>.
+</footer>
+
+</div>
+</body>
+</html>

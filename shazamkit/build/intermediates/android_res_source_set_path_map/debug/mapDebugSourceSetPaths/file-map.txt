@@ -1,0 +1,9 @@
+com.metrolist.shazamkit-pngs-0 C:\Users\Chikku\Downloads\Glossy-test-master\shazamkit\build\generated\res\pngs\debug
+com.metrolist.shazamkit-updated_navigation_xml-1 C:\Users\Chikku\Downloads\Glossy-test-master\shazamkit\build\generated\updated_navigation_xml\debug
+com.metrolist.shazamkit-mergeDebugResources-2 C:\Users\Chikku\Downloads\Glossy-test-master\shazamkit\build\intermediates\incremental\debug\mergeDebugResources\merged.dir
+com.metrolist.shazamkit-mergeDebugResources-3 C:\Users\Chikku\Downloads\Glossy-test-master\shazamkit\build\intermediates\incremental\debug\mergeDebugResources\stripped.dir
+com.metrolist.shazamkit-debug-4 C:\Users\Chikku\Downloads\Glossy-test-master\shazamkit\build\intermediates\merged_res\debug\mergeDebugResources
+com.metrolist.shazamkit-debug-5 C:\Users\Chikku\Downloads\Glossy-test-master\shazamkit\build\intermediates\packaged_res\debug\packageDebugResources
+com.metrolist.shazamkit-debug-6 C:\Users\Chikku\Downloads\Glossy-test-master\shazamkit\src\debug\res
+com.metrolist.shazamkit-main-7 C:\Users\Chikku\Downloads\Glossy-test-master\shazamkit\src\main\res
+gradleHome-0 C:\Users\Chikku\.gradle

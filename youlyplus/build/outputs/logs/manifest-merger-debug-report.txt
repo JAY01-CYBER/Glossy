@@ -1,0 +1,16 @@
+-- Merging decision tree log ---
+manifest
+ADDED from C:\Users\Chikku\Downloads\Glossy-test-master\youlyplus\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest17209731779063246730.xml:2:13-83
+INJECTED from C:\Users\Chikku\Downloads\Glossy-test-master\youlyplus\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest17209731779063246730.xml:2:13-83
+	package
+		INJECTED from C:\Users\Chikku\Downloads\Glossy-test-master\youlyplus\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest17209731779063246730.xml
+	xmlns:android
+		ADDED from C:\Users\Chikku\Downloads\Glossy-test-master\youlyplus\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest17209731779063246730.xml:2:23-81
+uses-sdk
+INJECTED from C:\Users\Chikku\Downloads\Glossy-test-master\youlyplus\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest17209731779063246730.xml reason: use-sdk injection requested
+INJECTED from C:\Users\Chikku\Downloads\Glossy-test-master\youlyplus\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest17209731779063246730.xml
+INJECTED from C:\Users\Chikku\Downloads\Glossy-test-master\youlyplus\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest17209731779063246730.xml
+	android:targetSdkVersion
+		INJECTED from C:\Users\Chikku\Downloads\Glossy-test-master\youlyplus\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest17209731779063246730.xml
+	android:minSdkVersion
+		INJECTED from C:\Users\Chikku\Downloads\Glossy-test-master\youlyplus\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest17209731779063246730.xml

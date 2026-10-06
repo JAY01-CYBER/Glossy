@@ -1,0 +1,9 @@
+com.jay.glossy.simpmusic-pngs-0 C:\Users\Chikku\Downloads\Glossy-test-master\simpmusic\build\generated\res\pngs\release
+com.jay.glossy.simpmusic-updated_navigation_xml-1 C:\Users\Chikku\Downloads\Glossy-test-master\simpmusic\build\generated\updated_navigation_xml\release
+com.jay.glossy.simpmusic-mergeReleaseResources-2 C:\Users\Chikku\Downloads\Glossy-test-master\simpmusic\build\intermediates\incremental\release\mergeReleaseResources\merged.dir
+com.jay.glossy.simpmusic-mergeReleaseResources-3 C:\Users\Chikku\Downloads\Glossy-test-master\simpmusic\build\intermediates\incremental\release\mergeReleaseResources\stripped.dir
+com.jay.glossy.simpmusic-release-4 C:\Users\Chikku\Downloads\Glossy-test-master\simpmusic\build\intermediates\merged_res\release\mergeReleaseResources
+com.jay.glossy.simpmusic-release-5 C:\Users\Chikku\Downloads\Glossy-test-master\simpmusic\build\intermediates\packaged_res\release\packageReleaseResources
+com.jay.glossy.simpmusic-main-6 C:\Users\Chikku\Downloads\Glossy-test-master\simpmusic\src\main\res
+com.jay.glossy.simpmusic-release-7 C:\Users\Chikku\Downloads\Glossy-test-master\simpmusic\src\release\res
+gradleHome-0 C:\Users\Chikku\.gradle
