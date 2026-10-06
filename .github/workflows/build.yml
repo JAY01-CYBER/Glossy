@@ -51,7 +51,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build Release APK and Run Lint
-        run: ./gradlew --console=plain assemble${{ matrix.variantName }}Release :app:lint${{ matrix.variantName }}Release --warning-mode summary
+        run: ./gradlew --console=plain assemble${{ matrix.variantName }}Release :app:lint${{ matrix.variantName }}Release --info
         env:
           GLOSSY_APPLICATION_ID: com.jay.glossy
           GLOSSY_APP_NAME: Glossy Nightly
@@ -126,7 +126,7 @@ jobs:
           keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
 
       - name: Build Debug APK and Run Lint
-        run: ./gradlew --console=plain assemble${{ matrix.variantName }}Debug :app:lint${{ matrix.variantName }}Debug --warning-mode summary
+        run: ./gradlew --console=plain assemble${{ matrix.variantName }}Debug :app:lint${{ matrix.variantName }}Debug --info
         env:
           GLOSSY_APPLICATION_ID: com.jay.glossy
           GLOSSY_APP_NAME: Glossy Nightly
