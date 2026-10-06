@@ -12,8 +12,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+<<<<<<< HEAD
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
+=======
+>>>>>>> origin/main
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -32,11 +35,14 @@ fun <T> EnumDialog(
     values: List<T>,
     valueText: @Composable (T) -> String,
     valueDescription: (@Composable (T) -> String)? = null,
+<<<<<<< HEAD
     /**
      * Optional trailing slot for the value itself — used to show an animation
      * next to its own name so a choice can be made without leaving the dialog.
      */
     valuePreview: (@Composable (T) -> Unit)? = null,
+=======
+>>>>>>> origin/main
 ) {
     ListDialog(
         onDismiss = onDismiss,
@@ -58,10 +64,14 @@ fun <T> EnumDialog(
                 )
 
                 Column(
+<<<<<<< HEAD
                     modifier =
                         Modifier
                             .weight(1f)
                             .padding(start = 16.dp),
+=======
+                    modifier = Modifier.padding(start = 16.dp),
+>>>>>>> origin/main
                 ) {
                     Text(
                         text = valueText(value),
@@ -74,11 +84,14 @@ fun <T> EnumDialog(
                         )
                     }
                 }
+<<<<<<< HEAD
 
                 if (valuePreview != null) {
                     Spacer(Modifier.width(12.dp))
                     valuePreview(value)
                 }
+=======
+>>>>>>> origin/main
             }
         }
     }

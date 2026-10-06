@@ -10,9 +10,13 @@ import com.jay.glossy.R
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
+<<<<<<< HEAD
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+=======
+import androidx.compose.foundation.background
+>>>>>>> origin/main
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
@@ -51,6 +55,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+<<<<<<< HEAD
+=======
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.TrendingUp
+>>>>>>> origin/main
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -70,7 +79,10 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults.LoadingInd
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
+<<<<<<< HEAD
 import androidx.compose.runtime.DisposableEffect
+=======
+>>>>>>> origin/main
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -102,9 +114,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+<<<<<<< HEAD
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+=======
+>>>>>>> origin/main
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jay.glossy.LocalNavController
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -134,6 +149,7 @@ import com.jay.glossy.constants.GridThumbnailHeight
 import com.jay.glossy.constants.InnerTubeCookieKey
 import com.jay.glossy.constants.ListItemHeight
 import com.jay.glossy.constants.ListThumbnailSize
+<<<<<<< HEAD
 import com.jay.glossy.constants.QuickPickCaptionHeight
 import com.jay.glossy.constants.QuickPickShape
 import com.jay.glossy.constants.QuickPickShapeKey
@@ -145,6 +161,12 @@ import com.jay.glossy.ui.component.GlossyAlbumCard
 import com.jay.glossy.ui.component.GlossyChipRow
 import com.jay.glossy.ui.component.GlossyCompactSongRow
 import com.jay.glossy.ui.theme.GlossyDimens
+=======
+import com.jay.glossy.constants.QuickPickShape
+import com.jay.glossy.constants.QuickPickShapeKey
+import com.jay.glossy.constants.QuickPicksStyle
+import com.jay.glossy.constants.QuickPicksStyleKey
+>>>>>>> origin/main
 import com.jay.glossy.constants.ShowFeaturedCarouselKey
 import com.jay.glossy.constants.SmallGridThumbnailHeight
 import com.jay.glossy.constants.ThumbnailCornerRadius
@@ -167,7 +189,10 @@ import com.jay.glossy.ui.component.GreetingSection
 import com.jay.glossy.ui.component.HideOnScrollFAB
 import com.jay.glossy.ui.component.LocalBottomSheetPageState
 import com.jay.glossy.ui.component.LocalMenuState
+<<<<<<< HEAD
 import com.jay.glossy.ui.component.MaterialQuickPickTile
+=======
+>>>>>>> origin/main
 import com.jay.glossy.ui.screens.MoodAndGenresButton
 import com.jay.glossy.ui.screens.MoodAndGenresButtonHeight
 import com.jay.glossy.ui.component.NavigationTitle
@@ -187,12 +212,15 @@ import com.jay.glossy.ui.menu.YouTubeAlbumMenu
 import com.jay.glossy.ui.menu.YouTubeArtistMenu
 import com.jay.glossy.ui.menu.YouTubePlaylistMenu
 import com.jay.glossy.ui.menu.YouTubeSongMenu
+<<<<<<< HEAD
 import com.jay.glossy.ui.player.CanvasPrefetcher
 import com.jay.glossy.ui.player.PlayerCanvasArtwork
 import com.jay.glossy.ui.player.rememberCanvasCornerSize
 import com.jay.glossy.ui.player.rememberCanvasOnMobileData
 import com.jay.glossy.ui.player.rememberCanvasPreloadEnabled
 import com.jay.glossy.ui.player.rememberSpotlightCanvasEnabled
+=======
+>>>>>>> origin/main
 import com.jay.glossy.ui.utils.SnapLayoutInfoProvider
 import com.jay.glossy.ui.utils.resize
 import com.jay.glossy.utils.joinByBullet
@@ -208,6 +236,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.min
+<<<<<<< HEAD
 import kotlin.random.Random/**
  * The home feed's section lockup: an accent rule, the eyebrow that says what
  * the section is for, the display-scale title, and — when the section leads
@@ -217,6 +246,9 @@ import kotlin.random.Random/**
  * than a stack of unrelated carousels.
  */
 @Composable
+=======
+import kotlin.random.Random@Composable
+>>>>>>> origin/main
 fun SimpSectionHeader(
     subtitle: String, 
     title: String,
@@ -230,12 +262,16 @@ fun SimpSectionHeader(
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+<<<<<<< HEAD
         SectionRule(hasEyebrow = subtitle.isNotEmpty())
 
+=======
+>>>>>>> origin/main
         Column(modifier = Modifier.weight(1f)) {
             if (subtitle.isNotEmpty()) {
                 Text(
                     text = subtitle.uppercase(),
+<<<<<<< HEAD
                     fontSize = 10.5.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary,
@@ -244,12 +280,26 @@ fun SimpSectionHeader(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Spacer(modifier = Modifier.height(2.dp))
+=======
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    letterSpacing = 1.5.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(modifier = Modifier.height(3.dp))
+>>>>>>> origin/main
             }
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,
+<<<<<<< HEAD
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = (-0.4).sp,
+=======
+                fontWeight = FontWeight.ExtraBold,
+>>>>>>> origin/main
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -259,14 +309,22 @@ fun SimpSectionHeader(
             Surface(
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+<<<<<<< HEAD
                 modifier = Modifier.size(34.dp),
+=======
+                modifier = Modifier.size(32.dp),
+>>>>>>> origin/main
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         painter = painterResource(R.drawable.arrow_forward),
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
+<<<<<<< HEAD
                         modifier = Modifier.size(17.dp),
+=======
+                        modifier = Modifier.size(16.dp),
+>>>>>>> origin/main
                     )
                 }
             }
@@ -274,6 +332,7 @@ fun SimpSectionHeader(
     }
 }
 
+<<<<<<< HEAD
 /**
  * The accent rule that opens a section lockup: as tall as the text block beside
  * it, longer where the block carries an eyebrow above the title.
@@ -373,6 +432,8 @@ private fun SpotlightCanvasPrefetch(
     }
 }
 
+=======
+>>>>>>> origin/main
 @Composable
 fun CommunityPlaylistCard(
     item: CommunityPlaylistItem,
@@ -835,10 +896,13 @@ fun HomeScreen(
     val showFeaturedCarouselPref by rememberPreference(ShowFeaturedCarouselKey, defaultValue = true)
     val quickPicksStylePref by rememberEnumPreference(QuickPicksStyleKey, defaultValue = QuickPicksStyle.GRID)
 
+<<<<<<< HEAD
     // The new design always drew the compact "Quick picks" rows and the 96dp
     // "Listen again" cards. It is pinned off now, so the classic home wins.
     val newDesign = ActiveDesignStyle == DesignStyle.TEAL
 
+=======
+>>>>>>> origin/main
     LaunchedEffect(Unit) { viewModel.loadHomeData() }
 
     val shouldShowWrappedCard by viewModel.showWrappedCard.collectAsStateWithLifecycle()
@@ -1039,6 +1103,7 @@ fun HomeScreen(
                     positionInLayout = { layoutSize, itemSize -> (layoutSize * horizontalLazyGridItemWidthFactor / 2f - itemSize / 2f) },
                 )
             }
+<<<<<<< HEAD
             // Quick picks draws two compact tiles per row, so it snaps a tile at
             // a time to the screen margin instead of centring one.
             val quickPicksPageSnapLayoutInfoProvider = remember(quickPicksLazyGridState) {
@@ -1047,6 +1112,8 @@ fun HomeScreen(
                     positionInLayout = { _, _ -> 0f },
                 )
             }
+=======
+>>>>>>> origin/main
             val forgottenFavoritesSnapLayoutInfoProvider = remember(forgottenFavoritesLazyGridState) {
                 SnapLayoutInfoProvider(
                     lazyGridState = forgottenFavoritesLazyGridState,
@@ -1058,6 +1125,7 @@ fun HomeScreen(
                 state = lazylistState,
                 contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
             ) {
+<<<<<<< HEAD
                 item(key = "greeting_section", contentType = "greeting") {
                     val guestNamePref by rememberPreference(stringPreferencesKey("guest_name"), "")
                     // Never a hardcoded personal name here: the fallback is
@@ -1084,6 +1152,27 @@ fun HomeScreen(
                                 onValueUpdate = { viewModel.toggleChip(it) },
                             )
                         }
+=======
+                item(key = "chips", contentType = "chips") {
+                    Box(modifier = Modifier.animateItem()) {
+                        ChipsRow(
+                            chips = homePage?.chips?.map { it to it.title } ?: emptyList(),
+                            currentValue = selectedChip,
+                            onValueUpdate = { viewModel.toggleChip(it) },
+                        )
+                    }
+                }
+
+                item(key = "greeting_section", contentType = "greeting") {
+                    val guestNamePref by rememberPreference(stringPreferencesKey("guest_name"), "")
+                    val finalName = when {
+                        !accountName.isNullOrBlank() && !accountName.equals("Guest", ignoreCase = true) -> accountName
+                        guestNamePref.isNotBlank() -> guestNamePref
+                        else -> "Jay Chaudhary"
+                    }
+                    Box(modifier = Modifier.animateItem()) {
+                        GreetingSection(userName = finalName)
+>>>>>>> origin/main
                     }
                 }
 
@@ -1276,6 +1365,7 @@ fun HomeScreen(
                             Column(modifier = Modifier.animateItem().fillMaxWidth().padding(bottom = 24.dp)) {
                                 SimpSectionHeader(subtitle = "HANDPICKED FOR YOU", title = "Featured Spotlight")
                                 val pagerState = rememberPagerState(pageCount = { spotlightItems.size })
+<<<<<<< HEAD
                                 // Animated canvases for the featured cards, on by
                                 // default and governed by the "Spotlight Canvas"
                                 // switch. The page that has settled plays, and the
@@ -1297,11 +1387,17 @@ fun HomeScreen(
                                 // animation is over, far too late to start
                                 // looking for a canvas then.
                                 val activeSpotlightPage = pagerState.currentPage
+=======
+>>>>>>> origin/main
                                 HorizontalPager(
                                     state = pagerState,
                                     contentPadding = PaddingValues(horizontal = 32.dp),
                                     pageSpacing = 16.dp,
+<<<<<<< HEAD
                                     modifier = Modifier.fillMaxWidth().height(252.dp)
+=======
+                                    modifier = Modifier.fillMaxWidth().height(240.dp)
+>>>>>>> origin/main
                                 ) { page ->
                                     val item = spotlightItems[page]
                                     val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
@@ -1312,7 +1408,11 @@ fun HomeScreen(
                                         modifier = Modifier
                                             .fillMaxSize()
                                             .graphicsLayer { scaleX = scaleFactor; scaleY = scaleFactor; alpha = alphaFactor }
+<<<<<<< HEAD
                                             .clip(RoundedCornerShape(spotlightCanvasCorner))
+=======
+                                            .clip(RoundedCornerShape(24.dp))
+>>>>>>> origin/main
                                             .combinedClickable(
                                                 onClick = {
                                                     if (!isListenTogetherGuest) {
@@ -1335,6 +1435,7 @@ fun HomeScreen(
                                             },
                                             contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()
                                         )
+<<<<<<< HEAD
                                         // Moving artwork over the still: the still
                                         // stays visible while the clip buffers,
                                         // and remains the fallback when the song
@@ -1368,6 +1469,8 @@ fun HomeScreen(
                                                     )
                                             }
                                         }
+=======
+>>>>>>> origin/main
                                         Box(
                                             modifier = Modifier.fillMaxSize().background(
                                                 Brush.verticalGradient(
@@ -1376,6 +1479,7 @@ fun HomeScreen(
                                                 )
                                             )
                                         )
+<<<<<<< HEAD
                                         // Title block clears both the play pill and the
                                         // dots below it, so a long song name never runs
                                         // under either.
@@ -1407,6 +1511,15 @@ fun HomeScreen(
                                                 .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
                                                 .clip(RoundedCornerShape(percent = 50))
                                                 .background(Color.White)
+=======
+                                        Column(modifier = Modifier.align(Alignment.BottomStart).padding(20.dp).padding(end = 64.dp)) {
+                                            Text(text = item.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(text = item.artists.joinToArtistString(" & ") { it.name }, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.75f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        }
+                                        Box(
+                                            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp).size(52.dp).background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
+>>>>>>> origin/main
                                                 .clickable {
                                                     if (!isListenTogetherGuest) {
                                                         playerConnection.playQueue(
@@ -1414,6 +1527,7 @@ fun HomeScreen(
                                                             else ListQueue(title = item.title, items = listOf(item.toMediaItem()))
                                                         )
                                                     }
+<<<<<<< HEAD
                                                 }
                                                 .padding(start = 7.dp, end = 16.dp, top = 7.dp, bottom = 7.dp),
                                             verticalAlignment = Alignment.CenterVertically,
@@ -1472,6 +1586,15 @@ fun HomeScreen(
                                         )
                                     }
                                 }
+=======
+                                                },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(painter = painterResource(R.drawable.play), contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(26.dp))
+                                        }
+                                    }
+                                }
+>>>>>>> origin/main
                             }
                         }
                     }
@@ -1614,6 +1737,7 @@ fun HomeScreen(
                             }
                         }
 
+<<<<<<< HEAD
                         HomeSection.NewReleases -> {
                             explorePage?.newReleaseAlbums?.takeIf { it.isNotEmpty() }?.let { newReleaseAlbums ->
                                 item(key = "new_releases_title", contentType = "section_header") {
@@ -1637,10 +1761,50 @@ fun HomeScreen(
                                     Spacer(modifier = Modifier.height(24.dp))
                                 }
                             }
+=======
+                        HomeSection.Charts -> {
+                            item(key = "charts_header", contentType = "section_header") {
+                                var expanded by remember { mutableStateOf(false) }
+                                val countries = listOf("Global", "India", "United States", "United Kingdom", "Japan", "South Korea")
+                                var selectedCountry by rememberSaveable { mutableStateOf(countries[1]) }
+                                Row(
+                                    modifier = Modifier.animateItem().fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), 
+                                    horizontalArrangement = Arrangement.SpaceBetween, 
+                                    verticalAlignment = Alignment.Bottom
+                                ) {
+                                    SimpSectionHeader(subtitle = "WHAT IS BEST CHOICE TODAY", title = "Chart")
+                                    Box(modifier = Modifier.padding(bottom = 8.dp)) {
+                                        androidx.compose.material3.Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f), modifier = Modifier.clip(RoundedCornerShape(16.dp)).clickable { expanded = true }) {
+                                            Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                                Text(text = selectedCountry, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(20.dp))
+                                            }
+                                        }
+                                        androidx.compose.material3.DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant)) {
+                                            countries.forEach { country -> androidx.compose.material3.DropdownMenuItem(text = { Text(country) }, onClick = { selectedCountry = country; expanded = false }) }
+                                        }
+                                    }
+                                }
+                            }
+                            item(key = "charts_content", contentType = "charts") {
+                                Card(modifier = Modifier.animateItem().fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).height(140.dp).clickable { navController.navigate("youtube_browse/FEmusic_charts") }, shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Icon(imageVector = Icons.Default.TrendingUp, contentDescription = null, modifier = Modifier.size(36.dp), tint = MaterialTheme.colorScheme.primary)
+                                            Spacer(modifier = Modifier.height(12.dp))
+                                            Text(text = "Explore Charts", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(24.dp))
+                            }
+>>>>>>> origin/main
                         }
 
                         HomeSection.QuickPicks -> {
                             quickPicks?.takeIf { it.isNotEmpty() }?.let { quickPicksList ->
+<<<<<<< HEAD
                                 val materialistic = ActiveDesignStyle == DesignStyle.MATERIALISTIC
                                 item(key = "quick_picks_title", contentType = "section_header") {
                                     if (materialistic) {
@@ -1789,6 +1953,14 @@ fun HomeScreen(
                                             }
                                         }
                                     } else when (quickPicksStylePref) {
+=======
+                                item(key = "quick_picks_title", contentType = "section_header") {
+                                    SimpSectionHeader(subtitle = "LET'S START WITH A RADIO", title = "Quick picks", modifier = Modifier.animateItem())
+                                }
+
+                                item(key = "quick_picks_list", contentType = "quick_picks") {
+                                    when (quickPicksStylePref) {
+>>>>>>> origin/main
                                         QuickPicksStyle.GRID, QuickPicksStyle.LIST -> {
                                             val rowsCount = if (quickPicksStylePref == QuickPicksStyle.GRID) 4 else 1
                                             LazyHorizontalGrid(
@@ -2057,6 +2229,7 @@ fun HomeScreen(
                                 }
 
                                 item(key = "keep_listening_list", contentType = "keep_listening") {
+<<<<<<< HEAD
                                     if (newDesign) {
                                         // "Listen again": 96dp square album cards with the
                                         // title and artist captioned underneath.
@@ -2088,6 +2261,8 @@ fun HomeScreen(
                                         }
                                         Spacer(modifier = Modifier.height(24.dp))
                                     } else {
+=======
+>>>>>>> origin/main
                                     val rows = if (keepListening.size > 6) 2 else 1
                                     LazyHorizontalGrid(
                                         state = remember("keep_listening_grid") { LazyGridState() },
@@ -2101,7 +2276,10 @@ fun HomeScreen(
                                             localGridItem(it)
                                         }
                                     }
+<<<<<<< HEAD
                                     }
+=======
+>>>>>>> origin/main
                                     Spacer(modifier = Modifier.height(24.dp))
                                 }
                             }

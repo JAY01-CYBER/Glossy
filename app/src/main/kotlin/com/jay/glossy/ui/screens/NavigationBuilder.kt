@@ -18,9 +18,13 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.getValue
+<<<<<<< HEAD
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+=======
+import androidx.compose.runtime.remember
+>>>>>>> origin/main
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -29,7 +33,10 @@ import androidx.navigation.compose.dialog
 import androidx.navigation.navArgument
 import com.jay.glossy.constants.DarkModeKey
 import com.jay.glossy.constants.PureBlackKey
+<<<<<<< HEAD
 import com.jay.glossy.ui.component.AccountSettingsDialog
+=======
+>>>>>>> origin/main
 import com.jay.glossy.ui.screens.artist.ArtistAlbumsScreen
 import com.jay.glossy.ui.screens.artist.ArtistItemsScreen
 import com.jay.glossy.ui.screens.artist.ArtistScreen
@@ -92,9 +99,12 @@ fun NavGraphBuilder.navigationBuilder(
     // --- WELCOME SCREEN ROUTE ---
     composable("welcome") {
         val context = LocalContext.current
+<<<<<<< HEAD
         // The sign-in screen's cookie/token link opens the account dialog;
         // its "Log in with token" entry is this app's paste-a-cookie flow.
         var showAccountSettings by remember { mutableStateOf(false) }
+=======
+>>>>>>> origin/main
         val coroutineScope = rememberCoroutineScope()
         
         GlossyWelcomeScreen(
@@ -110,6 +120,7 @@ fun NavGraphBuilder.navigationBuilder(
             },
             onGoogleLoginClick = { 
                 navController.navigate("login")
+<<<<<<< HEAD
             },
             onTokenClick = { showAccountSettings = true },
         )
@@ -120,6 +131,10 @@ fun NavGraphBuilder.navigationBuilder(
                 latestVersionName = latestVersionName,
             )
         }
+=======
+            }
+        )
+>>>>>>> origin/main
     }
 
     composable(Screens.Home.route) {
@@ -381,7 +396,11 @@ fun NavGraphBuilder.navigationBuilder(
     }
 
     composable(
+<<<<<<< HEAD
         route = "youtube_browse/{browseId}?params={params}&region={region}",
+=======
+        route = "youtube_browse/{browseId}?params={params}",
+>>>>>>> origin/main
         arguments =
             listOf(
                 navArgument("browseId") {
@@ -392,10 +411,13 @@ fun NavGraphBuilder.navigationBuilder(
                     type = NavType.StringType
                     nullable = true
                 },
+<<<<<<< HEAD
                 navArgument("region") {
                     type = NavType.StringType
                     nullable = true
                 },
+=======
+>>>>>>> origin/main
             ),
     ) {
         YouTubeBrowseScreen(navController)

@@ -24,9 +24,12 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+<<<<<<< HEAD
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+=======
+>>>>>>> origin/main
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -36,7 +39,10 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+<<<<<<< HEAD
 import androidx.compose.foundation.Canvas
+=======
+>>>>>>> origin/main
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -51,8 +57,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+<<<<<<< HEAD
 import androidx.compose.foundation.layout.fillMaxHeight
 
+=======
+>>>>>>> origin/main
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -147,6 +156,7 @@ import com.jay.glossy.constants.PureBlackMiniPlayerKey
 import com.jay.glossy.constants.SwipeSensitivityKey
 import com.jay.glossy.constants.SwipeThumbnailKey
 import com.jay.glossy.constants.ThumbnailCornerRadius
+<<<<<<< HEAD
 import com.jay.glossy.constants.ThumbnailShadowKey
 import com.jay.glossy.constants.ActiveDesignStyle
 import com.jay.glossy.constants.DesignStyle
@@ -154,6 +164,10 @@ import com.jay.glossy.constants.MiniPlayerStyle
 import com.jay.glossy.constants.MiniPlayerStyleKey
 import com.jay.glossy.constants.MiniPlayerPlayingAnimation
 import com.jay.glossy.constants.MiniPlayerPlayingAnimationKey
+=======
+import com.jay.glossy.constants.MiniPlayerStyle
+import com.jay.glossy.constants.MiniPlayerStyleKey
+>>>>>>> origin/main
 import com.jay.glossy.db.entities.ArtistEntity
 import com.jay.glossy.listentogether.ListenTogetherManager
 import com.metrolist.models.MediaMetadata
@@ -167,6 +181,7 @@ import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.ui.component.Icon as MIcon
 import androidx.compose.ui.draw.blur
 import com.jay.glossy.ui.theme.PlayerColorExtractor
+<<<<<<< HEAD
 import com.jay.glossy.ui.component.BlurredArtworkBackdrop
 import com.jay.glossy.ui.component.GlossyIconAction
 import com.jay.glossy.ui.component.GlossyThumb
@@ -175,6 +190,9 @@ import com.jay.glossy.ui.component.ArtworkNotesOverlay
 import com.jay.glossy.ui.component.NowPlayingAnimationIndicator
 import com.jay.glossy.ui.component.rememberAmbientMotionEnabled
 import com.jay.glossy.ui.theme.GlossyPalette
+=======
+import com.jay.glossy.ui.component.LocalMenuState
+>>>>>>> origin/main
 import com.jay.glossy.ui.menu.AddToPlaylistDialog
 
 @Stable
@@ -196,6 +214,7 @@ fun MiniPlayer(
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {},
 ) {
+<<<<<<< HEAD
     val miniPlayerStylePreference by rememberEnumPreference(
         MiniPlayerStyleKey,
         defaultValue = MiniPlayerStyle.MODERN
@@ -208,11 +227,15 @@ fun MiniPlayer(
     } else {
         miniPlayerStylePreference
     }
+=======
+    val miniPlayerStyle by rememberEnumPreference(MiniPlayerStyleKey, defaultValue = MiniPlayerStyle.MODERN)
+>>>>>>> origin/main
     val pureBlack by rememberPreference(PureBlackMiniPlayerKey, defaultValue = false)
 
     val progressState = remember { ProgressState(positionState, durationState) }
 
     when (miniPlayerStyle) {
+<<<<<<< HEAD
         MiniPlayerStyle.STUDIO -> {
             GlossyBarMiniPlayer(
                 positionState = positionState,
@@ -222,6 +245,8 @@ fun MiniPlayer(
                 onClick = onClick,
             )
         }
+=======
+>>>>>>> origin/main
         MiniPlayerStyle.GLOSSY_SPECIAL -> {
             GlossySpecialEditionMiniPlayer(
                 progressState = progressState,
@@ -251,6 +276,7 @@ fun MiniPlayer(
 }
 
 // ============================================================================
+<<<<<<< HEAD
 // New design system: compact bar with a teal progress hairline
 // ============================================================================
 
@@ -508,6 +534,8 @@ private fun MiniPlayerStyleBackground(
 }
 
 // ============================================================================
+=======
+>>>>>>> origin/main
 // EXACT M3-PLAY APPLE MUSIC STYLE UI & LOGIC
 // ============================================================================
 
@@ -657,8 +685,13 @@ fun MiniPlayerColorExtractor(
     val fallbackColor = MaterialTheme.colorScheme.surfaceContainer.toArgb()
 
     LaunchedEffect(mediaMetadata?.id, miniPlayerBackground) {
+<<<<<<< HEAD
         if (miniPlayerBackground == MiniPlayerBackgroundStyle.GRADIENT ||
             miniPlayerBackground == MiniPlayerBackgroundStyle.GLOW) {
+=======
+        if (miniPlayerBackground == MiniPlayerBackgroundStyle.GRADIENT || 
+            miniPlayerBackground == MiniPlayerBackgroundStyle.ANIMATED_MESH) {
+>>>>>>> origin/main
             
             val currentMetadata = mediaMetadata
             if (currentMetadata?.thumbnailUrl != null) {
@@ -786,7 +819,10 @@ private fun GlossySpecialEditionMiniPlayer(
         pureBlack = pureBlack,
         useLegacyBackground = false
     ) { offsetX ->
+<<<<<<< HEAD
         val thumbnailShadow by rememberPreference(ThumbnailShadowKey, true)
+=======
+>>>>>>> origin/main
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -876,6 +912,7 @@ private fun GlossySpecialEditionMiniPlayer(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp)
                 ) {
+<<<<<<< HEAD
 
                     Box(
                         modifier = Modifier.size(50.dp),
@@ -917,15 +954,34 @@ private fun GlossySpecialEditionMiniPlayer(
                             )
                         }
                     }
+=======
+        
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(mediaMetadata?.thumbnailUrl)
+                            .crossfade(500)
+                            .build(),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(50.dp)
+                            .shadow(4.dp, RoundedCornerShape(14.dp), spotColor = Color.Black.copy(alpha = 0.3f))
+                            .clip(RoundedCornerShape(14.dp))
+                    )
+>>>>>>> origin/main
                     
                     Spacer(modifier = Modifier.width(14.dp))
                     
                     AnimatedContent(
+<<<<<<< HEAD
                         // Key on the song ID so the slide animation only fires when
                         // the track actually changes — not when metadata is re-emitted
                         // unchanged after a seek or position update.
                         targetState = mediaMetadata?.id,
                         contentKey = { it },
+=======
+                        targetState = mediaMetadata,
+>>>>>>> origin/main
                         transitionSpec = {
                             (slideInHorizontally { width -> width } + fadeIn()).togetherWith(
                                 slideOutHorizontally { width -> -width } + fadeOut()
@@ -933,12 +989,16 @@ private fun GlossySpecialEditionMiniPlayer(
                         },
                         modifier = Modifier.weight(1f),
                         label = "trackInfoAnimation"
+<<<<<<< HEAD
                     ) { _ ->
                         val metadata = mediaMetadata
                         val specialPlayingAnimation by rememberEnumPreference(
                             MiniPlayerPlayingAnimationKey,
                             defaultValue = MiniPlayerPlayingAnimation.BARS,
                         )
+=======
+                    ) { metadata ->
+>>>>>>> origin/main
                         Column(
                             verticalArrangement = Arrangement.Center,
                             modifier = Modifier
@@ -957,6 +1017,7 @@ private fun GlossySpecialEditionMiniPlayer(
                                     )
                                 }
                         ) {
+<<<<<<< HEAD
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 if (specialPlayingAnimation == MiniPlayerPlayingAnimation.BARS) {
                                     NowPlayingAnimationIndicator(
@@ -975,6 +1036,16 @@ private fun GlossySpecialEditionMiniPlayer(
                                     modifier = Modifier.weight(1f).basicMarquee()
                                 )
                             }
+=======
+                            Text(
+                                text = metadata?.title ?: "Unknown",
+                                color = textColor,
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold, fontSize = 16.sp),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.basicMarquee()
+                            )
+>>>>>>> origin/main
                             val artistText = metadata?.artists?.filter { it.name.isNotBlank() }?.joinToString(", ") { it.name } ?: "Unknown Artist"
                             Text(
                                 text = artistText,
@@ -1140,8 +1211,13 @@ private fun NewMiniPlayer(
 
     LaunchedEffect(mediaMetadata?.id, miniPlayerBackground) {
         gradientColors = emptyList()
+<<<<<<< HEAD
         if (miniPlayerBackground == MiniPlayerBackgroundStyle.GRADIENT ||
             miniPlayerBackground == MiniPlayerBackgroundStyle.GLOW) {
+=======
+        if (miniPlayerBackground == MiniPlayerBackgroundStyle.GRADIENT || 
+            miniPlayerBackground == MiniPlayerBackgroundStyle.ANIMATED_MESH) {
+>>>>>>> origin/main
             val url = mediaMetadata?.thumbnailUrl
             if (url != null) {
                 withContext(Dispatchers.IO) {
@@ -1183,13 +1259,21 @@ private fun NewMiniPlayer(
         MiniPlayerBackgroundStyle.TRANSPARENT -> Color.Black.copy(alpha = 0.25f)
         MiniPlayerBackgroundStyle.BLUR       -> MaterialTheme.colorScheme.surfaceContainer
         MiniPlayerBackgroundStyle.GRADIENT   -> MaterialTheme.colorScheme.surfaceContainer
+<<<<<<< HEAD
         MiniPlayerBackgroundStyle.GLOW       -> MaterialTheme.colorScheme.surfaceContainer
+=======
+        MiniPlayerBackgroundStyle.ANIMATED_MESH -> MaterialTheme.colorScheme.surfaceContainer
+>>>>>>> origin/main
         MiniPlayerBackgroundStyle.PURE_BLACK -> Color.Black
     }
     val forceLightColors = !useDarkTheme && (miniPlayerBackground == MiniPlayerBackgroundStyle.PURE_BLACK ||
             miniPlayerBackground == MiniPlayerBackgroundStyle.BLUR ||
             miniPlayerBackground == MiniPlayerBackgroundStyle.GRADIENT ||
+<<<<<<< HEAD
             miniPlayerBackground == MiniPlayerBackgroundStyle.GLOW)
+=======
+            miniPlayerBackground == MiniPlayerBackgroundStyle.ANIMATED_MESH)
+>>>>>>> origin/main
 
     val primaryColor = if (forceLightColors) Color.White else MaterialTheme.colorScheme.primary
     val outlineColor = if (forceLightColors) Color.White else MaterialTheme.colorScheme.outline
@@ -1284,6 +1368,7 @@ private fun NewMiniPlayer(
         ) {
             when (miniPlayerBackground) {
                 MiniPlayerBackgroundStyle.BLUR -> {
+<<<<<<< HEAD
                     mediaMetadata?.thumbnailUrl?.let { url ->
                         // CPU blur: no API-level guard, and no stretched
                         // low-resolution thumbnail showing through.
@@ -1297,6 +1382,24 @@ private fun NewMiniPlayer(
                                 .fillMaxSize()
                                 .background(Color.Black.copy(alpha = 0.58f)),
                         )
+=======
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                        mediaMetadata?.thumbnailUrl?.let { url ->
+                            AsyncImage(
+                                model = url,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .blur(60.dp),
+                            )
+                            Box(
+                                Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = 0.45f)),
+                            )
+                        }
+>>>>>>> origin/main
                     }
                 }
                 MiniPlayerBackgroundStyle.GRADIENT -> {
@@ -1314,6 +1417,7 @@ private fun NewMiniPlayer(
                             .background(Color.Black.copy(alpha = 0.15f)),
                     )
                 }
+<<<<<<< HEAD
                 MiniPlayerBackgroundStyle.GLOW -> {
                     val colors = if (gradientColors.isNotEmpty()) gradientColors
                     else listOf(
@@ -1328,6 +1432,10 @@ private fun NewMiniPlayer(
                             .fillMaxSize()
                             .background(Color.Black.copy(alpha = 0.32f)),
                     )
+=======
+                MiniPlayerBackgroundStyle.ANIMATED_MESH -> {
+                    // AnimatedMeshBackground is expected to be present in your project
+>>>>>>> origin/main
                 }
                 else -> {}
             }
@@ -1526,6 +1634,7 @@ private fun NewMiniPlayerPlayButton(
                 )
             }
         }
+<<<<<<< HEAD
         val artworkNotesAnimation by rememberEnumPreference(
             MiniPlayerPlayingAnimationKey,
             defaultValue = MiniPlayerPlayingAnimation.BARS,
@@ -1537,6 +1646,8 @@ private fun NewMiniPlayerPlayButton(
                 modifier = Modifier.matchParentSize(),
             )
         }
+=======
+>>>>>>> origin/main
     }
 }
 
@@ -1548,14 +1659,18 @@ private fun NewMiniPlayerSongInfo(
     modifier: Modifier = Modifier,
 ) {
     val error by LocalPlayerConnection.current?.error?.collectAsState() ?: remember { mutableStateOf(null) }
+<<<<<<< HEAD
     val isPlaying by LocalPlayerConnection.current?.isPlaying?.collectAsStateWithLifecycle()
         ?: remember { mutableStateOf(false) }
+=======
+>>>>>>> origin/main
 
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.Center,
     ) {
         mediaMetadata?.let { metadata ->
+<<<<<<< HEAD
             // NOTES now rises off the artwork thumbnail itself; only the bars
             // marker lives beside the title, so the NOTES pick leaves no gap.
             val playingAnimation by rememberEnumPreference(
@@ -1584,6 +1699,17 @@ private fun NewMiniPlayerSongInfo(
                             .basicMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp),
                 )
             }
+=======
+            Text(
+                text = metadata.title,
+                color = onSurfaceColor,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Clip,
+                modifier = Modifier.basicMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp),
+            )
+>>>>>>> origin/main
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
@@ -1879,6 +2005,7 @@ private fun LegacyMiniMediaInfo(
 ) {
     val error by LocalPlayerConnection.current?.error?.collectAsState() ?: remember { mutableStateOf(null) }
     val cropAlbumArt by rememberPreference(CropAlbumArtKey, false)
+<<<<<<< HEAD
     val thumbnailShadow by rememberPreference(ThumbnailShadowKey, true)
 
     val legacyIsPlaying by LocalPlayerConnection.current?.isPlaying?.collectAsStateWithLifecycle()
@@ -1887,24 +2014,35 @@ private fun LegacyMiniMediaInfo(
         MiniPlayerPlayingAnimationKey,
         defaultValue = MiniPlayerPlayingAnimation.BARS,
     )
+=======
+>>>>>>> origin/main
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier,
     ) {
+<<<<<<< HEAD
         // Unclipped anchor: the clipped artwork lives inside, the notes rise
         // as its sibling so they can drift past the artwork's top edge.
+=======
+>>>>>>> origin/main
         Box(
             modifier =
                 Modifier
                     .padding(6.dp)
+<<<<<<< HEAD
                     .size(48.dp),
             contentAlignment = Alignment.BottomCenter,
+=======
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(ThumbnailCornerRadius)),
+>>>>>>> origin/main
         ) {
             Box(
                 modifier =
                     Modifier
                         .fillMaxSize()
+<<<<<<< HEAD
                         .then(
                             if (thumbnailShadow) {
                                 Modifier.artworkDropShadow(
@@ -1963,6 +2101,41 @@ private fun LegacyMiniMediaInfo(
                     color = Color.White,
                     modifier = Modifier.matchParentSize(),
                 )
+=======
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+            )
+
+            val thumbnailUrl =
+                remember(mediaMetadata.thumbnailUrl) {
+                    mediaMetadata.thumbnailUrl?.resize(144, 144)
+                }
+            AsyncImage(
+                model = thumbnailUrl,
+                contentDescription = null,
+                contentScale = if (cropAlbumArt) ContentScale.Crop else ContentScale.Fit,
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(ThumbnailCornerRadius)),
+            )
+
+            androidx.compose.animation.AnimatedVisibility(visible = error != null, enter = fadeIn(), exit = fadeOut()) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .background(
+                            color = if (pureBlack) Color.Black else Color.Black.copy(alpha = 0.6f),
+                            shape = RoundedCornerShape(ThumbnailCornerRadius),
+                        ),
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.info),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.align(Alignment.Center),
+                    )
+                }
+>>>>>>> origin/main
             }
         }
 
@@ -1972,6 +2145,7 @@ private fun LegacyMiniMediaInfo(
                     .weight(1f)
                     .padding(horizontal = 6.dp),
         ) {
+<<<<<<< HEAD
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (legacyPlayingAnimation == MiniPlayerPlayingAnimation.BARS) {
                     NowPlayingAnimationIndicator(
@@ -1991,6 +2165,17 @@ private fun LegacyMiniMediaInfo(
                     modifier = Modifier.weight(1f).basicMarquee(),
                 )
             }
+=======
+            Text(
+                text = mediaMetadata.title,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.basicMarquee(),
+            )
+>>>>>>> origin/main
 
              if (mediaMetadata.artists.any { it.name.isNotBlank() }) {
                  Text(
@@ -2128,6 +2313,7 @@ private fun FavoriteButton(
         )
     }
 }
+<<<<<<< HEAD
 
 /** Blur radius of the mini-player glow — modest, so the drift keeps its frames. */
 private val GlowBlurRadius = 32.dp
@@ -2246,3 +2432,5 @@ private fun GlowAnimatedBackground(
         drawBlob(primary, 0.5f, 0.30f, 0.26f, 0.34f, 1.15f)
     }
 }
+=======
+>>>>>>> origin/main

@@ -104,8 +104,11 @@ import com.jay.glossy.constants.AndroidAutoTargetPlaylistKey
 import com.jay.glossy.constants.AudioNormalizationKey
 import com.jay.glossy.constants.AudioOffload
 import com.jay.glossy.constants.AudioQualityKey
+<<<<<<< HEAD
 import com.jay.glossy.constants.CanvasOnMobileDataKey
 import com.jay.glossy.constants.CanvasPreloadKey
+=======
+>>>>>>> origin/main
 import com.jay.glossy.constants.CanvasThumbnailAnimationKey
 import com.jay.glossy.constants.AudioTrackPlaybackParamsKey
 import com.jay.glossy.constants.AutoDownloadOnLikeKey
@@ -120,6 +123,10 @@ import com.jay.glossy.constants.AutoplayKey
 import com.jay.glossy.constants.CrossfadeDurationKey
 import com.jay.glossy.constants.CrossfadeEnabledKey
 import com.jay.glossy.constants.CrossfadeGaplessKey
+<<<<<<< HEAD
+=======
+import com.jay.glossy.constants.SoundFxEnabledKey
+>>>>>>> origin/main
 import com.jay.glossy.constants.DisableLoadMoreWhenRepeatAllKey
 import com.jay.glossy.constants.DiscordActivityNameKey
 import com.jay.glossy.constants.DiscordActivityTypeKey
@@ -169,7 +176,10 @@ import com.jay.glossy.constants.ShufflePlaylistFirstKey
 import com.jay.glossy.constants.SimilarContent
 import com.jay.glossy.constants.SkipSilenceInstantKey
 import com.jay.glossy.constants.SkipSilenceKey
+<<<<<<< HEAD
 import com.jay.glossy.constants.SpatialAudioKey
+=======
+>>>>>>> origin/main
 import com.jay.glossy.constants.StopMusicOnTaskClearKey
 import com.jay.glossy.db.MusicDatabase
 import com.jay.glossy.db.entities.Event
@@ -196,8 +206,11 @@ import com.jay.glossy.extensions.toMediaItem
 import com.jay.glossy.extensions.toPersistQueue
 import com.jay.glossy.extensions.toQueue
 import com.jay.glossy.lyrics.LyricsHelper
+<<<<<<< HEAD
 import com.jay.glossy.ui.player.CanvasPrefetcher
 import com.jay.glossy.ui.player.isMobileDataConnection
+=======
+>>>>>>> origin/main
 import com.jay.glossy.ui.player.CanvasResolver
 import com.metrolist.models.PersistPlayerState
 import com.metrolist.models.PersistQueue
@@ -205,7 +218,10 @@ import com.metrolist.models.toMediaMetadata
 import com.jay.glossy.playback.alarm.MusicAlarmScheduler
 import com.jay.glossy.playback.alarm.MusicAlarmStore
 import com.jay.glossy.playback.audio.SilenceDetectorAudioProcessor
+<<<<<<< HEAD
 import com.jay.glossy.playback.audio.StereoWidenerAudioProcessor
+=======
+>>>>>>> origin/main
 import com.jay.glossy.playback.queues.EmptyQueue
 import com.jay.glossy.playback.queues.ListQueue
 import com.jay.glossy.playback.queues.Queue
@@ -270,9 +286,12 @@ import kotlin.random.Random
 private const val INSTANT_SILENCE_SKIP_STEP_MS = 15_000L
 private const val INSTANT_SILENCE_SKIP_SETTLE_MS = 350L
 
+<<<<<<< HEAD
 /** Side-channel gain used while "Spatial Audio" is on (see [StereoWidenerAudioProcessor]). */
 private const val SPATIAL_AUDIO_WIDTH = 1.7f
 
+=======
+>>>>>>> origin/main
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @androidx.annotation.OptIn(UnstableApi::class)
 @AndroidEntryPoint
@@ -458,7 +477,10 @@ class MusicService :
     val playerFlow = _playerFlow.asStateFlow()
 
     private val playerSilenceProcessors = HashMap<Player, SilenceDetectorAudioProcessor>()
+<<<<<<< HEAD
     private val playerStereoWideners = HashMap<Player, StereoWidenerAudioProcessor>()
+=======
+>>>>>>> origin/main
 
     private val instantSilenceSkipEnabled = MutableStateFlow(false)
 
@@ -968,6 +990,7 @@ class MusicService :
             .debounce(1500)
             .distinctUntilChangedBy { it?.id }
             .collectLatest(scope) { mediaMetadata ->
+<<<<<<< HEAD
                 val (canvasEnabled, canvasOnMobileData, canvasPreload) = dataStore.data
                     .map {
                         Triple(
@@ -1019,6 +1042,33 @@ class MusicService :
                         albumName = next.album?.title.orEmpty(),
                             warmVideo = canvasPreload,
                             allowMetered = canvasOnMobileData,
+=======
+                val canvasEnabled = dataStore.data
+                    .map { it[CanvasThumbnailAnimationKey] ?: false }
+                    .first()
+                if (!canvasEnabled) return@collectLatest
+                val context = applicationContext
+                // Current track (may have missed the instant path)
+                mediaMetadata?.let { current ->
+                    CanvasResolver.prefetch(
+                        context = context,
+                        mediaId = current.id,
+                        songTitle = current.title,
+                        artistName = current.artists.firstOrNull()?.name.orEmpty(),
+                        albumName = current.album?.title.orEmpty(),
+                    )
+                }
+                // Next queued track
+                val currentIndex = player.currentMediaItemIndex
+                if (player.mediaItemCount > currentIndex + 1) {
+                    player.getMediaItemAt(currentIndex + 1).metadata?.let { next ->
+                        CanvasResolver.prefetch(
+                            context = context,
+                            mediaId = next.id,
+                            songTitle = next.title,
+                            artistName = next.artists.firstOrNull()?.name.orEmpty(),
+                            albumName = next.album?.title.orEmpty(),
+>>>>>>> origin/main
                         )
                     }
                 }
@@ -1047,6 +1097,7 @@ class MusicService :
             }
 
         dataStore.data
+<<<<<<< HEAD
             .map { it[SpatialAudioKey] ?: false }
             .distinctUntilChanged()
             .collectLatest(scope) { spatialAudio ->
@@ -1055,6 +1106,8 @@ class MusicService :
             }
 
         dataStore.data
+=======
+>>>>>>> origin/main
             .map { com.jay.glossy.eq.soundfx.SoundFxSettings.fromPreferences(it) }
             .distinctUntilChanged()
             .collectLatest(scope) { settings ->
@@ -1080,6 +1133,7 @@ class MusicService :
         combine(
             dataStore.data.map { it[AudioOffload] ?: false },
             dataStore.data.map { it[CrossfadeEnabledKey] ?: false },
+<<<<<<< HEAD
             // Read the effective sound fx state, not the raw switch: the
             // one-tap audio boost turns the effects on without touching
             // SoundFxEnabledKey, and a boost that offload swallowed would be
@@ -1092,6 +1146,13 @@ class MusicService :
             // or while spatial audio is enabled — offloaded audio bypasses the
             // processor chain entirely, so the stereo widener would never run
             if (crossfadeEnabled || soundFxEnabled || spatialAudio) false else offloadPref
+=======
+            dataStore.data.map { it[SoundFxEnabledKey] ?: false },
+        ) { offloadPref, crossfadeEnabled, soundFxEnabled ->
+            // Force disable offload if crossfade is enabled to prevent volume ramp issues,
+            // or while sound fx are enabled — session effects do not run on offloaded audio
+            if (crossfadeEnabled || soundFxEnabled) false else offloadPref
+>>>>>>> origin/main
         }.distinctUntilChanged()
             .collectLatest(scope) { useOffload ->
                 player.setOffloadEnabled(useOffload)
@@ -1125,7 +1186,10 @@ class MusicService :
                 sleepTimer?.let { player.removeListener(it) }
                 playerNormalizationProcessors.remove(player)
                 playerSilenceProcessors.remove(player)
+<<<<<<< HEAD
                 playerStereoWideners.remove(player)
+=======
+>>>>>>> origin/main
                 player.release()
 
                 val newPlayer = createExoPlayer()
@@ -1465,21 +1529,30 @@ class MusicService :
         equalizerService.addAudioProcessor(eqProcessor)
 
         val silenceProcessor = SilenceDetectorAudioProcessor { handleLongSilenceDetected() }
+<<<<<<< HEAD
         val stereoWidener = StereoWidenerAudioProcessor()
+=======
+>>>>>>> origin/main
 
         // Set initial state — use pre-read prefs when available, otherwise fall back to DataStore
         val useAudioTrackPlaybackParams = if (prefs != null) {
             val skipSilence = prefs[SkipSilenceKey] ?: false
             val instantSkip = prefs[SkipSilenceInstantKey] ?: false
             silenceProcessor.instantModeEnabled = skipSilence && instantSkip
+<<<<<<< HEAD
             stereoWidener.width = if (prefs[SpatialAudioKey] ?: false) SPATIAL_AUDIO_WIDTH else 1f
+=======
+>>>>>>> origin/main
             prefs[AudioTrackPlaybackParamsKey] ?: true
         } else {
             runBlocking {
                 val skipSilence = dataStore.get(SkipSilenceKey, false)
                 val instantSkip = dataStore.get(SkipSilenceInstantKey, false)
                 silenceProcessor.instantModeEnabled = skipSilence && instantSkip
+<<<<<<< HEAD
                 stereoWidener.width = if (dataStore.get(SpatialAudioKey, false)) SPATIAL_AUDIO_WIDTH else 1f
+=======
+>>>>>>> origin/main
                 dataStore.get(AudioTrackPlaybackParamsKey, true)
             }
         }
@@ -1488,7 +1561,11 @@ class MusicService :
             ExoPlayer
                 .Builder(this)
                 .setMediaSourceFactory(createMediaSourceFactory())
+<<<<<<< HEAD
                 .setRenderersFactory(createRenderersFactory(normalizationProcessor, eqProcessor, silenceProcessor, stereoWidener, useAudioTrackPlaybackParams))
+=======
+                .setRenderersFactory(createRenderersFactory(normalizationProcessor, eqProcessor, silenceProcessor, useAudioTrackPlaybackParams))
+>>>>>>> origin/main
                 .setLoadControl(
                     // Start playback once ~750ms is buffered (media3's default is 1000ms) so first
                     // audio is audible a touch sooner. min/max/after-rebuffer match the media3 1.x
@@ -1514,7 +1591,10 @@ class MusicService :
 
         playerNormalizationProcessors[player] = normalizationProcessor
         playerSilenceProcessors[player] = silenceProcessor
+<<<<<<< HEAD
         playerStereoWideners[player] = stereoWidener
+=======
+>>>>>>> origin/main
 
         // FIX: Ensure new ExoPlayer instances inherit the selected routing!
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && preferredDeviceId != null) {
@@ -3976,7 +4056,10 @@ class MusicService :
         normalizationProcessor: VolumeNormalizationAudioProcessor,
         eqProcessor: CustomEqualizerAudioProcessor,
         silenceProcessor: SilenceDetectorAudioProcessor,
+<<<<<<< HEAD
         stereoWidener: StereoWidenerAudioProcessor,
+=======
+>>>>>>> origin/main
         useAudioTrackPlaybackParams: Boolean,
     ) = object : DefaultRenderersFactory(this) {
         override fun buildAudioRenderers(
@@ -4037,7 +4120,10 @@ class MusicService :
                         normalizationProcessor,
                         eqProcessor,
                         silenceProcessor,
+<<<<<<< HEAD
                         stereoWidener,
+=======
+>>>>>>> origin/main
                     ),
                     SilenceSkippingAudioProcessor(2_000_000, 20_000, 256),
                     SonicAudioProcessor(),
@@ -4302,7 +4388,10 @@ class MusicService :
         sleepTimer?.let { player.removeListener(it) }
         playerNormalizationProcessors.remove(player)
         playerSilenceProcessors.remove(player)
+<<<<<<< HEAD
         playerStereoWideners.remove(player)
+=======
+>>>>>>> origin/main
         controllerFuture?.let { MediaController.releaseFuture(it) }
         controllerFuture = null
         player.release()
@@ -4860,7 +4949,10 @@ class MusicService :
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Failed to prepare secondary player for crossfade")
             playerNormalizationProcessors.remove(secPlayer)
+<<<<<<< HEAD
             playerStereoWideners.remove(secPlayer)
+=======
+>>>>>>> origin/main
             secPlayer.release()
             secondaryPlayer = null
             return
@@ -4978,7 +5070,10 @@ class MusicService :
 
     private fun cleanupCrossfade(fadingPlayerSessionId: Int = C.AUDIO_SESSION_ID_UNSET) {
         fadingPlayer?.let { playerNormalizationProcessors.remove(it) }
+<<<<<<< HEAD
         fadingPlayer?.let { playerStereoWideners.remove(it) }
+=======
+>>>>>>> origin/main
         fadingPlayer?.stop()
         fadingPlayer?.clearMediaItems()
         fadingPlayer?.release()

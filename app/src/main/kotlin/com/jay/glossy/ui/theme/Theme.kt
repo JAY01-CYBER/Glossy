@@ -7,11 +7,20 @@ package com.jay.glossy.ui.theme
 
 import com.jay.glossy.R
 import android.graphics.Bitmap
+<<<<<<< HEAD
+=======
+import android.os.Build
+>>>>>>> origin/main
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
+<<<<<<< HEAD
+=======
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+>>>>>>> origin/main
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
@@ -28,10 +37,14 @@ import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamiccolor.ColorSpec
 import com.materialkolor.rememberDynamicColorScheme
 import com.materialkolor.score.Score
+<<<<<<< HEAD
 import androidx.compose.runtime.CompositionLocalProvider
 import com.jay.glossy.constants.ActiveDesignStyle
 import com.jay.glossy.constants.AppFont
 import com.jay.glossy.constants.DesignStyle
+=======
+import com.jay.glossy.constants.AppFont
+>>>>>>> origin/main
 import com.jay.glossy.constants.SelectedFontKey
 import com.jay.glossy.utils.rememberPreference
 
@@ -62,6 +75,7 @@ fun MetrolistTheme(
         }
     }
 
+<<<<<<< HEAD
     // The new design is dark-only: in light mode we keep the Material You
     // scheme so the app still has a proper light look. The design style is
     // pinned to classic — see [ActiveDesignStyle].
@@ -85,6 +99,23 @@ fun MetrolistTheme(
                 specVersion = ColorSpec.SpecVersion.SPEC_2025,
                 style = PaletteStyle.Expressive
             )
+=======
+    val typography = remember(brandFont) {
+        getTypography(brandFont = brandFont, plainFont = brandFont)
+    }
+
+    val useSystemDynamicColor = (themeColor == DefaultThemeColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+
+    val baseColorScheme = if (useSystemDynamicColor) {
+        if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+    } else {
+        rememberDynamicColorScheme(
+            seedColor = themeColor,
+            isDark = darkTheme,
+            specVersion = ColorSpec.SpecVersion.SPEC_2025,
+            style = PaletteStyle.Expressive 
+        )
+>>>>>>> origin/main
     }
 
     val colorScheme = remember(baseColorScheme, pureBlack, darkTheme) {
@@ -95,6 +126,7 @@ fun MetrolistTheme(
         }
     }
 
+<<<<<<< HEAD
     // The redesigned surfaces (Settings and the Glossy components it is built
     // from) read these tokens instead of hardcoded colours, so they follow the
     // theme: near-black in dark mode, near-white in light mode. Under the
@@ -116,6 +148,14 @@ fun MetrolistTheme(
             content = content
         )
     }
+=======
+    MaterialTheme(
+        colorScheme = colorScheme,
+        typography = typography,
+        shapes = GlossyShapes,
+        content = content
+    )
+>>>>>>> origin/main
 }
 
 /**

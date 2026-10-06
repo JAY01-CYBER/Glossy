@@ -8,6 +8,7 @@ package com.jay.glossy.ui.screens.settings
 import com.jay.glossy.R
 
 import androidx.compose.foundation.background
+<<<<<<< HEAD
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -16,6 +17,11 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+=======
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+>>>>>>> origin/main
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -25,8 +31,18 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+<<<<<<< HEAD
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+=======
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+>>>>>>> origin/main
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -43,7 +59,10 @@ import timber.log.Timber
 import com.jay.glossy.utils.reportException
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+<<<<<<< HEAD
 import androidx.compose.ui.draw.alpha
+=======
+>>>>>>> origin/main
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -52,9 +71,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
+<<<<<<< HEAD
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+=======
+import androidx.compose.ui.unit.dp
+>>>>>>> origin/main
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
@@ -71,6 +94,12 @@ import com.jay.glossy.constants.VisitorDataKey
 import com.jay.glossy.constants.YtmSyncKey
 import com.jay.glossy.ui.component.DefaultDialog
 import com.jay.glossy.ui.component.InfoLabel
+<<<<<<< HEAD
+=======
+import com.jay.glossy.ui.component.Material3SettingsGroup
+import com.jay.glossy.ui.component.Material3SettingsItem
+import com.jay.glossy.ui.component.PreferenceEntry
+>>>>>>> origin/main
 import com.jay.glossy.ui.component.TextFieldDialog
 import com.jay.glossy.utils.Updater
 import com.jay.glossy.utils.rememberPreference
@@ -111,6 +140,7 @@ fun AccountSettings(
 
     Column(
         modifier = Modifier
+<<<<<<< HEAD
             .background(MaterialTheme.colorScheme.surfaceContainerLow)
             .padding(horizontal = 16.dp)
             .verticalScroll(rememberScrollState())
@@ -156,6 +186,30 @@ fun AccountSettings(
         }
 
         Spacer(Modifier.height(18.dp))
+=======
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 8.dp, end = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(id = R.string.app_name),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                modifier = Modifier.padding(start = 4.dp)
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            IconButton(onClick = onClose) {
+                Icon(painterResource(R.drawable.close), contentDescription = null)
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+>>>>>>> origin/main
 
         // Logout confirmation dialog
         if (showLogoutDialog) {
@@ -274,6 +328,7 @@ fun AccountSettings(
             )
         }
 
+<<<<<<< HEAD
         AccountHeroCard(
             isLoggedIn = isLoggedIn,
             accountName = accountName,
@@ -397,10 +452,146 @@ fun AccountSettings(
                 title = stringResource(R.string.integrations),
                 icon = R.drawable.integration,
                 showChevron = true,
+=======
+        Material3SettingsGroup(
+            items = listOf(
+                Material3SettingsItem(
+                    title = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (isLoggedIn && accountImageUrl != null) {
+                                AsyncImage(
+                                    model = accountImageUrl,
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.size(40.dp).clip(CircleShape)
+                                )
+
+                                Spacer(Modifier.width(12.dp))
+                            }
+
+                            Text(
+                                text = if (isLoggedIn) accountName else stringResource(R.string.login),
+                            )
+                        }
+                    },
+                    icon = if (!isLoggedIn) painterResource(R.drawable.login) else null,
+                    trailingContent = {
+                        if (isLoggedIn) {
+                            OutlinedButton(
+                                onClick = {
+                                    Timber.d("[LOGOUT] User clicked logout button, showing dialog")
+                                    showLogoutDialog = true
+                                },
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                    contentColor = MaterialTheme.colorScheme.onSurface
+                                )
+                            ) {
+                                Text(stringResource(R.string.action_logout))
+                            }
+                        }
+                    },
+                    onClick = {
+                        onClose()
+                        if (isLoggedIn) {
+                            navController.navigate("account")
+                        } else {
+                            navController.navigate("login")
+                        }
+                    }
+                )
+            ),
+            useLowContrast = true
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        Material3SettingsGroup(
+            items = listOf(
+                Material3SettingsItem(
+                    title = {
+                        Text(
+                            when {
+                                !isLoggedIn -> stringResource(R.string.advanced_login)
+                                showToken -> stringResource(R.string.token_shown)
+                                else -> stringResource(R.string.token_hidden)
+                            }
+                        )
+                    },
+                    icon = painterResource(R.drawable.token),
+                    onClick = {
+                        if (!isLoggedIn) showTokenEditor = true
+                        else if (!showToken) showToken = true
+                        else showTokenEditor = true
+                    }
+                ),
+                Material3SettingsItem(
+                    title = { Text(stringResource(R.string.more_content)) },
+                    icon = painterResource(R.drawable.cached),
+                    trailingContent = {
+                        Switch(
+                            enabled = isLoggedIn,
+                            checked = useLoginForBrowse,
+                            onCheckedChange = {
+                                YouTube.useLoginForBrowse = it
+                                onUseLoginForBrowseChange(it)
+                            },
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (useLoginForBrowse) R.drawable.check else R.drawable.close
+                                    ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                )
+                            }
+                        )
+                    },
+                    enabled = isLoggedIn
+                ),
+                Material3SettingsItem(
+                    title = { Text(stringResource(R.string.yt_sync)) },
+                    icon = painterResource(R.drawable.cached),
+                    trailingContent = {
+                        Switch(
+                            enabled = isLoggedIn,
+                            checked = ytmSync,
+                            onCheckedChange = onYtmSyncChange,
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (ytmSync) R.drawable.check else R.drawable.close
+                                    ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                )
+                            }
+                        )
+                    },
+                    enabled = isLoggedIn
+                )
+            ),
+            useLowContrast = true
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        Column(
+            modifier = Modifier
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainer)
+        ) {
+            PreferenceEntry(
+                title = { Text(stringResource(R.string.integrations)) },
+                icon = { Icon(painterResource(R.drawable.integration), null) },
+>>>>>>> origin/main
                 onClick = {
                     onClose()
                     navController.navigate("settings/integrations")
                 },
+<<<<<<< HEAD
             )
 
             SheetDivider()
@@ -410,10 +601,33 @@ fun AccountSettings(
                 icon = R.drawable.settings,
                 badge = updatePending,
                 showChevron = true,
+=======
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceContainer)
+            )
+
+            Spacer(Modifier.height(4.dp))
+
+            PreferenceEntry(
+                title = { Text(stringResource(R.string.settings)) },
+                icon = {
+                    BadgedBox(
+                        badge = {
+                            if (BuildConfig.UPDATER_AVAILABLE && latestVersionName != BuildConfig.VERSION_NAME) {
+                                Badge()
+                            }
+                        }
+                    ) {
+                        Icon(painterResource(R.drawable.settings), contentDescription = null)
+                    }
+                },
+>>>>>>> origin/main
                 onClick = {
                     onClose()
                     navController.navigate("settings")
                 },
+<<<<<<< HEAD
             )
 
             if (downloadUrl != null) {
@@ -688,3 +902,36 @@ private fun AccountHeroCard(
         )
     }
 }
+=======
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceContainer)
+            )
+
+            Spacer(Modifier.height(4.dp))
+
+            if (BuildConfig.UPDATER_AVAILABLE && latestVersionName != BuildConfig.VERSION_NAME) {
+                val releaseInfo = Updater.getCachedLatestRelease()
+                val downloadUrl = releaseInfo?.let { Updater.getDownloadUrlForCurrentVariant(it) }
+                
+                if (downloadUrl != null) {
+                    PreferenceEntry(
+                        title = {
+                            Text(text = stringResource(R.string.new_version_available))
+                        },
+                        description = latestVersionName,
+                        icon = {
+                            BadgedBox(badge = { Badge() }) {
+                                Icon(painterResource(R.drawable.update), null)
+                            }
+                        },
+                        onClick = {
+                            uriHandler.openUri(downloadUrl)
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+>>>>>>> origin/main

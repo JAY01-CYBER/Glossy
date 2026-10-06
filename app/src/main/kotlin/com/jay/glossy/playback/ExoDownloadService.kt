@@ -12,8 +12,11 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.Icon
+<<<<<<< HEAD
 import android.net.ConnectivityManager
 import android.widget.Toast
+=======
+>>>>>>> origin/main
 import androidx.media3.common.util.NotificationUtil
 import androidx.media3.common.util.Util
 import androidx.media3.exoplayer.offline.Download
@@ -22,12 +25,17 @@ import androidx.media3.exoplayer.offline.DownloadNotificationHelper
 import androidx.media3.exoplayer.offline.DownloadService
 import androidx.media3.exoplayer.scheduler.PlatformScheduler
 import androidx.media3.exoplayer.scheduler.Scheduler
+<<<<<<< HEAD
 import com.jay.glossy.constants.DownloadOverWifiOnlyKey
 import com.jay.glossy.utils.dataStore
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+=======
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
+>>>>>>> origin/main
 
 
 @AndroidEntryPoint
@@ -47,6 +55,7 @@ class ExoDownloadService : DownloadService(
                 downloadManager.removeDownload(download.request.id)
             }
         }
+<<<<<<< HEAD
 
         // "Download over Wi-Fi only": hold new downloads back while the device
         // is on mobile data, and explain why nothing started.
@@ -68,6 +77,11 @@ class ExoDownloadService : DownloadService(
         return manager.isActiveNetworkMetered
     }
 
+=======
+        return super.onStartCommand(intent, flags, startId)
+    }
+
+>>>>>>> origin/main
     override fun getDownloadManager() = downloadUtil.downloadManager
 
     override fun getScheduler(): Scheduler = PlatformScheduler(this, JOB_ID)

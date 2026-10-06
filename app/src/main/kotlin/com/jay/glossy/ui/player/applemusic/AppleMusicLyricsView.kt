@@ -56,7 +56,10 @@ import com.jay.glossy.db.entities.LyricsEntity
 import com.jay.glossy.ui.component.LocalBottomSheetPageState
 import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.component.Lyrics
+<<<<<<< HEAD
 import com.jay.glossy.ui.component.GlassBackdrop
+=======
+>>>>>>> origin/main
 import com.jay.glossy.ui.component.PlayStoreRefreshIndicator
 import com.jay.glossy.ui.utils.ShowOffsetDialog
 import dagger.hilt.android.EntryPointAccessors
@@ -193,6 +196,7 @@ internal fun AppleMusicLyricsView(
                 .padding(horizontal = 10.dp),
             contentAlignment = Alignment.Center
         ) {
+<<<<<<< HEAD
             // Premium frosted-glass lyrics panel: blurred artwork backdrop + dark
             // scrim, shared with the other player designs via GlassBackdrop. The
             // backdrop fades in down the panel, so the blur builds up from the
@@ -205,6 +209,54 @@ internal fun AppleMusicLyricsView(
                 shape = RoundedCornerShape(28.dp),
                 modifier = Modifier.fillMaxSize(),
             )
+=======
+            // Premium frosted-glass lyrics panel: blurred artwork backdrop + dark scrim.
+            val lyricsArtworkUrl = remember(mediaMetadata?.thumbnailUrl) {
+                mediaMetadata?.thumbnailUrl?.toHighRes()
+            }
+            val lyricsPanelShape = RoundedCornerShape(28.dp)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(lyricsPanelShape)
+            ) {
+                if (lyricsArtworkUrl != null) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(lyricsArtworkUrl)
+                            .crossfade(400)
+                            .build(),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .matchParentSize()
+                            .graphicsLayer {
+                                scaleX = 1.5f
+                                scaleY = 1.5f
+                            }
+                            .blur(72.dp)
+                            .alpha(0.6f),
+                    )
+                }
+                Box(
+                    Modifier
+                        .matchParentSize()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color.Black.copy(alpha = 0.35f),
+                                    Color.Black.copy(alpha = 0.55f),
+                                ),
+                            ),
+                        ),
+                )
+                Box(
+                    Modifier
+                        .matchParentSize()
+                        .border(1.dp, Color.White.copy(alpha = 0.10f), lyricsPanelShape),
+                )
+            }
+>>>>>>> origin/main
             Box(
                 modifier = Modifier
                     .fillMaxSize()

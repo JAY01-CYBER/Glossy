@@ -29,6 +29,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+<<<<<<< HEAD
+=======
+import androidx.compose.ui.draw.blur
+>>>>>>> origin/main
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.*
@@ -43,7 +47,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+<<<<<<< HEAD
 import com.jay.glossy.ui.component.GlassBackdrop
+=======
+>>>>>>> origin/main
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.jay.glossy.R
@@ -69,6 +76,7 @@ internal val AppleMusicPillInactive = Color.White.copy(alpha = 0.24f)
 internal val AppleMusicTrackInactive = Color.White.copy(alpha = 0.26f)
 internal val AppleMusicTrackActive = Color.White.copy(alpha = 0.92f)
 
+<<<<<<< HEAD
 /**
  * Horizontal inset of the design's text from the screen edge, and the value
  * `AppleMusicMainTitleRow` pads itself by.
@@ -87,6 +95,8 @@ internal val AppleMusicGutter = 20.dp
  */
 internal val AppleMusicGlowInset = PaddingValues(start = AppleMusicGutter, end = AppleMusicGutter)
 
+=======
+>>>>>>> origin/main
 internal fun appleMusicGradientColorAt(seedColor: Color, fraction: Float): Color {
     val top = lerp(seedColor, Color.Black, 0.05f)
     val mid = lerp(seedColor, Color.Black, 0.32f)
@@ -518,10 +528,13 @@ internal fun AppleMusicBottomCluster(
  * Premium frosted-glass sheet for the bottom of the Apple Music style player:
  * a heavily blurred, darkened crop of the current artwork sits behind the
  * controls with a hairline glass edge on top.
+<<<<<<< HEAD
  *
  * The sheet fades in from its top edge rather than starting at full strength,
  * so the blur and the darkening build up across the transport, volume and dock
  * rows instead of the cluster separating from the artwork above it.
+=======
+>>>>>>> origin/main
  */
 @Composable
 internal fun FrostedBottomPanel(
@@ -532,11 +545,16 @@ internal fun FrostedBottomPanel(
     val shape = RoundedCornerShape(topStart = cornerRadius, topEnd = cornerRadius)
     val playerConnection = LocalPlayerConnection.current
     val mediaMetadata = playerConnection?.mediaMetadata?.collectAsStateWithLifecycle()?.value
+<<<<<<< HEAD
+=======
+    val context = LocalContext.current
+>>>>>>> origin/main
     val artworkUrl = remember(mediaMetadata?.thumbnailUrl) {
         mediaMetadata?.thumbnailUrl?.toHighRes()
     }
 
     Box(modifier = modifier.clip(shape)) {
+<<<<<<< HEAD
         // A CPU Gaussian blur rather than `Modifier.blur`: RenderEffect only
         // exists from API 31, so the frosted panel used to render as a plain
         // sharp, stretched crop of the artwork on older devices.
@@ -554,6 +572,42 @@ internal fun FrostedBottomPanel(
                 ),
             ),
             modifier = Modifier.matchParentSize(),
+=======
+        if (artworkUrl != null) {
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(artworkUrl)
+                    .crossfade(400)
+                    .build(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .matchParentSize()
+                    .graphicsLayer {
+                        scaleX = 1.4f
+                        scaleY = 1.4f
+                    }
+                    .blur(56.dp)
+                    .alpha(0.55f),
+            )
+        }
+        Box(
+            Modifier
+                .matchParentSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color.Black.copy(alpha = 0.50f),
+                            Color.Black.copy(alpha = 0.22f),
+                        ),
+                    ),
+                ),
+        )
+        Box(
+            Modifier
+                .matchParentSize()
+                .border(1.dp, Color.White.copy(alpha = 0.10f), shape),
+>>>>>>> origin/main
         )
         content()
     }

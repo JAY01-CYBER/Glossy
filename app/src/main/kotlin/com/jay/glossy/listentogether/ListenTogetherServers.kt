@@ -1,6 +1,7 @@
 /**
  * Metrolist Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
+<<<<<<< HEAD
  *
  * Server registry for Listen Together. The list is seeded with the known
  * endpoints and refreshed at startup from Echo Music's published server.json,
@@ -8,10 +9,13 @@
  * a hardcoded URL silently dies with its host.
  *
  * Ported from Echo Music's ListenTogetherServers (GPL-3.0).
+=======
+>>>>>>> origin/main
  */
 
 package com.jay.glossy.listentogether
 
+<<<<<<< HEAD
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -25,6 +29,12 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.OkHttpClient
 import okhttp3.Request
+=======
+import com.jay.glossy.R
+
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+>>>>>>> origin/main
 
 @Serializable
 data class ListenTogetherServer(
@@ -35,6 +45,7 @@ data class ListenTogetherServer(
 )
 
 object ListenTogetherServers {
+<<<<<<< HEAD
     /** Echo Music's published server descriptor: { name, serverUrl, region }. */
     private const val SERVER_JSON_URL =
         "https://raw.githubusercontent.com/EchoMusicApp/Echo-Music/refs/heads/main/app/server.json"
@@ -90,6 +101,23 @@ object ListenTogetherServers {
                 // Keep the seeded list — fallback implicitly retained.
             }
         }
+=======
+    private const val ServersJson = """
+        [
+          {
+            "name": "The Meowery",
+            "url": "wss://rx.meowery.eu/ws",
+            "location": "Poland",
+            "operator": "Nyx"
+          }
+        ]
+    """
+
+    private val json = Json { ignoreUnknownKeys = true }
+
+    val servers: List<ListenTogetherServer> by lazy {
+        json.decodeFromString(ServersJson)
+>>>>>>> origin/main
     }
 
     val defaultServerUrl: String

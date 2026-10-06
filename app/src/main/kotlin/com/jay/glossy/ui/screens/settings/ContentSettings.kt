@@ -19,7 +19,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+<<<<<<< HEAD
 import androidx.compose.foundation.layout.width
+=======
+>>>>>>> origin/main
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -33,7 +36,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
+<<<<<<< HEAD
 import androidx.compose.material3.IconButton
+=======
+>>>>>>> origin/main
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -74,7 +80,10 @@ import com.jay.glossy.constants.EnableBiniLyricsKey
 import com.jay.glossy.constants.EnableSimpMusicKey
 import com.jay.glossy.constants.EnableNetEaseKey
 import com.jay.glossy.constants.EnableMegalobizKey
+<<<<<<< HEAD
 import com.jay.glossy.constants.EnableSpotifyLyricsKey
+=======
+>>>>>>> origin/main
 import com.jay.glossy.constants.HideExplicitKey
 import com.jay.glossy.constants.HideVideoSongsKey
 import com.jay.glossy.constants.HideYoutubeShortsKey
@@ -99,6 +108,11 @@ import com.jay.glossy.ui.component.EnumDialog
 import com.jay.glossy.ui.component.IconButton
 import com.jay.glossy.ui.component.Material3SettingsGroup
 import com.jay.glossy.ui.component.Material3SettingsItem
+<<<<<<< HEAD
+=======
+import com.jay.glossy.ui.component.DraggableLyricsProviderItem
+import com.jay.glossy.ui.component.DraggableLyricsProviderList
+>>>>>>> origin/main
 import com.jay.glossy.lyrics.LyricsProviderRegistry
 import com.jay.glossy.ui.utils.backToMain
 import com.jay.glossy.utils.rememberEnumPreference
@@ -142,7 +156,10 @@ fun ContentSettings(
     val (enableSimpMusic, onEnableSimpMusicChange) = rememberPreference(key = EnableSimpMusicKey, defaultValue = true)
     val (enableNetEase, onEnableNetEaseChange) = rememberPreference(key = EnableNetEaseKey, defaultValue = true)
     val (enableMegalobiz, onEnableMegalobizChange) = rememberPreference(key = EnableMegalobizKey, defaultValue = true)
+<<<<<<< HEAD
     val (enableSpotifyLyrics, onEnableSpotifyLyricsChange) = rememberPreference(key = EnableSpotifyLyricsKey, defaultValue = false)
+=======
+>>>>>>> origin/main
 
     val (lyricsProviderOrder, onLyricsProviderOrderChange) = rememberPreference(
         key = LyricsProviderOrderKey,
@@ -181,8 +198,12 @@ fun ContentSettings(
 
     val providerDisplayNames =
         mapOf(
+<<<<<<< HEAD
                 "Spotify" to "Spotify",
                 "BetterLyrics" to "Better Lyrics",
+=======
+            "BetterLyrics" to "Better Lyrics",
+>>>>>>> origin/main
             "Paxsenix" to "Paxsenix",
             "LrcLib" to "LrcLib",
             "KuGou" to "KuGou",
@@ -491,6 +512,7 @@ fun ContentSettings(
                         Column(
                             modifier = Modifier.weight(1f)
                         ) {
+<<<<<<< HEAD
                             Text(stringResource(R.string.spotify_lyrics))
                             Text(
                                 text = stringResource(R.string.spotify_lyrics_desc),
@@ -520,6 +542,8 @@ fun ContentSettings(
                         Column(
                             modifier = Modifier.weight(1f)
                         ) {
+=======
+>>>>>>> origin/main
                             Text("Enable YouLyPlus")
                             Text(
                                 text = "Fetch lyrics from YouLyPlus community servers",
@@ -863,6 +887,7 @@ fun ContentSettings(
         val normalizedOrder = currentOrder.filter { it in defaultOrder } +
             defaultOrder.filter { it !in currentOrder }
 
+<<<<<<< HEAD
         // Every provider that has a switch to its name, mapped to it. The
         // YouTube rows are not here: they are always asked and carry no switch.
         val providerSwitches: Map<String, Pair<Boolean, (Boolean) -> Unit>> = mapOf(
@@ -893,6 +918,39 @@ fun ContentSettings(
         }
         val moveUpPainter = painterResource(R.drawable.arrow_upward)
         val moveDownPainter = painterResource(R.drawable.arrow_downward)
+=======
+        val enabledProviders = setOf(
+            "LrcLib".takeIf { enableLrclib },
+            "KuGou".takeIf { enableKugou },
+            "BetterLyrics".takeIf { enableBetterLyrics },
+            "Paxsenix".takeIf { enablePaxsenix },
+            "LyricsPlus".takeIf { enableLyricsPlus },
+            "Musixmatch".takeIf { enableMusixmatch },
+            "NetEase".takeIf { enableNetEase },
+            "Megalobiz".takeIf { enableMegalobiz },
+            "YouLyPlus".takeIf { enableYouLyPlus },
+            "Unison".takeIf { enableUnison },
+            "BiniLyrics".takeIf { enableBiniLyrics },
+            "SimpMusic".takeIf { enableSimpMusic } 
+        ).filterNotNull().toSet()
+        val lyricsIcon = painterResource(R.drawable.lyrics)
+        val draggableItems = remember { mutableStateListOf<DraggableLyricsProviderItem>() }
+
+        LaunchedEffect(normalizedOrder, enableLrclib, enableKugou, enableBetterLyrics, enablePaxsenix, enableLyricsPlus, enableMusixmatch, enableNetEase, enableMegalobiz, enableYouLyPlus, enableUnison, enableBiniLyrics, enableSimpMusic) {
+            val orderedEnabledProviders = normalizedOrder.filter { it in enabledProviders }
+            draggableItems.clear()
+            draggableItems.addAll(
+                orderedEnabledProviders.mapNotNull { providerName ->
+                    LyricsProviderRegistry.getProviderByName(providerName) ?: return@mapNotNull null
+                    DraggableLyricsProviderItem(
+                        id = providerName,
+                        name = providerDisplayNames[providerName] ?: providerName,
+                        icon = lyricsIcon,
+                    )
+                }
+            )
+        }
+>>>>>>> origin/main
 
         AlertDialog(
             onDismissRequest = { showProviderPriorityDialog = false },
@@ -901,7 +959,11 @@ fun ContentSettings(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+<<<<<<< HEAD
                         .height(400.dp)
+=======
+                        .height(300.dp)
+>>>>>>> origin/main
                 ) {
                     Text(
                         stringResource(R.string.lyrics_provider_priority_desc),
@@ -909,6 +971,7 @@ fun ContentSettings(
                         modifier = Modifier.padding(bottom = 8.dp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+<<<<<<< HEAD
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -997,6 +1060,21 @@ fun ContentSettings(
                             }
                         }
                     }
+=======
+                    DraggableLyricsProviderList(
+                        items = draggableItems,
+                        onItemsReordered = { reorderedItems ->
+                            val enabledOrder = reorderedItems.map { it.id }
+                            val disabledOrder = normalizedOrder.filter { it !in enabledProviders }
+                            onLyricsProviderOrderChange(
+                                LyricsProviderRegistry.serializeProviderOrder(enabledOrder + disabledOrder)
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                    )
+>>>>>>> origin/main
                 }
             },
             confirmButton = {
@@ -1252,6 +1330,7 @@ fun ContentSettings(
                     description = { Text(stringResource(R.string.lyrics_provider_selection_desc)) },
                     onClick = { showProviderSelectionDialog = true }
                 ),
+<<<<<<< HEAD
                 // The Spotify switch used to live only inside the provider
                 // dialog, which meant the feature was invisible unless you
                 // already knew to open it. It gets its own row here, beside
@@ -1278,6 +1357,8 @@ fun ContentSettings(
                     },
                     onClick = { onEnableSpotifyLyricsChange(!enableSpotifyLyrics) }
                 ),
+=======
+>>>>>>> origin/main
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.lyrics),
                     title = { Text(stringResource(R.string.lyrics_provider_priority)) },

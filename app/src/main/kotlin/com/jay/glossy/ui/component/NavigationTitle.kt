@@ -8,10 +8,15 @@ package com.jay.glossy.ui.component
 import com.jay.glossy.R
 
 import androidx.compose.foundation.BorderStroke
+<<<<<<< HEAD
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+=======
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+>>>>>>> origin/main
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -22,7 +27,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+<<<<<<< HEAD
 import androidx.compose.foundation.layout.width
+=======
+>>>>>>> origin/main
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
@@ -36,7 +44,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+<<<<<<< HEAD
 import androidx.compose.ui.draw.clip
+=======
+>>>>>>> origin/main
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -66,6 +77,7 @@ fun NavigationTitle(
     ) {
         thumbnail?.invoke()
 
+<<<<<<< HEAD
         // The same accent rule the home feed's own lockup uses, so a section
         // heading looks the same wherever it appears.
         Box(
@@ -77,6 +89,8 @@ fun NavigationTitle(
                 .background(MaterialTheme.colorScheme.primary),
         )
 
+=======
+>>>>>>> origin/main
         Column(
             verticalArrangement = Arrangement.Center,
             modifier = Modifier.weight(1f)
@@ -84,9 +98,15 @@ fun NavigationTitle(
             label?.let { rawLabel ->
                 Text(
                     text = rawLabel.uppercase(),
+<<<<<<< HEAD
                     fontSize = 10.5.sp,
                     fontWeight = FontWeight.SemiBold,
                     letterSpacing = 1.3.sp,
+=======
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.5.sp,
+>>>>>>> origin/main
                     color = MaterialTheme.colorScheme.primary,
                     overflow = TextOverflow.Ellipsis,
                     maxLines = 1,
@@ -97,8 +117,12 @@ fun NavigationTitle(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,
+<<<<<<< HEAD
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = (-0.4).sp,
+=======
+                fontWeight = FontWeight.Bold,
+>>>>>>> origin/main
                 color = MaterialTheme.colorScheme.onSurface,
                 overflow = TextOverflow.Ellipsis,
                 maxLines = 1,

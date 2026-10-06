@@ -10,7 +10,10 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+<<<<<<< HEAD
 import androidx.compose.foundation.layout.BoxWithConstraints
+=======
+>>>>>>> origin/main
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -57,11 +60,16 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+<<<<<<< HEAD
 import com.jay.glossy.constants.ActiveDesignStyle
 import com.jay.glossy.constants.DesignStyle
 import com.jay.glossy.constants.UseFloatingNavBarKey
 import com.jay.glossy.ui.screens.Screens
 import com.jay.glossy.ui.theme.GlossyPalette
+=======
+import com.jay.glossy.constants.UseFloatingNavBarKey
+import com.jay.glossy.ui.screens.Screens
+>>>>>>> origin/main
 import com.jay.glossy.utils.rememberPreference
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -180,6 +188,7 @@ fun AppNavigationBar(
     onSearchLongClick: (() -> Unit)? = null
 ) {
     val (useFloatingNavBar) = rememberPreference(UseFloatingNavBarKey, defaultValue = true)
+<<<<<<< HEAD
     // Pinned to the classic look: the redesigned bar is no longer selectable.
     val newDesign = ActiveDesignStyle == DesignStyle.TEAL
 
@@ -197,6 +206,12 @@ fun AppNavigationBar(
             // which has no Search in it) is not enough on its own — without
             // this the lookup came back empty and the pill never appeared.
             navigationItems = navigationItems.withSearchPill(),
+=======
+
+    if (useFloatingNavBar) {
+        FloatingAppNavigationBar(
+            navigationItems = navigationItems,
+>>>>>>> origin/main
             currentRoute = currentRoute,
             onItemClick = onItemClick,
             modifier = modifier,
@@ -218,6 +233,7 @@ fun AppNavigationBar(
 }
 
 // ----------------------------------------------------
+<<<<<<< HEAD
 // New design system: flat four-item bar
 // ----------------------------------------------------
 @Composable
@@ -286,6 +302,10 @@ private val SearchPillGap = 12.dp
 private val TabMinWidth = 62.dp
 private val TabMaxWidth = 80.dp
 
+=======
+// Premium MD3 Liquid Navigation Bar (Squash & Stretch)
+// ----------------------------------------------------
+>>>>>>> origin/main
 @Composable
 private fun FloatingAppNavigationBar(
     navigationItems: List<Screens>,
@@ -314,10 +334,14 @@ private fun FloatingAppNavigationBar(
     }
 
     val barHeight = if (slimNav) 48.dp else 56.dp 
+<<<<<<< HEAD
     // Deliberately shorter than the tab pill: search is a secondary control
     // sitting beside the bar, not a fifth tab wedged into it, and the smaller
     // footprint hands the tabs their width back.
     val searchSize = if (slimNav) 42.dp else 46.dp
+=======
+    val fabSize = if (slimNav) 48.dp else 56.dp 
+>>>>>>> origin/main
 
     Row(
         modifier = modifier
@@ -326,6 +350,7 @@ private fun FloatingAppNavigationBar(
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
+<<<<<<< HEAD
         // The tabs and the search pill share whatever width the bar is given:
         // the tabs flex down toward icon width so the pill always fits beside
         // the navigation pill, however narrow the screen.
@@ -341,6 +366,9 @@ private fun FloatingAppNavigationBar(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
         // 1. Home, Mix and Library, all three inside one pill.
+=======
+        // 1. The MD3 Sliding Pill Container
+>>>>>>> origin/main
         MaterialLiquidTabBar(
             tabs = mainItems,
             selectedIndex = lastMainIndex,
@@ -350,6 +378,7 @@ private fun FloatingAppNavigationBar(
             pureBlack = pureBlack,
             slimNav = slimNav,
             barHeight = barHeight,
+<<<<<<< HEAD
             tabWidth = tabWidth,
             onItemClick = onItemClick
         )
@@ -357,6 +386,14 @@ private fun FloatingAppNavigationBar(
         // 2. Search, floating on its own
         if (searchItem != null) {
             Spacer(modifier = Modifier.width(gap)) 
+=======
+            onItemClick = onItemClick
+        )
+
+        // 2. Detached Search FAB
+        if (searchItem != null) {
+            Spacer(modifier = Modifier.width(16.dp)) 
+>>>>>>> origin/main
             
             val isSearchSelected = remember(currentRoute, searchItem.route) {
                 isRouteSelected(currentRoute, searchItem.route, navigationItems)
@@ -387,10 +424,13 @@ private fun FloatingAppNavigationBar(
                 }
             }
 
+<<<<<<< HEAD
             // A circle carrying nothing but the magnifier and its own
             // elevation, so search reads as a control in its own right rather
             // than a fourth tab wedged into the navigation pill. The word was
             // labelling a control nobody needs labelling.
+=======
+>>>>>>> origin/main
             Surface(
                 onClick = {
                     if (onSearchLongClick == null) {
@@ -398,6 +438,7 @@ private fun FloatingAppNavigationBar(
                     }
                 },
                 interactionSource = interactionSource,
+<<<<<<< HEAD
                 shape = RoundedCornerShape(percent = 50),
                 // Accent-filled, so the pill reads as the bar's second control
                 // instead of a tonal blob that disappears into it.
@@ -409,17 +450,35 @@ private fun FloatingAppNavigationBar(
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
+=======
+                shape = CircleShape,
+                color = if (isSearchSelected) floatingToolbarSelectedItemContainerColor(pureBlack) else floatingToolbarFabContainerColor(pureBlack),
+                contentColor = if (isSearchSelected) floatingToolbarSelectedItemContentColor(pureBlack) else floatingToolbarFabContentColor(pureBlack),
+                shadowElevation = 12.dp,
+                modifier = Modifier.size(fabSize) 
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center, 
+                    modifier = Modifier.fillMaxSize()
+>>>>>>> origin/main
                 ) {
                     Icon(
                         painter = painterResource(id = if (isSearchSelected) searchItem.iconIdActive else searchItem.iconIdInactive),
                         contentDescription = stringResource(searchItem.titleId),
+<<<<<<< HEAD
                         modifier = Modifier.size(22.dp)
+=======
+                        modifier = Modifier.size(24.dp) 
+>>>>>>> origin/main
                     )
                 }
             }
         }
+<<<<<<< HEAD
             }
         }
+=======
+>>>>>>> origin/main
     }
 }
 
@@ -433,12 +492,19 @@ private fun MaterialLiquidTabBar(
     pureBlack: Boolean,
     slimNav: Boolean,
     barHeight: androidx.compose.ui.unit.Dp,
+<<<<<<< HEAD
     /** Width of one tab — the caller decides how much of the bar the pills may take. */
     tabWidth: androidx.compose.ui.unit.Dp,
+=======
+>>>>>>> origin/main
     onItemClick: (Screens, Boolean) -> Unit
 ) {
     val tabsCount = tabs.size
     
+<<<<<<< HEAD
+=======
+    val tabWidth = if (slimNav) 64.dp else 80.dp 
+>>>>>>> origin/main
     val blobHeight = if (slimNav) 36.dp else 44.dp 
     
     val tabWidthPx = with(LocalDensity.current) { tabWidth.toPx() }
@@ -676,6 +742,13 @@ private fun StandardAppNavigationBar(
 @Composable
 private fun floatingToolbarContainerColor(pureBlack: Boolean): Color = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
 @Composable
+<<<<<<< HEAD
+=======
+private fun floatingToolbarFabContainerColor(pureBlack: Boolean): Color = if (pureBlack) Color.White.copy(alpha = 0.12f) else MaterialTheme.colorScheme.tertiaryContainer
+@Composable
+private fun floatingToolbarFabContentColor(pureBlack: Boolean): Color = if (pureBlack) Color.White else MaterialTheme.colorScheme.onTertiaryContainer
+@Composable
+>>>>>>> origin/main
 private fun floatingToolbarSelectedItemContainerColor(pureBlack: Boolean): Color = if (pureBlack) Color.White.copy(alpha = 0.12f) else MaterialTheme.colorScheme.secondaryContainer
 @Composable
 private fun floatingToolbarSelectedItemContentColor(pureBlack: Boolean): Color = if (pureBlack) Color.White else MaterialTheme.colorScheme.onSecondaryContainer

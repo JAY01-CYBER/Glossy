@@ -25,6 +25,10 @@ sealed class Screens(
         route = "home"
     )
 
+<<<<<<< HEAD
+=======
+    
+>>>>>>> origin/main
     object Mix : Screens(
         titleId = R.string.mix,
         iconIdInactive = R.drawable.radio, 
@@ -54,6 +58,7 @@ sealed class Screens(
     )
 
     companion object {
+<<<<<<< HEAD
         /**
          * The bottom bar of the new design: Home · Mix · Library. Search rides
          * the floating bar as its own pill, and Listen
@@ -65,5 +70,8 @@ sealed class Screens(
          * the same browse endpoints.
          */
         val MainScreens = listOf(Home, Mix, Library)
+=======
+        val MainScreens = listOf(Home, Mix, Search, ListenTogether, Library)
+>>>>>>> origin/main
     }
 }

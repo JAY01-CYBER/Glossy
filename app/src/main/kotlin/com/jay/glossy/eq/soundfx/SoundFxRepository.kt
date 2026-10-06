@@ -8,7 +8,10 @@ package com.jay.glossy.eq.soundfx
 import android.content.Context
 import android.net.Uri
 import androidx.datastore.preferences.core.edit
+<<<<<<< HEAD
 import com.jay.glossy.constants.AudioBoostLevelKey
+=======
+>>>>>>> origin/main
 import com.jay.glossy.constants.SoundFxBandLevelsMbKey
 import com.jay.glossy.constants.SoundFxBassBoostEnabledKey
 import com.jay.glossy.constants.SoundFxBassBoostStrengthKey
@@ -57,6 +60,7 @@ class SoundFxRepository
                     settings = settings.copy(bandLevelsMb = normalizedLevels),
                     capabilities = capabilities,
                     profiles = decodeProfiles(prefs[SoundFxProfilesJsonKey]),
+<<<<<<< HEAD
                     audioBoost = AudioBoostLevel.fromPreferences(prefs),
                 )
             }.flowOn(Dispatchers.IO)
@@ -70,6 +74,12 @@ class SoundFxRepository
                 // applied, because the boost folds `enabled` back in.
                 if (!enabled) prefs[AudioBoostLevelKey] = AudioBoostLevel.OFF.name
             }
+=======
+                )
+            }.flowOn(Dispatchers.IO)
+
+        suspend fun setEnabled(enabled: Boolean) = edit { it[SoundFxEnabledKey] = enabled }
+>>>>>>> origin/main
 
         suspend fun setControlMode(mode: SoundFxControlMode) = edit { it[SoundFxControlModeKey] = mode.storageValue }
 
@@ -96,7 +106,10 @@ class SoundFxRepository
 
         suspend fun setAutoHeadroomEnabled(enabled: Boolean) = editManual { it[SoundFxAutoHeadroomKey] = enabled }
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/main
         suspend fun applyProfile(profile: SoundFxProfile) {
             context.safeDataStoreEdit { prefs ->
                 writeProfileSettings(prefs, profile)
@@ -178,9 +191,12 @@ class SoundFxRepository
         /** Applies the all-flat baseline. */
         suspend fun applyFlat() {
             context.dataStore.edit { prefs ->
+<<<<<<< HEAD
                 // A flat equalizer with an active boost on top of it would just
                 // read as "flat is broken", so the boost goes with it.
                 prefs[AudioBoostLevelKey] = AudioBoostLevel.OFF.name
+=======
+>>>>>>> origin/main
                 prefs[SoundFxEnabledKey] = true
                 prefs[SoundFxBandLevelsMbKey] = SoundFxJson.encodeToString(emptyList<Int>())
                 prefs[SoundFxOutputGainMbKey] = 0
@@ -214,11 +230,14 @@ class SoundFxRepository
         private suspend fun editManual(block: suspend (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
             edit { prefs ->
                 block(prefs)
+<<<<<<< HEAD
                 // Touching the output gain, bass boost or virtualizer by hand
                 // means the stored settings are the user's intent again, so the
                 // one-tap boost steps out of the way instead of overriding the
                 // slider that was just moved.
                 prefs[AudioBoostLevelKey] = AudioBoostLevel.OFF.name
+=======
+>>>>>>> origin/main
                 prefs[SoundFxSelectedProfileIdKey] = MANUAL_PROFILE_ID
             }
         }
@@ -227,9 +246,12 @@ class SoundFxRepository
             prefs: androidx.datastore.preferences.core.MutablePreferences,
             profile: SoundFxProfile,
         ) {
+<<<<<<< HEAD
             // Applying a profile (or importing one) restores that profile's own
             // gain, so the boost is cleared rather than left to override it.
             prefs[AudioBoostLevelKey] = AudioBoostLevel.OFF.name
+=======
+>>>>>>> origin/main
             prefs[SoundFxEnabledKey] = true
             prefs[SoundFxBandLevelsMbKey] = SoundFxJson.encodeToString(profile.bandLevelsMb)
             prefs[SoundFxOutputGainMbKey] = profile.outputGainMb.coerceIn(SoundFxSettings.MIN_OUTPUT_GAIN_MB, SoundFxSettings.MAX_OUTPUT_GAIN_MB)

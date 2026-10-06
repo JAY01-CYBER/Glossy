@@ -1,5 +1,6 @@
 package com.jay.glossy.applecanvas
 
+<<<<<<< HEAD
 import com.jay.glossy.canvas.CanvasLookupUnavailable
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
@@ -95,4 +96,42 @@ internal object AppleMusicTokenProvider {
             val json = String(Base64.getUrlDecoder().decode(payload), Charsets.UTF_8)
             Regex("\"exp\"\\s*:\\s*(\\d+)").find(json)?.groupValues?.get(1)?.toLongOrNull()?.times(1000L)
         }.getOrNull()
+=======
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.request.get
+import io.ktor.client.statement.bodyAsText
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+
+internal object AppleMusicTokenProvider {
+    private var cachedToken: String? = null
+    private val mutex = Mutex()
+    private val httpClient = HttpClient(OkHttp) { expectSuccess = true }
+
+    suspend fun getToken(): String {
+        return mutex.withLock {
+            cachedToken?.let { return@withLock it }
+            try {
+                val htmlResponse = httpClient.get("https://beta.music.apple.com")
+                val htmlBody = htmlResponse.bodyAsText()
+                val indexJsRegex = Regex("""src="(/assets/index-[^"]+\.js)"""")
+                val match = indexJsRegex.find(htmlBody) ?: throw Exception("Could not find index.js")
+                
+                val indexJsResponse = httpClient.get("https://beta.music.apple.com${match.groupValues[1]}")
+                val indexJsBody = indexJsResponse.bodyAsText()
+
+                val tokenRegex = Regex("""eyJ[A-Za-z0-9\-_=]+\.[A-Za-z0-9\-_=]+\.[A-Za-z0-9\-_=]+""")
+                val token = tokenRegex.find(indexJsBody)?.value ?: throw Exception("Could not find token")
+                
+                cachedToken = token
+                token
+            } catch (e: Exception) {
+                e.printStackTrace()
+                // Fallback token
+                "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IldlYlBsYXlLaWQifQ.eyJpc3MiOiJBTVBXZWJQbGF5IiwiaWF0IjoxNzc0NDU2MzgyLCJleHAiOjE3ODE3MTM5ODIsInJvb3RfaHR0cHNfb3JpZ2luIjpbImFwcGxlLmNvbSJdfQ.4n8qYF4qa18sL1E0G9A3qX35cD8wQ-IJcS9Bh8ZT8JV_yLBtVq46B-9-2ZS3EvWHuw3yK9BYFYAhAdTaDm38vQ"
+            }
+        }
+    }
+>>>>>>> origin/main
 }

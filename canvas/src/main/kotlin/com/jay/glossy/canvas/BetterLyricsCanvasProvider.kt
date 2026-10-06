@@ -65,12 +65,16 @@ object BetterLyricsCanvasProvider {
                 parameter("storefront", storefront)
                 if (forceRefresh) header(HttpHeaders.CacheControl, "no-cache")
             }
+<<<<<<< HEAD
             // An error page is not an answer about the song. Saying "no
             // canvas" would write the song off for the rest of the session
             // (CanvasResolver.wasDefinitiveMiss); a failure is retried.
             if (response.status != HttpStatusCode.OK) {
                 throw CanvasLookupUnavailable("ArchiveTune answered HTTP ${response.status.value}")
             }
+=======
+            if (response.status != HttpStatusCode.OK) return null
+>>>>>>> origin/main
             val artwork = response.body<CanvasArtwork>()
             if (artwork.preferredAnimationUrl.isNullOrBlank()) return null
             if (cache.size >= 128) cache.clear()
@@ -78,10 +82,15 @@ object BetterLyricsCanvasProvider {
             artwork
         } catch (error: CancellationException) {
             throw error
+<<<<<<< HEAD
         } catch (error: CanvasLookupUnavailable) {
             throw error
         } catch (error: Exception) {
             throw CanvasLookupUnavailable("ArchiveTune lookup failed", error)
+=======
+        } catch (error: Exception) {
+            null
+>>>>>>> origin/main
         }
     }
 
@@ -90,19 +99,28 @@ object BetterLyricsCanvasProvider {
         cache[key]?.takeIf { it.expiresAtMs > System.currentTimeMillis() }?.let { return it.artwork }
         return try {
             val response = client.get(BASE_URL) { parameter("id", albumId) }
+<<<<<<< HEAD
             if (response.status != HttpStatusCode.OK) {
                 throw CanvasLookupUnavailable("ArchiveTune answered HTTP ${response.status.value}")
             }
+=======
+            if (response.status != HttpStatusCode.OK) return null
+>>>>>>> origin/main
             val artwork = response.body<CanvasArtwork>()
             if (artwork.preferredAnimationUrl.isNullOrBlank()) return null
             cache[key] = CacheEntry(artwork, System.currentTimeMillis() + CACHE_TTL_MS)
             artwork
         } catch (error: CancellationException) {
             throw error
+<<<<<<< HEAD
         } catch (error: CanvasLookupUnavailable) {
             throw error
         } catch (error: Exception) {
             throw CanvasLookupUnavailable("ArchiveTune album lookup failed", error)
+=======
+        } catch (error: Exception) {
+            null
+>>>>>>> origin/main
         }
     }
 }

@@ -76,8 +76,11 @@
     <string name="hide_player_thumbnail_desc">Replace the album artwork with the app logo in the player</string>
     <string name="crop_album_art">Crop album art</string>
     <string name="crop_album_art_desc">Force a square aspect ratio by cropping video thumbnails</string>
+<<<<<<< HEAD
     <string name="thumbnail_shadow">Thumbnail shadow</string>
     <string name="thumbnail_shadow_desc">Drop a shadow under the album artwork in the player and mini player</string>
+=======
+>>>>>>> origin/main
 
     <string name="already_in_playlist">Already in playlist: </string>
 
@@ -130,12 +133,15 @@
     <string name="lyrics_animation_slide">Slide</string>
     <string name="lyrics_animation_karaoke">Karaoke</string>
     <string name="lyrics_animation_apple">Apple Music Style</string>
+<<<<<<< HEAD
     <string name="lyrics_animation_none_desc">Shows the whole line at once, without word-by-word motion.</string>
     <string name="lyrics_animation_fade_desc">Each word fades in and brightens as it is sung.</string>
     <string name="lyrics_animation_glow_desc">The word being sung lights up with a soft glow.</string>
     <string name="lyrics_animation_slide_desc">A highlight sweeps across each word as it is sung.</string>
     <string name="lyrics_animation_karaoke_desc">Words fill in one after another, like a karaoke sing-along.</string>
     <string name="lyrics_animation_apple_desc">Words brighten quickly with a gentle glow, in the Apple Music style.</string>
+=======
+>>>>>>> origin/main
     <string name="lyrics_text_size">Lyrics text size</string>
     <string name="lyrics_line_spacing">Lyrics line spacing</string>
     <string name="enable_lrclib_desc">Community-driven synchronized lyrics database</string>
@@ -149,7 +155,10 @@
     <string name="enable_lyricsplus_desc">Synchronized lyrics from multiple sources</string>
     <string name="lyrics_provider_selection">Provider selection</string>
     <string name="lyrics_provider_selection_desc">Choose which lyrics providers are enabled</string>
+<<<<<<< HEAD
     <string name="lyrics_not_time_synced">Lyrics aren\'t time-synced</string>
+=======
+>>>>>>> origin/main
     <string name="auto_scroll">Re-sync</string>
     <string name="slim">Slim</string>
     <string name="slim_navbar">Slim bottom navigation bar</string>
@@ -171,6 +180,7 @@
     <string name="skip_silence_desc">Fast-forward through silent parts of songs</string>
     <string name="skip_silence_instant">Instantly skip silence</string>
     <string name="skip_silence_instant_desc">Jump ahead during silent moments instead of speeding up playback</string>
+<<<<<<< HEAD
     <string name="spatial_audio">Spatial audio</string>
     <string name="spatial_audio_desc">Widen the stereo image for a more immersive soundstage</string>
     <string name="audio_output">Audio output</string>
@@ -188,6 +198,8 @@
     <string name="spotlight_canvas_desc">Animated artwork on the Featured Spotlight cards, one ahead of the card in view. Independent of Canvas Background</string>
     <string name="canvas_mobile_data">Load canvases on mobile data</string>
     <string name="canvas_mobile_data_desc">On: animated canvases load on Wi-Fi and mobile data. Off: Wi-Fi only</string>
+=======
+>>>>>>> origin/main
 
     <string name="advanced_login">Log in with token</string>
     <string name="token_hidden">Tap to show token</string>
@@ -214,11 +226,15 @@
     <string name="last_song_listened">Based on the last song you listened to</string>
     <string name="app_language">App language</string>
     <string name="lyrics_provider_priority">Lyrics provider priority</string>
+<<<<<<< HEAD
     <string name="lyrics_provider_priority_desc">Move a provider up to ask it first — the highest-ranked provider that has lyrics wins. Switch one off to keep it out of the search</string>
     <string name="spotify_lyrics">Spotify lyrics</string>
     <string name="spotify_lyrics_desc">Sync synced lyrics from your signed-in Spotify account and keep them in the app for offline playback. Requires Spotify sign-in</string>
     <string name="move_up">Move up</string>
     <string name="move_down">Move down</string>
+=======
+    <string name="lyrics_provider_priority_desc">Drag to reorder providers by preference. Higher position means higher priority</string>
+>>>>>>> origin/main
     <string name="experimental_lyrics">Experimental lyrics</string>
     <string name="experimental_lyrics_desc">Enable the new experimental lyrics component with enhanced animations and performance</string>
     <string name="experimental_lyrics_beta_title">Experimental feature</string>
@@ -943,8 +959,11 @@
 
     <!-- Credits / About Screen -->
     <string name="credits_lead_developer">Lead developer</string>
+<<<<<<< HEAD
     <string name="credits_developer">Developer</string>
     <string name="credits_glossy_devs">Glossy Devs</string>
+=======
+>>>>>>> origin/main
     <string name="credits_collaborator">Collaborator</string>
     <string name="credits_collaborators_section">Collaborators</string>
     <string name="credits_license_name">GNU General Public License v3.0</string>
@@ -1092,6 +1111,7 @@
     <string name="stream_source_web_creator_desc">Creator web client.</string>
     <string name="stream_source_android_creator">ANDROID_CREATOR</string>
     <string name="stream_source_android_creator_desc">Android creator client. Off by default; needs DroidGuard.</string>
+<<<<<<< HEAD
 
     <!-- ================= New design system (teal, dark) ================= -->
     <string name="glossy_explore">Explore</string>
@@ -1207,4 +1227,6 @@
     <string name="canvas_check_verdict_empty">nothing</string>
     <string name="canvas_check_verdict_failed">lookup failed</string>
     <string name="canvas_check_verdict_dead_url">will not play</string>
+=======
+>>>>>>> origin/main
 </resources>

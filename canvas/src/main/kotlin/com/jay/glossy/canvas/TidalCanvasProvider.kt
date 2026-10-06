@@ -77,12 +77,16 @@ object TidalCanvasProvider {
                 parameter("types", types)
                 parameter("countryCode", countryCode)
             }
+<<<<<<< HEAD
             if (response.status != HttpStatusCode.OK) {
                 // A rate limit or server error is not Tidal saying "no canvas":
                 // that answer is a null below, and only that one may be
                 // remembered as a definitive miss.
                 throw CanvasLookupUnavailable("Tidal answered HTTP ${response.status.value}")
             }
+=======
+            if (response.status != HttpStatusCode.OK) return null
+>>>>>>> origin/main
 
             val root = response.body<JsonObject>()
             val items = findSearchSection(root, types.lowercase(Locale.ROOT))?.jsonObject?.get("items")?.jsonArray ?: return null
@@ -128,11 +132,15 @@ object TidalCanvasProvider {
             // A lookup cancelled by a track change must not complete —
             // otherwise the stale result paints over the new song.
             throw e
+<<<<<<< HEAD
         } catch (e: CanvasLookupUnavailable) {
             throw e
         } catch (e: Exception) {
             throw CanvasLookupUnavailable("Tidal lookup failed", e)
         }
+=======
+        } catch (e: Exception) { e.printStackTrace() }
+>>>>>>> origin/main
         return null
     }
 

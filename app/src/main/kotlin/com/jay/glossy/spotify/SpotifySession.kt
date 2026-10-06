@@ -10,7 +10,10 @@ import android.webkit.WebStorage
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.datastore.preferences.core.stringPreferencesKey
+<<<<<<< HEAD
 import com.jay.glossy.spotifycore.Spotify
+=======
+>>>>>>> origin/main
 import com.jay.glossy.utils.dataStore
 import com.jay.glossy.utils.safeDataStoreEdit
 import kotlinx.coroutines.CancellationException
@@ -49,6 +52,7 @@ object SpotifySession {
 
     suspend fun cookie(context: Context): String = context.dataStore.data.first()[cookieKey].orEmpty()
 
+<<<<<<< HEAD
     /**
      * A bearer token that is still good for API calls, wherever it can be got
      * from.
@@ -105,6 +109,8 @@ object SpotifySession {
         return CanvasCredentials(access, clientToken())
     }
 
+=======
+>>>>>>> origin/main
     suspend fun saveCookie(context: Context, value: String) {
         context.safeDataStoreEdit { preferences -> preferences[cookieKey] = value }
         cached = null

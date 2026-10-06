@@ -68,7 +68,10 @@ import com.jay.glossy.db.entities.LyricsEntity
 import com.jay.glossy.db.entities.SongEntity
 import com.jay.glossy.lyrics.LyricsTranslationHelper
 import com.jay.glossy.lyrics.LyricsUtils
+<<<<<<< HEAD
 import com.jay.glossy.lyrics.lyricsTextLooksSynced
+=======
+>>>>>>> origin/main
 import com.metrolist.models.MediaMetadata
 import com.jay.glossy.ui.component.DefaultDialog
 import com.jay.glossy.ui.component.ListDialog
@@ -312,7 +315,11 @@ fun LyricsMenu(
                                 color = MaterialTheme.colorScheme.secondary,
                                 maxLines = 1,
                             )
+<<<<<<< HEAD
                             if (lyricsTextLooksSynced(result.lyrics)) {
+=======
+                            if (result.lyrics.startsWith("[")) {
+>>>>>>> origin/main
                                 Icon(
                                     painter = painterResource(R.drawable.sync),
                                     contentDescription = null,
@@ -453,7 +460,11 @@ fun LyricsMenu(
                             onClick = {
                                 lyricsProvider()?.lyrics?.let { lyrics ->
                                     val plainLyrics =
+<<<<<<< HEAD
                                         if (lyricsTextLooksSynced(lyrics)) {
+=======
+                                        if (lyrics.startsWith("[")) {
+>>>>>>> origin/main
                                             LyricsUtils.parseLyrics(lyrics)
                                                 .joinToString("\n") { it.text }
                                         } else {

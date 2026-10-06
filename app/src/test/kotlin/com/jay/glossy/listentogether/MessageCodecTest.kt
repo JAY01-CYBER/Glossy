@@ -3,16 +3,22 @@ package com.jay.glossy.listentogether
 import com.jay.glossy.R
 
 import com.google.protobuf.ByteString
+<<<<<<< HEAD
 import com.google.protobuf.MessageLite
 import com.metrolist.music.listentogether.proto.Listentogether
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+=======
+import com.jay.glossy.listentogether.proto.Listentogether
+import org.junit.Assert.assertEquals
+>>>>>>> origin/main
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MessageCodecTest {
     private val codec = MessageCodec(compressionEnabled = true)
 
+<<<<<<< HEAD
     private fun envelope(
         type: String,
         payload: MessageLite,
@@ -24,6 +30,8 @@ class MessageCodecTest {
             .build()
             .toByteArray()
 
+=======
+>>>>>>> origin/main
     @Test
     fun `playback timing fields survive a protobuf round trip`() {
         val action =
@@ -76,6 +84,7 @@ class MessageCodecTest {
         assertEquals(PongPayload(1_000L, 10_000L, 10_001L, 3L), decoded)
         assertTrue(decoded.serverSendTime >= decoded.serverReceiveTime)
     }
+<<<<<<< HEAD
 
     @Test
     fun `sync state that omits the queue and volume reports them as absent`() {
@@ -143,4 +152,6 @@ class MessageCodecTest {
         val payload = codec.decode(envelope(MessageTypes.SYNC_STATE, state)).second
         return codec.decodePayload(MessageTypes.SYNC_STATE, payload) as SyncStatePayload
     }
+=======
+>>>>>>> origin/main
 }

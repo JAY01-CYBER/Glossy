@@ -3272,6 +3272,7 @@ object YouTube {
     }
 
 
+<<<<<<< HEAD
     /** `[mm:ss.xx]`-style stamp, any of the variants the lyrics shelf uses. */
     private val LYRICS_TIMESTAMP_REGEX = Regex("""\[\d{1,2}:\d{2}(?:[.:]\d{1,3})?\]""")
 
@@ -3279,12 +3280,19 @@ object YouTube {
         runCatching {
             val response = innerTube.browse(WEB_REMIX, endpoint.browseId, endpoint.params).body<BrowseResponse>()
             val runs = response.contents
+=======
+    suspend fun lyrics(endpoint: BrowseEndpoint): Result<String?> =
+        runCatching {
+            val response = innerTube.browse(WEB_REMIX, endpoint.browseId, endpoint.params).body<BrowseResponse>()
+            response.contents
+>>>>>>> origin/main
                 ?.sectionListRenderer
                 ?.contents
                 ?.firstOrNull { it.musicDescriptionShelfRenderer != null }
                 ?.musicDescriptionShelfRenderer
                 ?.description
                 ?.runs
+<<<<<<< HEAD
                 ?: return@runCatching null
 
             val joined = runs.joinToString(separator = "") { it.text }
@@ -3298,6 +3306,9 @@ object YouTube {
             } else {
                 runs.joinToString(separator = "\n") { it.text.trim() }
             }
+=======
+                ?.joinToString(separator = "") { it.text }
+>>>>>>> origin/main
         }
 
     suspend fun related(endpoint: BrowseEndpoint): Result<RelatedPage> =

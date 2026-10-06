@@ -10,7 +10,10 @@ import com.jay.glossy.R
 
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+<<<<<<< HEAD
 import androidx.compose.animation.animateColorAsState
+=======
+>>>>>>> origin/main
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animate
@@ -26,7 +29,10 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.MarqueeAnimationMode
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+<<<<<<< HEAD
 import androidx.compose.foundation.border
+=======
+>>>>>>> origin/main
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.focusable
@@ -64,6 +70,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+<<<<<<< HEAD
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -71,6 +78,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+=======
+import androidx.compose.runtime.getValue
+>>>>>>> origin/main
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.produceState
@@ -82,7 +92,10 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+<<<<<<< HEAD
 import androidx.compose.ui.graphics.Brush
+=======
+>>>>>>> origin/main
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
@@ -327,6 +340,7 @@ inline fun ListItem(
     isAvailable: Boolean = true,
     showDivider: Boolean = false,
 ) {
+<<<<<<< HEAD
     val contentColor = MaterialTheme.colorScheme.onSurface
     // Soft ghost tile: an ordinary row draws nothing at all and the list reads
     // as a list. The tonal fill is reserved for rows that earned one — the
@@ -341,18 +355,30 @@ inline fun ListItem(
         label = "listTileGhost",
     )
 
+=======
+    val contentColor = MaterialTheme.colorScheme.onBackground
+    
+>>>>>>> origin/main
     Column(modifier = modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+<<<<<<< HEAD
                 .padding(horizontal = 6.dp, vertical = 3.dp)
                 .clip(ListTileShape)
                 .background(tileColor)
+=======
+                .background(if (isSelected == true) MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f) else Color.Transparent)
+>>>>>>> origin/main
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
+<<<<<<< HEAD
                     .padding(vertical = 9.dp, horizontal = 12.dp)
+=======
+                    .padding(vertical = 8.dp, horizontal = 15.dp) // Simp Music precise padding
+>>>>>>> origin/main
                     .fillMaxWidth()
             ) {
                 if (leadingContent != null) {
@@ -365,7 +391,11 @@ inline fun ListItem(
                 }
 
                 Box(
+<<<<<<< HEAD
                     modifier = Modifier.size(56.dp),
+=======
+                    modifier = Modifier.size(48.dp),
+>>>>>>> origin/main
                     contentAlignment = Alignment.Center
                 ) {
                     thumbnailContent()
@@ -512,6 +542,7 @@ fun ListItem(
 // GRID ITEM DESIGN
 // ------------------------------------------------------------------------
 
+<<<<<<< HEAD
 /**
  * One shared artwork geometry so grid cards round identically everywhere they
  * are used.
@@ -531,6 +562,8 @@ internal val ListTileShape = RoundedCornerShape(16.dp)
  */
 private val ListThumbnailShape = RoundedCornerShape(12.dp)
 
+=======
+>>>>>>> origin/main
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun GridItem(
@@ -540,6 +573,7 @@ fun GridItem(
     badges: @Composable RowScope.() -> Unit = {},
     thumbnailContent: @Composable BoxWithConstraintsScope.() -> Unit,
     thumbnailRatio: Float = 1f,
+<<<<<<< HEAD
     imageShape: Shape = CardThumbnailShape,
     fillMaxWidth: Boolean = false,
 ) {
@@ -573,6 +607,26 @@ fun GridItem(
                     scaleX = cardScale
                     scaleY = cardScale
                 }
+=======
+    fillMaxWidth: Boolean = false,
+) {
+    val gridHeight = currentGridThumbnailHeight()
+    val cardShape = RoundedCornerShape(20.dp)
+    val cardColor = MaterialTheme.colorScheme.surfaceContainerLow
+
+    Column(
+        modifier = if (fillMaxWidth) {
+            modifier
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+                .clip(cardShape)
+                .background(cardColor)
+                .fillMaxWidth()
+        } else {
+            modifier
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+                .clip(cardShape)
+                .background(cardColor)
+>>>>>>> origin/main
                 .width(gridHeight * thumbnailRatio)
         }
     ) {
@@ -581,6 +635,7 @@ fun GridItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(thumbnailRatio)
+<<<<<<< HEAD
                 .graphicsLayer {
                     shape = imageShape
                     clip = true
@@ -605,6 +660,15 @@ fun GridItem(
         Spacer(modifier = Modifier.height(10.dp))
 
         Box(modifier = Modifier.padding(horizontal = 4.dp)) {
+=======
+        ) {
+            thumbnailContent()
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Box(modifier = Modifier.padding(horizontal = 10.dp)) {
+>>>>>>> origin/main
             title()
         }
 
@@ -612,12 +676,20 @@ fun GridItem(
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
+<<<<<<< HEAD
             modifier = Modifier.padding(horizontal = 4.dp),
+=======
+            modifier = Modifier.padding(horizontal = 10.dp),
+>>>>>>> origin/main
         ) {
             badges()
             subtitle()
         }
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> origin/main
         Spacer(modifier = Modifier.height(2.dp))
     }
 }
@@ -631,7 +703,10 @@ fun GridItem(
     badges: @Composable RowScope.() -> Unit = {},
     thumbnailContent: @Composable BoxWithConstraintsScope.() -> Unit,
     thumbnailRatio: Float = 1f,
+<<<<<<< HEAD
     imageShape: Shape = CardThumbnailShape,
+=======
+>>>>>>> origin/main
     fillMaxWidth: Boolean = false,
 ) = GridItem(
     modifier = modifier,
@@ -639,9 +714,14 @@ fun GridItem(
         Text(
             text = title,
             style = MaterialTheme.typography.bodyLarge,
+<<<<<<< HEAD
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
             color = MaterialTheme.colorScheme.onSurface,
+=======
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+>>>>>>> origin/main
             textAlign = TextAlign.Start,
             modifier = Modifier
                 .fillMaxWidth()
@@ -656,7 +736,11 @@ fun GridItem(
         Text(
             text = subtitle,
             style = MaterialTheme.typography.bodyMedium,
+<<<<<<< HEAD
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+=======
+            color = MaterialTheme.colorScheme.secondary,
+>>>>>>> origin/main
             maxLines = 1,
             modifier = Modifier
                 .fillMaxWidth()
@@ -670,7 +754,10 @@ fun GridItem(
     badges = badges,
     thumbnailContent = thumbnailContent,
     thumbnailRatio = thumbnailRatio,
+<<<<<<< HEAD
     imageShape = imageShape,
+=======
+>>>>>>> origin/main
     fillMaxWidth = fillMaxWidth
 )
 
@@ -688,7 +775,11 @@ fun SongListItem(
     showInLibraryIcon: Boolean = false,
     showDownloadIcon: Boolean = true,
     subtitleOverride: String? = null,
+<<<<<<< HEAD
     thumbnailShape: Shape = ListThumbnailShape,
+=======
+    thumbnailShape: Shape = RoundedCornerShape(4.dp),
+>>>>>>> origin/main
     badges: @Composable RowScope.() -> Unit = {
         if (song.song.explicit) {
             Icon.Explicit()
@@ -830,7 +921,11 @@ fun SongGridItem(
                 makeTimeString(song.song.duration * 1000L)
             ),
             style = MaterialTheme.typography.bodyMedium,
+<<<<<<< HEAD
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+=======
+            color = MaterialTheme.colorScheme.secondary,
+>>>>>>> origin/main
             maxLines = 1,
             modifier = Modifier.basicMarquee().fillMaxWidth()
         )
@@ -842,7 +937,11 @@ fun SongGridItem(
             thumbnailUrl = song.song.thumbnailUrl,
             isActive = isActive,
             isPlaying = isPlaying,
+<<<<<<< HEAD
             shape = CardThumbnailShape,
+=======
+            shape = RoundedCornerShape(12.dp),
+>>>>>>> origin/main
             modifier = Modifier.size(gridHeight)
         )
         if (!isActive) {
@@ -937,7 +1036,10 @@ fun ArtistGridItem(
                     .clip(CircleShape)
             )
         },
+<<<<<<< HEAD
         imageShape = CircleShape,
+=======
+>>>>>>> origin/main
         fillMaxWidth = fillMaxWidth,
         modifier = modifier
     )
@@ -1011,7 +1113,11 @@ fun AlbumListItem(
             thumbnailUrl = album.album.thumbnailUrl,
             isActive = isActive,
             isPlaying = isPlaying,
+<<<<<<< HEAD
             shape = ListThumbnailShape,
+=======
+            shape = RoundedCornerShape(8.dp),
+>>>>>>> origin/main
             modifier = Modifier.fillMaxSize()
         )
     },
@@ -1086,7 +1192,11 @@ fun AlbumGridItem(
          Text(
              text = album.artists.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name },
              style = MaterialTheme.typography.bodyMedium,
+<<<<<<< HEAD
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+=======
+            color = MaterialTheme.colorScheme.secondary,
+>>>>>>> origin/main
             maxLines = 1,
             modifier = Modifier.basicMarquee().fillMaxWidth()
         )
@@ -1101,7 +1211,11 @@ fun AlbumGridItem(
             thumbnailUrl = album.album.thumbnailUrl,
             isActive = isActive,
             isPlaying = isPlaying,
+<<<<<<< HEAD
             shape = CardThumbnailShape,
+=======
+            shape = RoundedCornerShape(12.dp),
+>>>>>>> origin/main
         )
 
         AlbumPlayButton(
@@ -1196,7 +1310,11 @@ fun PlaylistListItem(
                     modifier = Modifier.size(24.dp)
                 )
             },
+<<<<<<< HEAD
             shape = ListThumbnailShape
+=======
+            shape = RoundedCornerShape(8.dp) // Playlists usually use slightly larger radius
+>>>>>>> origin/main
         )
     },
     trailingContent = trailingContent,
@@ -1269,7 +1387,11 @@ fun PlaylistGridItem(
         Text(
             text = subtitle,
             style = MaterialTheme.typography.bodyMedium,
+<<<<<<< HEAD
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+=======
+            color = MaterialTheme.colorScheme.secondary,
+>>>>>>> origin/main
             maxLines = 1,
             modifier = Modifier.basicMarquee().fillMaxWidth()
         )
@@ -1300,7 +1422,11 @@ fun PlaylistGridItem(
                     )
                 }
             },
+<<<<<<< HEAD
             shape = CardThumbnailShape
+=======
+            shape = RoundedCornerShape(12.dp)
+>>>>>>> origin/main
         )
     },
     fillMaxWidth = fillMaxWidth,
@@ -1355,7 +1481,11 @@ fun MediaMetadataListItem(
                 isSelected = isSelected,
                 isActive = isActive,
                 isPlaying = isPlaying,
+<<<<<<< HEAD
                 shape = ListThumbnailShape,
+=======
+                shape = RoundedCornerShape(4.dp),
+>>>>>>> origin/main
                 modifier = Modifier.fillMaxSize()
             )
         },
@@ -1381,7 +1511,11 @@ fun YouTubeListItem(
     isSwipeable: Boolean = true,
     showDivider: Boolean = false,
     trailingContent: @Composable RowScope.() -> Unit = {},
+<<<<<<< HEAD
     thumbnailShape: Shape = if (item is ArtistItem) CircleShape else ListThumbnailShape,
+=======
+    thumbnailShape: Shape = if (item is ArtistItem) CircleShape else RoundedCornerShape(4.dp),
+>>>>>>> origin/main
     badges: @Composable RowScope.() -> Unit = {
         if (item.explicit) {
             Text(
@@ -1416,6 +1550,7 @@ fun YouTubeListItem(
     val contentColor = MaterialTheme.colorScheme.onBackground
     val subtitleColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f) 
 
+<<<<<<< HEAD
     // Same ghost tile as the base ListItem — this row used to keep its own
     // filled card and a hairline border, which is exactly the look the rebuild
     // retired. It now draws nothing until it is playing or selected.
@@ -1428,11 +1563,14 @@ fun YouTubeListItem(
         label = "youTubeListTileGhost",
     )
 
+=======
+>>>>>>> origin/main
     val content: @Composable () -> Unit = {
         Column(modifier = modifier.fillMaxWidth()) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
+<<<<<<< HEAD
                     .padding(horizontal = 6.dp, vertical = 3.dp)
                     .clip(ListTileShape)
                     .background(tileColor)
@@ -1440,11 +1578,22 @@ fun YouTubeListItem(
                 Row(
                     modifier = Modifier
                         .padding(vertical = 8.dp, horizontal = 12.dp)
+=======
+                    .background(if (isSelected) MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f) else Color.Transparent)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .padding(vertical = 6.dp, horizontal = 15.dp) 
+>>>>>>> origin/main
                         .fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
+<<<<<<< HEAD
                         modifier = Modifier.size(52.dp),
+=======
+                        modifier = Modifier.size(48.dp),
+>>>>>>> origin/main
                         contentAlignment = Alignment.Center
                     ) {
                         ItemThumbnail(
@@ -1591,7 +1740,11 @@ fun YouTubeGridItem(
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodyMedium,
+<<<<<<< HEAD
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+=======
+                color = MaterialTheme.colorScheme.secondary,
+>>>>>>> origin/main
                 maxLines = 1,
                 modifier = Modifier.basicMarquee().fillMaxWidth()
             )
@@ -1607,7 +1760,11 @@ fun YouTubeGridItem(
             thumbnailUrl = item.thumbnail,
             isActive = isActive,
             isPlaying = isPlaying,
+<<<<<<< HEAD
             shape = if (item is ArtistItem) CircleShape else CardThumbnailShape,
+=======
+            shape = if (item is ArtistItem) CircleShape else RoundedCornerShape(12.dp),
+>>>>>>> origin/main
         )
 
         if (item is SongItem && !isActive) {
@@ -1637,7 +1794,10 @@ fun YouTubeGridItem(
         )
     },
     thumbnailRatio = thumbnailRatio,
+<<<<<<< HEAD
     imageShape = if (item is ArtistItem) CircleShape else CardThumbnailShape,
+=======
+>>>>>>> origin/main
     fillMaxWidth = fillMaxWidth,
     modifier = modifier
 )
@@ -1659,7 +1819,11 @@ fun LocalSongsGrid(
         Text(
             text = subtitle,
             style = MaterialTheme.typography.bodyMedium,
+<<<<<<< HEAD
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+=======
+            color = MaterialTheme.colorScheme.secondary,
+>>>>>>> origin/main
             maxLines = 1,
             modifier = Modifier.basicMarquee().fillMaxWidth()
         )
@@ -1670,7 +1834,11 @@ fun LocalSongsGrid(
             thumbnailUrl = thumbnailUrl,
             isActive = isActive,
             isPlaying = isPlaying,
+<<<<<<< HEAD
             shape = CardThumbnailShape,
+=======
+            shape = RoundedCornerShape(12.dp),
+>>>>>>> origin/main
             modifier = if (fillMaxWidth) Modifier.fillMaxWidth() else Modifier,
             showCenterPlay = true,
             playButtonVisible = false
@@ -1697,7 +1865,11 @@ fun LocalArtistsGrid(
         Text(
             text = subtitle,
             style = MaterialTheme.typography.bodyMedium,
+<<<<<<< HEAD
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+=======
+            color = MaterialTheme.colorScheme.secondary,
+>>>>>>> origin/main
             maxLines = 1,
             modifier = Modifier.basicMarquee().fillMaxWidth()
         )
@@ -1735,7 +1907,11 @@ fun LocalAlbumsGrid(
         Text(
             text = subtitle,
             style = MaterialTheme.typography.bodyMedium,
+<<<<<<< HEAD
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+=======
+            color = MaterialTheme.colorScheme.secondary,
+>>>>>>> origin/main
             maxLines = 1,
             modifier = Modifier.basicMarquee().fillMaxWidth()
         )
@@ -1746,7 +1922,11 @@ fun LocalAlbumsGrid(
             thumbnailUrl = thumbnailUrl,
             isActive = isActive,
             isPlaying = isPlaying,
+<<<<<<< HEAD
             shape = CardThumbnailShape,
+=======
+            shape = RoundedCornerShape(12.dp),
+>>>>>>> origin/main
             modifier = if (fillMaxWidth) Modifier.fillMaxWidth() else Modifier,
             showCenterPlay = false,
             playButtonVisible = true
@@ -1972,6 +2152,10 @@ fun PlaylistThumbnail(
     shape: Shape,
     cacheKey: String? = null
 ) {
+<<<<<<< HEAD
+=======
+    val cropAlbumArt by rememberPreference(CropAlbumArtKey, false)
+>>>>>>> origin/main
     val context = LocalContext.current
     
     when (thumbnails.size) {
@@ -1986,6 +2170,7 @@ fun PlaylistThumbnail(
         }
         1 -> {
             val thumbUrl = thumbnails[0].resize((size.value * 3).toInt())
+<<<<<<< HEAD
             Box(
                 modifier = Modifier
                     .size(size)
@@ -2015,6 +2200,26 @@ fun PlaylistThumbnail(
                         .clip(shape)
                 )
             }
+=======
+            AsyncImage(
+                model = remember(thumbUrl) {
+                    ImageRequest.Builder(context)
+                        .data(thumbUrl)
+                        .memoryCachePolicy(CachePolicy.ENABLED)
+                        .diskCachePolicy(CachePolicy.ENABLED)
+                        .networkCachePolicy(CachePolicy.ENABLED)
+                        .crossfade(true)
+                        .build()
+                },
+                contentDescription = null,
+                contentScale = if (cropAlbumArt) ContentScale.Crop else ContentScale.Fit,
+                placeholder = painterResource(R.drawable.queue_music),
+                error = painterResource(R.drawable.queue_music),
+                modifier = Modifier
+                    .size(size)
+                    .clip(shape)
+            )
+>>>>>>> origin/main
         }
         else -> Box(
             modifier = Modifier
@@ -2039,15 +2244,22 @@ fun PlaylistThumbnail(
                             .build()
                     },
                     contentDescription = null,
+<<<<<<< HEAD
                     // Same story as the 1-thumb case above: always crop so no
                     // letterbox or unclipped edges leak outside the card.
                     contentScale = ContentScale.Crop,
+=======
+                    contentScale = if (cropAlbumArt) ContentScale.Crop else ContentScale.Fit,
+>>>>>>> origin/main
                     placeholder = painterResource(R.drawable.queue_music),
                     error = painterResource(R.drawable.queue_music),
                     modifier = Modifier
                         .align(alignment)
                         .size(size / 2)
+<<<<<<< HEAD
                         .clip(shape)
+=======
+>>>>>>> origin/main
                 )
             }
         }
@@ -2058,28 +2270,45 @@ fun PlaylistThumbnail(
 fun BoxScope.OverlayPlayButton(
     visible: Boolean
 ) {
+<<<<<<< HEAD
     // A floating tonal play button tucked into the artwork's bottom corner,
     // the Material 3 way to advertise "tap me" on a card.
+=======
+>>>>>>> origin/main
     AnimatedVisibility(
         visible = visible,
         enter = fadeIn(),
         exit = fadeOut(),
         modifier = Modifier
+<<<<<<< HEAD
             .align(Alignment.BottomEnd)
             .padding(10.dp)
+=======
+            .align(Alignment.Center)
+>>>>>>> origin/main
     ) {
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
+<<<<<<< HEAD
                 .size(38.dp)
                 .fastShadow(10.dp, CircleShape)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.primaryContainer)
+=======
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(Color.Black.copy(alpha = ActiveBoxAlpha))
+>>>>>>> origin/main
         ) {
             Icon(
                 painter = painterResource(R.drawable.play),
                 contentDescription = null,
+<<<<<<< HEAD
                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
+=======
+                tint = Color.White,
+>>>>>>> origin/main
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -2098,22 +2327,36 @@ fun BoxScope.OverlayEditButton(
         exit = fadeOut(),
         modifier = Modifier
             .align(alignment)
+<<<<<<< HEAD
             .then(if (alignment == Alignment.BottomEnd) Modifier.padding(10.dp) else Modifier)
+=======
+            .then(if (alignment == Alignment.BottomEnd) Modifier.padding(8.dp) else Modifier)
+>>>>>>> origin/main
     ) {
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
+<<<<<<< HEAD
                 .size(38.dp)
                 .fastShadow(10.dp, CircleShape)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.secondaryContainer)
+=======
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(Color.Black.copy(alpha = ActiveBoxAlpha))
+>>>>>>> origin/main
                 .padding(0.dp)
                 .clickable(onClick = onClick)
         ) {
             Icon(
                 painter = painterResource(R.drawable.edit),
                 contentDescription = null,
+<<<<<<< HEAD
                 tint = MaterialTheme.colorScheme.onSecondaryContainer,
+=======
+                tint = Color.White,
+>>>>>>> origin/main
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -2131,22 +2374,36 @@ fun BoxScope.AlbumPlayButton(
         exit = fadeOut(),
         modifier = Modifier
             .align(Alignment.BottomEnd)
+<<<<<<< HEAD
             .padding(10.dp)
+=======
+            .padding(8.dp)
+>>>>>>> origin/main
     ) {
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
+<<<<<<< HEAD
                 .size(38.dp)
                 .fastShadow(10.dp, CircleShape)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.primaryContainer)
+=======
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(Color.Black.copy(alpha = ActiveBoxAlpha))
+>>>>>>> origin/main
                 .clickable(onClick = onClick)
         ) {
             Icon(
                 painter = painterResource(R.drawable.play),
                 contentDescription = null,
+<<<<<<< HEAD
                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 modifier = Modifier.size(20.dp)
+=======
+                tint = Color.White
+>>>>>>> origin/main
             )
         }
     }
@@ -2316,6 +2573,7 @@ object Icon {
 
 @Composable
 fun AppleMusicVisualizer(modifier: Modifier = Modifier, color: Color = Color.White) {
+<<<<<<< HEAD
     // This used to run its own four-bar animation through `fillMaxHeight`,
     // which is a relayout *and* a recomposition on every frame — on the one
     // surface that is on screen for the whole song. It now rides the shared
@@ -2329,6 +2587,41 @@ fun AppleMusicVisualizer(modifier: Modifier = Modifier, color: Color = Color.Whi
         barSpacing = 3.dp,
         barHeight = 22.dp,
     )
+=======
+    val infiniteTransition = rememberInfiniteTransition(label = "visualizer")
+    
+    val anim1 by infiniteTransition.animateFloat(
+        initialValue = 0.3f, targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(tween(400, easing = LinearEasing), RepeatMode.Reverse),
+        label = "bar1"
+    )
+    val anim2 by infiniteTransition.animateFloat(
+        initialValue = 1.0f, targetValue = 0.4f,
+        animationSpec = infiniteRepeatable(tween(300, easing = LinearEasing), RepeatMode.Reverse),
+        label = "bar2"
+    )
+    val anim3 by infiniteTransition.animateFloat(
+        initialValue = 0.5f, targetValue = 0.9f,
+        animationSpec = infiniteRepeatable(tween(500, easing = LinearEasing), RepeatMode.Reverse),
+        label = "bar3"
+    )
+    val anim4 by infiniteTransition.animateFloat(
+        initialValue = 0.8f, targetValue = 0.2f,
+        animationSpec = infiniteRepeatable(tween(350, easing = LinearEasing), RepeatMode.Reverse),
+        label = "bar4"
+    )
+
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(3.dp), 
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(modifier = Modifier.width(4.dp).fillMaxHeight(anim1).clip(RoundedCornerShape(50)).background(color))
+        Box(modifier = Modifier.width(4.dp).fillMaxHeight(anim2).clip(RoundedCornerShape(50)).background(color))
+        Box(modifier = Modifier.width(4.dp).fillMaxHeight(anim3).clip(RoundedCornerShape(50)).background(color))
+        Box(modifier = Modifier.width(4.dp).fillMaxHeight(anim4).clip(RoundedCornerShape(50)).background(color))
+    }
+>>>>>>> origin/main
 }
 
 // 🔥 TIP APPLIED: Fast Hardware Accelerated Shadows

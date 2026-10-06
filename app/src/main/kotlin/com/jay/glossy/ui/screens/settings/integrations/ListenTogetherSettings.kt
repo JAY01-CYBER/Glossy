@@ -116,7 +116,11 @@ fun ListenTogetherSettings(
     val logs by viewModel.logs.collectAsStateWithLifecycle()
     val blockedUsernames by viewModel.blockedUsernames.collectAsStateWithLifecycle()
 
+<<<<<<< HEAD
     val servers by ListenTogetherServers.serversFlow.collectAsStateWithLifecycle()
+=======
+    val servers = remember { ListenTogetherServers.servers }
+>>>>>>> origin/main
     var serverUrl by rememberPreference(ListenTogetherServerUrlKey, ListenTogetherServers.defaultServerUrl)
     var username by rememberPreference(ListenTogetherUsernameKey, "")
     var autoApprovalJoins by rememberPreference(ListenTogetherAutoApprovalKey, false)

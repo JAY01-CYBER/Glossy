@@ -80,7 +80,10 @@ import com.jay.glossy.playback.queues.YouTubeQueue
 import com.jay.glossy.ui.component.IconButton
 import com.jay.glossy.ui.component.Material3SettingsGroup
 import com.jay.glossy.ui.component.Material3SettingsItem
+<<<<<<< HEAD
 import com.jay.glossy.ui.theme.PoppinsFontFamily
+=======
+>>>>>>> origin/main
 import com.jay.glossy.ui.utils.backToMain
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -94,12 +97,16 @@ private data class Contributor(
     val githubUrl: String = "https://github.com/$githubHandle",
     val sponsorUrl: String? = null,
     val polygon: RoundedPolygon? = null,
+<<<<<<< HEAD
     val favoriteSongVideoId: String? = null,
     /**
      * A portrait bundled with the build, used instead of [avatarUrl] when set.
      * It renders offline and never changes under us when the GitHub avatar does.
      */
     val avatarRes: Int? = null,
+=======
+    val favoriteSongVideoId: String? = null
+>>>>>>> origin/main
 )
 
 private data class CommunityLink(
@@ -111,12 +118,17 @@ private data class CommunityLink(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 private val leadDeveloper = Contributor(
     name = "Jay Chaudhary",
+<<<<<<< HEAD
     roleRes = R.string.credits_main_head,
+=======
+    roleRes = R.string.credits_lead_developer,
+>>>>>>> origin/main
     githubHandle = "JAY01-CYBER",
     polygon = MaterialShapes.Cookie9Sided,
     favoriteSongVideoId = "Mh2JWGWvy_Y"
 )
 
+<<<<<<< HEAD
 /**
  * Glossy's second lead developer, shown as a hero card of their own directly
  * below the project head's card.
@@ -141,6 +153,8 @@ private val secondLeadDeveloper = Contributor(
  */
 private val developers = emptyList<Contributor>()
 
+=======
+>>>>>>> origin/main
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 private val collaborators = listOf(
     Contributor(name = "Mo Agamy", roleRes = R.string.credits_collaborator, githubHandle = "mostafaalagamy", sponsorUrl = "https://buymeacoffee.com/mostafaalagamy", polygon = MaterialShapes.Cookie9Sided, favoriteSongVideoId = "Mh2JWGWvy_Y"),
@@ -196,8 +210,11 @@ private fun ContributorAvatar(
     modifier: Modifier = Modifier,
     shape: Shape = CircleShape,
     contentDescription: String? = null,
+<<<<<<< HEAD
     /** A bundled portrait; when set it wins over [avatarUrl]. */
     avatarRes: Int? = null,
+=======
+>>>>>>> origin/main
     onClick: (() -> Unit)? = null
 ) {
     val fallback = painterResource(R.drawable.about_icon)
@@ -209,6 +226,7 @@ private fun ContributorAvatar(
         color = MaterialTheme.colorScheme.surfaceContainerHighest,
         tonalElevation = 4.dp,
     ) {
+<<<<<<< HEAD
         if (avatarRes != null) {
             Image(
                 painter = painterResource(avatarRes),
@@ -227,6 +245,17 @@ private fun ContributorAvatar(
                 error = fallback,
             )
         }
+=======
+        AsyncImage(
+            model = avatarUrl,
+            contentDescription = contentDescription,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+            placeholder = fallback,
+            fallback = fallback,
+            error = fallback,
+        )
+>>>>>>> origin/main
     }
 }
 
@@ -425,11 +454,18 @@ fun AboutScreen(
                             letterSpacing = (-0.5).sp
                         )
                         Text(
+<<<<<<< HEAD
                             text = stringResource(leadDeveloper.roleRes),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.SemiBold,
                             fontFamily = PoppinsFontFamily
+=======
+                            text = stringResource(R.string.credits_lead_developer),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold
+>>>>>>> origin/main
                         )
                     }
                 }
@@ -456,6 +492,7 @@ fun AboutScreen(
             }
         }
 
+<<<<<<< HEAD
         Spacer(Modifier.height(16.dp))
 
         // Second Lead Developer Hero Card — right under the project head's card,
@@ -590,6 +627,10 @@ fun AboutScreen(
 
         Spacer(Modifier.height(32.dp))
 
+=======
+        Spacer(Modifier.height(32.dp))
+        
+>>>>>>> origin/main
         // Collaborators section
         Material3SettingsGroup(
             title = "Metrolist Devs",
