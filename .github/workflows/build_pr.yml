@@ -2,6 +2,7 @@ name: Build PR
 
 on:
   pull_request:
+  workflow_dispatch: # <--- This adds a "Run workflow" button in the Actions tab
 
 jobs:
   build:
@@ -32,7 +33,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: app/pr-debug.keystore
-          key: pr-debug-keystore-${{ github.event.number }}
+          key: pr-debug-keystore-${{ github.event.number || 'manual' }}
 
       - name: Generate PR debug keystore if not cached
         if: steps.pr_keystore.outputs.cache-hit != 'true'
@@ -45,7 +46,7 @@ jobs:
             -keyalg RSA \
             -keysize 2048 \
             -validity 10000 \
-            -dname "CN=Glossy PR ${{ github.event.number }},O=Glossy,C=US"
+            -dname "CN=Glossy PR,O=Glossy,C=US"
 
       - name: Save PR debug keystore
         if: steps.pr_keystore.outputs.cache-hit != 'true'
@@ -58,15 +59,15 @@ jobs:
         run: ./gradlew --console=plain assembleFossDebug :app:lintFossDebug --warning-mode summary
         env:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
-          GLOSSY_APPLICATION_ID: com.jay.glossy.pr.p${{ github.event.number }}
-          GLOSSY_APP_NAME: GLOSSY PR ${{ github.event.number }}
+          GLOSSY_APPLICATION_ID: com.jay.glossy.pr.manual
+          GLOSSY_APP_NAME: GLOSSY PR Manual
           GLOSSY_DEBUG_KEYSTORE_PATH: pr-debug.keystore
-          PULL_REQUEST: "true"
+          PULL_REQUEST: "false"
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
           LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-universal-debug-pr-${{ github.event.number }}
+          name: app-universal-debug-manual
           path: app/build/outputs/apk/foss/debug/*.apk
