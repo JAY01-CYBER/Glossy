@@ -115,6 +115,11 @@ object YouTube {
         set(value) {
             innerTube.dataSyncId = value
         }
+    var authUser: String
+        get() = innerTube.authUser
+        set(value) {
+            innerTube.authUser = value.ifBlank { "0" }
+        }
     var cookie: String?
         get() = innerTube.cookie
         set(value) {
