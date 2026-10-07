@@ -568,9 +568,18 @@ class MusicService :
     private val recoveringSongs = Collections.synchronizedSet(mutableSetOf<String>())
 
     private val sessionKey
-        get() = YouTube.dataSyncId.takeIf { !it.isNullOrBlank() }
-            ?: YouTube.visitorData.takeIf { !it.isNullOrBlank() }
-            ?: ""
+        get() = buildString {
+            // Authenticated stream URLs are account/session scoped. Include the account
+            // index so an account switch cannot reuse a cached URL from another session.
+            if (YouTube.cookie != null) {
+                append("auth:").append(YouTube.authUser.ifBlank { "0" }).append(':')
+            }
+            append(
+                YouTube.dataSyncId.takeIf { !it.isNullOrBlank() }
+                    ?: YouTube.visitorData.takeIf { !it.isNullOrBlank() }
+                    ?: "anonymous",
+            )
+        }
 
     private fun cacheKey(mediaId: String) = "${sessionKey}:$mediaId"
 
