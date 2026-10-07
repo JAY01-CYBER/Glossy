@@ -1,7 +1,7 @@
 name: Build Personal APK
 
 on:
-  workflow_dispatch: # Allows you to trigger this manually anytime from the Actions tab
+  workflow_dispatch: # Triggers manually from the Actions tab
 
 jobs:
   build-release:
@@ -28,23 +28,30 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # Optional: Decode your release keystore if your build.gradle expects a keystore file
-      - name: Decode Keystore
+      - name: Generate Temporary Personal Keystore
         run: |
-          echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 --decode > app/release.keystore
+          keytool -genkeypair -v \
+            -keystore app/personal-release.keystore \
+            -storepass androidpassword \
+            -alias personaldebugkey \
+            -keypass androidpassword \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Glossy Personal,O=Glossy,C=US"
 
-      - name: Build Release APK
+      - name: Build and Sign Release APK
         run: ./gradlew --console=plain assembleFossRelease --warning-mode summary
         env:
-          GLOSSY_DEBUG_KEYSTORE_PATH: release.keystore
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          GLOSSY_DEBUG_KEYSTORE_PATH: personal-release.keystore
+          KEYSTORE_PASSWORD: androidpassword
+          KEY_ALIAS: personaldebugkey
+          KEY_PASSWORD: androidpassword
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
           LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
 
-      - name: Upload Personal APK Artifact
+      - name: Upload Signed Personal APK
         uses: actions/upload-artifact@v4
         with:
-          name: glossy-personal-release-apk
+          name: glossy-signed-personal-apk
           path: app/build/outputs/apk/foss/release/*.apk
