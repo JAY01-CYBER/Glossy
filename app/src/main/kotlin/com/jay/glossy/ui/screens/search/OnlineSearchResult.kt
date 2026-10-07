@@ -103,6 +103,7 @@ import com.jay.glossy.ui.component.EmptyPlaceholder
 import com.jay.glossy.ui.component.HideOnScrollFAB
 import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.component.NavigationTitle
+import com.jay.glossy.ui.component.TiledListRows
 import com.jay.glossy.ui.component.YouTubeListItem
 import com.jay.glossy.ui.component.shimmer.ListItemPlaceHolder
 import com.jay.glossy.ui.component.shimmer.ShimmerHost
@@ -501,7 +502,7 @@ fun OnlineSearchResult(
                             itemsIndexed(
                                 items = summary.items,
                                 key = { index, item -> "${summary.title}/${item.id}/$index" },
-                                itemContent = { index, item -> ytItemContent(item) },
+                                itemContent = { index, item -> TiledListRows { ytItemContent(item) } },
                             )
                         }
 
@@ -514,10 +515,14 @@ fun OnlineSearchResult(
                             }
                         }
                     } else {
+                        // Results are the one list in the app drawn as tiles:
+                        // a result is skimmed by artwork and title, and the
+                        // resting fill separates one from the next. Every other
+                        // list keeps the ghost row.
                         items(
                             items = itemsPage?.items.orEmpty().distinctBy { it.id },
                             key = { "filtered_${it.id}" },
-                            itemContent = ytItemContent,
+                            itemContent = { item -> TiledListRows { ytItemContent(item) } },
                         )
 
                         if (itemsPage?.continuation != null) {
@@ -556,16 +561,20 @@ fun OnlineSearchResult(
                 }
             }
             if (isSearchFocused) {
-                OnlineSearchScreen(
-                    query = query.text,
-                    onQueryChange = { query = it },
-                    onSearch = onSearch,
-                    onDismiss = {
-                        isSearchFocused = false
-                        focusManager.clearFocus()
-                    },
-                    pureBlack = pureBlack,
-                )
+                // Suggestions are tiled like the results behind them, so the
+                // overlay does not change the look of the list underneath.
+                TiledListRows {
+                    OnlineSearchScreen(
+                        query = query.text,
+                        onQueryChange = { query = it },
+                        onSearch = onSearch,
+                        onDismiss = {
+                            isSearchFocused = false
+                            focusManager.clearFocus()
+                        },
+                        pureBlack = pureBlack,
+                    )
+                }
             }
             HideOnScrollFAB(
                 lazyListState = lazyListState,

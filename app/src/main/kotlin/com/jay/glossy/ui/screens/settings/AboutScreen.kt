@@ -149,9 +149,19 @@ private val collaborators = listOf(
 )
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
-private val specialHelpers = listOf(
-    Contributor(name = "M4TRX", roleRes = R.string.credits_special_helper, githubHandle = "m4trxx", polygon = MaterialShapes.Cookie12Sided)
+private val secondLeadSupporter = Contributor(
+    name = "M4TRX",
+    roleRes = R.string.credits_special_helper,
+    githubHandle = "m4trxx",
+    polygon = MaterialShapes.Cookie12Sided
 )
+
+/**
+ * Helpers with no card of their own. Empty while the only helper is credited
+ * inside a lead developer's card ([secondLeadSupporter]) — the group renders
+ * nothing at all until someone new joins the list.
+ */
+private val specialHelpers = emptyList<Contributor>()
 
 private val communityLinks = listOf(
     CommunityLink(R.string.credits_discord, R.drawable.discord, "https://discord.gg/wmS43GfkU"),
@@ -515,6 +525,55 @@ fun AboutScreen(
                         contentDescription = stringResource(R.string.credits_github)
                     )
                 }
+
+                Spacer(Modifier.height(20.dp))
+
+                // The helper this developer works with, carried at the foot of
+                // the card rather than in a group of their own further down the
+                // screen: the pair reads as one block, and the card already has
+                // the spacing, tone and tap target the line needs.
+                Surface(
+                    onClick = { uriHandler.openUri(secondLeadSupporter.githubUrl) },
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                    ) {
+                        ContributorAvatar(
+                            avatarUrl = secondLeadSupporter.avatarUrl,
+                            sizeDp = 36,
+                            shape = secondLeadSupporter.polygon?.toShape() ?: CircleShape,
+                            contentDescription = secondLeadSupporter.name,
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.credits_supported_by),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Text(
+                                text = secondLeadSupporter.name,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            Text(
+                                text = stringResource(secondLeadSupporter.roleRes),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Icon(
+                            painter = painterResource(R.drawable.github),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                }
             }
         }
 
@@ -655,70 +714,74 @@ fun AboutScreen(
         
         Spacer(Modifier.height(32.dp))
 
-        // Special Helpers section
-        Material3SettingsGroup(
-            title = stringResource(R.string.credits_special_helpers),
-            items = specialHelpers.map { contributor ->
-                Material3SettingsItem(
-                    leadingContent = {
-                        var clickCount by remember(contributor.name) { mutableIntStateOf(0) }
-                        ContributorAvatar(
-                            avatarUrl = contributor.avatarUrl,
-                            sizeDp = 48,
-                            shape = contributor.polygon?.toShape() ?: CircleShape,
-                            contentDescription = contributor.name,
-                            onClick = {
-                                handleEasterEggClick(
-                                    clickCount = clickCount,
-                                    favoriteSongVideoId = contributor.favoriteSongVideoId,
-                                    coroutineScope = coroutineScope,
-                                    snackbarHostState = snackbarHostState,
-                                    playerConnection = playerConnection,
-                                    wannaPlayStr = wannaPlayStr,
-                                    yeahStr = yeahStr,
-                                    onCountUpdate = { clickCount = it }
-                                )
-                            }
-                        )
-                    },
-                    title = { Text(text = contributor.name, fontWeight = FontWeight.SemiBold) },
-                    description = { Text(stringResource(contributor.roleRes)) },
-                    trailingContent = {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            if (contributor.sponsorUrl != null) {
-                                Surface(
-                                    onClick = { uriHandler.openUri(contributor.sponsorUrl) },
-                                    shape = CircleShape,
-                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                                    modifier = Modifier.size(36.dp)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            painter = painterResource(R.drawable.buymeacoffee),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(20.dp),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
+        // Special Helpers section — hidden entirely while nobody is on the
+        // list, the same way the Glossy Devs group above hides itself: an empty
+        // group would still print its section title with nothing under it.
+        if (specialHelpers.isNotEmpty()) {
+            Material3SettingsGroup(
+                title = stringResource(R.string.credits_special_helpers),
+                items = specialHelpers.map { contributor ->
+                    Material3SettingsItem(
+                        leadingContent = {
+                            var clickCount by remember(contributor.name) { mutableIntStateOf(0) }
+                            ContributorAvatar(
+                                avatarUrl = contributor.avatarUrl,
+                                sizeDp = 48,
+                                shape = contributor.polygon?.toShape() ?: CircleShape,
+                                contentDescription = contributor.name,
+                                onClick = {
+                                    handleEasterEggClick(
+                                        clickCount = clickCount,
+                                        favoriteSongVideoId = contributor.favoriteSongVideoId,
+                                        coroutineScope = coroutineScope,
+                                        snackbarHostState = snackbarHostState,
+                                        playerConnection = playerConnection,
+                                        wannaPlayStr = wannaPlayStr,
+                                        yeahStr = yeahStr,
+                                        onCountUpdate = { clickCount = it }
+                                    )
+                                }
+                            )
+                        },
+                        title = { Text(text = contributor.name, fontWeight = FontWeight.SemiBold) },
+                        description = { Text(stringResource(contributor.roleRes)) },
+                        trailingContent = {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (contributor.sponsorUrl != null) {
+                                    Surface(
+                                        onClick = { uriHandler.openUri(contributor.sponsorUrl) },
+                                        shape = CircleShape,
+                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                        modifier = Modifier.size(36.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                painter = painterResource(R.drawable.buymeacoffee),
+                                                contentDescription = null,
+                                                modifier = Modifier.size(20.dp),
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
                                     }
                                 }
+                                Icon(
+                                    painter = painterResource(R.drawable.github),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(24.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
-                            Icon(
-                                painter = painterResource(R.drawable.github),
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    },
-                    onClick = { uriHandler.openUri(contributor.githubUrl) }
-                )
-            }
-        )
+                        },
+                        onClick = { uriHandler.openUri(contributor.githubUrl) }
+                    )
+                }
+            )
 
-        Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(32.dp))
+        }
 
         // Community & Info using standard Group
         Material3SettingsGroup(

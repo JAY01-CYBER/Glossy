@@ -62,6 +62,7 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.animation.core.Spring
@@ -76,6 +77,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -309,6 +311,35 @@ fun ClickableArtistText(
     )
 }
 
+/**
+ * Whether the rows in this part of the tree are drawn as filled tiles instead
+ * of the app-wide ghost row.
+ *
+ * Search is the only surface that asks for tiles: a result list is skimmed by
+ * artwork and title, and the resting fill separates one result from the next.
+ * Everywhere else a row paints nothing until it is playing or selected — hence
+ * the false default, so a list cannot inherit the search look by accident.
+ *
+ * Static, because whether a list is tiled is decided once by the screen that
+ * owns it and never changes while that screen is on show: none of the rows
+ * needs to be tracked for a read that can never go stale.
+ */
+val LocalListRowsTiled = staticCompositionLocalOf { false }
+
+/**
+ * Draws [content] with its list rows painted as tiles.
+ *
+ * Provided by the search screens around the lists they own — including their
+ * nested surfaces, so a suggestion overlay opened from a search result is
+ * tiled the same way as the result behind it. Being a provider rather than a
+ * flag threaded through every row keeps the rule in one place: a list either
+ * sits inside this call or it keeps the ghost row.
+ */
+@Composable
+fun TiledListRows(content: @Composable () -> Unit) {
+    CompositionLocalProvider(LocalListRowsTiled provides true) { content() }
+}
+
 // ------------------------------------------------------------------------
 // PREMIUM LIST ITEM DESIGN (Online Playlist Style)
 // ------------------------------------------------------------------------
@@ -329,13 +360,17 @@ inline fun ListItem(
 ) {
     val contentColor = MaterialTheme.colorScheme.onSurface
     // Soft ghost tile: an ordinary row draws nothing at all and the list reads
-    // as a list. The tonal fill is reserved for rows that earned one — the
-    // playing row and rows picked in selection mode — and it fades in rather
-    // than snapping, so the highlight feels like it is settling onto the row.
+    // as a list. A list that asked for tiles ([LocalListRowsTiled], Search)
+    // paints the resting fill instead, while the tonal highlight stays reserved
+    // for rows that earned one — the playing row and rows picked in selection
+    // mode. Everything fades in rather than snapping, so the highlight feels
+    // like it is settling onto the row.
+    val tiled = LocalListRowsTiled.current
     val tileColor by animateColorAsState(
         when {
             isSelected == true -> MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
             isActive -> MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
+            tiled -> MaterialTheme.colorScheme.surfaceContainer
             else -> Color.Transparent
         },
         label = "listTileGhost",
@@ -1418,11 +1453,14 @@ fun YouTubeListItem(
 
     // Same ghost tile as the base ListItem — this row used to keep its own
     // filled card and a hairline border, which is exactly the look the rebuild
-    // retired. It now draws nothing until it is playing or selected.
+    // retired. It now draws nothing until it is playing, selected, or the list
+    // it belongs to asked for tiles.
+    val tiled = LocalListRowsTiled.current
     val tileColor by animateColorAsState(
         when {
             isSelected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
             isActive -> MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
+            tiled -> MaterialTheme.colorScheme.surfaceContainer
             else -> Color.Transparent
         },
         label = "youTubeListTileGhost",
