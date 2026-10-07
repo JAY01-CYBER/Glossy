@@ -117,6 +117,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -1866,16 +1867,19 @@ fun InlineLyricsView(
     }
 
     Box(
-        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)),
+        modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
         // Apple Music-style frosted glass: the artwork blurred behind the text,
         // so the full-screen lyrics view looks the same in every player design.
-        // The backdrop fades in down the panel, so the blur builds up from the
-        // track details above instead of starting at a hard edge.
+        // Full-bleed with square corners on purpose: rounded corners used to cut
+        // out little triangles that revealed the (often much lighter) sheet
+        // behind as white corner padding. The backdrop fades in down the panel,
+        // so the blur builds up from the top instead of starting at a hard edge.
         GlassBackdrop(
             thumbnailUrl = mediaMetadata?.thumbnailUrl?.toHighRes(),
-            shape = RoundedCornerShape(12.dp),
+            shape = RectangleShape,
+            border = null,
             modifier = Modifier.fillMaxSize(),
         )
         // Buttery-smooth cross-state animation: scale + fade between loading,
