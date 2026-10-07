@@ -26,6 +26,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import com.jay.glossy.constants.DataSyncIdKey
+import com.jay.glossy.constants.InnerTubeAuthUserKey
 import com.jay.glossy.constants.InnerTubeCookieKey
 import com.jay.glossy.constants.VisitorDataKey
 import com.jay.glossy.db.InternalDatabase
@@ -282,6 +283,7 @@ class BackupRestoreViewModel @Inject constructor(
                                         prefs.remove(InnerTubeCookieKey)
                                         prefs.remove(VisitorDataKey)
                                         prefs.remove(DataSyncIdKey)
+                                        prefs.remove(InnerTubeAuthUserKey)
                                     }
                                 }
 
