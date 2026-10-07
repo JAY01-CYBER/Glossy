@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -235,12 +235,24 @@ class App :
                 .map { it[DataSyncIdKey] }
                 .distinctUntilChanged()
                 .collect { dataSyncId ->
+                    // Store/use the user-session portion only. Older installs may contain
+                    // YouTube's compound DATASYNC_ID form (delegated||user); keep the
+                    // existing compatibility behavior while normalizing empty values.
                     YouTube.dataSyncId =
                         dataSyncId?.let {
                             it.takeIf { !it.contains("||") }
                                 ?: it.takeIf { it.endsWith("||") }?.substringBefore("||")
                                 ?: it.substringAfter("||")
-                        }
+                        }?.takeIf { it.isNotBlank() }
+                }
+        }
+
+        applicationScope.launch(Dispatchers.IO) {
+            dataStore.data
+                .map { it[InnerTubeAuthUserKey] ?: "0" }
+                .distinctUntilChanged()
+                .collect { authUser ->
+                    YouTube.authUser = authUser.filter(Char::isDigit).ifBlank { "0" }
                 }
         }
 
@@ -363,6 +375,7 @@ class App :
                 settings.remove(InnerTubeCookieKey)
                 settings.remove(VisitorDataKey)
                 settings.remove(DataSyncIdKey)
+                settings.remove(InnerTubeAuthUserKey)
                 settings.remove(AccountNameKey)
                 settings.remove(AccountEmailKey)
                 settings.remove(AccountChannelHandleKey)
@@ -383,6 +396,7 @@ class App :
             YouTube.cookie = null
             YouTube.visitorData = null
             YouTube.dataSyncId = null
+            YouTube.authUser = "0"
             Timber.d(
                 "forgetAccount: After - cookie=${YouTube.cookie}, visitorData=${YouTube.visitorData}, dataSyncId=${YouTube.dataSyncId}",
             )
