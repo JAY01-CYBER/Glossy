@@ -48,6 +48,8 @@ class InnerTube {
     )
     var visitorData: String? = null
     var dataSyncId: String? = null
+    /** YouTube account/session index used by authenticated Innertube requests (0 = primary account). */
+    var authUser: String = "0"
     var cookie: String? = null
         set(value) {
             field = value
@@ -162,6 +164,11 @@ class InnerTube {
                     val currentTime = System.currentTimeMillis() / 1000
                     val sapisidHash = sha1("$currentTime ${cookieMap["SAPISID"]} ${YouTubeClient.ORIGIN_YOUTUBE_MUSIC}")
                     append("Authorization", "SAPISIDHASH ${currentTime}_${sapisidHash}")
+                    // Authenticated YouTube requests need the account/session index as well as
+                    // the SAPISID proof. Without this, YouTube can treat a valid cookie as an
+                    // incomplete session and return the bot-verification playback response.
+                    append("X-Goog-AuthUser", authUser.ifBlank { "0" })
+                    append("X-Youtube-Bootstrap-Logged-In", "true")
                 }
             }
         }
@@ -730,6 +737,11 @@ class InnerTube {
                     val currentTime = System.currentTimeMillis() / 1000
                     val sapisidHash = sha1("$currentTime ${cookieMap["SAPISID"]} ${YouTubeClient.ORIGIN_YOUTUBE_MUSIC}")
                     append("Authorization", "SAPISIDHASH ${currentTime}_${sapisidHash}")
+                    // Authenticated YouTube requests need the account/session index as well as
+                    // the SAPISID proof. Without this, YouTube can treat a valid cookie as an
+                    // incomplete session and return the bot-verification playback response.
+                    append("X-Goog-AuthUser", authUser.ifBlank { "0" })
+                    append("X-Youtube-Bootstrap-Logged-In", "true")
                 }
             }
             contentType(ContentType.Application.FormUrlEncoded)
@@ -757,6 +769,11 @@ class InnerTube {
                     val currentTime = System.currentTimeMillis() / 1000
                     val sapisidHash = sha1("$currentTime ${cookieMap["SAPISID"]} ${YouTubeClient.ORIGIN_YOUTUBE_MUSIC}")
                     append("Authorization", "SAPISIDHASH ${currentTime}_${sapisidHash}")
+                    // Authenticated YouTube requests need the account/session index as well as
+                    // the SAPISID proof. Without this, YouTube can treat a valid cookie as an
+                    // incomplete session and return the bot-verification playback response.
+                    append("X-Goog-AuthUser", authUser.ifBlank { "0" })
+                    append("X-Youtube-Bootstrap-Logged-In", "true")
                 }
             }
             contentType(ContentType.Application.OctetStream)
@@ -786,6 +803,11 @@ class InnerTube {
                     val currentTime = System.currentTimeMillis() / 1000
                     val sapisidHash = sha1("$currentTime ${cookieMap["SAPISID"]} ${YouTubeClient.ORIGIN_YOUTUBE_MUSIC}")
                     append("Authorization", "SAPISIDHASH ${currentTime}_${sapisidHash}")
+                    // Authenticated YouTube requests need the account/session index as well as
+                    // the SAPISID proof. Without this, YouTube can treat a valid cookie as an
+                    // incomplete session and return the bot-verification playback response.
+                    append("X-Goog-AuthUser", authUser.ifBlank { "0" })
+                    append("X-Youtube-Bootstrap-Logged-In", "true")
                 }
             }
             parameter("key", "AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX3")
