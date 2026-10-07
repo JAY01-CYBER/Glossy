@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -38,6 +38,7 @@ import com.jay.glossy.constants.AccountChannelHandleKey
 import com.jay.glossy.constants.AccountEmailKey
 import com.jay.glossy.constants.AccountNameKey
 import com.jay.glossy.constants.DataSyncIdKey
+import com.jay.glossy.constants.InnerTubeAuthUserKey
 import com.jay.glossy.constants.InnerTubeCookieKey
 import com.jay.glossy.constants.PendingCommunityIntroKey
 import com.jay.glossy.constants.VisitorDataKey
@@ -45,8 +46,10 @@ import com.jay.glossy.ui.component.IconButton
 import com.jay.glossy.ui.utils.backToMain
 import com.jay.glossy.utils.reportException
 import com.jay.glossy.utils.safeDataStoreEdit
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 
@@ -59,8 +62,64 @@ fun LoginScreen(navController: NavController) {
     var isCompletingLogin by remember { mutableStateOf(false) }
 
     var webView: WebView? = null
-    var visitorDataFromWeb by remember { mutableStateOf("") }
-    var dataSyncIdFromWeb by remember { mutableStateOf("") }
+    val jsBridge = remember { LoginJsInterface() }
+
+    suspend fun extractAuthData(view: WebView): Triple<String, String, String>? {
+        var lastCookie = ""
+        repeat(12) {
+            val cookie = CookieManager.getInstance().getCookie("https://music.youtube.com").orEmpty()
+            lastCookie = cookie
+
+            val visitorDeferred = CompletableDeferred<String?>()
+            val dataSyncDeferred = CompletableDeferred<String?>()
+            val authUserDeferred = CompletableDeferred<String?>()
+
+            jsBridge.onVisitorDataReceived = { value ->
+                if (!visitorDeferred.isCompleted) visitorDeferred.complete(value)
+            }
+            jsBridge.onDataSyncIdReceived = { value ->
+                if (!dataSyncDeferred.isCompleted) dataSyncDeferred.complete(value)
+            }
+            jsBridge.onAuthUserReceived = { value ->
+                if (!authUserDeferred.isCompleted) authUserDeferred.complete(value)
+            }
+
+            view.loadUrl(
+                "javascript:Android.onRetrieveVisitorData(" +
+                    "window.yt&&window.yt.config_?window.yt.config_.VISITOR_DATA:null)",
+            )
+            view.loadUrl(
+                "javascript:Android.onRetrieveDataSyncId(" +
+                    "window.yt&&window.yt.config_?window.yt.config_.DATASYNC_ID:null)",
+            )
+            view.loadUrl(
+                "javascript:Android.onRetrieveAuthUser(" +
+                    "window.yt&&window.yt.config_?String(window.yt.config_.SESSION_INDEX||0):'0')",
+            )
+
+            val values = withTimeoutOrNull(1500L) {
+                Triple(visitorDeferred.await(), dataSyncDeferred.await(), authUserDeferred.await())
+            }
+
+            val visitorData = values?.first?.trim().orEmpty()
+            val rawDataSyncId = values?.second?.trim().orEmpty()
+            val authUser = values?.third?.filter(Char::isDigit).orEmpty().ifBlank { "0" }
+
+            if (cookie.isNotBlank() && visitorData.isNotBlank()) {
+                // DATASYNC_ID can be emitted as delegated||user. The existing InnerTube
+                // implementation expects the first/session-bound portion in onBehalfOfUser.
+                val dataSyncId = rawDataSyncId.substringBefore("||").trim()
+                if (dataSyncId.isNotBlank()) {
+                    return Triple(cookie, visitorData, dataSyncId + "||" + authUser)
+                }
+            }
+
+            kotlinx.coroutines.delay(250L)
+        }
+
+        Timber.w("Login: Timed out waiting for YouTube Music auth data (cookie=${lastCookie.isNotBlank()})")
+        return null
+    }
 
     fun completeLogin(onClose: () -> Unit) {
         if (isCompletingLogin) return
@@ -75,16 +134,34 @@ fun LoginScreen(navController: NavController) {
                 return@launch
             }
 
-            // Save extracted values from the WebView before validating
-            val savedVisitorData = visitorDataFromWeb
-            val savedDataSyncId = dataSyncIdFromWeb
+            // Do not finish login just because a cookie exists. The WebView exposes
+            // VISITOR_DATA, DATASYNC_ID and SESSION_INDEX asynchronously; saving only the
+            // cookie creates a partially-authenticated session and is the main cause of
+            // logged-in playback returning the bot-verification response.
+            val authData = extractAuthData(webView ?: run {
+                isCompletingLogin = false
+                onClose()
+                return@launch
+            })
 
-            // Initialize YouTube object with selected authentication data
-            YouTube.cookie = currentCookie
+            if (authData == null) {
+                isCompletingLogin = false
+                onClose()
+                return@launch
+            }
+
+            val (savedCookie, savedVisitorData, packedSession) = authData
+            val savedDataSyncId = packedSession.substringBefore("||")
+            val savedAuthUser = packedSession.substringAfter("||", "0").ifBlank { "0" }
+
+            // Initialize YouTube with a complete, self-consistent authenticated session
+            // before validating the account.
+            YouTube.cookie = savedCookie
             YouTube.dataSyncId = savedDataSyncId
             YouTube.visitorData = savedVisitorData
+            YouTube.authUser = savedAuthUser
 
-            Timber.d("Login: Manual close detected, validating selected account...")
+            Timber.d("Login: Validating complete YouTube Music session...")
 
             YouTube
                 .accountInfo()
@@ -105,9 +182,10 @@ fun LoginScreen(navController: NavController) {
                     // launch intent and exit the process so all services reinitialize cleanly.
                     val saved = withContext(Dispatchers.IO) {
                         context.safeDataStoreEdit { settings ->
-                            settings[InnerTubeCookieKey] = currentCookie
+                            settings[InnerTubeCookieKey] = savedCookie
                             settings[VisitorDataKey] = savedVisitorData
                             settings[DataSyncIdKey] = savedDataSyncId
+                            settings[InnerTubeAuthUserKey] = savedAuthUser
                             settings[AccountNameKey] = info.name
                             settings[AccountEmailKey] = info.email.orEmpty()
                             settings[AccountChannelHandleKey] = info.channelHandle.orEmpty()
@@ -152,17 +230,14 @@ fun LoginScreen(navController: NavController) {
                             view: WebView,
                             url: String?,
                         ) {
-                            loadUrl("javascript:Android.onRetrieveVisitorData(window.yt.config_.VISITOR_DATA)")
-                            loadUrl("javascript:Android.onRetrieveDataSyncId(window.yt.config_.DATASYNC_ID)")
-
-                            // Auto-detect login completion: when the WebView lands on
-                            // music.youtube.com with a valid cookie, complete the login.
+                            // A cookie appearing is not sufficient. completeLogin() now waits
+                            // for all WebView session fields before persisting the account.
                             if (url?.contains("music.youtube.com") == true &&
                                 !isCompletingLogin &&
                                 CookieManager.getInstance().getCookie("https://music.youtube.com").orEmpty()
                                     .isNotBlank()
                             ) {
-                                Timber.d("Login: Detected authenticated session on music.youtube.com, completing login...")
+                                Timber.d("Login: Authenticated YouTube Music page detected; extracting complete session...")
                                 completeLogin(navController::navigateUp)
                             }
                         }
@@ -173,24 +248,7 @@ fun LoginScreen(navController: NavController) {
                     builtInZoomControls = true
                     displayZoomControls = false
                 }
-                addJavascriptInterface(
-                    object {
-                        @JavascriptInterface
-                        fun onRetrieveVisitorData(newVisitorData: String?) {
-                            if (newVisitorData != null) {
-                                visitorDataFromWeb = newVisitorData
-                            }
-                        }
-
-                        @JavascriptInterface
-                        fun onRetrieveDataSyncId(newDataSyncId: String?) {
-                            if (newDataSyncId != null) {
-                                dataSyncIdFromWeb = newDataSyncId.substringBefore("||")
-                            }
-                        }
-                    },
-                    "Android",
-                )
+                addJavascriptInterface(jsBridge, "Android")
                 webView = this
                 loadUrl("https://accounts.google.com/ServiceLogin?continue=https%3A%2F%2Fmusic.youtube.com")
             }
@@ -219,5 +277,28 @@ fun LoginScreen(navController: NavController) {
         } else {
             completeLogin(navController::navigateUp)
         }
+    }
+}
+
+
+@Suppress("unused")
+private class LoginJsInterface {
+    var onVisitorDataReceived: ((String?) -> Unit)? = null
+    var onDataSyncIdReceived: ((String?) -> Unit)? = null
+    var onAuthUserReceived: ((String?) -> Unit)? = null
+
+    @JavascriptInterface
+    fun onRetrieveVisitorData(visitorData: String?) {
+        onVisitorDataReceived?.invoke(visitorData)
+    }
+
+    @JavascriptInterface
+    fun onRetrieveDataSyncId(dataSyncId: String?) {
+        onDataSyncIdReceived?.invoke(dataSyncId)
+    }
+
+    @JavascriptInterface
+    fun onRetrieveAuthUser(authUser: String?) {
+        onAuthUserReceived?.invoke(authUser)
     }
 }
