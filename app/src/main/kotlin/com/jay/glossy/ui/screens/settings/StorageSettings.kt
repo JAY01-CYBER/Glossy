@@ -186,14 +186,14 @@ fun StorageSettings(
 
     LaunchedEffect(imageDiskCache) {
         while (isActive) {
-            delay(500)
+            delay(1000)
             imageCacheSize = imageDiskCache.size
         }
     }
     
     LaunchedEffect(playerCache, playerCacheDir) {
         while (isActive) {
-            delay(500)
+            delay(1000)
             playerCacheSize = withContext(Dispatchers.IO) {
                 val cacheSpace = tryOrNull { playerCache.cacheSpace } ?: 0L
                 if (cacheSpace == 0L) playerCacheDir.directorySizeBytes() else cacheSpace
@@ -203,7 +203,7 @@ fun StorageSettings(
     
     LaunchedEffect(downloadCache, downloadCacheDir) {
         while (isActive) {
-            delay(500)
+            delay(1000)
             downloadCacheSize = withContext(Dispatchers.IO) {
                 val cacheSpace = tryOrNull { downloadCache.cacheSpace } ?: 0L
                 if (cacheSpace == 0L) downloadCacheDir.directorySizeBytes() else cacheSpace
