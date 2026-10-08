@@ -1,5 +1,5 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -45,6 +45,8 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
@@ -68,6 +70,14 @@ class PlaylistWidgetManager @Inject constructor(
     private var cachedRoundedSource: Bitmap? = null
     private val fallbackArtworkCache = ConcurrentHashMap<FallbackArtworkKey, Bitmap>()
     private val roundedAppIconCache = ConcurrentHashMap<Int, Bitmap>()
+
+    // Quick picks are database-backed but change much less often than playback position.
+    // Keep a snapshot in memory so widget progress updates never trigger five DB queries.
+    @Volatile
+    private var cachedQuickPicks: List<QuickPick> = emptyList()
+    @Volatile
+    private var quickPickCacheInitialized = false
+    private val quickPickCacheMutex = Mutex()
 
     @Volatile
     private var lastWidgetState = WidgetState(
@@ -103,7 +113,7 @@ class PlaylistWidgetManager @Inject constructor(
         val appWidgetManager = AppWidgetManager.getInstance(context)
         val state = lastWidgetState
         val albumArt = getCachedAlbumArt(state.artworkUri)
-        val quickPicks = buildQuickPicks()
+        val quickPicks = getCachedQuickPicks()
         val views = createRemoteViews(
             options = options,
             title = state.title,
@@ -156,7 +166,7 @@ class PlaylistWidgetManager @Inject constructor(
         if (widgetIds.isEmpty()) return
 
         val albumArt = getCachedAlbumArt(artworkUri)
-        val quickPicks = buildQuickPicks()
+        val quickPicks = getCachedQuickPicks()
 
         widgetIds.forEach { widgetId ->
             val options = appWidgetManager.getAppWidgetOptions(widgetId)
@@ -234,7 +244,10 @@ class PlaylistWidgetManager @Inject constructor(
         }
             .distinctUntilChanged()
             .debounce(500L)
-            .onEach { refreshWidgetsFromLastState() }
+            .onEach {
+                refreshQuickPickCache()
+                refreshWidgetsFromLastState()
+            }
             .launchIn(applicationScope)
     }
 
@@ -371,7 +384,25 @@ class PlaylistWidgetManager @Inject constructor(
         else -> emptySet()
     }
 
-    private suspend fun buildQuickPicks(): List<QuickPick> = withContext(Dispatchers.IO) {
+    private suspend fun getCachedQuickPicks(): List<QuickPick> {
+        if (quickPickCacheInitialized) return cachedQuickPicks
+        return quickPickCacheMutex.withLock {
+            if (!quickPickCacheInitialized) {
+                cachedQuickPicks = loadQuickPicksFromDatabase()
+                quickPickCacheInitialized = true
+            }
+            cachedQuickPicks
+        }
+    }
+
+    private suspend fun refreshQuickPickCache() {
+        quickPickCacheMutex.withLock {
+            cachedQuickPicks = loadQuickPicksFromDatabase()
+            quickPickCacheInitialized = true
+        }
+    }
+
+    private suspend fun loadQuickPicksFromDatabase(): List<QuickPick> = withContext(Dispatchers.IO) {
         val speedDialItemsDeferred = async { database.speedDialDao.getAll().first() }
         val savedPlaylistsDeferred = async { database.playlistsByCreateDateAsc().first() }
         val likedSongsDeferred = async { database.likedSongsByCreateDateAsc().first() }
