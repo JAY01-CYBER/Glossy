@@ -83,7 +83,9 @@ class App :
 
         // Plant logging BEFORE cipher init so the synchronous config-store load
         // (bundled asset + cached overlay) is captured, not just the async remote refresh.
-        Timber.plant(Timber.DebugTree())
+        if (BuildConfig.DEBUG) {
+            Timber.plant(Timber.DebugTree())
+        }
 
         // Initialize cipher deobfuscator on background thread to keep app launch non-blocking
         applicationScope.launch(Dispatchers.IO) {
