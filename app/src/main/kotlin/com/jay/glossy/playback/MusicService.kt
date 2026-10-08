@@ -538,6 +538,10 @@ class MusicService :
     private var cachedShufflePlaylistFirst = false
     @Volatile
     private var cachedAutoLoadMore = true
+    @Volatile
+    private var cachedRepeatMode = REPEAT_MODE_OFF
+    @Volatile
+    private var cachedShuffleEnabled = false
 
     // URL cache for stream URLs - class-level so it can be invalidated on errors
     private val songUrlCache = Collections.synchronizedMap(
@@ -1339,6 +1343,12 @@ class MusicService :
         scope.launch {
             dataStore.data.map { it[AutoLoadMoreKey] ?: true }.distinctUntilChanged().collect { cachedAutoLoadMore = it }
         }
+        scope.launch {
+            dataStore.data.map { it[RepeatModeKey] ?: REPEAT_MODE_OFF }.distinctUntilChanged().collect { cachedRepeatMode = it }
+        }
+        scope.launch {
+            dataStore.data.map { it[ShuffleModeKey] ?: false }.distinctUntilChanged().collect { cachedShuffleEnabled = it }
+        }
         // Keep YTPlayerUtils in sync with the stream source toggles (Settings → Stream sources).
         // Map to the derived set + distinctUntilChanged so an unrelated preference write doesn't
         // rebuild the set and rewrite the @Volatile field on every DataStore emission.
@@ -1437,10 +1447,11 @@ class MusicService :
             }
         }
 
-        // Save queue periodically to prevent queue loss from crash or force kill
+        // Save queue periodically to prevent queue loss from crash or force kill.
+        // Keep a single persistence loop; two overlapping timers caused duplicate disk writes.
         scope.launch {
             while (isActive) {
-                delay(15.seconds)
+                delay(10.seconds)
                 if (cachedPersistentQueue) {
                     saveQueueToDisk()
                 }
@@ -1448,15 +1459,6 @@ class MusicService :
                 if (currentMetadata?.isEpisode == true && player.isPlaying && player.currentPosition > 0) {
                     previousEpisodePosition = player.currentPosition
                     saveEpisodePosition(currentMetadata.id, player.currentPosition)
-                }
-            }
-        }
-
-        scope.launch {
-            while (isActive) {
-                delay(10.seconds)
-                if (cachedPersistentQueue && player.isPlaying) {
-                    saveQueueToDisk()
                 }
             }
         }
@@ -4707,7 +4709,7 @@ class MusicService :
                     if (player.isPlaying) {
                         updateWidgetUI(true)
                     }
-                    delay(200)
+                    delay(1000)
                 }
             }
     }
@@ -4826,10 +4828,10 @@ class MusicService :
 
 
 
-        // Preserve player state before creating the secondary player
-        // Use runBlocking to ensure we get the correct state from DataStore
-        val savedRepeatMode = runBlocking { dataStore.get(RepeatModeKey, REPEAT_MODE_OFF) }
-        val savedShuffleEnabled = runBlocking { dataStore.get(ShuffleModeKey, false) }
+        // Crossfade runs on the playback path; use the already-observed preferences instead of
+        // blocking the service thread on synchronous DataStore reads.
+        val savedRepeatMode = cachedRepeatMode
+        val savedShuffleEnabled = cachedShuffleEnabled
 
         // For repeat-one, crossfade back into the same track
         val targetIndex =
