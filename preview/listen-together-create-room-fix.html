@@ -241,6 +241,26 @@
     <div class="stat"><b>2 entry points</b><span>Listen Together screen and the player sheet now both report failures — the sheet had the same silent gap</span></div>
   </div>
 
+  <h2>The room server, hosted on Cloudflare</h2>
+  <p class="sub" style="max-width:820px">
+    A Worker cannot relay between two sockets on its own, so the server is a Worker front door plus
+    <b>one Durable Object</b> that owns every room — the same single-hub shape as the Python server,
+    and the smallest thing that actually holds room state. It uses the WebSocket Hibernation API, so
+    idle rooms cost nothing, and writes its state through to DO storage after every mutation.
+  </p>
+  <div class="stats" style="margin-top:16px">
+    <div class="stat good"><b>37 / 37</b><span>Same protocol suite, run against the worker under <code>wrangler dev</code> — byte-for-byte the client's wire format</span></div>
+    <div class="stat good"><b>1 DO</b><span>All rooms in one durable hub, sockets attached with their member binding so they survive eviction</span></div>
+    <div class="stat"><b>Free plan</b><span>SQLite-backed Durable Object, no paid tier required</span></div>
+  </div>
+  <div class="trace" style="margin-top:16px">
+    <div class="row"><span class="dim"># publish it (one browser login, no token passes through the agent)</span></div>
+    <div class="row"><span class="to">$</span><span>cd metroserver-worker &amp;&amp; npx wrangler login</span></div>
+    <div class="row"><span class="to">$</span><span>npx wrangler deploy</span></div>
+    <div class="row"><span class="from">#</span><span class="ok">https://glossy-listen-together.&lt;your-subdomain&gt;.workers.dev/ws</span></div>
+    <div class="row"><span class="dim"># that address goes in Settings -&gt; Integrations -&gt; Listen Together, on every phone that joins</span></div>
+  </div>
+
   <h2>How to host your own</h2>
   <ul class="notes">
     <li>Run <code>python metroserver/metro_server.py --print-urls</code> — stdlib only, Python 3.11+.</li>
@@ -254,7 +274,9 @@
     Changed: <code>ListenTogetherClient.kt</code> (error watchdog, URL normalisation, guarded connect) ·
     <code>ListenTogetherScreen.kt</code> and <code>PlayerMenu.kt</code> (failure handling + creating state) ·
     <code>ui/utils/ListenTogetherErrorText.kt</code> (shared wording) ·
-    <code>Protocol.kt</code> (error codes) · <code>glossy_strings.xml</code>.
+    <code>Protocol.kt</code> (error codes) · <code>glossy_strings.xml</code>.<br>
+    Added: <code>metroserver-worker/</code> — <code>src/protocol.js</code> (wire format),
+    <code>src/index.js</code> (Worker + RoomHub Durable Object), <code>wrangler.jsonc</code>.
   </div>
 </div>
 </body>
