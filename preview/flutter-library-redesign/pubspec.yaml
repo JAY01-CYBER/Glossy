@@ -1,0 +1,25 @@
+name: glossy_library_preview
+description: "A new Flutter project."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.13.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # WebSocket transport for Listen Together. The prototype is web-only, so it
+  # binds to the DOM socket instead of dart:html (deprecated).
+  web: ^1.1.1
+  # The room server gzips larger payloads and sets Envelope.compressed, so the
+  # codec has to inflate them. Pure Dart, so the codec stays unit-testable.
+  archive: ^4.0.7
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
