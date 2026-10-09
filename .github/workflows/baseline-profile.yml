@@ -1,0 +1,68 @@
+name: Generate Baseline Profiles
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 5 * * 0"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  generate-baseline-profile:
+    name: Generate Baseline Profiles
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [gms, foss]
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Install SDK packages required by Glossy
+        run: sdkmanager --install "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Grant execute permission for Gradle
+        run: chmod +x gradlew
+
+      - name: Verify Android SDK
+        run: |
+          adb version
+          sdkmanager --list_installed
+
+      - name: Run Baseline Profile generation
+        run: |
+          ./gradlew :baselineprofile:connected${{ matrix.variant == 'gms' && 'Gms' || 'Foss' }}NonMinifiedReleaseAndroidTest \
+            --stacktrace
+
+      - name: Build release variant
+        run: |
+          ./gradlew :app:assemble${{ matrix.variant == 'gms' && 'Gms' || 'Foss' }}Release \
+            --stacktrace
+
+      - name: Upload build outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: baseline-profile-${{ matrix.variant }}
+          path: |
+            app/build/outputs/apk/**
+            app/build/outputs/mapping/**
+            app/src/**/baseline-prof.txt
+            baselineprofile/build/outputs/**
+          if-no-files-found: warn
+          retention-days: 14
