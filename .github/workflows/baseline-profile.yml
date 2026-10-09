@@ -12,7 +12,7 @@ permissions:
 jobs:
   generate-baseline-profile:
     name: Generate Baseline Profiles (${{ matrix.variant }})
-    runs-on: ubuntu-latest
+    runs-on: macos-14
 
     strategy:
       fail-fast: false
@@ -36,15 +36,12 @@ jobs:
         with:
           packages: platform-tools
 
-      # Removed platforms;android-37 so Gradle can auto-download it instead of crashing here
       - name: Install SDK packages required by Glossy
         run: sdkmanager --install "build-tools;35.0.0"
 
       - name: Grant execute permission for Gradle
         run: chmod +x gradlew
 
-      # app/build.gradle.kts explicitly points the debug signing config
-      # at ~/.android/debug.keystore on clean GitHub-hosted runners.
       - name: Generate Default Debug Keystore
         run: |
           mkdir -p "$HOME/.android"
@@ -66,9 +63,6 @@ jobs:
           sdkmanager --list_installed
           test -f "$HOME/.android/debug.keystore"
 
-      # connected...AndroidTest requires a running device. GitHub-hosted
-      # runners do not provide one automatically, so start an Android emulator.
-      # ARM64 matches this project's configured app ABI filters.
       - name: Generate Baseline Profile on Android Emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -93,7 +87,6 @@ jobs:
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
           LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
 
-      # Keep the existing repository release-signing secrets for the APK signing step.
       - name: Sign Release APK
         uses: ilharp/sign-android-release@v2.0.0
         with:
