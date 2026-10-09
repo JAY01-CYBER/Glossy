@@ -30,16 +30,9 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
-        with:
-          # Match the working M3Play workflow: keep this input to one package.
-          packages: platform-tools
 
       - name: Install SDK packages required by Glossy
-        run: |
-          sdkmanager --install \\
-            "platforms;android-37" \\
-            "build-tools;35.0.0" \\
-            "build-tools;36.0.0"
+        run: sdkmanager --install "platforms;android-37" "build-tools;35.0.0" "build-tools;36.0.0"
 
       - name: Grant execute permission for Gradle
         run: chmod +x gradlew
