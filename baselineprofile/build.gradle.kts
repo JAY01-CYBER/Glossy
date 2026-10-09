@@ -15,7 +15,18 @@ android {
 
     targetProjectPath = ":app"
 
-
+    flavorDimensions += listOf("variant")
+    productFlavors {
+        create("foss") {
+            dimension = "variant"
+        }
+        create("gms") {
+            dimension = "variant"
+        }
+        create("izzy") {
+            dimension = "variant"
+        }
+    }
 }
 
 baselineProfile {
