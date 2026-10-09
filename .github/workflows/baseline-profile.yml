@@ -12,7 +12,7 @@ permissions:
 jobs:
   generate-baseline-profile:
     name: Generate Baseline Profiles (${{ matrix.variant }})
-    runs-on: macos-14
+    runs-on: ubuntu-latest
 
     strategy:
       fail-fast: false
@@ -68,7 +68,7 @@ jobs:
         with:
           api-level: 35
           target: google_apis
-          arch: arm64-v8a
+          arch: x86_64
           profile: pixel_2
           disable-animations: true
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
