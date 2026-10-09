@@ -46,7 +46,7 @@ jobs:
 
       - name: Run Baseline Profile generation
         run: |
-          ./gradlew :baselineprofile:connected${{ matrix.variant == 'gms' && 'Gms' || 'Foss' }}ReleaseAndroidTest \
+          ./gradlew :baselineprofile:connected${{ matrix.variant == 'gms' && 'Gms' || 'Foss' }}NonMinifiedReleaseAndroidTest \
             --stacktrace
 
       - name: Build release variant
