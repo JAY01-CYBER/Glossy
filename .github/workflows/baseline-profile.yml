@@ -36,9 +36,9 @@ jobs:
         with:
           packages: platform-tools
 
-      # The project uses compileSdk 37.
+      # Removed platforms;android-37 so Gradle can auto-download it instead of crashing here
       - name: Install SDK packages required by Glossy
-        run: sdkmanager --install "platforms;android-37" "build-tools;35.0.0"
+        run: sdkmanager --install "build-tools;35.0.0"
 
       - name: Grant execute permission for Gradle
         run: chmod +x gradlew
