@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Credits / About Screen — lead developer role titles -->
+    <string name="credits_main_head">Main Head Of The Project</string>
+    <string name="credits_ui_design_styling">UI Design and Styling</string>
+    <!-- Credits / About Screen — caption over a helper credited at the foot of a lead developer's card -->
+    <string name="credits_supported_by">Supported by</string>
+    <!-- Appearance — "Reduce animation" row -->
+    <string name="reduce_animation_title">Reduce animation</string>
+    <string name="reduce_animation_desc">Hide the mini player bars and floating music notes; everything else — the header wash, the glow, the artwork — stays still instead of moving</string>
+</resources>
