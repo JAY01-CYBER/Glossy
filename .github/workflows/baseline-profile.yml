@@ -1,0 +1,117 @@
+name: Generate Baseline Profiles
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 5 * * 0"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: baseline-profile-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    name: Generate and validate GMS/FOSS profiles
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          java-version: "21"
+          distribution: "temurin"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_CACHE_KEY }}
+          cache-cleanup: on-success
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Generate GMS and FOSS Baseline Profiles
+        run: >-
+          ./gradlew --console=plain --max-workers=2
+          :app:generateGmsReleaseBaselineProfile
+          :app:generateFossReleaseBaselineProfile
+          --warning-mode summary
+        env:
+          GLOSSY_APPLICATION_ID: com.jay.glossy
+          GLOSSY_APP_NAME: Glossy
+          PULL_REQUEST: "false"
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+
+      - name: Copy generated profiles into variant source sets
+        shell: bash
+        run: |
+          set -euo pipefail
+          for variant in gms foss; do
+            destination="app/src/${variant}/baseline-prof.txt"
+            generated="$(find app/src -type f -path '*/generated/baselineProfiles/baseline-prof.txt' \
+              | grep -E "/${variant}([Rr]elease)?/generated/baselineProfiles/baseline-prof\.txt$" \
+              | head -n 1 || true)"
+            if [[ -z "$generated" || ! -s "$generated" ]]; then
+              echo "Generated profile for ${variant} was not found or is empty. Available profiles:"
+              find app -type f -name 'baseline-prof.txt' -print || true
+              exit 1
+            fi
+            mkdir -p "app/src/${variant}"
+            cp "$generated" "$destination"
+            test -s "$destination"
+            echo "Prepared $destination ($(wc -l < "$destination") rules) from $generated"
+          done
+
+      - name: Validate profiles are packaged in Release APKs
+        run: >-
+          ./gradlew --console=plain --max-workers=2
+          :app:assembleGmsRelease
+          :app:assembleFossRelease
+          --warning-mode summary
+        env:
+          GLOSSY_APPLICATION_ID: com.jay.glossy
+          GLOSSY_APP_NAME: Glossy
+          PULL_REQUEST: "false"
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+
+      - name: Upload generated profiles and validation APKs
+        uses: actions/upload-artifact@v6
+        with:
+          name: baseline-profile-validation
+          if-no-files-found: error
+          path: |
+            app/src/gms/baseline-prof.txt
+            app/src/foss/baseline-prof.txt
+            app/build/outputs/apk/gms/release/*.apk
+            app/build/outputs/apk/foss/release/*.apk
+
+      - name: Open pull request with refreshed profiles
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: automation/update-baseline-profiles
+          delete-branch: true
+          commit-message: "perf: refresh Android baseline profiles"
+          title: "perf: refresh Android Baseline Profiles"
+          body: |
+            Automated Baseline Profile refresh for Glossy's GMS and FOSS release variants.
+
+            The workflow generated profiles from startup, home scrolling, search, and library navigation, then assembled both release variants to validate packaging.
+          add-paths: |
+            app/src/gms/baseline-prof.txt
+            app/src/foss/baseline-prof.txt
