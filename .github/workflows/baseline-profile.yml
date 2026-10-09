@@ -41,12 +41,11 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Generate GMS and FOSS Baseline Profiles
-        run: >-
-          ./gradlew --console=plain --max-workers=2
-          :app:generateGmsReleaseBaselineProfile
-          :app:generateFossReleaseBaselineProfile
-          --warning-mode summary
+      - name: Set up Android emulator
+        uses: android-actions/setup-android@v3
+
+      - name: Generate GMS and FOSS Baseline Profiles on emulator
+        uses: reactivecircus/android-emulator-runner@v2
         env:
           GLOSSY_APPLICATION_ID: com.jay.glossy
           GLOSSY_APP_NAME: Glossy
@@ -54,6 +53,13 @@ jobs:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
           LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+        with:
+          api-level: 35
+          target: default
+          arch: x86_64
+          profile: pixel_2
+          script: |
+            ./gradlew --console=plain --max-workers=2 :app:generateGmsReleaseBaselineProfile :app:generateFossReleaseBaselineProfile --warning-mode summary
 
       - name: Copy generated profiles into variant source sets
         shell: bash
