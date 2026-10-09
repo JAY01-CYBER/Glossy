@@ -10,6 +10,11 @@ itself.
     python metro_server.py --port 8099      # in one terminal
     python smoke_test.py --port 8099        # in another
 
+The same checks run against a deployed, TLS-only server by pointing the client
+at its host and asking for wss:
+
+    python smoke_test.py --host <name>.<subdomain>.workers.dev --port 443 --tls
+
 It walks the real client's flow: create a room, request to join, approve,
 answer the first pong with request_sync, drive a playback action, run the
 buffer handshake, reconnect with the session token, then kick a user.
@@ -23,6 +28,7 @@ import base64
 import gzip
 import os
 import secrets
+import ssl
 import struct
 import sys
 
@@ -172,23 +178,42 @@ def decode_envelope(data: bytes) -> tuple[str, bytes]:
 # Independent WebSocket client
 # ---------------------------------------------------------------------------
 
+def host_header(host: str, port: int) -> str:
+    """The port is left out of the Host header for the default ports, the way a
+    browser and the Android client write it.
+
+    The header must name the server actually being tested: a deployed edge (and
+    anything behind it) rejects a request whose Host is not its own hostname.
+    """
+    if port in (80, 443):
+        return host
+    return f"{host}:{port}"
+
+
 class WsClient:
-    def __init__(self, name: str, host: str, port: int):
+    def __init__(self, name: str, host: str, port: int, tls: bool = False):
         self.name = name
         self.host = host
         self.port = port
+        self.tls = tls
         self.reader: asyncio.StreamReader | None = None
         self.writer: asyncio.StreamWriter | None = None
         self.inbox: asyncio.Queue[tuple[str, bytes]] = asyncio.Queue()
         self.raw_events: list[str] = []
         self._pump: asyncio.Task | None = None
 
+    def host_header(self) -> str:
+        return host_header(self.host, self.port)
+
     async def connect(self) -> None:
-        self.reader, self.writer = await asyncio.open_connection(self.host, self.port)
+        context = ssl.create_default_context() if self.tls else None
+        self.reader, self.writer = await asyncio.open_connection(
+            self.host, self.port, ssl=context, server_hostname=self.host if self.tls else None
+        )
         key = base64.b64encode(secrets.token_bytes(16)).decode()
         request = (
             f"GET /ws HTTP/1.1\r\n"
-            f"Host: {self.host}:{self.port}\r\n"
+            f"Host: {self.host_header()}\r\n"
             "Upgrade: websocket\r\n"
             "Connection: Upgrade\r\n"
             f"Sec-WebSocket-Key: {key}\r\n"
@@ -283,9 +308,9 @@ def check(condition: bool, label: str) -> None:
     print(f"  {'PASS' if condition else 'FAIL'}  {label}", flush=True)
 
 
-async def run(host: str, port: int) -> int:
-    host_client = WsClient("host", host, port)
-    guest_client = WsClient("guest", host, port)
+async def run(host: str, port: int, tls: bool = False) -> int:
+    host_client = WsClient("host", host, port, tls)
+    guest_client = WsClient("guest", host, port, tls)
 
     print("connecting two clients", flush=True)
     await host_client.connect()
@@ -399,7 +424,7 @@ async def run(host: str, port: int) -> int:
     # 9. reconnect with the session token ---------------------------------
     await guest_client.close()
     await asyncio.sleep(0.3)
-    rejoin = WsClient("guest-reconnect", host, port)
+    rejoin = WsClient("guest-reconnect", host, port, tls)
     await rejoin.connect()
     await rejoin.send("reconnect", pb_string(1, guest_token))
     msg_type, body = await rejoin.expect("reconnected", "error")
@@ -411,7 +436,7 @@ async def run(host: str, port: int) -> int:
         del f_bool
 
     # 10. bad session ------------------------------------------------------
-    stranger = WsClient("stranger", host, port)
+    stranger = WsClient("stranger", host, port, tls)
     await stranger.connect()
     await stranger.send("reconnect", pb_string(1, "not-a-real-token"))
     msg_type, body = await stranger.expect("error")
@@ -433,8 +458,13 @@ async def run(host: str, port: int) -> int:
         check(f_string(read_fields(body), 1) == "Bye", "kick reason relayed")
 
     # 13. health endpoint --------------------------------------------------
-    reader, writer = await asyncio.open_connection(host, port)
-    writer.write(b"GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n")
+    reader, writer = await asyncio.open_connection(
+        host, port, ssl=ssl.create_default_context() if tls else None,
+        server_hostname=host if tls else None,
+    )
+    writer.write(
+        f"GET / HTTP/1.1\r\nHost: {host_header(host, port)}\r\nConnection: close\r\n\r\n".encode()
+    )
     await writer.drain()
     raw = await reader.read()
     writer.close()
@@ -454,9 +484,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="End-to-end test for metro_server.py")
     parser.add_argument("--host", default=os.environ.get("HOST", "127.0.0.1"))
     parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8080")))
+    parser.add_argument(
+        "--tls", action="store_true",
+        help="connect over wss:// instead of ws:// (a deployed server)",
+    )
     args = parser.parse_args()
     try:
-        return asyncio.run(run(args.host, args.port))
+        return asyncio.run(run(args.host, args.port, args.tls))
     except AssertionError as exc:
         print(f"\nFAILED: {exc}", flush=True)
         return 1
