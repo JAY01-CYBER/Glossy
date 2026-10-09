@@ -110,7 +110,7 @@ android {
         vectorDrawables.useSupportLibrary = true
 
         ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
         }
 
         // LastFM API keys from GitHub Secrets
@@ -436,7 +436,3 @@ dependencies {
     implementation("dev.chrisbanes.haze:haze:1.1.1")
     implementation("dev.chrisbanes.haze:haze-materials:1.1.1")
 }
-
-
-// Cache bust for spotifycore module update
-
