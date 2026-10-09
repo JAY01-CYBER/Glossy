@@ -66,8 +66,8 @@ jobs:
       - name: Generate Baseline Profile on Android Emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 35
-          target: google_apis
+          api-level: 33
+          target: aosp_atd
           arch: x86_64
           profile: pixel_2
           disable-animations: true
