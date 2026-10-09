@@ -39,6 +39,24 @@ jobs:
       - name: Grant execute permission for Gradle
         run: chmod +x gradlew
 
+      # The app's current Gradle signing configuration points at
+      # ~/.android/debug.keystore even for the release-profile variant.
+      # Generate the standard ephemeral Android debug keystore on this runner.
+      - name: Generate Default Debug Keystore
+        run: |
+          mkdir -p "$HOME/.android"
+          if [ ! -f "$HOME/.android/debug.keystore" ]; then
+            keytool -genkeypair -v \\
+              -keystore "$HOME/.android/debug.keystore" \\
+              -storepass android \\
+              -alias androiddebugkey \\
+              -keypass android \\
+              -keyalg RSA \\
+              -keysize 2048 \\
+              -validity 10000 \\
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
       - name: Verify Android SDK
         run: |
           adb version
