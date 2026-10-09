@@ -56,6 +56,21 @@ object MessageTypes {
 }
 
 /**
+ * Error codes a server can answer with.
+ *
+ * Only the codes the app can explain in its own words belong here; anything
+ * else is surfaced with the server's own message so an unknown failure is still
+ * visible instead of silent.
+ */
+object ErrorCodes {
+    /**
+     * The server accepted the connection but will not host a room for this
+     * client: hosting is restricted to an allowlist the operator controls.
+     */
+    const val HOST_NOT_ALLOWED = "host_not_allowed"
+}
+
+/**
  * Playback action types
  */
 object PlaybackActions {

@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Listen Together · Create room never finishing</title>
+<style>
+  :root {
+    --bg: #0b0d12;
+    --panel: #12151d;
+    --panel2: #171b26;
+    --line: #232936;
+    --text: #e8eaf2;
+    --muted: #8b93a7;
+    --accent: #1d9e75;
+    --accent-soft: rgba(29,158,117,.14);
+    --danger: #ff6b81;
+    --danger-soft: rgba(255,107,129,.12);
+    --ok-soft: rgba(29,158,117,.12);
+    --warn: #ffb454;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Segoe UI', Roboto, -apple-system, sans-serif;
+    padding: 34px 22px 70px; line-height: 1.55;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; }
+  h1 { font-size: 26px; font-weight: 700; letter-spacing: -.3px; }
+  h1 .thin { color: var(--muted); font-weight: 400; }
+  .sub { color: var(--muted); margin-top: 8px; font-size: 14px; max-width: 720px; }
+  .badges { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+  .badge {
+    padding: 4px 11px; border-radius: 999px; border: 1px solid var(--line);
+    font-size: 11px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase;
+  }
+  .badge.fix { color: var(--accent); border-color: rgba(29,158,117,.4); background: var(--accent-soft); }
+  .badge.evidence { color: var(--warn); border-color: rgba(255,180,84,.35); background: rgba(255,180,84,.1); }
+  .badge.scope { color: var(--muted); }
+
+  h2 { font-size: 15px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted); margin: 38px 0 14px; font-weight: 700; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  @media (max-width: 900px) { .cols { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 20px;
+    padding: 20px; position: relative; overflow: hidden;
+  }
+  .tag {
+    position: absolute; top: 16px; right: 16px; font-size: 10px; letter-spacing: 1px;
+    text-transform: uppercase; padding: 3px 10px; border-radius: 999px; font-weight: 700;
+  }
+  .tag.before { background: var(--danger-soft); color: var(--danger); border: 1px solid rgba(255,107,129,.3); }
+  .tag.after  { background: var(--ok-soft); color: var(--accent); border: 1px solid rgba(29,158,117,.4); }
+  .panel h3 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .panel .cap { color: var(--muted); font-size: 12.5px; margin-bottom: 16px; }
+
+  /* phone mock */
+  .phone {
+    background: #0e1118; border: 1px solid var(--line); border-radius: 20px;
+    padding: 14px; margin-bottom: 16px;
+  }
+  .sheet { background: var(--panel2); border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
+  .sheet-title { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .sheet-title .dot {
+    width: 34px; height: 34px; border-radius: 11px; background: var(--accent-soft);
+    display: grid; place-items: center; color: var(--accent); font-size: 16px;
+  }
+  .sheet-title b { font-size: 15px; }
+  .field {
+    border: 1px solid var(--line); background: #0f131b; border-radius: 10px;
+    padding: 10px 12px; font-size: 12.5px; color: var(--muted); margin-bottom: 10px;
+  }
+  .field.filled { color: var(--text); }
+  .btns { display: flex; gap: 10px; }
+  .btn {
+    flex: 1; text-align: center; border-radius: 12px; padding: 10px; font-size: 12.5px;
+    font-weight: 600; background: var(--accent); color: #04342c;
+  }
+  .btn.ghost { background: transparent; border: 1px solid var(--line); color: var(--text); }
+  .btn.dead { background: #1c2431; color: var(--muted); }
+  .progress {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    background: var(--accent-soft); border-radius: 12px; padding: 13px; margin: 12px 0 0;
+    font-size: 12.5px; font-weight: 600; color: var(--accent);
+  }
+  .spinner {
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid rgba(29,158,117,.3); border-top-color: var(--accent);
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .errorcard {
+    display: flex; gap: 10px; align-items: flex-start; background: rgba(149,20,43,.28);
+    border: 1px solid rgba(255,107,129,.35); border-radius: 12px; padding: 12px 14px;
+    margin: 12px 0 0; font-size: 12.5px; color: #ffd9df;
+  }
+  .errorcard .x { color: var(--danger); font-weight: 700; }
+  .toast {
+    display: inline-block; background: #2b3243; border: 1px solid var(--line); color: var(--text);
+    border-radius: 999px; padding: 7px 14px; font-size: 12px; margin: 14px 0 0;
+  }
+  .nothing {
+    margin-top: 14px; border: 1px dashed rgba(255,107,129,.35); border-radius: 12px;
+    padding: 14px; font-size: 12.5px; color: #ffb9c4; background: rgba(255,107,129,.05);
+  }
+
+  ul.notes { list-style: none; }
+  ul.notes li { position: relative; padding-left: 18px; margin-bottom: 9px; font-size: 13px; color: #cfd5e3; }
+  ul.notes li::before {
+    content: ''; position: absolute; left: 0; top: 7px; width: 3px; height: 12px;
+    border-radius: 2px; background: var(--accent);
+  }
+  ul.notes.bad li::before { background: var(--danger); }
+  ul.notes li b { color: var(--text); }
+
+  /* protocol trace */
+  .trace {
+    background: #0d1017; border: 1px solid var(--line); border-radius: 16px; padding: 18px;
+    font-family: 'Cascadia Code', Consolas, Menlo, monospace; font-size: 12.5px; line-height: 1.75;
+  }
+  .trace .row { display: flex; gap: 10px; }
+  .trace .to  { color: #85b7eb; }
+  .trace .from { color: var(--muted); }
+  .trace .err { color: var(--danger); }
+  .trace .ok  { color: var(--accent); }
+  .trace .dim { color: var(--muted); }
+  .trace .note { color: #6f7891; font-style: italic; }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 900px) { .stats { grid-template-columns: 1fr; } }
+  .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px; }
+  .stat b { display: block; font-size: 22px; font-weight: 700; }
+  .stat.good b { color: var(--accent); }
+  .stat.bad b { color: var(--danger); }
+  .stat span { font-size: 12px; color: var(--muted); }
+
+  .footer { margin-top: 34px; color: var(--muted); font-size: 12.5px; border-top: 1px solid var(--line); padding-top: 18px; }
+  code { background: #0f131b; border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; font-size: 12px; color: #cfd5e3; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Listen Together · <span class="thin">"Creating room…" that never finished</span></h1>
+  <p class="sub">
+    A room was never created, and the app never said why: the server refuses to host for this client,
+    the client reported the refusal, and the Listen Together screen had no branch for it. The fix is
+    the missing branch — plus the states around it.
+  </p>
+  <div class="badges">
+    <span class="badge fix">Fix preview</span>
+    <span class="badge evidence">Reproduced against the live default server</span>
+    <span class="badge scope">Kotlin only · no APK built</span>
+  </div>
+
+  <h2>What the server actually answers</h2>
+  <div class="trace">
+    <div class="row"><span class="to">→</span><span>connect</span><span class="dim">wss://metroserverx.meowery.eu/ws</span><span class="ok">← HTTP/1.1 101 Switching Protocols</span></div>
+    <div class="row"><span class="to">→</span><span>create_room</span><span class="dim">{ username: "Probe" }</span></div>
+    <div class="row"><span class="from">←</span><span class="err">error</span><span class="err">{ code: "host_not_allowed", message: "Only allowlisted clients can host rooms" }</span></div>
+    <div class="row"><span class="to">→</span><span>ping</span><span class="dim">— protocol is alive</span><span class="ok">← pong</span></div>
+    <div class="row"><span class="to">→</span><span>join_room</span><span class="dim">{ "NOPE" }</span><span class="from">←</span><span>error { room_not_found }</span><span class="dim">— joining speaks the protocol fine</span></div>
+    <div class="row"><span class="note">// captured live on 2026-10-09 with a raw websocket client</span></div>
+  </div>
+  <p class="sub" style="margin-top:14px">
+    Hosting on the app's default server is allowlisted, so <b>no</b> client can open a room there — the
+    room code never arrives. The bundled <code>metroserver/metro_server.py</code> does permit hosting:
+    it passes its own end-to-end suite (<b>37/37</b>, including <code>create_room</code>).
+  </p>
+
+  <h2>Before / after</h2>
+  <div class="cols">
+    <div class="panel">
+      <span class="tag before">Before</span>
+      <h3>Tap Create room</h3>
+      <p class="cap">The request is answered in under a second. Nothing on screen changes.</p>
+      <div class="phone">
+        <div class="sheet">
+          <div class="sheet-title"><span class="dot">♫</span><b>Listen Together</b></div>
+          <div class="field filled">Aman</div>
+          <div class="field">Room code</div>
+          <div class="btns">
+            <div class="btn dead">Create room</div>
+            <div class="btn ghost">Join room</div>
+          </div>
+          <div class="toast">Creating room…</div>
+        </div>
+      </div>
+      <div class="nothing">
+        <b>…and then nothing.</b> No spinner, no error, no room code. The sheet goes back to
+        looking idle while the client has already been told the room was refused.
+      </div>
+      <ul class="notes bad" style="margin-top:16px">
+        <li><b>One swallowed event.</b> <code>ServerError</code> was collected and every branch
+          except join-rejected fell through to <code>else -> {}</code>.</li>
+        <li><b>Dead state.</b> <code>isCreatingRoom</code> was written on tap and cleared on
+          success — but never passed to the UI, so it drew nothing.</li>
+        <li><b>Stale watchdog.</b> A server answer did not cancel the 12 s "no answer" timer,
+          so a rejection could be followed by a bogus timeout message.</li>
+      </ul>
+    </div>
+
+    <div class="panel">
+      <span class="tag after">After</span>
+      <h3>Tap Create room</h3>
+      <p class="cap">The state is drawn while waiting, and the refusal is explained in one sentence.</p>
+      <div class="phone">
+        <div class="sheet">
+          <div class="sheet-title"><span class="dot">♫</span><b>Listen Together</b></div>
+          <div class="field filled">Aman</div>
+          <div class="field">Room code</div>
+          <div class="btns">
+            <div class="btn">Create room</div>
+            <div class="btn ghost">Join room</div>
+          </div>
+          <div class="progress"><span class="spinner"></span>Creating room…</div>
+          <div class="errorcard">
+            <span class="x">!</span>
+            <span>This server is not accepting new rooms. Pick a different server under
+            Settings → Integrations → Listen Together, or host your own.</span>
+          </div>
+        </div>
+      </div>
+      <ul class="notes">
+        <li><b>Every terminal outcome clears the pending state</b> and shows the reason:
+          server errors, connection failures, and a rejected join.</li>
+        <li><b><code>host_not_allowed</code> gets its own sentence</b> with the settings path,
+          instead of the operator wording "Only allowlisted clients can host rooms".</li>
+        <li><b>The waiting state is real now</b> — the same progress row the join flow already had.</li>
+        <li><b>The watchdog is cancelled</b> as soon as the server answers, so one refusal
+          produces one message.</li>
+        <li><b>Same treatment in the player sheet</b>, which hosts the other Create room button.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Verify it yourself</h2>
+  <div class="stats">
+    <div class="stat good"><b>37 / 37</b><span>Bundled server smoke test, including <code>create_room</code> — hosting works on your own server</span></div>
+    <div class="stat bad"><b>host_not_allowed</b><span>Live answer from the default server: it will not host for this client</span></div>
+    <div class="stat"><b>2 entry points</b><span>Listen Together screen and the player sheet now both report failures — the sheet had the same silent gap</span></div>
+  </div>
+
+  <h2>How to host your own</h2>
+  <ul class="notes">
+    <li>Run <code>python metroserver/metro_server.py --print-urls</code> — stdlib only, Python 3.11+.</li>
+    <li>Paste the printed address (<code>ws://&lt;lan-ip&gt;:8080/ws</code>) into
+      Settings → Integrations → Listen Together → Server URL.</li>
+    <li>An address typed without a scheme (<code>192.168.1.24:8080</code>) is now normalised to
+      <code>ws://…</code> instead of reaching OkHttp and throwing out of the tap handler.</li>
+  </ul>
+
+  <div class="footer">
+    Changed: <code>ListenTogetherClient.kt</code> (error watchdog, URL normalisation, guarded connect) ·
+    <code>ListenTogetherScreen.kt</code> and <code>PlayerMenu.kt</code> (failure handling + creating state) ·
+    <code>ui/utils/ListenTogetherErrorText.kt</code> (shared wording) ·
+    <code>Protocol.kt</code> (error codes) · <code>glossy_strings.xml</code>.
+  </div>
+</div>
+</body>
+</html>
