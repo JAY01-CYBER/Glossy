@@ -157,6 +157,17 @@ sealed class ListenTogetherEvent {
         val reason: String,
     ) : ListenTogetherEvent()
 
+    /**
+     * A join request that has been sent and neither approved nor refused yet.
+     * The server answers a bad code or a full room in well under a second and
+     * says nothing else, so silence after a short doorbell means the request is
+     * standing at the host's door. The UI shows "waiting for the host" instead
+     * of a timeout the user cannot act on.
+     */
+    data class WaitingForHost(
+        val roomCode: String,
+    ) : ListenTogetherEvent()
+
     data class UserJoined(
         val userId: String,
         val username: String,
@@ -242,6 +253,15 @@ class ListenTogetherClient
             private const val MAX_RECONNECT_ATTEMPTS = 15 // Increased from 5 to 15
             /** How long to wait for a room_created/join answer before reporting it. */
             private const val ROOM_ACTION_TIMEOUT_MS = 12_000L
+
+            /**
+             * How long a join may go unanswered before it is treated as "at the
+             * host's door" rather than a failure. The server refuses a bad code or
+             * a full room in a fraction of a second and then says nothing else, so
+             * silence past this point is the host's decision pending — not a
+             * timeout the guest can act on.
+             */
+            private const val JOIN_DOORBELL_MS = 5_000L
             private const val INITIAL_RECONNECT_DELAY_MS = 1000L // Start at 1 second
             private const val MAX_RECONNECT_DELAY_MS = 120000L // Cap at 2 minutes
             private const val PING_INTERVAL_MS = 25000L
@@ -641,13 +661,14 @@ class ListenTogetherClient
             // the current live server: they still accept sockets, but they predate
             // this protocol and silently ignore room requests, which looks exactly
             // like "connected but no room ever gets created".
-            return if (trimmed.contains("metroserver.meowery.eu", ignoreCase = true) ||
+            if (trimmed.contains("metroserver.meowery.eu", ignoreCase = true) ||
                 trimmed.contains("rx.meowery.eu", ignoreCase = true)
             ) {
-                defaultServerUrl
-            } else {
-                trimmed
+                return defaultServerUrl
             }
+            // Normalise what the user typed (bare host → ws://, https:// → wss://,
+            // missing path → /ws) so a custom address never throws out of OkHttp.
+            return ListenTogetherServers.normaliseServerUrl(trimmed)
         }
 
         private fun getServerUrl(): String {
@@ -786,36 +807,61 @@ class ListenTogetherClient
 
         /**
          * Sends a create/join request and arms a watchdog. A server that accepts
-         * the socket but never answers the request (wrong protocol or a dead
+         * the socket but never answers a create request (wrong protocol or a dead
          * deployment) would otherwise leave the user on a "Connected" screen with
          * no room and no explanation.
+         *
+         * A join arms a doorbell instead of a failure timer: because a refusal (no
+         * such room, room full) comes back in a fraction of a second, silence a few
+         * seconds in means the host is deciding. The guest is told it is waiting at
+         * the door rather than being handed a timeout it cannot act on — matching
+         * the host's side, which shows the request as a card until it is answered.
          */
         private fun dispatchRoomAction(action: PendingAction) {
+            clearRoomActionTimeout()
             when (action) {
                 is PendingAction.CreateRoom -> {
                     log(LogLevel.INFO, "Sending create room", action.username)
                     sendMessage(MessageTypes.CREATE_ROOM, CreateRoomPayload(action.username))
+                    armRoomActionTimeout()
                 }
 
                 is PendingAction.JoinRoom -> {
                     log(LogLevel.INFO, "Sending join room", "${action.roomCode} as ${action.username}")
                     sendMessage(MessageTypes.JOIN_ROOM, JoinRoomPayload(action.roomCode.uppercase(), action.username))
+                    armJoinDoorbell(action)
                 }
             }
+        }
 
-            roomActionTimeoutJob?.cancel()
+        private fun armRoomActionTimeout() {
             roomActionTimeoutJob =
                 scope.launch {
                     delay(ROOM_ACTION_TIMEOUT_MS)
-                    val what = if (action is PendingAction.CreateRoom) "create a room" else "join the room"
-                    log(LogLevel.ERROR, "Room action timed out", what)
+                    log(LogLevel.ERROR, "Room action timed out", "create a room")
                     emitEvent(
                         ListenTogetherEvent.ServerError(
                             "timeout",
-                            "The server accepted the connection but didn't answer the request to $what. " +
+                            "The server accepted the connection but didn't answer the request to create a room. " +
                                 "Pick a different server under Listen Together settings and try again.",
                         ),
                     )
+                }
+        }
+
+        /**
+         * After [JOIN_DOORBELL_MS] with no answer, the join is waiting on the host
+         * rather than failing: the guest is moved to the "waiting for the host"
+         * state and the screen says so instead of reporting a timeout. There is no
+         * failure timer after this — a late approve/reject or a socket close is
+         * what ends the wait.
+         */
+        private fun armJoinDoorbell(action: PendingAction.JoinRoom) {
+            roomActionTimeoutJob =
+                scope.launch {
+                    delay(JOIN_DOORBELL_MS)
+                    log(LogLevel.INFO, "Join is waiting on the host", action.roomCode)
+                    emitEvent(ListenTogetherEvent.WaitingForHost(action.roomCode.uppercase()))
                 }
         }
 

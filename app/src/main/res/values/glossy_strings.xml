@@ -8,4 +8,9 @@
     <!-- Appearance — "Reduce animation" row -->
     <string name="reduce_animation_title">Reduce animation</string>
     <string name="reduce_animation_desc">Hide the mini player bars and floating music notes; everything else — the header wash, the glow, the artwork — stays still instead of moving</string>
+    <!-- Listen Together — shown while a join request waits for the host to approve or reject it -->
+    <string name="listen_together_waiting_for_host">Waiting for the host to let you in</string>
+    <string name="listen_together_waiting_for_host_desc">The host has your request and taps Let in. This stays here until they decide — nothing is wrong while it waits.</string>
+    <!-- Listen Together — Cloudflare Worker deployment, the app's own first server preset -->
+    <string name="listen_together_glossy_cloudflare">Glossy on Cloudflare</string>
 </resources>

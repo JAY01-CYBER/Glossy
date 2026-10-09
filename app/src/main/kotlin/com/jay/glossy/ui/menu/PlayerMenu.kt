@@ -103,6 +103,7 @@ import com.jay.glossy.constants.ShowLyricsOnPlayerKey
 import com.jay.glossy.constants.VarispeedKey
 import com.jay.glossy.listentogether.ConnectionState
 import com.jay.glossy.listentogether.ListenTogetherEvent
+import com.jay.glossy.listentogether.ROOM_CODE_LENGTH
 import com.metrolist.models.MediaMetadata
 import com.jay.glossy.playback.ExoDownloadService
 import com.jay.glossy.db.entities.Song
@@ -1213,12 +1214,14 @@ fun ListenTogetherDialog(
 
     var isCreatingRoom by rememberSaveable { mutableStateOf(false) }
     var isJoiningRoom by rememberSaveable { mutableStateOf(false) }
+    var isWaitingForHost by rememberSaveable { mutableStateOf(false) }
     var joinErrorMessage by rememberSaveable { mutableStateOf<String?>(null) }
 
     var selectedUserForMenu by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedUsername by rememberSaveable { mutableStateOf<String?>(null) }
 
     val waitingForApprovalText = stringResource(R.string.waiting_for_approval)
+    val waitingForHostText = stringResource(R.string.listen_together_waiting_for_host)
     val invalidRoomCodeText = stringResource(R.string.invalid_room_code)
     val joinRequestDeniedText = stringResource(R.string.join_request_denied)
 
@@ -1354,14 +1357,24 @@ fun ListenTogetherDialog(
                         else -> "$joinRequestDeniedText: $reason"
                     }
                     isJoiningRoom = false
+                    isWaitingForHost = false
                     isCreatingRoom = false
+                }
+                is ListenTogetherEvent.WaitingForHost -> {
+                    // The request is standing at the host's door: say so instead of
+                    // letting the join spinner look like it is stuck.
+                    isJoiningRoom = true
+                    isWaitingForHost = true
+                    joinErrorMessage = null
                 }
                 is ListenTogetherEvent.JoinApproved -> {
                     isJoiningRoom = false
+                    isWaitingForHost = false
                     joinErrorMessage = null
                 }
                 is ListenTogetherEvent.RoomCreated -> {
                     isCreatingRoom = false
+                    isWaitingForHost = false
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
                     val clip = android.content.ClipData.newPlainText("ListenTogetherRoom", event.roomCode)
                     clipboard.setPrimaryClip(clip)
@@ -1746,10 +1759,10 @@ fun ListenTogetherDialog(
 
                         OutlinedTextField(
                             value = roomCodeInput,
-                            onValueChange = { roomCodeInput = it.uppercase().filter { c -> c.isLetterOrDigit() }.take(8) },
+                            onValueChange = { roomCodeInput = it.uppercase().filter { c -> c.isLetterOrDigit() }.take(ROOM_CODE_LENGTH) },
                             label = { Text(stringResource(R.string.room_code)) },
-                            placeholder = { Text("ABCD1234") },
-                            supportingText = { Text(text = "${roomCodeInput.length}/8", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                            placeholder = { Text("ABC234") },
+                            supportingText = { Text(text = "${roomCodeInput.length}/$ROOM_CODE_LENGTH", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) },
                             leadingIcon = { Icon(painterResource(R.drawable.token), null, tint = MaterialTheme.colorScheme.primary) },
                             singleLine = true,
                             shape = RoundedCornerShape(12.dp),
@@ -1758,10 +1771,16 @@ fun ListenTogetherDialog(
                         )
 
                         if (isJoiningRoom) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-                                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(text = waitingForApprovalText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
+                                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(text = if (isWaitingForHost) waitingForHostText else waitingForApprovalText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
+                                }
+                                if (isWaitingForHost) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(text = stringResource(R.string.listen_together_waiting_for_host_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                                }
                             }
                         }
 
@@ -1791,6 +1810,7 @@ fun ListenTogetherDialog(
                                     Toast.makeText(context, R.string.creating_room, Toast.LENGTH_SHORT).show()
                                     isCreatingRoom = true
                                     isJoiningRoom = false
+                                    isWaitingForHost = false
                                     joinErrorMessage = null
                                     listenTogetherManager.connect()
                                     listenTogetherManager.createRoom(finalUsername)
@@ -1807,7 +1827,7 @@ fun ListenTogetherDialog(
                             Text(stringResource(R.string.create_room), fontWeight = FontWeight.SemiBold)
                         }
 
-                        if (roomCodeInput.length == 8) {
+                        if (roomCodeInput.length == ROOM_CODE_LENGTH) {
                             Button(
                                 onClick = {
                                     val username = usernameInput.takeIf { it.isNotBlank() } ?: savedUsername
@@ -1816,6 +1836,7 @@ fun ListenTogetherDialog(
                                         savedUsername = finalUsername
                                         Toast.makeText(context, String.format(joiningRoomTemplate, roomCodeInput), Toast.LENGTH_SHORT).show()
                                         isJoiningRoom = true
+                                        isWaitingForHost = false
                                         isCreatingRoom = false
                                         joinErrorMessage = null
                                         listenTogetherManager.connect()
