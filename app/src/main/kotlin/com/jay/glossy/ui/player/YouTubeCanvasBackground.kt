@@ -27,10 +27,11 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import com.jay.glossy.constants.CanvasCacheMode
 import com.jay.glossy.constants.CanvasCacheModeKey
-import com.jay.glossy.ui.player.CanvasCacheManager
 import com.jay.glossy.utils.rememberEnumPreference
 import kotlinx.coroutines.delay
 import java.util.Locale
