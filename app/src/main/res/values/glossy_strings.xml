@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Credits / About Screen — lead developer role titles -->
+    <string name="credits_main_head">Main Head Of The Project</string>
+    <string name="credits_ui_design_styling">UI Design and Styling</string>
+    <!-- Listen Together — the room server refused to open a room because its
+         host allowlist does not include this client -->
+    <string name="listen_together_host_not_allowed">This server is not accepting new rooms. Pick a different server under Settings → Integrations → Listen Together, or host your own.</string>
+    <!-- Listen Together — the client gave up trying to reach the room server -->
+    <string name="listen_together_connection_failed">Could not reach the room server. Check the server URL under Settings → Integrations → Listen Together.</string>
+    <!-- Appearance — "Reduce animation" row -->
+    <string name="reduce_animation_title">Reduce animation</string>
+    <string name="reduce_animation_desc">Hide the mini player bars and floating music notes; everything else — the header wash, the glow, the artwork — stays still instead of moving</string>
+</resources>

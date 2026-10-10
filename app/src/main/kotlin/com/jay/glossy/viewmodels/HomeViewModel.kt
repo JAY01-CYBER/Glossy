@@ -28,6 +28,7 @@ import com.metrolist.innertube.models.filterYoutubeShorts
 import com.metrolist.innertube.pages.ExplorePage
 import com.metrolist.innertube.pages.HomePage
 import com.metrolist.innertube.utils.completed
+import com.jay.glossy.constants.AccountNameKey
 import com.jay.glossy.constants.HideExplicitKey
 import com.jay.glossy.constants.HideVideoSongsKey
 import com.jay.glossy.constants.HideYoutubeShortsKey
@@ -79,7 +80,7 @@ sealed class HomeSection(
 ) {
     data object SpeedDial : HomeSection("speed_dial", 100)
     data object QuickPicks : HomeSection("quick_picks", 90)
-    data object Charts : HomeSection("charts", 85)
+    data object NewReleases : HomeSection("new_releases", 85)
     data object DailyDiscover : HomeSection("daily_discover", 80)
     data object KeepListening : HomeSection("keep_listening", 50)
     data object AccountPlaylists : HomeSection("account_playlists", 40)
@@ -242,7 +243,7 @@ class HomeViewModel @Inject constructor(
             ?.distinctBy { it.id }
             ?.shuffled()
             ?.take(8) ?: emptyList()
-    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val homeSections: StateFlow<List<HomeSection>> = combine(
         combine(selectedChip, speedDialItems, quickPicks, dailyDiscover) { a, b, c, d -> listOf(a, b, c, d) },
@@ -277,7 +278,7 @@ class HomeViewModel @Inject constructor(
         if (!chipActive && quickPicksList?.isNotEmpty() == true) list.add(HomeSection.QuickPicks)
         if (!chipActive && communityPlaylistsList?.isNotEmpty() == true) list.add(HomeSection.FromTheCommunity)
         if (!chipActive && dailyDiscoverList?.isNotEmpty() == true) list.add(HomeSection.DailyDiscover)
-        if (!chipActive) list.add(HomeSection.Charts)
+        if (!chipActive && explorePageObj?.newReleaseAlbums?.isNotEmpty() == true) list.add(HomeSection.NewReleases)
         if (!chipActive && keepListeningList?.isNotEmpty() == true) list.add(HomeSection.KeepListening)
         if (!chipActive && accountPlaylistsList?.isNotEmpty() == true) list.add(HomeSection.AccountPlaylists)
         if (!chipActive && forgottenFavoritesList?.isNotEmpty() == true) list.add(HomeSection.ForgottenFavorites)
@@ -294,12 +295,12 @@ class HomeViewModel @Inject constructor(
             list.sortedByDescending { section ->
                 val sectionRandom = Random(seed + section.id.hashCode())
                 val base = when (section) {
-                    HomeSection.SpeedDial, HomeSection.QuickPicks, HomeSection.DailyDiscover, HomeSection.Charts -> 500
+                    HomeSection.SpeedDial, HomeSection.QuickPicks, HomeSection.DailyDiscover, HomeSection.NewReleases -> 500
                     HomeSection.KeepListening, HomeSection.AccountPlaylists, HomeSection.ForgottenFavorites, HomeSection.FromTheCommunity -> 300
                     else -> 100
                 }
                 val modifier = when (section) {
-                    HomeSection.SpeedDial, HomeSection.QuickPicks, HomeSection.DailyDiscover, HomeSection.Charts -> sectionRandom.nextInt(-200, 400)
+                    HomeSection.SpeedDial, HomeSection.QuickPicks, HomeSection.DailyDiscover, HomeSection.NewReleases -> sectionRandom.nextInt(-200, 400)
                     HomeSection.KeepListening, HomeSection.AccountPlaylists, HomeSection.ForgottenFavorites, HomeSection.FromTheCommunity -> sectionRandom.nextInt(-100, 400)
                     else -> sectionRandom.nextInt(-50, 50)
                 }
@@ -307,7 +308,7 @@ class HomeViewModel @Inject constructor(
             }
         } else {
             val defaultOrder = mapOf(
-                HomeSection.SpeedDial to 100, HomeSection.QuickPicks to 90, HomeSection.Charts to 85,
+                HomeSection.SpeedDial to 100, HomeSection.QuickPicks to 90, HomeSection.NewReleases to 85,
                 HomeSection.FromTheCommunity to 80, HomeSection.DailyDiscover to 70,
                 HomeSection.KeepListening to 60, HomeSection.AccountPlaylists to 50,
                 HomeSection.ForgottenFavorites to 40, HomeSection.MoodAndGenres to 10
@@ -830,6 +831,17 @@ class HomeViewModel @Inject constructor(
     }
 
     init {
+        // Seed the greeting with the name saved at login before the network
+        // answers. accountName starts as "Guest", and the home header used to
+        // show a hardcoded developer name for the couple of seconds the
+        // accountInfo() round trip took on every cold start.
+        viewModelScope.launch(Dispatchers.IO) {
+            val savedName = context.dataStore.get(AccountNameKey, "")
+            if (!savedName.isNullOrBlank() && accountName.value == "Guest") {
+                accountName.value = savedName
+            }
+        }
+
         viewModelScope.launch(Dispatchers.IO) {
             syncUtils.tryAutoSync()
         }
@@ -872,7 +884,11 @@ class HomeViewModel @Inject constructor(
                             accountName.value = info.name
                             accountImageUrl.value = info.thumbnailUrl
                         }.onFailure {
-                            accountName.value = if (!guestName.isNullOrBlank()) guestName else "Guest"
+                            // A failed lookup must not downgrade the seeded
+                            // saved name to the placeholder.
+                            accountName.value = guestName?.takeIf { it.isNotBlank() }
+                                ?: context.dataStore.get(AccountNameKey, "").takeIf { it.isNotBlank() }
+                                ?: "Guest"
                             reportException(it)
                         }
                     } else {

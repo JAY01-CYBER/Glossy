@@ -68,6 +68,7 @@ import com.jay.glossy.db.entities.LyricsEntity
 import com.jay.glossy.db.entities.SongEntity
 import com.jay.glossy.lyrics.LyricsTranslationHelper
 import com.jay.glossy.lyrics.LyricsUtils
+import com.jay.glossy.lyrics.lyricsTextLooksSynced
 import com.metrolist.models.MediaMetadata
 import com.jay.glossy.ui.component.DefaultDialog
 import com.jay.glossy.ui.component.ListDialog
@@ -311,7 +312,7 @@ fun LyricsMenu(
                                 color = MaterialTheme.colorScheme.secondary,
                                 maxLines = 1,
                             )
-                            if (result.lyrics.startsWith("[")) {
+                            if (lyricsTextLooksSynced(result.lyrics)) {
                                 Icon(
                                     painter = painterResource(R.drawable.sync),
                                     contentDescription = null,
@@ -452,7 +453,7 @@ fun LyricsMenu(
                             onClick = {
                                 lyricsProvider()?.lyrics?.let { lyrics ->
                                     val plainLyrics =
-                                        if (lyrics.startsWith("[")) {
+                                        if (lyricsTextLooksSynced(lyrics)) {
                                             LyricsUtils.parseLyrics(lyrics)
                                                 .joinToString("\n") { it.text }
                                         } else {

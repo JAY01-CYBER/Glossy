@@ -10,6 +10,7 @@ import android.webkit.WebStorage
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.jay.glossy.spotifycore.Spotify
 import com.jay.glossy.utils.dataStore
 import com.jay.glossy.utils.safeDataStoreEdit
 import kotlinx.coroutines.CancellationException
@@ -47,6 +48,62 @@ object SpotifySession {
     @Volatile private var clientTokenExpiresAtMs = 0L
 
     suspend fun cookie(context: Context): String = context.dataStore.data.first()[cookieKey].orEmpty()
+
+    /**
+     * A bearer token that is still good for API calls, wherever it can be got
+     * from.
+     *
+     * The library session ([Spotify.accessToken]) mints a token once at login
+     * and nothing re-mints it while music plays, so it lapses a little while
+     * after signing in. Handing that raw value to lyrics or canvas lookups is
+     * what made them answer "nothing found" — an expired token and no token
+     * are indistinguishable to the callers — for the rest of the session. So:
+     *
+     *  1. the library token while its recorded expiry
+     *     ([SpotifyAccessTokenExpiresAtKey]) still has a minute of room, since
+     *     it is instant and avoids spinning up the offscreen harvest;
+     *  2. a fresh web-player token harvested with the saved sp_dc cookie,
+     *     which is the source that keeps answering minutes or hours later;
+     *  3. the lapsed library token as a last resort, for a caller that would
+     *     otherwise give up entirely — the provider treats an expired token
+     *     and no token alike, so nothing is lost by trying.
+     */
+    suspend fun freshAccessToken(context: Context): String? {
+        val libraryToken = Spotify.accessToken?.takeIf(String::isNotBlank)
+
+        if (libraryToken != null) {
+            // Same safety margin the library session itself uses when it
+            // decides whether a stored token is still worth restoring.
+            val expiresAt = context.dataStore.data.first()[SpotifyAccessTokenExpiresAtKey] ?: 0L
+            if (expiresAt > System.currentTimeMillis() + 60_000L) return libraryToken
+        }
+
+        token(context)?.accessToken?.takeIf(String::isNotBlank)?.let { return it }
+
+        return libraryToken
+    }
+
+    /**
+     * The credentials the canvas endpoints want: a web-player bearer token and
+     * the client token that belongs beside it.
+     *
+     * Deliberately not just [freshAccessToken], which prefers the library
+     * token — that one is minted by replaying the web player's /api/token
+     * request with a computed TOTP, and spclient turns it away with a 429, so
+     * Spotify canvases stopped answering the moment the library session was
+     * signed in. The harvested token is the one the web player itself uses;
+     * [clientToken] is the second header those endpoints demand.
+     *
+     * The harvest needs the saved sp_dc cookie. Without one, the library token
+     * is still tried, which leaves the lookup no worse than it was.
+     */
+    data class CanvasCredentials(val accessToken: String, val clientToken: String?)
+
+    suspend fun canvasCredentials(context: Context): CanvasCredentials? {
+        val harvested = token(context)?.accessToken?.takeIf(String::isNotBlank)
+        val access = harvested ?: freshAccessToken(context)?.takeIf(String::isNotBlank) ?: return null
+        return CanvasCredentials(access, clientToken())
+    }
 
     suspend fun saveCookie(context: Context, value: String) {
         context.safeDataStoreEdit { preferences -> preferences[cookieKey] = value }

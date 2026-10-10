@@ -39,6 +39,7 @@ import com.jay.glossy.constants.AccountEmailKey
 import com.jay.glossy.constants.AccountNameKey
 import com.jay.glossy.constants.DataSyncIdKey
 import com.jay.glossy.constants.InnerTubeCookieKey
+import com.jay.glossy.constants.PendingCommunityIntroKey
 import com.jay.glossy.constants.VisitorDataKey
 import com.jay.glossy.ui.component.IconButton
 import com.jay.glossy.ui.utils.backToMain
@@ -110,6 +111,10 @@ fun LoginScreen(navController: NavController) {
                             settings[AccountNameKey] = info.name
                             settings[AccountEmailKey] = info.email.orEmpty()
                             settings[AccountChannelHandleKey] = info.channelHandle.orEmpty()
+                            // The process is restarted below, so the onboarding
+                            // flow picks the user up on the community page
+                            // instead of dropping them straight on Home.
+                            settings[PendingCommunityIntroKey] = true
                         }
                     }
 

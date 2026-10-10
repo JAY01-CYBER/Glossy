@@ -94,10 +94,12 @@ import com.jay.glossy.constants.AiSystemPromptKey
 import com.jay.glossy.constants.DeeplApiKey
 import com.jay.glossy.constants.DeeplFormalityKey
 import com.jay.glossy.constants.LyricsClickKey
+import com.jay.glossy.constants.LyricsLineSpacingKey
 import com.jay.glossy.constants.LyricsRomanizeAsMainKey
 import com.jay.glossy.constants.LyricsRomanizeCyrillicByLineKey
 import com.jay.glossy.constants.LyricsRomanizeList
 import com.jay.glossy.constants.LyricsTextPositionKey
+import com.jay.glossy.constants.LyricsTextSizeKey
 import com.jay.glossy.constants.OpenRouterApiKey
 import com.jay.glossy.constants.OpenRouterBaseUrlKey
 import com.jay.glossy.constants.OpenRouterDefaultBaseUrl
@@ -168,6 +170,11 @@ fun ExperimentalLyrics(
     val romanizeCyrillicByLine by rememberPreference(LyricsRomanizeCyrillicByLineKey, false)
     val respectAgentPositioning by rememberPreference(RespectAgentPositioningKey, true)
     val showIntervalIndicator by rememberPreference(ShowIntervalIndicatorKey, true)
+    // Honoured instead of a hardcoded size so the Appearance → Lyrics text-size
+    // and line-spacing settings actually apply to this view too (it used to
+    // render everything at a fixed 36sp regardless of the preference).
+    val lyricsTextSize by rememberPreference(LyricsTextSizeKey, 24f)
+    val lyricsLineSpacing by rememberPreference(LyricsLineSpacingKey, 1.3f)
     
     // AI Translation Preferences
     val openRouterApiKey by rememberPreference(OpenRouterApiKey, "")
@@ -337,8 +344,14 @@ fun ExperimentalLyrics(
     var smoothPositionForSync by remember { mutableLongStateOf(0L) }
 
     LaunchedEffect(lyrics, lines) {
-        if (lyrics.isNullOrEmpty() || lines.isEmpty()) {
+        // Unsynchronised lyrics must not be treated as if they were timed: a
+        // plain-text fallback has no line to point at, and following it pinned
+        // the view to the opening line and pushed the list back to the top.
+        // Render them as plain text instead — no highlight, no auto-scroll, and
+        // the user can still scroll by hand.
+        if (!isSynced || lyrics.isNullOrEmpty() || lines.isEmpty()) {
             activeLineIndices = emptySet()
+            isSeeking = false
             return@LaunchedEffect
         }
         
@@ -461,7 +474,13 @@ fun ExperimentalLyrics(
     }
 
     var userManualOffset by remember { mutableFloatStateOf(0f) }
-    LaunchedEffect(lyrics, lines) {
+    // Keyed on the song too: deferredCurrentLineIndex and scrollTargetIndex are
+    // rememberSaveable, so a value restored from the previous song (often the
+    // last line, if the player was closed at the end of a track) survived into
+    // the first seconds of the next one whenever the lyrics object happened to
+    // be identical — the view opened parked on the end of the song instead of
+    // its beginning. A new media id always starts from the top.
+    LaunchedEffect(lyrics, lines, mediaMetadata?.id) {
         isAutoScrollEnabled = true
         userManualOffset = 0f
         scrollTargetIndex = -1
@@ -530,7 +549,24 @@ fun ExperimentalLyrics(
             map
         }
 
-        val minOffset = remember(itemHeights.toMap(), mergedLyricsList, activeListIndex, anchorY) {
+        // Where the block as a whole sits.
+        //
+        // Every line is drawn at anchorY plus its own offset from the active
+        // one, so while the song's opening lines are the ones on view there is
+        // nothing above the active line to fill the anchor's band: the lyrics
+        // hang a third of the way down the view with nothing but backdrop above
+        // them. Scooting the whole block up until its first line reaches the top
+        // puts lyrics there instead. It is a clamp on a positive number, so the
+        // shift melts away by itself once there are lines above the active one —
+        // the anchor still holds for the rest of the song, exactly as before.
+        val contentShift =
+            remember(positions, anchorY) {
+                if (positions.isEmpty()) return@remember 0f
+                val firstLineTop = anchorY + (positions[0] ?: 0f)
+                if (firstLineTop > 0f) -firstLineTop else 0f
+            }
+
+        val minOffset = remember(itemHeights.toMap(), mergedLyricsList, activeListIndex, anchorY, contentShift) {
             if (mergedLyricsList.isEmpty() || activeListIndex == -1) return@remember 0f
             val totalBelow = (activeListIndex until mergedLyricsList.size - 1).sumOf { i ->
                 val currentItem = mergedLyricsList[i]
@@ -541,10 +577,10 @@ fun ExperimentalLyrics(
             }.toFloat()
             val lastItem = mergedLyricsList.last()
             val lastHeight = itemHeights[mergedLyricsList.size - 1]?.toFloat() ?: (if (lastItem is LyricsListItem.Indicator) indicatorHeightPx else constraintLineHeightPx)
-            with(density) { 100.dp.toPx() } - anchorY - totalBelow - lastHeight
+            with(density) { 100.dp.toPx() } - anchorY - totalBelow - lastHeight + contentShift
         }
 
-        val maxOffset = remember(itemHeights.toMap(), mergedLyricsList, activeListIndex, maxHeightPx, anchorY) {
+        val maxOffset = remember(itemHeights.toMap(), mergedLyricsList, activeListIndex, maxHeightPx, anchorY, contentShift) {
             if (mergedLyricsList.isEmpty() || activeListIndex == -1) return@remember 0f
             val totalAbove = (0 until activeListIndex).sumOf { i ->
                 val item = mergedLyricsList[i]
@@ -552,7 +588,7 @@ fun ExperimentalLyrics(
                 val noGap = (item as? LyricsListItem.Line)?.entry?.isBackground == true || item is LyricsListItem.Indicator
                 (height + if (noGap) 0f else with(density) { LYRICS_ITEM_GAP_DP.toPx() }).toDouble()
             }.toFloat()
-            maxHeightPx - with(density) { 150.dp.toPx() } - anchorY + totalAbove
+            maxHeightPx - with(density) { 150.dp.toPx() } - anchorY + totalAbove + contentShift
         }
 
         // Clamp to real content bounds only. minOffset/maxOffset already use conservative height
@@ -714,7 +750,7 @@ fun ExperimentalLyrics(
                 val currentEffectivePosition = currentPositionState + lyricsOffsetVal
                 
                 if (isLyricsProviderShown) {
-                    val targetProviderBase = anchorY + (positions[0] ?: 0f) - with(density) { 32.dp.toPx() }
+                    val targetProviderBase = contentShift + anchorY + (positions[0] ?: 0f) - with(density) { 32.dp.toPx() }
                     val animatedProviderBase by animateFloatAsState(
                         targetValue = targetProviderBase,
                         animationSpec = if (isInitialLayout || !isAutoScrollEnabled) snap()
@@ -733,7 +769,7 @@ fun ExperimentalLyrics(
                 mergedLyricsList.forEachIndexed { listIndex, listItem ->
                     key(listItem) {
                         val distance = abs(listIndex - activeListIndex)
-                        val targetOffset = anchorY + positions.getOrDefault(listIndex, (listIndex - activeListIndex) * lineHeightPx)
+                        val targetOffset = contentShift + anchorY + positions.getOrDefault(listIndex, (listIndex - activeListIndex) * lineHeightPx)
                         val frozenOffset = remember { mutableFloatStateOf(targetOffset) }
                         LaunchedEffect(isAutoScrollEnabled, targetOffset, isInitialLayout) {
                             if (isAutoScrollEnabled || isInitialLayout) frozenOffset.floatValue = targetOffset
@@ -781,7 +817,7 @@ fun ExperimentalLyrics(
                                         bgVisible = bgVisible, isSelected = selectedIndices.contains(index),
                                         isSelectionModeActive = isSelectionModeActive, currentPositionState = currentPositionState,
                                         lyricsOffset = (currentSong?.song?.lyricsOffset ?: 0).toLong(),
-                                        playerConnection = playerConnection, lyricsTextSize = 36f, lyricsLineSpacing = 1.3f,
+                                        playerConnection = playerConnection, lyricsTextSize = lyricsTextSize, lyricsLineSpacing = lyricsLineSpacing,
                                         expressiveAccent = expressiveAccent, lyricsTextPosition = lyricsTextPosition,
                                         respectAgentPositioning = respectAgentPositioning, isAutoScrollEnabled = isAutoScrollEnabled,
                                         displayedCurrentLineIndex = deferredCurrentLineIndex, romanizeAsMain = romanizeAsMain,

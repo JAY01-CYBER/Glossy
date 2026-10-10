@@ -10,6 +10,7 @@ import com.jay.glossy.R
 
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animate
@@ -25,6 +26,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.MarqueeAnimationMode
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.focusable
@@ -62,7 +64,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.produceState
@@ -74,6 +82,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
@@ -318,18 +327,32 @@ inline fun ListItem(
     isAvailable: Boolean = true,
     showDivider: Boolean = false,
 ) {
-    val contentColor = MaterialTheme.colorScheme.onBackground
-    
+    val contentColor = MaterialTheme.colorScheme.onSurface
+    // Soft ghost tile: an ordinary row draws nothing at all and the list reads
+    // as a list. The tonal fill is reserved for rows that earned one — the
+    // playing row and rows picked in selection mode — and it fades in rather
+    // than snapping, so the highlight feels like it is settling onto the row.
+    val tileColor by animateColorAsState(
+        when {
+            isSelected == true -> MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+            isActive -> MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
+            else -> Color.Transparent
+        },
+        label = "listTileGhost",
+    )
+
     Column(modifier = modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(if (isSelected == true) MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f) else Color.Transparent)
+                .padding(horizontal = 6.dp, vertical = 3.dp)
+                .clip(ListTileShape)
+                .background(tileColor)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .padding(vertical = 8.dp, horizontal = 15.dp) // Simp Music precise padding
+                    .padding(vertical = 9.dp, horizontal = 12.dp)
                     .fillMaxWidth()
             ) {
                 if (leadingContent != null) {
@@ -342,7 +365,7 @@ inline fun ListItem(
                 }
 
                 Box(
-                    modifier = Modifier.size(48.dp),
+                    modifier = Modifier.size(56.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     thumbnailContent()
@@ -489,6 +512,25 @@ fun ListItem(
 // GRID ITEM DESIGN
 // ------------------------------------------------------------------------
 
+/**
+ * One shared artwork geometry so grid cards round identically everywhere they
+ * are used.
+ */
+private val CardThumbnailShape = RoundedCornerShape(20.dp)
+
+/**
+ * The ghost-tile silhouette every list row shares: the same soft corner
+ * language as the grid cards, a step tighter because it spans the whole row.
+ */
+@PublishedApi
+internal val ListTileShape = RoundedCornerShape(16.dp)
+
+/**
+ * Artwork corners inside a list row — tighter than the grid's 20 dp, so the
+ * cover stays the quiet half of a row that no longer has a card to lean on.
+ */
+private val ListThumbnailShape = RoundedCornerShape(12.dp)
+
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun GridItem(
@@ -498,24 +540,39 @@ fun GridItem(
     badges: @Composable RowScope.() -> Unit = {},
     thumbnailContent: @Composable BoxWithConstraintsScope.() -> Unit,
     thumbnailRatio: Float = 1f,
+    imageShape: Shape = CardThumbnailShape,
     fillMaxWidth: Boolean = false,
 ) {
     val gridHeight = currentGridThumbnailHeight()
-    val cardShape = RoundedCornerShape(20.dp)
-    val cardColor = MaterialTheme.colorScheme.surfaceContainerLow
-
+    // Cards pop into place with a spring instead of appearing flat.
+    var appeared by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { appeared = true }
+    val cardScale by animateFloatAsState(
+        targetValue = if (appeared) 1f else 0.92f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow,
+        ),
+        label = "gridItemEntrance",
+    )
+    // The artwork is the card: a floating, softly shadowed tile instead of a
+    // grey box drawn behind it.
     Column(
         modifier = if (fillMaxWidth) {
             modifier
-                .padding(horizontal = 8.dp, vertical = 4.dp)
-                .clip(cardShape)
-                .background(cardColor)
+                .padding(horizontal = 6.dp, vertical = 8.dp)
+                .graphicsLayer {
+                    scaleX = cardScale
+                    scaleY = cardScale
+                }
                 .fillMaxWidth()
         } else {
             modifier
-                .padding(horizontal = 8.dp, vertical = 4.dp)
-                .clip(cardShape)
-                .background(cardColor)
+                .padding(horizontal = 6.dp, vertical = 8.dp)
+                .graphicsLayer {
+                    scaleX = cardScale
+                    scaleY = cardScale
+                }
                 .width(gridHeight * thumbnailRatio)
         }
     ) {
@@ -524,13 +581,30 @@ fun GridItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(thumbnailRatio)
+                .graphicsLayer {
+                    shape = imageShape
+                    clip = true
+                    shadowElevation = 16.dp.toPx()
+                    spotShadowColor = Color.Black
+                    ambientShadowColor = Color.Black
+                }
         ) {
             thumbnailContent()
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.verticalGradient(
+                            0.70f to Color.Transparent,
+                            1f to Color.Black.copy(alpha = 0.32f),
+                        ),
+                    ),
+            )
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
-        Box(modifier = Modifier.padding(horizontal = 10.dp)) {
+        Box(modifier = Modifier.padding(horizontal = 4.dp)) {
             title()
         }
 
@@ -538,12 +612,12 @@ fun GridItem(
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 10.dp),
+            modifier = Modifier.padding(horizontal = 4.dp),
         ) {
             badges()
             subtitle()
         }
-        
+
         Spacer(modifier = Modifier.height(2.dp))
     }
 }
@@ -557,6 +631,7 @@ fun GridItem(
     badges: @Composable RowScope.() -> Unit = {},
     thumbnailContent: @Composable BoxWithConstraintsScope.() -> Unit,
     thumbnailRatio: Float = 1f,
+    imageShape: Shape = CardThumbnailShape,
     fillMaxWidth: Boolean = false,
 ) = GridItem(
     modifier = modifier,
@@ -564,8 +639,9 @@ fun GridItem(
         Text(
             text = title,
             style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
             maxLines = 1,
+            color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Start,
             modifier = Modifier
                 .fillMaxWidth()
@@ -580,7 +656,7 @@ fun GridItem(
         Text(
             text = subtitle,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.secondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             modifier = Modifier
                 .fillMaxWidth()
@@ -594,6 +670,7 @@ fun GridItem(
     badges = badges,
     thumbnailContent = thumbnailContent,
     thumbnailRatio = thumbnailRatio,
+    imageShape = imageShape,
     fillMaxWidth = fillMaxWidth
 )
 
@@ -611,7 +688,7 @@ fun SongListItem(
     showInLibraryIcon: Boolean = false,
     showDownloadIcon: Boolean = true,
     subtitleOverride: String? = null,
-    thumbnailShape: Shape = RoundedCornerShape(4.dp),
+    thumbnailShape: Shape = ListThumbnailShape,
     badges: @Composable RowScope.() -> Unit = {
         if (song.song.explicit) {
             Icon.Explicit()
@@ -753,7 +830,7 @@ fun SongGridItem(
                 makeTimeString(song.song.duration * 1000L)
             ),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.secondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             modifier = Modifier.basicMarquee().fillMaxWidth()
         )
@@ -765,7 +842,7 @@ fun SongGridItem(
             thumbnailUrl = song.song.thumbnailUrl,
             isActive = isActive,
             isPlaying = isPlaying,
-            shape = RoundedCornerShape(12.dp),
+            shape = CardThumbnailShape,
             modifier = Modifier.size(gridHeight)
         )
         if (!isActive) {
@@ -860,6 +937,7 @@ fun ArtistGridItem(
                     .clip(CircleShape)
             )
         },
+        imageShape = CircleShape,
         fillMaxWidth = fillMaxWidth,
         modifier = modifier
     )
@@ -933,7 +1011,7 @@ fun AlbumListItem(
             thumbnailUrl = album.album.thumbnailUrl,
             isActive = isActive,
             isPlaying = isPlaying,
-            shape = RoundedCornerShape(8.dp),
+            shape = ListThumbnailShape,
             modifier = Modifier.fillMaxSize()
         )
     },
@@ -1008,7 +1086,7 @@ fun AlbumGridItem(
          Text(
              text = album.artists.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name },
              style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.secondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             modifier = Modifier.basicMarquee().fillMaxWidth()
         )
@@ -1023,7 +1101,7 @@ fun AlbumGridItem(
             thumbnailUrl = album.album.thumbnailUrl,
             isActive = isActive,
             isPlaying = isPlaying,
-            shape = RoundedCornerShape(12.dp),
+            shape = CardThumbnailShape,
         )
 
         AlbumPlayButton(
@@ -1118,7 +1196,7 @@ fun PlaylistListItem(
                     modifier = Modifier.size(24.dp)
                 )
             },
-            shape = RoundedCornerShape(8.dp) // Playlists usually use slightly larger radius
+            shape = ListThumbnailShape
         )
     },
     trailingContent = trailingContent,
@@ -1191,7 +1269,7 @@ fun PlaylistGridItem(
         Text(
             text = subtitle,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.secondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             modifier = Modifier.basicMarquee().fillMaxWidth()
         )
@@ -1222,7 +1300,7 @@ fun PlaylistGridItem(
                     )
                 }
             },
-            shape = RoundedCornerShape(12.dp)
+            shape = CardThumbnailShape
         )
     },
     fillMaxWidth = fillMaxWidth,
@@ -1277,7 +1355,7 @@ fun MediaMetadataListItem(
                 isSelected = isSelected,
                 isActive = isActive,
                 isPlaying = isPlaying,
-                shape = RoundedCornerShape(4.dp),
+                shape = ListThumbnailShape,
                 modifier = Modifier.fillMaxSize()
             )
         },
@@ -1303,7 +1381,7 @@ fun YouTubeListItem(
     isSwipeable: Boolean = true,
     showDivider: Boolean = false,
     trailingContent: @Composable RowScope.() -> Unit = {},
-    thumbnailShape: Shape = if (item is ArtistItem) CircleShape else RoundedCornerShape(4.dp),
+    thumbnailShape: Shape = if (item is ArtistItem) CircleShape else ListThumbnailShape,
     badges: @Composable RowScope.() -> Unit = {
         if (item.explicit) {
             Text(
@@ -1338,21 +1416,35 @@ fun YouTubeListItem(
     val contentColor = MaterialTheme.colorScheme.onBackground
     val subtitleColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f) 
 
+    // Same ghost tile as the base ListItem — this row used to keep its own
+    // filled card and a hairline border, which is exactly the look the rebuild
+    // retired. It now draws nothing until it is playing or selected.
+    val tileColor by animateColorAsState(
+        when {
+            isSelected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+            isActive -> MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
+            else -> Color.Transparent
+        },
+        label = "youTubeListTileGhost",
+    )
+
     val content: @Composable () -> Unit = {
         Column(modifier = modifier.fillMaxWidth()) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(if (isSelected) MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f) else Color.Transparent)
+                    .padding(horizontal = 6.dp, vertical = 3.dp)
+                    .clip(ListTileShape)
+                    .background(tileColor)
             ) {
                 Row(
                     modifier = Modifier
-                        .padding(vertical = 6.dp, horizontal = 15.dp) 
+                        .padding(vertical = 8.dp, horizontal = 12.dp)
                         .fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
-                        modifier = Modifier.size(48.dp),
+                        modifier = Modifier.size(52.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         ItemThumbnail(
@@ -1499,7 +1591,7 @@ fun YouTubeGridItem(
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.secondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 modifier = Modifier.basicMarquee().fillMaxWidth()
             )
@@ -1515,7 +1607,7 @@ fun YouTubeGridItem(
             thumbnailUrl = item.thumbnail,
             isActive = isActive,
             isPlaying = isPlaying,
-            shape = if (item is ArtistItem) CircleShape else RoundedCornerShape(12.dp),
+            shape = if (item is ArtistItem) CircleShape else CardThumbnailShape,
         )
 
         if (item is SongItem && !isActive) {
@@ -1545,6 +1637,7 @@ fun YouTubeGridItem(
         )
     },
     thumbnailRatio = thumbnailRatio,
+    imageShape = if (item is ArtistItem) CircleShape else CardThumbnailShape,
     fillMaxWidth = fillMaxWidth,
     modifier = modifier
 )
@@ -1566,7 +1659,7 @@ fun LocalSongsGrid(
         Text(
             text = subtitle,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.secondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             modifier = Modifier.basicMarquee().fillMaxWidth()
         )
@@ -1577,7 +1670,7 @@ fun LocalSongsGrid(
             thumbnailUrl = thumbnailUrl,
             isActive = isActive,
             isPlaying = isPlaying,
-            shape = RoundedCornerShape(12.dp),
+            shape = CardThumbnailShape,
             modifier = if (fillMaxWidth) Modifier.fillMaxWidth() else Modifier,
             showCenterPlay = true,
             playButtonVisible = false
@@ -1604,7 +1697,7 @@ fun LocalArtistsGrid(
         Text(
             text = subtitle,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.secondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             modifier = Modifier.basicMarquee().fillMaxWidth()
         )
@@ -1642,7 +1735,7 @@ fun LocalAlbumsGrid(
         Text(
             text = subtitle,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.secondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             modifier = Modifier.basicMarquee().fillMaxWidth()
         )
@@ -1653,7 +1746,7 @@ fun LocalAlbumsGrid(
             thumbnailUrl = thumbnailUrl,
             isActive = isActive,
             isPlaying = isPlaying,
-            shape = RoundedCornerShape(12.dp),
+            shape = CardThumbnailShape,
             modifier = if (fillMaxWidth) Modifier.fillMaxWidth() else Modifier,
             showCenterPlay = false,
             playButtonVisible = true
@@ -1879,7 +1972,6 @@ fun PlaylistThumbnail(
     shape: Shape,
     cacheKey: String? = null
 ) {
-    val cropAlbumArt by rememberPreference(CropAlbumArtKey, false)
     val context = LocalContext.current
     
     when (thumbnails.size) {
@@ -1894,24 +1986,35 @@ fun PlaylistThumbnail(
         }
         1 -> {
             val thumbUrl = thumbnails[0].resize((size.value * 3).toInt())
-            AsyncImage(
-                model = remember(thumbUrl) {
-                    ImageRequest.Builder(context)
-                        .data(thumbUrl)
-                        .memoryCachePolicy(CachePolicy.ENABLED)
-                        .diskCachePolicy(CachePolicy.ENABLED)
-                        .networkCachePolicy(CachePolicy.ENABLED)
-                        .crossfade(true)
-                        .build()
-                },
-                contentDescription = null,
-                contentScale = if (cropAlbumArt) ContentScale.Crop else ContentScale.Fit,
-                placeholder = painterResource(R.drawable.queue_music),
-                error = painterResource(R.drawable.queue_music),
+            Box(
                 modifier = Modifier
                     .size(size)
                     .clip(shape)
-            )
+                    .background(MaterialTheme.colorScheme.surfaceContainer)
+            ) {
+                AsyncImage(
+                    model = remember(thumbUrl) {
+                        ImageRequest.Builder(context)
+                            .data(thumbUrl)
+                            .memoryCachePolicy(CachePolicy.ENABLED)
+                            .diskCachePolicy(CachePolicy.ENABLED)
+                            .networkCachePolicy(CachePolicy.ENABLED)
+                            .crossfade(true)
+                            .build()
+                    },
+                    contentDescription = null,
+                    // Playlists often carry 16:9 video thumbs in a square card. Fit
+                    // letterboxes (grey bands) while Crop can still bleed through
+                    // Coil placeholders during crossfade, so always crop and keep the
+                    // image strictly inside the rounded shape.
+                    contentScale = ContentScale.Crop,
+                    placeholder = painterResource(R.drawable.queue_music),
+                    error = painterResource(R.drawable.queue_music),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(shape)
+                )
+            }
         }
         else -> Box(
             modifier = Modifier
@@ -1936,12 +2039,15 @@ fun PlaylistThumbnail(
                             .build()
                     },
                     contentDescription = null,
-                    contentScale = if (cropAlbumArt) ContentScale.Crop else ContentScale.Fit,
+                    // Same story as the 1-thumb case above: always crop so no
+                    // letterbox or unclipped edges leak outside the card.
+                    contentScale = ContentScale.Crop,
                     placeholder = painterResource(R.drawable.queue_music),
                     error = painterResource(R.drawable.queue_music),
                     modifier = Modifier
                         .align(alignment)
                         .size(size / 2)
+                        .clip(shape)
                 )
             }
         }
@@ -1952,24 +2058,28 @@ fun PlaylistThumbnail(
 fun BoxScope.OverlayPlayButton(
     visible: Boolean
 ) {
+    // A floating tonal play button tucked into the artwork's bottom corner,
+    // the Material 3 way to advertise "tap me" on a card.
     AnimatedVisibility(
         visible = visible,
         enter = fadeIn(),
         exit = fadeOut(),
         modifier = Modifier
-            .align(Alignment.Center)
+            .align(Alignment.BottomEnd)
+            .padding(10.dp)
     ) {
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-                .size(36.dp)
+                .size(38.dp)
+                .fastShadow(10.dp, CircleShape)
                 .clip(CircleShape)
-                .background(Color.Black.copy(alpha = ActiveBoxAlpha))
+                .background(MaterialTheme.colorScheme.primaryContainer)
         ) {
             Icon(
                 painter = painterResource(R.drawable.play),
                 contentDescription = null,
-                tint = Color.White,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -1988,21 +2098,22 @@ fun BoxScope.OverlayEditButton(
         exit = fadeOut(),
         modifier = Modifier
             .align(alignment)
-            .then(if (alignment == Alignment.BottomEnd) Modifier.padding(8.dp) else Modifier)
+            .then(if (alignment == Alignment.BottomEnd) Modifier.padding(10.dp) else Modifier)
     ) {
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-                .size(36.dp)
+                .size(38.dp)
+                .fastShadow(10.dp, CircleShape)
                 .clip(CircleShape)
-                .background(Color.Black.copy(alpha = ActiveBoxAlpha))
+                .background(MaterialTheme.colorScheme.secondaryContainer)
                 .padding(0.dp)
                 .clickable(onClick = onClick)
         ) {
             Icon(
                 painter = painterResource(R.drawable.edit),
                 contentDescription = null,
-                tint = Color.White,
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -2020,20 +2131,22 @@ fun BoxScope.AlbumPlayButton(
         exit = fadeOut(),
         modifier = Modifier
             .align(Alignment.BottomEnd)
-            .padding(8.dp)
+            .padding(10.dp)
     ) {
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-                .size(36.dp)
+                .size(38.dp)
+                .fastShadow(10.dp, CircleShape)
                 .clip(CircleShape)
-                .background(Color.Black.copy(alpha = ActiveBoxAlpha))
+                .background(MaterialTheme.colorScheme.primaryContainer)
                 .clickable(onClick = onClick)
         ) {
             Icon(
                 painter = painterResource(R.drawable.play),
                 contentDescription = null,
-                tint = Color.White
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.size(20.dp)
             )
         }
     }
@@ -2203,39 +2316,19 @@ object Icon {
 
 @Composable
 fun AppleMusicVisualizer(modifier: Modifier = Modifier, color: Color = Color.White) {
-    val infiniteTransition = rememberInfiniteTransition(label = "visualizer")
-    
-    val anim1 by infiniteTransition.animateFloat(
-        initialValue = 0.3f, targetValue = 1.0f,
-        animationSpec = infiniteRepeatable(tween(400, easing = LinearEasing), RepeatMode.Reverse),
-        label = "bar1"
-    )
-    val anim2 by infiniteTransition.animateFloat(
-        initialValue = 1.0f, targetValue = 0.4f,
-        animationSpec = infiniteRepeatable(tween(300, easing = LinearEasing), RepeatMode.Reverse),
-        label = "bar2"
-    )
-    val anim3 by infiniteTransition.animateFloat(
-        initialValue = 0.5f, targetValue = 0.9f,
-        animationSpec = infiniteRepeatable(tween(500, easing = LinearEasing), RepeatMode.Reverse),
-        label = "bar3"
-    )
-    val anim4 by infiniteTransition.animateFloat(
-        initialValue = 0.8f, targetValue = 0.2f,
-        animationSpec = infiniteRepeatable(tween(350, easing = LinearEasing), RepeatMode.Reverse),
-        label = "bar4"
-    )
-
-    Row(
+    // This used to run its own four-bar animation through `fillMaxHeight`,
+    // which is a relayout *and* a recomposition on every frame — on the one
+    // surface that is on screen for the whole song. It now rides the shared
+    // [PlayingBars], which pushes the same motion through layer transforms only.
+    PlayingBars(
+        isPlaying = true,
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(3.dp), 
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(modifier = Modifier.width(4.dp).fillMaxHeight(anim1).clip(RoundedCornerShape(50)).background(color))
-        Box(modifier = Modifier.width(4.dp).fillMaxHeight(anim2).clip(RoundedCornerShape(50)).background(color))
-        Box(modifier = Modifier.width(4.dp).fillMaxHeight(anim3).clip(RoundedCornerShape(50)).background(color))
-        Box(modifier = Modifier.width(4.dp).fillMaxHeight(anim4).clip(RoundedCornerShape(50)).background(color))
-    }
+        color = color,
+        barCount = 4,
+        barWidth = 3.dp,
+        barSpacing = 3.dp,
+        barHeight = 22.dp,
+    )
 }
 
 // 🔥 TIP APPLIED: Fast Hardware Accelerated Shadows

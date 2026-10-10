@@ -1,0 +1,9 @@
+com.jay.glossy.netease-pngs-0 C:\Users\Chikku\Downloads\Glossy-test-master\netease\build\generated\res\pngs\debug
+com.jay.glossy.netease-updated_navigation_xml-1 C:\Users\Chikku\Downloads\Glossy-test-master\netease\build\generated\updated_navigation_xml\debug
+com.jay.glossy.netease-mergeDebugResources-2 C:\Users\Chikku\Downloads\Glossy-test-master\netease\build\intermediates\incremental\debug\mergeDebugResources\merged.dir
+com.jay.glossy.netease-mergeDebugResources-3 C:\Users\Chikku\Downloads\Glossy-test-master\netease\build\intermediates\incremental\debug\mergeDebugResources\stripped.dir
+com.jay.glossy.netease-debug-4 C:\Users\Chikku\Downloads\Glossy-test-master\netease\build\intermediates\merged_res\debug\mergeDebugResources
+com.jay.glossy.netease-debug-5 C:\Users\Chikku\Downloads\Glossy-test-master\netease\build\intermediates\packaged_res\debug\packageDebugResources
+com.jay.glossy.netease-debug-6 C:\Users\Chikku\Downloads\Glossy-test-master\netease\src\debug\res
+com.jay.glossy.netease-main-7 C:\Users\Chikku\Downloads\Glossy-test-master\netease\src\main\res
+gradleHome-0 C:\Users\Chikku\.gradle

@@ -6,9 +6,11 @@
 package com.jay.glossy.lyrics
 
 import com.jay.glossy.R
+import java.util.Locale
 
 object LyricsProviderRegistry {
     private val providerMap = mapOf(
+        "Spotify" to SpotifyLyricsProvider,
         "BetterLyrics" to BetterLyricsProvider,
         "Paxsenix" to PaxsenixLyricsProvider,
         "LrcLib" to LrcLibLyricsProvider,
@@ -36,15 +38,29 @@ object LyricsProviderRegistry {
         if (orderString.isBlank()) {
             return getDefaultProviderOrder()
         }
-        return orderString.split(",").map { it.trim() }.filter { it in providerNames }
+        // Two separators have shipped: the priority screen serialises with ","
+        // while an older migration wrote ";". Splitting on only the comma made
+        // a semicolon-joined order parse to a single unknown token, which was
+        // filtered away — so the whole list came back empty and the resolver
+        // silently fell back to the default order, ignoring whatever the user
+        // had arranged. Accept both, and match names case-insensitively so a
+        // hand-edited or older entry still lands on its provider.
+        val byLowercaseName = providerNames.associateBy { it.lowercase(Locale.ROOT) }
+        return orderString
+            .split(';', ',')
+            .map { it.trim() }
+            .mapNotNull { stored -> byLowercaseName[stored.lowercase(Locale.ROOT)] }
     }
 
     fun serializeProviderOrder(providers: List<String>): String {
+        // The comma is the canonical separator: every writer must agree on it,
+        // or deserialization has to guess which format it is reading.
         return providers.filter { it in providerNames }.joinToString(",")
     }
 
     fun getDefaultProviderOrder(): List<String> = listOf(
         "NetEase",
+        "Spotify",
         "Musixmatch",
         "YouLyPlus",
         "Unison",

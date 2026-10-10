@@ -101,6 +101,8 @@ import com.jay.glossy.listentogether.UserInfo
 import com.jay.glossy.ui.component.DefaultDialog
 import com.jay.glossy.ui.component.IconButton
 import com.jay.glossy.ui.utils.backToMain
+import com.jay.glossy.ui.utils.listenTogetherConnectionErrorText
+import com.jay.glossy.ui.utils.listenTogetherServerErrorText
 import com.jay.glossy.utils.rememberPreference
 import kotlinx.coroutines.launch
 import androidx.compose.material3.IconButton as MaterialIconButton
@@ -176,6 +178,23 @@ fun ListenTogetherScreen(
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
                     val clip = android.content.ClipData.newPlainText("ListenTogetherRoom", event.roomCode)
                     clipboard.setPrimaryClip(clip)
+                }
+
+                // Failures used to leave this screen waiting on a room that was never
+                // coming: the client reported them, nothing here listened, and the
+                // create/join buttons stayed in their working state with no
+                // explanation. Every terminal outcome now clears that state and says
+                // what happened.
+                is ListenTogetherEvent.ServerError -> {
+                    isCreatingRoom = false
+                    isJoiningRoom = false
+                    joinErrorMessage = listenTogetherServerErrorText(context, event.code, event.message)
+                }
+
+                is ListenTogetherEvent.ConnectionError -> {
+                    isCreatingRoom = false
+                    isJoiningRoom = false
+                    joinErrorMessage = listenTogetherConnectionErrorText(context)
                 }
 
                 else -> {}
@@ -361,6 +380,7 @@ fun ListenTogetherScreen(
                     roomCodeInput = roomCodeInput,
                     onRoomCodeChange = { roomCodeInput = it },
                     savedUsername = savedUsername,
+                    isCreatingRoom = isCreatingRoom,
                     isJoiningRoom = isJoiningRoom,
                     joinErrorMessage = joinErrorMessage,
                     waitingForApprovalText = waitingForApprovalText,
@@ -1057,6 +1077,7 @@ private fun JoinCreateRoomSection(
     roomCodeInput: String,
     onRoomCodeChange: (String) -> Unit,
     savedUsername: String,
+    isCreatingRoom: Boolean,
     isJoiningRoom: Boolean,
     joinErrorMessage: String?,
     waitingForApprovalText: String,
@@ -1151,6 +1172,44 @@ private fun JoinCreateRoomSection(
                         .bringIntoViewRequester(bringIntoViewRequester)
                         .onFocusChanged { if (it.isFocused) onFieldFocused() },
             )
+
+            // "Creating room…" while the client waits for the server's answer. The
+            // state existed before but was never drawn, so a create that stalled left
+            // no trace on screen beyond the toast that started it.
+            AnimatedVisibility(
+                visible = isCreatingRoom,
+                enter = fadeIn() + slideInVertically(),
+                exit = fadeOut() + slideOutVertically(),
+            ) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = stringResource(R.string.creating_room),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            fontWeight = FontWeight.Medium,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
+            }
 
             // Waiting for approval indicator
             AnimatedVisibility(

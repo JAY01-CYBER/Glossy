@@ -46,7 +46,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import okhttp3.Credentials
 import timber.log.Timber
@@ -131,6 +130,13 @@ class App :
         val settings = dataStore.data.first()
         val locale = Locale.getDefault()
         val languageTag = locale.language
+
+        // Published for MainActivity, which has to set the locale before its
+        // first frame. The read behind `dataStore[key]` is a runBlocking, so
+        // without this the locale was resolved by stalling the main thread on
+        // disk during every cold start on Android 12 and below. The settings
+        // read above is already happening, so sharing its answer is free.
+        cachedAppLanguageTag = settings[AppLanguageKey]
 
         ArtistConjunctions.conjunctions = listOf(
             R.string.and,
@@ -298,9 +304,12 @@ class App :
     private var cachedCoilCacheSize: Int? = null
 
     override fun newImageLoader(context: PlatformContext): ImageLoader {
-        val cacheSize = cachedCoilCacheSize ?: runBlocking {
-            dataStore.data.map { it[MaxImageCacheSizeKey] ?: 512 }.first()
-        }
+        // Nothing on this path may block. It runs on whichever thread first asks
+        // Coil for an image — usually the main one — and sizing the cache used to
+        // be a runBlocking DataStore read, so the first image of a session could
+        // stall on disk. onCreate pre-reads the value on IO; until it lands, the
+        // default here is the same one the preference itself falls back to.
+        val cacheSize = cachedCoilCacheSize ?: DefaultImageCacheSizeMb
         return ImageLoader
             .Builder(this)
             .apply {
@@ -330,6 +339,21 @@ class App :
     }
 
     companion object {
+        /** The Coil disk cache size used until the stored preference is known. */
+        private const val DefaultImageCacheSizeMb = 512
+
+        /**
+         * The stored app language, read by [initializeSettings] on IO.
+         *
+         * MainActivity sets the locale before it draws anything and cannot wait
+         * for a coroutine to do it, so it takes this value when it is there and
+         * only falls back to the blocking read if this Activity somehow beat the
+         * settings load.
+         */
+        @Volatile
+        var cachedAppLanguageTag: String? = null
+            private set
+
         suspend fun forgetAccount(context: Context) {
             Timber.d("forgetAccount: Starting logout process")
 

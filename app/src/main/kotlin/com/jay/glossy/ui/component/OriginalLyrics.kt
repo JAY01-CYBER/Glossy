@@ -164,7 +164,6 @@ import com.jay.glossy.lyrics.LyricsUtils.romanizeCyrillic
 import com.jay.glossy.lyrics.LyricsUtils.romanizeHindi
 import com.jay.glossy.lyrics.LyricsUtils.romanizeJapanese
 import com.jay.glossy.lyrics.LyricsUtils.romanizeKorean
-import com.jay.glossy.lyrics.lyricsTextLooksSynced
 import com.jay.glossy.ui.component.shimmer.ShimmerHost
 import com.jay.glossy.ui.component.shimmer.TextPlaceholder
 import com.jay.glossy.ui.screens.settings.DarkMode
@@ -260,12 +259,27 @@ fun OriginalLyrics(
 
     val enabledLanguages = decodedList.filter { (_, checked) -> checked }.map { (lang, _) -> lang }
 
+    // The parser is the only authority on whether these lyrics are timed, and it
+    // is asked exactly once. Three places used to answer that question — this
+    // list, `isSynced`, and the ticker below — and two of them asked a different
+    // one: `lyrics.startsWith("[")`. A payload whose timestamps did not begin on
+    // its very first line (a title, an attribution, anything the provider placed
+    // above the first stamp — which is how the YouTube Music shelf arrives) was
+    // therefore announced to the player as time-synced, built with fake 100 ms
+    // spacing, and then handed to a ticker that refused to start. The lines sat
+    // still for the whole song, and no amount of scrolling preference changed
+    // that. Reading one parse three ways makes the disagreement impossible.
+    val parsedEntries =
+        remember(lyrics) {
+            if (lyrics == null || lyrics == LYRICS_NOT_FOUND) emptyList() else parseLyrics(lyrics)
+        }
+
     val lines =
-        remember(lyrics, scope) {
+        remember(parsedEntries, lyrics, scope) {
             if (lyrics == null || lyrics == LYRICS_NOT_FOUND) {
                 emptyList()
-            } else if (lyrics.startsWith("[")) {
-                val parsedLines = parseLyrics(lyrics)
+            } else if (parsedEntries.isNotEmpty()) {
+                val parsedLines = parsedEntries
 
                 parsedLines
                     .map { entry ->
@@ -359,7 +373,9 @@ fun OriginalLyrics(
                 }
             }
         }
-    val isSynced = remember(lyrics) { lyricsTextLooksSynced(lyrics) }
+    // The same parse `lines` was built from, so the "time-synced" announcement
+    // can never contradict the list the player is actually reading.
+    val isSynced = parsedEntries.isNotEmpty()
 
     // State for translation status
     val translationStatus by LyricsTranslationHelper.status.collectAsStateWithLifecycle()
@@ -556,8 +572,14 @@ fun OriginalLyrics(
         selectedIndices.clear()
     }
 
-    LaunchedEffect(lyrics) {
-        if (lyrics.isNullOrEmpty() || !lyrics.startsWith("[")) {
+    LaunchedEffect(lyrics, parsedEntries) {
+        // Gated on the parse rather than on the first character. This used to
+        // refuse to start for any payload that did not literally open with '[',
+        // which left `currentLineIndex` pinned at -1 forever: nothing was ever
+        // highlighted as the active line, and the auto-scroll below — which
+        // keys off that index — had nothing to follow. That is the whole of
+        // "the lyrics show but never move".
+        if (parsedEntries.isEmpty()) {
             currentLineIndex = -1
             return@LaunchedEffect
         }
@@ -808,10 +830,19 @@ fun OriginalLyrics(
         } else {
             LazyColumn(
                 state = lazyListState,
+                // Only the status bar, then straight into the first line.
+                //
+                // The top inset used to be a third of the viewport, which
+                // pushed the lyrics into the lower half of the screen and left
+                // a band of empty backdrop above them — at song start, before
+                // anything had scrolled, that band was most of what was on
+                // screen. The bottom inset stays: it is what lets the last
+                // lines be scrolled up under the controls instead of ending
+                // flush against them.
                 contentPadding =
                     WindowInsets.systemBars
                         .only(WindowInsetsSides.Top)
-                        .add(WindowInsets(top = maxHeight / 3, bottom = maxHeight / 2))
+                        .add(WindowInsets(bottom = maxHeight / 2))
                         .asPaddingValues(),
                 modifier =
                     Modifier

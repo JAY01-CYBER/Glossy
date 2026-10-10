@@ -229,8 +229,19 @@ class ListenTogetherClient
     ) {
         companion object {
             private const val TAG = "ListenTogether"
-            private val DEFAULT_SERVER_URL = ListenTogetherServers.defaultServerUrl
+
+            /**
+             * Resolved on every read rather than captured once. The registry
+             * seeds a fallback and then replaces it asynchronously from the
+             * published descriptor, so a value snapshotted during class
+             * initialisation would freeze the seed in place and the refresh
+             * would never reach the fallback it exists to fix.
+             */
+            private val defaultServerUrl: String
+                get() = ListenTogetherServers.defaultServerUrl
             private const val MAX_RECONNECT_ATTEMPTS = 15 // Increased from 5 to 15
+            /** How long to wait for a room_created/join answer before reporting it. */
+            private const val ROOM_ACTION_TIMEOUT_MS = 12_000L
             private const val INITIAL_RECONNECT_DELAY_MS = 1000L // Start at 1 second
             private const val MAX_RECONNECT_DELAY_MS = 120000L // Cap at 2 minutes
             private const val PING_INTERVAL_MS = 25000L
@@ -511,7 +522,7 @@ class ListenTogetherClient
          */
         private fun migrateServerUrl() {
             try {
-                val configuredUrl = context.dataStore.get(ListenTogetherServerUrlKey, DEFAULT_SERVER_URL)
+                val configuredUrl = context.dataStore.get(ListenTogetherServerUrlKey, defaultServerUrl)
                 val normalizedUrl = normalizeServerUrl(configuredUrl)
 
                 if (normalizedUrl != configuredUrl) {
@@ -575,6 +586,7 @@ class ListenTogetherClient
 
         private var webSocket: WebSocket? = null
         private var pingJob: Job? = null
+        private var roomActionTimeoutJob: Job? = null
         private var reconnectAttempts = 0
         private var backgroundDisconnectJob: Job? = null
 
@@ -622,18 +634,41 @@ class ListenTogetherClient
                 .pingInterval(60, TimeUnit.SECONDS) // Match server ping interval
                 .build()
 
+        /**
+         * Normalises whatever was pasted into the server field into an address the
+         * WebSocket client can open.
+         *
+         * A self-hosted server prints a full `ws://host:port/ws` URL, but people
+         * type `192.168.1.24:8080`, and the settings dialog stores the field
+         * verbatim. Without a scheme that address reached OkHttp as-is, which threw
+         * out of [connect] and left the caller waiting on a screen that could never
+         * finish — so the scheme is filled in here instead.
+         */
         private fun normalizeServerUrl(url: String): String {
             val trimmed = url.trim()
-            if (trimmed.isEmpty()) return DEFAULT_SERVER_URL
-            return if (trimmed.contains("metroserver.meowery.eu", ignoreCase = true)) {
-                DEFAULT_SERVER_URL
-            } else {
-                trimmed
+            if (trimmed.isEmpty()) return defaultServerUrl
+            // Both the pre-rename host and the old Meowery endpoint are migrated to
+            // the current live server: they still accept sockets, but they predate
+            // this protocol and silently ignore room requests, which looks exactly
+            // like "connected but no room ever gets created".
+            if (trimmed.contains("metroserver.meowery.eu", ignoreCase = true) ||
+                trimmed.contains("rx.meowery.eu", ignoreCase = true)
+            ) {
+                return defaultServerUrl
+            }
+            return when {
+                trimmed.startsWith("ws://", ignoreCase = true) ||
+                    trimmed.startsWith("wss://", ignoreCase = true) -> trimmed
+                trimmed.startsWith("https://", ignoreCase = true) -> "wss://" + trimmed.substring(8)
+                trimmed.startsWith("http://", ignoreCase = true) -> "ws://" + trimmed.substring(7)
+                // A bare host[:port][/path] — the shape people type by hand.
+                !trimmed.contains("://") -> "ws://$trimmed"
+                else -> trimmed
             }
         }
 
         private fun getServerUrl(): String {
-            val configuredUrl = context.dataStore.get(ListenTogetherServerUrlKey, DEFAULT_SERVER_URL)
+            val configuredUrl = context.dataStore.get(ListenTogetherServerUrlKey, defaultServerUrl)
             return normalizeServerUrl(configuredUrl)
         }
 
@@ -684,14 +719,26 @@ class ListenTogetherClient
             _connectionState.value = ConnectionState.CONNECTING
             serverClock.reset()
             evaluateBackgroundDisconnectPolicy("connect")
-            log(LogLevel.INFO, "Connecting to server", getServerUrl())
+            val serverUrl = getServerUrl()
+            log(LogLevel.INFO, "Connecting to server", serverUrl)
 
             val request =
-                Request
-                    .Builder()
-                    .url(getServerUrl())
-                    .header("User-Agent", context.packageName)
-                    .build()
+                try {
+                    Request
+                        .Builder()
+                        .url(serverUrl)
+                        .header("User-Agent", context.packageName)
+                        .build()
+                } catch (e: IllegalArgumentException) {
+                    // An address OkHttp cannot parse (a typo, an unsupported scheme)
+                    // used to escape this method and leave the screen that asked for
+                    // the connection waiting forever. Report it as a connection
+                    // failure so the caller can show it and reset.
+                    _connectionState.value = ConnectionState.ERROR
+                    log(LogLevel.ERROR, "Invalid server URL", serverUrl)
+                    emitEvent(ListenTogetherEvent.ConnectionError(e.message ?: serverUrl))
+                    return
+                }
 
             webSocket =
                 client.newWebSocket(
@@ -707,8 +754,12 @@ class ListenTogetherClient
                             startPingJob()
                             evaluateBackgroundDisconnectPolicy("socket_open")
 
-                            // Try to reconnect to previous session if we have a valid token
-                            if (sessionToken != null && storedRoomCode != null) {
+                            // A queued create/join must win over restoring an old
+                            // session: otherwise the client reconnects to the previous
+                            // room and the room the user just asked for is never created.
+                            if (pendingAction != null) {
+                                executePendingAction()
+                            } else if (sessionToken != null && storedRoomCode != null) {
                                 log(LogLevel.INFO, "Attempting to reconnect to previous session", "Room: $storedRoomCode")
                                 sendMessage(MessageTypes.RECONNECT, ReconnectPayload(sessionToken!!))
                             } else {
@@ -759,18 +810,47 @@ class ListenTogetherClient
             val action = pendingAction ?: return
             pendingAction = null
             evaluateBackgroundDisconnectPolicy("pending_action_started")
+            dispatchRoomAction(action)
+        }
 
+        /**
+         * Sends a create/join request and arms a watchdog. A server that accepts
+         * the socket but never answers the request (wrong protocol or a dead
+         * deployment) would otherwise leave the user on a "Connected" screen with
+         * no room and no explanation.
+         */
+        private fun dispatchRoomAction(action: PendingAction) {
             when (action) {
                 is PendingAction.CreateRoom -> {
-                    log(LogLevel.INFO, "Executing pending create room", action.username)
+                    log(LogLevel.INFO, "Sending create room", action.username)
                     sendMessage(MessageTypes.CREATE_ROOM, CreateRoomPayload(action.username))
                 }
 
                 is PendingAction.JoinRoom -> {
-                    log(LogLevel.INFO, "Executing pending join room", "${action.roomCode} as ${action.username}")
+                    log(LogLevel.INFO, "Sending join room", "${action.roomCode} as ${action.username}")
                     sendMessage(MessageTypes.JOIN_ROOM, JoinRoomPayload(action.roomCode.uppercase(), action.username))
                 }
             }
+
+            roomActionTimeoutJob?.cancel()
+            roomActionTimeoutJob =
+                scope.launch {
+                    delay(ROOM_ACTION_TIMEOUT_MS)
+                    val what = if (action is PendingAction.CreateRoom) "create a room" else "join the room"
+                    log(LogLevel.ERROR, "Room action timed out", what)
+                    emitEvent(
+                        ListenTogetherEvent.ServerError(
+                            "timeout",
+                            "The server accepted the connection but didn't answer the request to $what. " +
+                                "Pick a different server under Listen Together settings and try again.",
+                        ),
+                    )
+                }
+        }
+
+        private fun clearRoomActionTimeout() {
+            roomActionTimeoutJob?.cancel()
+            roomActionTimeoutJob = null
         }
 
         /**
@@ -780,6 +860,7 @@ class ListenTogetherClient
             log(LogLevel.INFO, "Disconnecting from server")
             backgroundDisconnectJob?.cancel()
             backgroundDisconnectJob = null
+            clearRoomActionTimeout()
             releaseWakeLock() // Release wake lock when disconnecting
             pingJob?.cancel()
             pingJob = null
@@ -1108,6 +1189,7 @@ class ListenTogetherClient
                 when (msgType) {
                     MessageTypes.ROOM_CREATED -> {
                         val payload = codec.decodePayload(msgType, payloadBytes) as? RoomCreatedPayload ?: return
+                        clearRoomActionTimeout()
                         _userId.value = payload.userId
                         _role.value = RoomRole.HOST
                         lastPlaybackRevision.set(0L)
@@ -1133,6 +1215,7 @@ class ListenTogetherClient
 
                         acquireWakeLock() // Keep connection alive while in room
                         log(LogLevel.INFO, "Room created", "Code: ${payload.roomCode}")
+                        flushPendingNotificationDecisions()
                         emitEvent(ListenTogetherEvent.RoomCreated(payload.roomCode, payload.userId))
                         // Global toast for room creation so the host sees it regardless of UI
                         scope.launch(Dispatchers.Main) {
@@ -1181,6 +1264,7 @@ class ListenTogetherClient
 
                     MessageTypes.JOIN_APPROVED -> {
                         val payload = codec.decodePayload(msgType, payloadBytes) as? JoinApprovedPayload ?: return
+                        clearRoomActionTimeout()
                         _userId.value = payload.userId
                         _role.value = RoomRole.GUEST
                         sessionToken = payload.sessionToken
@@ -1202,6 +1286,7 @@ class ListenTogetherClient
 
                     MessageTypes.JOIN_REJECTED -> {
                         val payload = codec.decodePayload(msgType, payloadBytes) as? JoinRejectedPayload ?: return
+                        clearRoomActionTimeout()
                         log(LogLevel.WARNING, "Join rejected", payload.reason)
                         emitEvent(ListenTogetherEvent.JoinRejected(payload.reason))
                     }
@@ -1464,6 +1549,7 @@ class ListenTogetherClient
 
                     MessageTypes.ERROR -> {
                         val payload = codec.decodePayload(msgType, payloadBytes) as? ErrorPayload ?: return
+                        clearRoomActionTimeout()
                         log(LogLevel.ERROR, "Server error", "${payload.code}: ${payload.message}")
 
                         // Handle specific error cases
@@ -1505,6 +1591,9 @@ class ListenTogetherClient
                             else -> {}
                         }
 
+                        // The server has answered, so the room-action watchdog must
+                        // not also fire its "no answer" error a few seconds later.
+                        clearRoomActionTimeout()
                         emitEvent(ListenTogetherEvent.ServerError(payload.code, payload.message))
                     }
 
@@ -1539,6 +1628,7 @@ class ListenTogetherClient
                         reconnectAttempts = 0
 
                         acquireWakeLock() // Re-acquire wake lock after reconnection
+                        if (payload.isHost) flushPendingNotificationDecisions()
                         log(
                             LogLevel.INFO,
                             "Successfully reconnected to room",
@@ -1605,6 +1695,43 @@ class ListenTogetherClient
             sendMessage<Unit>(type, null)
         }
 
+        /**
+         * Sends a decision the host tapped on a notification. Returns false when
+         * there is no room to send it into, so the caller can park it instead of
+         * losing it.
+         */
+        internal fun dispatchNotificationDecision(action: PendingNotificationAction): Boolean {
+            if (_role.value != RoomRole.HOST || webSocket == null) return false
+
+            when (action.kind) {
+                ListenTogetherPendingActions.KIND_APPROVE_JOIN -> approveJoin(action.targetId)
+                ListenTogetherPendingActions.KIND_REJECT_JOIN -> rejectJoin(action.targetId)
+                ListenTogetherPendingActions.KIND_APPROVE_SUGGESTION -> approveSuggestion(action.targetId)
+                ListenTogetherPendingActions.KIND_REJECT_SUGGESTION -> rejectSuggestion(action.targetId)
+                else -> return false
+            }
+            return true
+        }
+
+        /**
+         * Replays decisions tapped while the app was not connected. Hosting a room
+         * is the only state they apply in, so this is called when the host's own
+         * room is (re)established and not when a guest is merely promoted.
+         */
+        private fun flushPendingNotificationDecisions() {
+            scope.launch {
+                val queued = ListenTogetherPendingActions.takeAll(context)
+                if (queued.isEmpty()) return@launch
+
+                log(LogLevel.INFO, "Replaying queued notification decisions", "${queued.size} queued")
+                queued.forEach { action ->
+                    if (!dispatchNotificationDecision(action)) {
+                        log(LogLevel.WARNING, "Could not replay notification decision", action.kind)
+                    }
+                }
+            }
+        }
+
         // Public API methods
 
         /**
@@ -1623,7 +1750,7 @@ class ListenTogetherClient
             storedUsername = username
 
             if (_connectionState.value == ConnectionState.CONNECTED) {
-                sendMessage(MessageTypes.CREATE_ROOM, CreateRoomPayload(username))
+                dispatchRoomAction(PendingAction.CreateRoom(username))
             } else {
                 log(LogLevel.INFO, "Not connected, queueing create room action")
                 pendingAction = PendingAction.CreateRoom(username)
@@ -1656,7 +1783,7 @@ class ListenTogetherClient
             storedUsername = username
 
             if (_connectionState.value == ConnectionState.CONNECTED) {
-                sendMessage(MessageTypes.JOIN_ROOM, JoinRoomPayload(roomCode.uppercase(), username))
+                dispatchRoomAction(PendingAction.JoinRoom(roomCode, username))
             } else {
                 log(LogLevel.INFO, "Not connected, queueing join room action")
                 pendingAction = PendingAction.JoinRoom(roomCode, username)

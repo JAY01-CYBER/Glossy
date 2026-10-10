@@ -3,7 +3,9 @@ package com.jay.glossy.spotify
 import com.google.protobuf.CodedInputStream
 import com.google.protobuf.CodedOutputStream
 import com.jay.glossy.canvas.CanvasArtwork
+import com.jay.glossy.canvas.CanvasLookupUnavailable
 import com.jay.glossy.spotifycore.Spotify
+import com.jay.glossy.spotifycore.SpotifyHashProvider
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -13,6 +15,8 @@ import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
+import io.ktor.http.content.TextContent
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
@@ -31,11 +35,15 @@ import java.io.ByteArrayOutputStream
  */
 object SpotifyCanvasProvider {
     private const val SEARCH_URL = "https://api.spotify.com/v1/search"
-    private const val PATHFINDER_URL = "https://api-partner.spotify.com/pathfinder/v1/query"
+    private const val PATHFINDER_URL = "https://api-partner.spotify.com/pathfinder/v2/query"
     private const val CANVAS_URL = "https://spclient.wg.spotify.com/canvaz-cache/v0/canvases"
 
-    private const val PATHFINDER_SEARCH_HASH =
-        "bc1ca2fcd0ba1013a0fc88e6cc4f190af501851e3dafd3e1ef85840297694428"
+    /**
+     * The persisted query the web player uses for search. The hash lives in
+     * [SpotifyHashProvider] precisely so it can be refreshed when Spotify
+     * rotates it, instead of being frozen into this file.
+     */
+    private const val SEARCH_OPERATION = "searchDesktop"
 
     private const val SPOTIFY_APP_UA = "Spotify/9.0.34.593 iOS/18.4 (iPhone15,3)"
 
@@ -52,78 +60,164 @@ object SpotifyCanvasProvider {
             null
         }
 
-    suspend fun getBySongArtist(song: String, artist: String): CanvasArtwork? {
-        // Now directly using the global access token from our new core module
-        val token = Spotify.accessToken ?: return null
-        
-        val uri = searchViaPathfinder(song, artist, token)
-            ?: searchViaRest(song, artist, token)
+    suspend fun getBySongArtist(
+        song: String,
+        artist: String,
+        accessToken: String? = null,
+        clientToken: String? = null,
+    ): CanvasArtwork? {
+        // Prefer the token the caller already holds (minted from the web-player
+        // cookie or restored by the library session). Falling back to the
+        // spotifycore global keeps older call sites working.
+        val token = accessToken?.takeIf { it.isNotBlank() }
+            ?: Spotify.accessToken?.takeIf { it.isNotBlank() }
             ?: return null
-            
-        val canvasUrl = fetchCanvasUrl(uri, token) ?: return null
+        
+        val uri = resolveTrackUri(song, artist, token, clientToken) ?: return null
+
+        val canvasUrl = fetchCanvasUrl(uri, token, clientToken) ?: return null
         return CanvasArtwork(name = song, artist = artist, animated = canvasUrl, videoUrl = canvasUrl)
     }
 
-    private suspend fun searchViaPathfinder(song: String, artist: String, token: String): String? {
+    /**
+     * “Which Spotify track is this song?” — the persisted-query search first,
+     * the public REST search as backup. Used for canvases and, identically, by
+     * [com.jay.glossy.lyrics.SpotifyLyricsProvider]: one answer to that question
+     * is enough, and both features should trust the same track.
+     */
+    internal suspend fun resolveTrackUri(
+        song: String,
+        artist: String,
+        token: String,
+        clientToken: String? = null,
+    ): String? =
+        searchViaPathfinder(song, artist, token, clientToken) ?: searchViaRest(song, artist, token, clientToken)
+
+    /**
+     * Current + previously-known hash for the search operation, so one stale
+     * hash costs a retry instead of the whole lookup.
+     */
+    private fun searchHashes(): List<String> {
+        val primary = runCatching { SpotifyHashProvider.getHash(SEARCH_OPERATION) }.getOrNull()
+            ?: return emptyList()
+        val previous = SpotifyHashProvider.getPreviousHash(SEARCH_OPERATION)
+        return if (previous != null && previous != primary) listOf(primary, previous) else listOf(primary)
+    }
+
+    /**
+     * Resolves a track URI with the web player's own search operation, the same
+     * request [com.jay.glossy.spotifycore.Spotify.search] already issues for the
+     * Spotify library screens. Using the shared hash registry means a rotated
+     * hash recovers on its own instead of silently returning nothing.
+     */
+    private suspend fun searchViaPathfinder(
+        song: String,
+        artist: String,
+        token: String,
+        clientToken: String?,
+    ): String? {
         val variables = buildJsonObject {
             put("searchTerm", "$song $artist")
             put("offset", 0)
             put("limit", 10)
             put("numberOfTopResults", 5)
             put("includeAudiobooks", false)
+            put("includeArtistHasConcertsField", false)
             put("includePreReleases", false)
-        }.toString()
-        val extensions = buildJsonObject {
-            putJsonObject("persistedQuery") {
-                put("version", 1)
-                put("sha256Hash", PATHFINDER_SEARCH_HASH)
-            }
-        }.toString()
+            put("includeLocalConcertsField", false)
+            put("includeAuthors", false)
+        }
 
-        val response = runSuspend {
-            client.get(PATHFINDER_URL) {
-                header("Authorization", "Bearer $token")
-                header("App-platform", "WebPlayer")
-                header("User-Agent", SPOTIFY_APP_UA)
-                parameter("operationName", "searchTracks")
-                parameter("variables", variables)
-                parameter("extensions", extensions)
-            }
-        } ?: return null
-        if (response.status.value !in 200..299) return null
-        val body = runSuspend { response.bodyAsText() } ?: return null
+        for (sha256Hash in searchHashes()) {
+            val body = buildJsonObject {
+                put("variables", variables)
+                put("operationName", SEARCH_OPERATION)
+                putJsonObject("extensions") {
+                    putJsonObject("persistedQuery") {
+                        put("version", 1)
+                        put("sha256Hash", sha256Hash)
+                    }
+                }
+            }.toString()
 
-        return runCatching {
-            val root = json.parseToJsonElement(body).jsonObject
-            val firstItem = root["data"]?.jsonObject
-                ?.get("searchV2")?.jsonObject
-                ?.get("tracksV2")?.jsonObject
-                ?.get("items")?.jsonArray
-                ?.firstOrNull()
-                ?.jsonObject?.get("item")?.jsonObject
-                ?.get("data")?.jsonObject
-
-            val hitName = firstItem?.get("name")?.jsonPrimitive?.contentOrNull
-            if (hitName != null && !hitName.contains(song, ignoreCase = true)) {
-                return@runCatching null
-            }
-
-            firstItem?.get("uri")?.jsonPrimitive?.contentOrNull
-                ?: firstItem?.get("id")?.jsonPrimitive?.contentOrNull?.let { "spotify:track:$it" }
-        }.getOrNull()
+            val response = runSuspend {
+                client.post(PATHFINDER_URL) {
+                    header("Authorization", "Bearer $token")
+                    // The header the web player sends alongside the bearer; the
+                    // endpoints turn a bearer-only request away with a 429.
+                    clientToken?.let { header("Client-Token", it) }
+                    header("App-platform", "WebPlayer")
+                    header("User-Agent", SPOTIFY_APP_UA)
+                    header("Accept", "application/json")
+                    setBody(
+                        TextContent(
+                            body,
+                            ContentType.Application.Json.withParameter("charset", "UTF-8"),
+                        ),
+                    )
+                }
+            } ?: continue
+            if (response.status.value !in 200..299) continue
+            val text = runSuspend { response.bodyAsText() } ?: continue
+            findTrackUri(text, song, artist)?.let { return it }
+        }
+        return null
     }
 
-    private suspend fun searchViaRest(song: String, artist: String, token: String): String? {
+    /**
+     * Picks a track URI out of a searchDesktop response: an item whose title
+     * matches is preferred, otherwise the first track the response offers.
+     */
+    private fun findTrackUri(body: String, song: String, artist: String): String? = runCatching {
+        val items = json.parseToJsonElement(body).jsonObject["data"]?.jsonObject
+            ?.get("searchV2")?.jsonObject
+            ?.get("tracksV2")?.jsonObject
+            ?.get("items")?.jsonArray
+            ?: return@runCatching null
+
+        var fallback: String? = null
+        for (element in items) {
+            val wrapper = element.jsonObject["item"]?.jsonObject ?: continue
+            val data = wrapper["data"]?.jsonObject ?: continue
+            val uri = data["uri"]?.jsonPrimitive?.contentOrNull
+                ?: wrapper["_uri"]?.jsonPrimitive?.contentOrNull
+                ?: wrapper["uri"]?.jsonPrimitive?.contentOrNull
+                ?: data["id"]?.jsonPrimitive?.contentOrNull?.let { "spotify:track:$it" }
+                ?: continue
+            if (fallback == null) fallback = uri
+            val name = data["name"]?.jsonPrimitive?.contentOrNull ?: continue
+            val artistNames = data["artists"]?.jsonObject?.get("items")?.jsonArray
+                ?.mapNotNull { it.jsonObject["profile"]?.jsonObject?.get("name")?.jsonPrimitive?.contentOrNull }
+                .orEmpty()
+            val titleMatches = name.contains(song, ignoreCase = true)
+            val artistMatches = artistNames.isEmpty() || artistNames.any { it.contains(artist, ignoreCase = true) }
+            if (titleMatches && artistMatches) return@runCatching uri
+        }
+        fallback
+    }.getOrNull()
+
+    private suspend fun searchViaRest(
+        song: String,
+        artist: String,
+        token: String,
+        clientToken: String?,
+    ): String? {
         val response = runSuspend {
             client.get(SEARCH_URL) {
                 header("Authorization", "Bearer $token")
+                clientToken?.let { header("Client-Token", it) }
                 header("User-Agent", SPOTIFY_APP_UA)
                 parameter("q", "$song $artist")
                 parameter("type", "track")
                 parameter("limit", "10")
             }
         } ?: return null
-        if (response.status.value !in 200..299) return null
+        if (response.status.value !in 200..299) {
+            // A rate limit or an outage is not "Spotify has no canvas"; only a
+            // real answer may be remembered as one.
+            throwUnavailableForTransient(response.status.value)
+            return null
+        }
         val body = runSuspend { response.bodyAsText() } ?: return null
 
         return runCatching {
@@ -144,7 +238,7 @@ object SpotifyCanvasProvider {
 
     private data class CanvasHit(val url: String, val trackUri: String?)
 
-    private suspend fun fetchCanvasUrl(trackUri: String, token: String): String? {
+    private suspend fun fetchCanvasUrl(trackUri: String, token: String, clientToken: String?): String? {
         val body = ByteArrayOutputStream().also { output ->
             val coded = CodedOutputStream.newInstance(output)
             ByteArrayOutputStream().also { nested ->
@@ -156,6 +250,9 @@ object SpotifyCanvasProvider {
         val response = runSuspend {
             client.post(CANVAS_URL) {
                 header("Authorization", "Bearer $token")
+                // spclient refuses a bearer-only request with a 429, which used
+                // to end every Spotify canvas lookup in silence.
+                clientToken?.let { header("Client-Token", it) }
                 header("Accept", "application/protobuf")
                 header("Accept-Language", "en")
                 header("Content-Type", "application/protobuf")
@@ -163,14 +260,39 @@ object SpotifyCanvasProvider {
                 setBody(body.toByteArray())
             }
         } ?: return null
-        if (response.status.value !in 200..299) return null
+        if (response.status.value !in 200..299) {
+            throwUnavailableForTransient(response.status.value)
+            return null
+        }
         val bytes = runSuspend { response.body<ByteArray>() } ?: return null
 
         val hits = decodeCanvasResponse(bytes)
         hits.firstOrNull { it.trackUri == trackUri }?.let { return it.url }
 
-        return hits.firstOrNull()?.url
-            ?: CANVAS_URL_REGEX.find(String(bytes, Charsets.ISO_8859_1))?.value
+        // Every identified canvas belongs to some other track: refusing is the
+        // point of the whole check. Returning the first one anyway is how a
+        // different song's clip ended up labelled as this one.
+        if (hits.any { !it.trackUri.isNullOrBlank() }) return null
+
+        // The response does not echo the track at all, so its canvas cannot
+        // contradict the request; use it. A raw URL scraped out of the payload
+        // is used only when it is the only candidate there.
+        hits.firstOrNull()?.url?.let { return it }
+        return CANVAS_URL_REGEX.findAll(String(bytes, Charsets.ISO_8859_1))
+            .map { it.value }
+            .distinct()
+            .singleOrNull()
+    }
+
+    /**
+     * Spotify's way of saying "not now" — a rate limit or an outage. Anything
+     * else that is not a 2xx is a real answer about this track, which is a null
+     * at the call site, not a failure.
+     */
+    private fun throwUnavailableForTransient(statusCode: Int) {
+        if (statusCode == 429 || statusCode in 500..599) {
+            throw CanvasLookupUnavailable("Spotify answered HTTP $statusCode")
+        }
     }
 
     private fun decodeCanvasResponse(bytes: ByteArray): List<CanvasHit> = runCatching {

@@ -80,6 +80,7 @@ import com.jay.glossy.playback.queues.YouTubeQueue
 import com.jay.glossy.ui.component.IconButton
 import com.jay.glossy.ui.component.Material3SettingsGroup
 import com.jay.glossy.ui.component.Material3SettingsItem
+import com.jay.glossy.ui.theme.PoppinsFontFamily
 import com.jay.glossy.ui.utils.backToMain
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -93,7 +94,12 @@ private data class Contributor(
     val githubUrl: String = "https://github.com/$githubHandle",
     val sponsorUrl: String? = null,
     val polygon: RoundedPolygon? = null,
-    val favoriteSongVideoId: String? = null
+    val favoriteSongVideoId: String? = null,
+    /**
+     * A portrait bundled with the build, used instead of [avatarUrl] when set.
+     * It renders offline and never changes under us when the GitHub avatar does.
+     */
+    val avatarRes: Int? = null,
 )
 
 private data class CommunityLink(
@@ -105,11 +111,35 @@ private data class CommunityLink(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 private val leadDeveloper = Contributor(
     name = "Jay Chaudhary",
-    roleRes = R.string.credits_lead_developer,
+    roleRes = R.string.credits_main_head,
     githubHandle = "JAY01-CYBER",
     polygon = MaterialShapes.Cookie9Sided,
     favoriteSongVideoId = "Mh2JWGWvy_Y"
 )
+
+/**
+ * Glossy's second lead developer, shown as a hero card of their own directly
+ * below the project head's card.
+ *
+ * Their portrait ships with the build ([R.drawable.dev_chikku]) rather than
+ * being pulled from GitHub, so the card shows the face we were given, offline,
+ * and the avatar cannot drift when the GitHub account's picture changes. The
+ * GitHub link is the handle-derived one: https://github.com/izybro110-gif.
+ */
+private val secondLeadDeveloper = Contributor(
+    name = "Chikku",
+    roleRes = R.string.credits_ui_design_styling,
+    githubHandle = "izybro110-gif",
+    avatarRes = R.drawable.dev_chikku,
+)
+
+/**
+ * Glossy's own developers — everyone working on the app itself without a lead
+ * developer card above, shown in their own group directly under those cards.
+ * Empty while every current developer has a card; the group renders nothing at
+ * all until someone new joins the list.
+ */
+private val developers = emptyList<Contributor>()
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 private val collaborators = listOf(
@@ -166,6 +196,8 @@ private fun ContributorAvatar(
     modifier: Modifier = Modifier,
     shape: Shape = CircleShape,
     contentDescription: String? = null,
+    /** A bundled portrait; when set it wins over [avatarUrl]. */
+    avatarRes: Int? = null,
     onClick: (() -> Unit)? = null
 ) {
     val fallback = painterResource(R.drawable.about_icon)
@@ -177,15 +209,24 @@ private fun ContributorAvatar(
         color = MaterialTheme.colorScheme.surfaceContainerHighest,
         tonalElevation = 4.dp,
     ) {
-        AsyncImage(
-            model = avatarUrl,
-            contentDescription = contentDescription,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
-            placeholder = fallback,
-            fallback = fallback,
-            error = fallback,
-        )
+        if (avatarRes != null) {
+            Image(
+                painter = painterResource(avatarRes),
+                contentDescription = contentDescription,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else {
+            AsyncImage(
+                model = avatarUrl,
+                contentDescription = contentDescription,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+                placeholder = fallback,
+                fallback = fallback,
+                error = fallback,
+            )
+        }
     }
 }
 
@@ -384,10 +425,11 @@ fun AboutScreen(
                             letterSpacing = (-0.5).sp
                         )
                         Text(
-                            text = stringResource(R.string.credits_lead_developer),
+                            text = stringResource(leadDeveloper.roleRes),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
+                            fontFamily = PoppinsFontFamily
                         )
                     }
                 }
@@ -414,8 +456,140 @@ fun AboutScreen(
             }
         }
 
+        Spacer(Modifier.height(16.dp))
+
+        // Second Lead Developer Hero Card — right under the project head's card,
+        // so the two leads read as one block at the top of the credits. The
+        // avatar carries the bundled portrait and opens the profile, since this
+        // card has no easter-egg song of its own.
+        ElevatedCard(
+            shape = RoundedCornerShape(32.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(20.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    ContributorAvatar(
+                        avatarUrl = secondLeadDeveloper.avatarUrl,
+                        avatarRes = secondLeadDeveloper.avatarRes,
+                        sizeDp = 110,
+                        shape = secondLeadDeveloper.polygon?.toShape() ?: CircleShape,
+                        contentDescription = secondLeadDeveloper.name,
+                        onClick = { uriHandler.openUri(secondLeadDeveloper.githubUrl) },
+                    )
+
+                    Column(
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = secondLeadDeveloper.name,
+                            style = MaterialTheme.typography.headlineLarge,
+                            fontWeight = FontWeight.Black,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            lineHeight = 38.sp,
+                            letterSpacing = (-0.5).sp
+                        )
+                        Text(
+                            text = stringResource(secondLeadDeveloper.roleRes),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold,
+                            fontFamily = PoppinsFontFamily
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                FilledTonalButton(
+                    onClick = { uriHandler.openUri(secondLeadDeveloper.githubUrl) },
+                    modifier = Modifier.fillMaxWidth().height(48.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.github),
+                        contentDescription = stringResource(R.string.credits_github)
+                    )
+                }
+            }
+        }
+
         Spacer(Modifier.height(32.dp))
-        
+
+        // Glossy's own developers, directly under the lead developer's card.
+        // Hidden entirely while nobody is on the list — an empty group would
+        // still print its section title with nothing under it.
+        if (developers.isNotEmpty()) {
+            Material3SettingsGroup(
+                title = stringResource(R.string.credits_glossy_devs),
+                items = developers.map { contributor ->
+                    Material3SettingsItem(
+                        leadingContent = {
+                            var clickCount by remember(contributor.name) { mutableIntStateOf(0) }
+                            ContributorAvatar(
+                                avatarUrl = contributor.avatarUrl,
+                                avatarRes = contributor.avatarRes,
+                                sizeDp = 48,
+                                shape = contributor.polygon?.toShape() ?: CircleShape,
+                                contentDescription = contributor.name,
+                                onClick = {
+                                    handleEasterEggClick(
+                                        clickCount = clickCount,
+                                        favoriteSongVideoId = contributor.favoriteSongVideoId,
+                                        coroutineScope = coroutineScope,
+                                        snackbarHostState = snackbarHostState,
+                                        playerConnection = playerConnection,
+                                        wannaPlayStr = wannaPlayStr,
+                                        yeahStr = yeahStr,
+                                        onCountUpdate = { clickCount = it }
+                                    )
+                                }
+                            )
+                        },
+                        title = { Text(text = contributor.name, fontWeight = FontWeight.SemiBold) },
+                        description = { Text(stringResource(contributor.roleRes)) },
+                        trailingContent = {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (contributor.sponsorUrl != null) {
+                                    Surface(
+                                        onClick = { uriHandler.openUri(contributor.sponsorUrl) },
+                                        shape = CircleShape,
+                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                        modifier = Modifier.size(36.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                painter = painterResource(R.drawable.buymeacoffee),
+                                                contentDescription = null,
+                                                modifier = Modifier.size(20.dp),
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
+                                Icon(
+                                    painter = painterResource(R.drawable.github),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(24.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        },
+                        onClick = { uriHandler.openUri(contributor.githubUrl) }
+                    )
+                }
+            )
+        }
+
+        Spacer(Modifier.height(32.dp))
+
         // Collaborators section
         Material3SettingsGroup(
             title = "Metrolist Devs",
