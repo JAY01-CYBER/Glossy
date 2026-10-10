@@ -1,2 +1,0 @@
-Lcom/jay/glossy/**;
-HSPLcom/jay/glossy/**;->**(**)**
