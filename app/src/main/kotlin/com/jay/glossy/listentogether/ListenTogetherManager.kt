@@ -692,6 +692,17 @@ class ListenTogetherManager
                     cleanup()
                 }
 
+                is ListenTogetherEvent.SuggestionApproved -> {
+                    // Both servers broadcast SUGGESTION_APPROVED once the host
+                    // approves (auto or manual), but neither inserts the track
+                    // into the host's player — so nothing played for anyone.
+                    // The queue observer then fans the insert out to guests
+                    // via SYNC_QUEUE.
+                    if (isHost && isInRoom) {
+                        enqueueApprovedSuggestion(event.trackInfo)
+                    }
+                }
+
                 else -> { /* Other events handled by UI */ }
             }
         }
@@ -1448,7 +1459,11 @@ class ListenTogetherManager
                 currentTrack = state.currentTrack,
                 isPlaying = state.isPlaying,
                 position = state.position,
-                queue = state.queue,
+                // A snapshot that carries no queue says nothing about it, so keep
+                // the queue the room already knows instead of rebuilding it from
+                // the current track alone and silently dropping the guest's
+                // upcoming songs.
+                queue = state.queue ?: roomState.value?.queue,
                 effectiveAtServerTime = state.lastUpdate,
                 bypassBuffer = true, // Manual sync: bypass buffer
             )
@@ -1966,6 +1981,44 @@ class ListenTogetherManager
         private fun stopQueueSyncObservation() {
             queueObserverJob?.cancel()
             queueObserverJob = null
+        }
+
+        /**
+         * Put an approved suggestion into the host's local queue. The running
+         * queue observer picks the insert up and pushes it to guests with
+         * SYNC_QUEUE, so the track plays for the whole room.
+         */
+        private fun enqueueApprovedSuggestion(track: TrackInfo) {
+            Timber.tag(TAG).d("Host: queueing approved suggestion ${track.title}")
+            val connection = playerConnection ?: return
+            val actionQueueGeneration = queueSyncGeneration
+            enqueueQueueMutation(actionQueueGeneration) {
+                val result = withContext(Dispatchers.IO) { YouTube.queue(listOf(track.id)) }
+                if (queueSyncGeneration != actionQueueGeneration || playerConnection !== connection) {
+                    return@enqueueQueueMutation
+                }
+                result.onSuccess { list ->
+                    val mediaItem =
+                        list
+                            .firstOrNull()
+                            ?.toMediaMetadata()
+                            ?.copy(
+                                suggestedBy = track.suggestedBy,
+                            )?.toMediaItem()
+                    if (mediaItem != null) {
+                        connection.allowInternalSync = true
+                        try {
+                            connection.addToQueue(mediaItem)
+                        } finally {
+                            connection.allowInternalSync = false
+                        }
+                    } else {
+                        Timber.tag(TAG).w("Approved suggestion failed to resolve media item for ${track.id}")
+                    }
+                }.onFailure {
+                    Timber.tag(TAG).e(it, "Approved suggestion metadata fetch failed")
+                }
+            }
         }
 
         private fun TrackInfo.toMediaMetadata(): MediaMetadata =

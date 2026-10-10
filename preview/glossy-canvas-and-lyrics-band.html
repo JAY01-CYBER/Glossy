@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glossy · Spotlight canvas + the lyrics top band</title>
+<style>
+  :root{
+    --ink:#f4f1f2; --dim:#a9a2a5; --line:#2c2a2f; --card:#17161a; --page:#0d0c0f;
+    --accent:#ff6d7a; --ok:#6ee7a8; --warn:#ffcf6d;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--page);color:var(--ink);
+       font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
+  .wrap{max-width:1180px;margin:0 auto;padding:40px 24px 80px}
+  h1{font-size:27px;line-height:1.25;margin:0 0 10px;letter-spacing:-.2px}
+  h2{font-size:18px;margin:46px 0 6px;letter-spacing:-.1px}
+  h2 .n{color:var(--accent);font-variant-numeric:tabular-nums}
+  p.lede{color:var(--dim);margin:0 0 4px;max-width:74ch}
+  code{background:#211f25;border:1px solid var(--line);border-radius:5px;padding:1px 5px;
+       font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:#ffd9dd}
+  a{color:var(--accent)}
+  .row{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start;margin-top:22px}
+  .col{flex:1 1 300px;min-width:290px}
+  .cap{font-size:13px;color:var(--dim);margin:12px 0 0}
+  .cap b{color:var(--ink);font-weight:600}
+  .tag{display:inline-block;font-size:10.5px;letter-spacing:.10em;text-transform:uppercase;
+       padding:3px 8px;border-radius:99px;border:1px solid var(--line);color:var(--dim);margin-bottom:9px}
+  .tag.bad{color:#ffb3ba;border-color:#5a2b31;background:#2a1418}
+  .tag.good{color:var(--ok);border-color:#24503a;background:#0f2419}
+  .tag.keep{color:var(--warn);border-color:#5a4a22;background:#241f0f}
+
+  /* ---------- phone mock-up ---------- */
+  .phone{position:relative;width:360px;height:800px;border-radius:30px;overflow:hidden;
+         border:1px solid #35323a;background:#000;flex:0 0 auto;
+         box-shadow:0 18px 50px rgba(0,0,0,.55)}
+  .bg{position:absolute;inset:0;background:
+       radial-gradient(120% 58% at 26% 6%, rgba(232,126,140,.80), transparent 62%),
+       radial-gradient(95% 46% at 78% 22%, rgba(158,64,86,.62), transparent 68%),
+       radial-gradient(70% 40% at 62% 88%, rgba(120,40,60,.45), transparent 70%),
+       linear-gradient(180deg,#8f545c 0%, #4a262c 42%, #1a1013 78%, #0b0709 100%);}
+  .scrim{position:absolute;left:0;right:0;bottom:0;height:300px;
+         background:linear-gradient(180deg,transparent, rgba(0,0,0,.72) 55%, rgba(0,0,0,.9))}
+  .statusbar{position:absolute;top:0;left:0;right:0;height:54px;padding:9px 18px 0;
+             display:flex;justify-content:space-between;font-size:12px;color:#fff;
+             opacity:.92;letter-spacing:.2px}
+  /* the lyrics viewport: the artwork slot of the player, under the status bar */
+  .lyrics{position:absolute;left:0;right:0;top:54px;height:515px;overflow:hidden;
+          -webkit-mask-image:linear-gradient(180deg,transparent 0,rgba(0,0,0,.5) 10%,#000 26%,#000 74%,transparent 100%);
+          mask-image:linear-gradient(180deg,transparent 0,rgba(0,0,0,.5) 10%,#000 26%,#000 74%,transparent 100%)}
+  .l{position:absolute;left:22px;right:22px;font-weight:700;font-size:19px;line-height:29px;
+     color:#e9dee0;opacity:.42;letter-spacing:.1px}
+  .l.act{color:#fff;opacity:1;font-size:21px}
+  .l.faint{opacity:.24}
+  .band{position:absolute;left:0;right:0;top:54px;height:180px;
+        background:repeating-linear-gradient(45deg,rgba(255,255,255,.045) 0 8px,transparent 8px 16px);
+        border-bottom:1px dashed rgba(255,255,255,.28)}
+  .bandlabel{position:absolute;right:10px;top:118px;font-size:10.5px;letter-spacing:.08em;
+             text-transform:uppercase;color:#fff;opacity:.85}
+  .provider{position:absolute;left:22px;top:150px;font-size:11px;color:#fff;opacity:.45}
+
+  /* player bar */
+  .bar{position:absolute;left:0;right:0;bottom:0;height:238px;padding:0 18px}
+  .meta{position:absolute;left:18px;right:74px;top:118px}
+  .meta .t{font-size:17px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .meta .a{font-size:12.5px;color:#e7dbdd;opacity:.82;margin-top:3px;
+           white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mini{position:absolute;right:16px;top:120px;display:flex;gap:14px;opacity:.9}
+  .mini svg{width:19px;height:19px;stroke:#fff;fill:none;stroke-width:1.8}
+  .ctl{position:absolute;left:18px;right:18px;top:176px;display:flex;align-items:center;
+       justify-content:space-between}
+  .ctl svg{width:26px;height:26px;stroke:#fff;fill:none;stroke-width:1.7}
+  .round{width:46px;height:46px;border:1.6px solid rgba(255,255,255,.75);border-radius:50%;
+         display:flex;align-items:center;justify-content:center}
+  .pair{display:flex;gap:12px}
+
+  /* ---------- flow panels ---------- */
+  .flow{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 18px 20px}
+  .flow h3{margin:0 0 12px;font-size:14px;letter-spacing:.02em}
+  .step{display:flex;gap:10px;padding:7px 0;font-size:13.5px;color:#d8d2d5;border-top:1px dashed #26242a}
+  .step:first-of-type{border-top:0}
+  .step i{flex:0 0 20px;font-style:normal;color:var(--dim);font-variant-numeric:tabular-nums}
+  .step.stop{color:#ffb3ba}
+  .step.go{color:#c9f2dc}
+  .note{margin-top:26px;background:#141317;border:1px solid var(--line);border-left:3px solid var(--warn);
+        border-radius:10px;padding:14px 16px;color:#cfc8cb;font-size:13.5px;max-width:96ch}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Two fixes — the Spotlight canvas that needed a login, and the band above the lyrics</h1>
+  <p class="lede">Left: the phone as it behaves now. Right: after the change. Both are drawn from the two
+    screenshots you sent, at their own geometry, so the difference is the fix and nothing else.</p>
+
+  <!-- ============ 1 · lyrics ============ -->
+  <h2><span class="n">1</span> · The lyrics band — the opening lines start at the top</h2>
+  <p class="lede">The band is not a padding that was added: it is <code>LYRICS_ANCHOR_RATIO</code>. Every line is
+    drawn at <code>anchorY + its offset from the active line</code>, so while the song's first lines are the ones on
+    screen there is nothing above the active line to fill the band. The block is now clamped to the top until
+    there is, and the clamp releases by itself afterwards.</p>
+
+  <div class="row">
+
+    <!-- BEFORE -->
+    <div class="col">
+      <span class="tag bad">before · song start</span>
+      <div class="phone">
+        <div class="bg"></div>
+        <div class="scrim"></div>
+        <div class="statusbar"><span>8:13</span><span>5G &nbsp; 84%</span></div>
+        <div class="band"></div>
+        <div class="bandlabel">blank backdrop · 180 px</div>
+        <div class="provider">Lyrics from Spotify</div>
+        <div class="lyrics">
+          <div class="l" style="top:186px">J'lui ai dit : « Aime-moi, prends-moi dans tes bras, je n'ai plus personne »</div>
+          <div class="l" style="top:292px">Ne laisse pas ton odeur imprégner mes draps, et si tu m'abandonnes</div>
+          <div class="l faint" style="top:398px">J'suis pas celle que tu crois, aucun cabrón ne m'a touché</div>
+          <div class="l faint" style="top:504px">À part toi, caballero, personne ne m'a touché</div>
+          <div class="l faint" style="top:610px">Ne laisse pas ton odeur imprégner mes draps</div>
+        </div>
+        <div class="bar">
+          <div class="meta"><div class="t">Clandestina (JVSTIN Remix)</div>
+            <div class="a">FILV, Edmofo, Emma Peters and JVSTIN</div></div>
+          <div class="mini">
+            <svg viewBox="0 0 24 24"><path d="M4 6h16M4 11h10M4 16h7"/></svg>
+            <svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg>
+          </div>
+          <div class="ctl">
+            <svg viewBox="0 0 24 24"><path d="M4 7h12M4 12h12M4 17h8M19 14v6M16 17h6"/></svg>
+            <div class="pair">
+              <div class="round"><svg viewBox="0 0 24 24" style="width:17px;height:17px"><path d="M9 6v12M15 6v12" stroke-width="2.4"/></svg></div>
+              <div class="round"><svg viewBox="0 0 24 24" style="width:17px;height:17px"><path d="M7 6l8 6-8 6zM17 6v12"/></svg></div>
+            </div>
+            <svg viewBox="0 0 24 24"><path d="M4 6h11M4 10h11M4 14h7"/><circle cx="18" cy="15" r="3"/><path d="M21 15V7l-3 1"/></svg>
+          </div>
+        </div>
+      </div>
+      <p class="cap"><b>The complaint.</b> A third of the artwork slot is empty and the last lines crowd the controls,
+        so the view reads as if it were <em>pushed down</em> rather than started.</p>
+    </div>
+
+    <!-- AFTER -->
+    <div class="col">
+      <span class="tag good">after · song start</span>
+      <div class="phone">
+        <div class="bg"></div>
+        <div class="scrim"></div>
+        <div class="statusbar"><span>8:13</span><span>5G &nbsp; 84%</span></div>
+        <div class="provider" style="top:14px">Lyrics from Spotify</div>
+        <div class="lyrics">
+          <div class="l act" style="top:0px">J'lui ai dit : « Aime-moi, prends-moi dans tes bras, je n'ai plus personne »</div>
+          <div class="l" style="top:106px">Ne laisse pas ton odeur imprégner mes draps, et si tu m'abandonnes</div>
+          <div class="l faint" style="top:212px">J'suis pas celle que tu crois, aucun cabrón ne m'a touché</div>
+          <div class="l faint" style="top:318px">À part toi, caballero, personne ne m'a touché</div>
+          <div class="l faint" style="top:424px">Ne laisse pas ton odeur imprégner mes draps</div>
+        </div>
+        <div class="bar">
+          <div class="meta"><div class="t">Clandestina (JVSTIN Remix)</div>
+            <div class="a">FILV, Edmofo, Emma Peters and JVSTIN</div></div>
+          <div class="mini">
+            <svg viewBox="0 0 24 24"><path d="M4 6h16M4 11h10M4 16h7"/></svg>
+            <svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg>
+          </div>
+          <div class="ctl">
+            <svg viewBox="0 0 24 24"><path d="M4 7h12M4 12h12M4 17h8M19 14v6M16 17h6"/></svg>
+            <div class="pair">
+              <div class="round"><svg viewBox="0 0 24 24" style="width:17px;height:17px"><path d="M9 6v12M15 6v12" stroke-width="2.4"/></svg></div>
+              <div class="round"><svg viewBox="0 0 24 24" style="width:17px;height:17px"><path d="M7 6l8 6-8 6zM17 6v12"/></svg></div>
+            </div>
+            <svg viewBox="0 0 24 24"><path d="M4 6h11M4 10h11M4 14h7"/><circle cx="18" cy="15" r="3"/><path d="M21 15V7l-3 1"/></svg>
+          </div>
+        </div>
+      </div>
+      <p class="cap"><b>After.</b> Same block, same anchor, shifted up until its first line reaches the top
+        (<code>contentShift</code>). The last line now clears the controls, and the top fade still dims the
+        songs's first line as it did before.</p>
+    </div>
+
+    <!-- MID-SONG, UNCHANGED -->
+    <div class="col">
+      <span class="tag keep">mid-song · unchanged</span>
+      <div class="phone">
+        <div class="bg"></div>
+        <div class="scrim"></div>
+        <div class="statusbar"><span>8:14</span><span>5G &nbsp; 84%</span></div>
+        <div class="lyrics">
+          <div class="l faint" style="top:74px">v1: J'lui ai dit : « Aime-moi, prends-moi dans tes bras</div>
+          <div class="l act" style="top:180px">v1: Et je n'ai plus personne</div>
+          <div class="l" style="top:286px">v1: Et ne laisse pas ton odeur imprégner mes draps</div>
+          <div class="l faint" style="top:392px">v1: Et si tu m'abandonnes</div>
+          <div class="l faint" style="top:498px">v1: J'suis pas celle</div>
+        </div>
+        <div class="bar">
+          <div class="meta"><div class="t">Clandestina (Cocaina Remix)</div>
+            <div class="a">FILV and Edmofo</div></div>
+          <div class="mini">
+            <svg viewBox="0 0 24 24"><path d="M4 6h16M4 11h10M4 16h7"/></svg>
+            <svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg>
+          </div>
+          <div class="ctl">
+            <svg viewBox="0 0 24 24"><path d="M4 7h12M4 12h12M4 17h8M19 14v6M16 17h6"/></svg>
+            <div class="pair">
+              <div class="round"><svg viewBox="0 0 24 24" style="width:17px;height:17px"><path d="M8 6l10 6-10 6z"/></svg></div>
+              <div class="round"><svg viewBox="0 0 24 24" style="width:17px;height:17px"><path d="M7 6l8 6-8 6zM17 6v12"/></svg></div>
+            </div>
+            <svg viewBox="0 0 24 24"><path d="M4 6h11M4 10h11M4 14h7"/><circle cx="18" cy="15" r="3"/><path d="M21 15V7l-3 1"/></svg>
+          </div>
+        </div>
+      </div>
+      <p class="cap"><b>This one is your “implement this” shot, and it is untouched.</b> Mid-song there <em>are</em>
+        lines above the active one, so the clamp is zero and the anchor still holds the active line a third of the
+        way down. That is why the anchor ratio itself was <em>not</em> moved — lowering it (0.12, as an earlier pass
+        did in the sibling repo) would have fixed the first frame by breaking this one.</p>
+    </div>
+
+  </div>
+
+  <!-- ============ 2 · canvas ============ -->
+  <h2><span class="n">2</span> · The Spotlight canvas — why a login “fixed” it</h2>
+  <p class="lede">The carousel was not refusing to animate. It had been told not to bother, and only a Spotify
+    connect wiped the note. Both flows below start at the same moment: a card on screen, Spotify not connected.</p>
+
+  <div class="row">
+    <div class="col">
+      <div class="flow">
+        <h3 style="color:#ffb3ba">Before — the answer decided while a provider was unasked</h3>
+        <div class="step"><i>1</i><span>ALL-style race fires: <code>Spotify</code>, ArchiveTune, Tidal, Apple Music.</span></div>
+        <div class="step"><i>2</i><span>Spotify has no credentials → <code>FAILED</code> … and that verdict was counted as an <em>answer</em>.</span></div>
+        <div class="step"><i>3</i><span>The other three reply <code>EMPTY</code>.</span></div>
+        <div class="step stop"><i>4</i><span><code>markDefinitiveMiss(mediaId)</code> — “this song has no canvas”, for 15 minutes.</span></div>
+        <div class="step stop"><i>5</i><span>Every surface asks <code>wasDefinitiveMiss</code> <em>before</em> it looks → the card stops on its still artwork.</span></div>
+        <div class="step stop"><i>6</i><span>Nothing re-asks. Only <code>invalidateCredentials()</code>, called on a Spotify connect, clears the memory — so the canvas “only loads after login”.</span></div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="flow">
+        <h3 style="color:#c9f2dc">After — an incomplete lookup is not a fact about the song</h3>
+        <div class="step go"><i>1</i><span>A miss is written only when <b>every</b> provider really answered — no <code>FAILED</code> at all.</span></div>
+        <div class="step go"><i>2</i><span>Spotify unaskable → no miss → the song stays askable.</span></div>
+        <div class="step go"><i>3</i><span>The lookup retries while the surface is on screen: 4 attempts, 2s → 4s → 8s.</span></div>
+        <div class="step go"><i>4</i><span>A genuinely canvas-less song still stops on the first attempt: the definitive-miss path is unchanged for it.</span></div>
+        <div class="step go"><i>5</i><span><code>ON_START</code> starts a fresh attempt budget, so a card that failed on a cold radio or before the account was connected recovers by itself.</span></div>
+        <div class="step go"><i>6</i><span>Connecting Spotify still clears everything (<code>invalidateCredentials()</code>) — it is simply no longer the only way out.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>What is verified, and what is not.</b> Drawn from the code, not from a device: this checkout
+    (<code>Glossy-test-master</code>) has no <code>gradlew</code>, root <code>build.gradle.kts</code> or
+    <code>settings.gradle.kts</code>, so it cannot be built here, and no APK was built. I did run the Kotlin
+    2.4.10 frontend over the three edited files — clean of parse errors, every remaining diagnostic being an
+    unresolved Android/Compose symbol from the missing classpath. Files:
+    <code>ui/player/CanvasResolver.kt</code>, <code>ui/player/Thumbnail.kt</code>,
+    <code>ui/component/ExperimentalLyrics.kt</code>.
+  </div>
+
+</div>
+</body>
+</html>

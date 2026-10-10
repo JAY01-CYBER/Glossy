@@ -89,6 +89,7 @@ import com.jay.glossy.listentogether.ListenTogetherServer
 import com.jay.glossy.listentogether.ListenTogetherServers
 import com.jay.glossy.listentogether.LogEntry
 import com.jay.glossy.listentogether.LogLevel
+import com.jay.glossy.listentogether.ROOM_CODE_LENGTH
 import com.jay.glossy.listentogether.RoomRole
 import com.jay.glossy.ui.component.DefaultDialog
 import com.jay.glossy.ui.component.IconButton
@@ -116,7 +117,7 @@ fun ListenTogetherSettings(
     val logs by viewModel.logs.collectAsStateWithLifecycle()
     val blockedUsernames by viewModel.blockedUsernames.collectAsStateWithLifecycle()
 
-    val servers = remember { ListenTogetherServers.servers }
+    val servers by ListenTogetherServers.serversFlow.collectAsStateWithLifecycle()
     var serverUrl by rememberPreference(ListenTogetherServerUrlKey, ListenTogetherServers.defaultServerUrl)
     var username by rememberPreference(ListenTogetherUsernameKey, "")
     var autoApprovalJoins by rememberPreference(ListenTogetherAutoApprovalKey, false)
@@ -294,7 +295,7 @@ fun ListenTogetherSettings(
                 Button(
                     onClick = {
                         val finalUsername = joinUsername.trim()
-                        if (finalUsername.isNotBlank() && roomCodeInput.length == 8) {
+                        if (finalUsername.isNotBlank() && roomCodeInput.length == ROOM_CODE_LENGTH) {
                             username = finalUsername
                             viewModel.joinRoom(roomCodeInput, finalUsername)
                             showJoinRoomDialog = false
@@ -303,7 +304,7 @@ fun ListenTogetherSettings(
                             Toast.makeText(context, R.string.error_username_empty, Toast.LENGTH_SHORT).show()
                         }
                     },
-                    enabled = joinUsername.trim().isNotBlank() && roomCodeInput.length == 8,
+                    enabled = joinUsername.trim().isNotBlank() && roomCodeInput.length == ROOM_CODE_LENGTH,
                 ) {
                     Text(stringResource(R.string.join))
                 }
@@ -324,8 +325,15 @@ fun ListenTogetherSettings(
                 )
                 OutlinedTextField(
                     value = roomCodeInput,
-                    onValueChange = { roomCodeInput = it.uppercase().filter { c -> c.isLetterOrDigit() }.take(8) },
+                    onValueChange = { roomCodeInput = it.uppercase().filter { c -> c.isLetterOrDigit() }.take(ROOM_CODE_LENGTH) },
                     label = { Text(stringResource(R.string.listen_together_room_code)) },
+                    supportingText = {
+                        Text(
+                            text = "${roomCodeInput.length}/$ROOM_CODE_LENGTH",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
                     leadingIcon = {
                         Icon(painterResource(R.drawable.key), contentDescription = null)
                     },
@@ -397,7 +405,12 @@ fun ListenTogetherSettings(
                                 Text(
                                     selectedServer?.let { server ->
                                         "${server.name} - ${server.location}"
-                                    } ?: serverUrl,
+                                        // A custom address is never printed here: it can
+                                        // carry the owner's handle (e.g. a Cloudflare
+                                        // account label), so the row just says a
+                                        // custom server is in use. The address itself
+                                        // stays inside the chooser's text field.
+                                    } ?: stringResource(R.string.listen_together_custom_server),
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                 )
@@ -670,7 +683,12 @@ private fun ServerChooserDialog(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = server.name,
+                                text =
+                                    if (server.url == ListenTogetherServers.GLOSSY_CLOUDFLARE_URL) {
+                                        stringResource(R.string.listen_together_glossy_cloudflare)
+                                    } else {
+                                        server.name
+                                    },
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.SemiBold,
                             )
@@ -680,7 +698,7 @@ private fun ServerChooserDialog(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Text(
-                                text = server.url,
+                                text = ListenTogetherServers.serverAddressLabel(server.url),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,

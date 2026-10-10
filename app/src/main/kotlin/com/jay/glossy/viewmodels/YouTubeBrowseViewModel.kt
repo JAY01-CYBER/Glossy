@@ -13,6 +13,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.filterYoutubeShorts
+import com.metrolist.innertube.models.YouTubeLocale
 import com.metrolist.innertube.pages.BrowseResult
 import com.jay.glossy.constants.HideExplicitKey
 import com.jay.glossy.constants.HideVideoSongsKey
@@ -35,6 +36,7 @@ constructor(
 ) : ViewModel() {
     private val browseId = savedStateHandle.get<String>("browseId")!!
     private val params = savedStateHandle.get<String>("params")
+    private val region = savedStateHandle.get<String>("region")
 
     val result = MutableStateFlow<BrowseResult?>(null)
 
@@ -43,6 +45,24 @@ constructor(
             val hideExplicit = context.dataStore.get(HideExplicitKey, false)
             val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
             val hideYoutubeShorts = context.dataStore.get(HideYoutubeShortsKey, false)
+            
+            // For charts, temporarily set locale based on selected region
+            val originalLocale = YouTube.locale
+            if (browseId == "FEmusic_charts" && region != null) {
+                val regionLanguage = when (region) {
+                    "US", "GB" -> "en"
+                    "IN" -> "hi"
+                    "JP" -> "ja"
+                    "KR" -> "ko"
+                    "ZZ" -> "en"
+                    else -> originalLocale.hl
+                }
+                YouTube.locale = YouTubeLocale(
+                    gl = region,
+                    hl = regionLanguage
+                )
+            }
+            
             YouTube
                 .browse(browseId, params)
                 .onSuccess {
@@ -53,6 +73,11 @@ constructor(
                 }.onFailure {
                     reportException(it)
                 }
+            
+            // Restore original locale
+            if (browseId == "FEmusic_charts" && region != null) {
+                YouTube.locale = originalLocale
+            }
         }
     }
 }

@@ -386,8 +386,13 @@ class MainActivity : ComponentActivity() {
         listenTogetherManager.initialize()
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            // App loads the stored language as part of the settings it already
+            // reads on IO. Taking that value keeps this off the disk: the read
+            // behind `dataStore[key]` is a runBlocking, and it sat directly on
+            // the cold-start path, before setContent. The fallback is only there
+            // for the first launch that outruns the settings load.
             val locale =
-                dataStore[AppLanguageKey]
+                (App.cachedAppLanguageTag ?: dataStore[AppLanguageKey])
                     ?.takeUnless { it == SYSTEM_DEFAULT }
                     ?.let { Locale.forLanguageTag(it) }
                     ?: Locale.getDefault()
@@ -418,20 +423,23 @@ class MainActivity : ComponentActivity() {
             safeDataStoreEdit { settings ->
                 if (preferences[SimpMusicMigrationDoneKey] != true) {
                     val currentOrder = settings[LyricsProviderOrderKey] ?: ""
-                    if (currentOrder.contains("SimpMusic")) {
+                    if (currentOrder.contains("SimpMusic", ignoreCase = true)) {
+                        // Both separators have shipped: the priority screen writes
+                        // ",", earlier builds wrote ";". Splitting on only ";" left
+                        // a comma-joined order as one token — so SimpMusic was
+                        // never actually removed — and writing ";" back produced
+                        // an order the resolver could not read, silently ignoring
+                        // the user's priority list. Normalise to the canonical
+                        // comma on the way out.
                         val orderList =
                             currentOrder
-                                .split(";")
+                                .split(';', ',')
                                 .map { it.trim() }
-                                .filter { it.isNotBlank() && it != "SimpMusic" }
-                                .toMutableList()
-                        if (orderList.isEmpty()) {
-                            settings[LyricsProviderOrderKey] = ""
-                        } else {
-                            settings[LyricsProviderOrderKey] = orderList.joinToString(";")
-                        }
+                                .filter { it.isNotBlank() && !it.equals("SimpMusic", ignoreCase = true) }
+                        settings[LyricsProviderOrderKey] =
+                            if (orderList.isEmpty()) "" else orderList.joinToString(",")
                     }
-                    if (settings[PreferredLyricsProviderKey] == "SIMPMUSIC") {
+                    if (settings[PreferredLyricsProviderKey]?.equals("SIMPMUSIC", ignoreCase = true) == true) {
                         settings[PreferredLyricsProviderKey] = PreferredLyricsProvider.LRCLIB.name
                     }
                     settings[SimpMusicMigrationDoneKey] = true
@@ -793,15 +801,21 @@ class MainActivity : ComponentActivity() {
 
                 val shouldShowNavigationBar =
                     remember(currentRoute, navigationItemRoutes) {
-                        currentRoute == null ||
-                            navigationItemRoutes.contains(currentRoute) ||
-                            currentRoute!!.startsWith("search/")
+                        val route = currentRoute
+                        route != null &&
+                            (navigationItemRoutes.contains(route) || route.startsWith("search/"))
                     }
 
-                // Routes that must render without the mini player, nav bar and rail
-                // (the login page shows a loading bottom bar otherwise).
+                // Routes that must render without the mini player, nav bar and rail.
+                // A cold start has no route at all for a moment while the welcome
+                // flag and the start destination resolve; that unknown moment used
+                // to paint the nav bar on the login screen only to hide it again a
+                // second later, so it is treated the same as the login screens.
                 val hideBottomUi =
-                    currentRoute == "wrapped" || currentRoute == "login" || currentRoute == "welcome"
+                    currentRoute == null ||
+                        currentRoute == "wrapped" ||
+                        currentRoute == "login" ||
+                        currentRoute == "welcome"
 
                 val isLandscape = configuration.containerDpSize.width > configuration.containerDpSize.height
                 val isTablet = configuration.containerDpSize.width >= 600.dp
@@ -1066,9 +1080,15 @@ class MainActivity : ComponentActivity() {
                                                 )
                                                 Text(
                                                     text = "Glossy",
+                                                    // Sized past headlineMedium on purpose: the
+                                                    // wordmark is the app's signature, so it leads
+                                                    // the bar rather than sitting level with the
+                                                    // actions beside it.
                                                     style = MaterialTheme.typography.headlineMedium.copy(
                                                         fontFamily = FontFamily(Font(R.font.roundex)),
-                                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                                        fontSize = 34.sp,
+                                                        lineHeight = 40.sp
                                                     ),
                                                     maxLines = 1,
                                                     overflow = TextOverflow.Ellipsis,

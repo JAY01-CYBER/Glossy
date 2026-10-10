@@ -18,7 +18,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -27,6 +29,7 @@ import androidx.navigation.compose.dialog
 import androidx.navigation.navArgument
 import com.jay.glossy.constants.DarkModeKey
 import com.jay.glossy.constants.PureBlackKey
+import com.jay.glossy.ui.component.AccountSettingsDialog
 import com.jay.glossy.ui.screens.artist.ArtistAlbumsScreen
 import com.jay.glossy.ui.screens.artist.ArtistItemsScreen
 import com.jay.glossy.ui.screens.artist.ArtistScreen
@@ -89,6 +92,9 @@ fun NavGraphBuilder.navigationBuilder(
     // --- WELCOME SCREEN ROUTE ---
     composable("welcome") {
         val context = LocalContext.current
+        // The sign-in screen's cookie/token link opens the account dialog;
+        // its "Log in with token" entry is this app's paste-a-cookie flow.
+        var showAccountSettings by remember { mutableStateOf(false) }
         val coroutineScope = rememberCoroutineScope()
         
         GlossyWelcomeScreen(
@@ -104,8 +110,16 @@ fun NavGraphBuilder.navigationBuilder(
             },
             onGoogleLoginClick = { 
                 navController.navigate("login")
-            }
+            },
+            onTokenClick = { showAccountSettings = true },
         )
+
+        if (showAccountSettings) {
+            AccountSettingsDialog(
+                onDismiss = { showAccountSettings = false },
+                latestVersionName = latestVersionName,
+            )
+        }
     }
 
     composable(Screens.Home.route) {
@@ -367,7 +381,7 @@ fun NavGraphBuilder.navigationBuilder(
     }
 
     composable(
-        route = "youtube_browse/{browseId}?params={params}",
+        route = "youtube_browse/{browseId}?params={params}&region={region}",
         arguments =
             listOf(
                 navArgument("browseId") {
@@ -375,6 +389,10 @@ fun NavGraphBuilder.navigationBuilder(
                     nullable = true
                 },
                 navArgument("params") {
+                    type = NavType.StringType
+                    nullable = true
+                },
+                navArgument("region") {
                     type = NavType.StringType
                     nullable = true
                 },

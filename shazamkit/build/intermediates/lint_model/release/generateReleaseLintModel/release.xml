@@ -1,0 +1,32 @@
+<variant
+    name="release"
+    package="com.metrolist.shazamkit"
+    minSdkVersion="26"
+    targetSdkVersion="37.0"
+    mergedManifest="build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml"
+    manifestMergeReport="build\outputs\logs\manifest-merger-release-report.txt"
+    proguardFiles="build\intermediates\default_proguard_files\global\proguard-android-optimize.txt-9.3.0"
+    partialResultsDir="build\intermediates\lint_partial_results\release\lintAnalyzeRelease\out">
+  <buildFeatures
+      coreLibraryDesugaring="true"/>
+  <sourceProviders>
+    <sourceProvider
+        manifests="src\main\AndroidManifest.xml"
+        javaDirectories="src\main\java;src\release\java;src\main\kotlin;src\release\kotlin"
+        resDirectories="src\main\res;src\release\res"
+        assetsDirectories="src\main\assets;src\release\assets"
+        keepRulesDirectories="src\main\keepRules;src\release\keepRules"
+        aarKeepRulesDirectories="src\main\aarKeepRules;src\release\aarKeepRules"/>
+  </sourceProviders>
+  <testSourceProviders>
+  </testSourceProviders>
+  <testFixturesSourceProviders>
+  </testFixturesSourceProviders>
+  <artifact
+      classOutputs="build\intermediates\javac\release\compileReleaseJavaWithJavac\classes;build\intermediates\built_in_kotlinc\release\compileReleaseKotlin\classes;build\intermediates\compile_r_class_jar\release\generateReleaseRFile\R.jar"
+      type="MAIN"
+      applicationId="com.metrolist.shazamkit"
+      generatedSourceFolders="build\generated\ap_generated_sources\release\out"
+      desugaredMethodsFiles="C:\Users\Chikku\.gradle\caches\9.6.1\transforms\792b12c96bcbfd45f0597adc084f66c1\transformed\desugar_jdk_libs_configuration_nio-2.1.5-desugar-lint.txt;C:\Users\Chikku\.gradle\caches\9.6.1\transforms\3f845d493bfef6b67e45388766bf6df8\transformed\D8BackportedDesugaredMethods.txt">
+  </artifact>
+</variant>

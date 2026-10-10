@@ -43,6 +43,7 @@ import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.R
 import com.jay.glossy.ui.component.IconButton
+import com.jay.glossy.ui.player.CanvasResolver
 import com.jay.glossy.ui.utils.backToMain
 import kotlinx.coroutines.launch
 
@@ -120,7 +121,16 @@ fun SpotifyTokenLoginScreen(navController: NavController) {
                         tokenStatus = null
                         scope.launch {
                             tokenStatus = SpotifySession.saveAndValidateToken(context, tokenInput.trim())
-                            if (tokenStatus == "Spotify connected") connected = true
+                            if (tokenStatus == "Spotify connected") {
+                                // A fourth provider can answer from now on, so
+                                // every "this song has no canvas" the pipeline
+                                // wrote down while signed out is stale. Cleared
+                                // here rather than left to expire, or the
+                                // Spotlight cards a user lands on next would
+                                // stay still for the next quarter of an hour.
+                                CanvasResolver.invalidateCredentials()
+                                connected = true
+                            }
                             checkingToken = false
                         }
                     },
@@ -187,6 +197,10 @@ fun SpotifyTokenLoginScreen(navController: NavController) {
                 onClick = {
                     scope.launch {
                         SpotifySession.clear(context)
+                        // Spotify drops out of the race, so any clip it was
+                        // the one serving is no longer answerable. Cleared with
+                        // the sign-in case so both directions re-ask.
+                        CanvasResolver.invalidateCredentials()
                         connected = false
                         tokenInput = ""
                         tokenStatus = null

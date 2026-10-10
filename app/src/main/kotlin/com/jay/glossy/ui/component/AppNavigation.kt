@@ -10,6 +10,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -56,8 +57,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.jay.glossy.constants.ActiveDesignStyle
+import com.jay.glossy.constants.DesignStyle
 import com.jay.glossy.constants.UseFloatingNavBarKey
 import com.jay.glossy.ui.screens.Screens
+import com.jay.glossy.ui.theme.GlossyPalette
 import com.jay.glossy.utils.rememberPreference
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -176,10 +180,23 @@ fun AppNavigationBar(
     onSearchLongClick: (() -> Unit)? = null
 ) {
     val (useFloatingNavBar) = rememberPreference(UseFloatingNavBarKey, defaultValue = true)
+    // Pinned to the classic look: the redesigned bar is no longer selectable.
+    val newDesign = ActiveDesignStyle == DesignStyle.TEAL
 
-    if (useFloatingNavBar) {
-        FloatingAppNavigationBar(
+    if (newDesign) {
+        GlossyBottomNav(
             navigationItems = navigationItems,
+            currentRoute = currentRoute,
+            onItemClick = onItemClick,
+            modifier = modifier
+        )
+    } else if (useFloatingNavBar) {
+        FloatingAppNavigationBar(
+            // The floating bar draws Search as its own pill beside the tab pill
+            // rather than as a tab, so the list it is handed (the tab set,
+            // which has no Search in it) is not enough on its own — without
+            // this the lookup came back empty and the pill never appeared.
+            navigationItems = navigationItems.withSearchPill(),
             currentRoute = currentRoute,
             onItemClick = onItemClick,
             modifier = modifier,
@@ -201,8 +218,74 @@ fun AppNavigationBar(
 }
 
 // ----------------------------------------------------
+// New design system: flat four-item bar
+// ----------------------------------------------------
+@Composable
+fun GlossyBottomNav(
+    navigationItems: List<Screens>,
+    currentRoute: String?,
+    onItemClick: (Screens, Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(GlossyPalette.Page)
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        navigationItems.forEach { screen ->
+            val selected = isRouteSelected(currentRoute, screen.route, navigationItems)
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { onItemClick(screen, selected) }
+                    .padding(vertical = 6.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(3.dp),
+            ) {
+                Icon(
+                    painter = painterResource(
+                        if (selected) screen.iconIdActive else screen.iconIdInactive
+                    ),
+                    contentDescription = stringResource(screen.titleId),
+                    tint = if (selected) GlossyPalette.Accent else GlossyPalette.TextSecondary,
+                    modifier = Modifier.size(22.dp),
+                )
+                Text(
+                    text = stringResource(screen.titleId),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (selected) GlossyPalette.Accent else GlossyPalette.TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * The floating bar renders Search as a separate pill, not a tab, and the tab set
+ * the app passes in ([Screens.MainScreens]) does not contain it. Appending it
+ * here keeps the floating bar's own split (tabs vs. pill) working while the
+ * standard bar keeps showing exactly the tabs it was given.
+ */
+private fun List<Screens>.withSearchPill(): List<Screens> =
+    if (contains(Screens.Search)) this else this + Screens.Search
+
+// ----------------------------------------------------
 // Premium MD3 Liquid Navigation Bar (Squash & Stretch)
 // ----------------------------------------------------
+
+/** The gap that separates the floating search button from the navigation pill. */
+private val SearchPillGap = 12.dp
+
+/** Bounds one tab may occupy inside the navigation pill. */
+private val TabMinWidth = 62.dp
+private val TabMaxWidth = 80.dp
+
 @Composable
 private fun FloatingAppNavigationBar(
     navigationItems: List<Screens>,
@@ -231,7 +314,10 @@ private fun FloatingAppNavigationBar(
     }
 
     val barHeight = if (slimNav) 48.dp else 56.dp 
-    val fabSize = if (slimNav) 48.dp else 56.dp 
+    // Deliberately shorter than the tab pill: search is a secondary control
+    // sitting beside the bar, not a fifth tab wedged into it, and the smaller
+    // footprint hands the tabs their width back.
+    val searchSize = if (slimNav) 42.dp else 46.dp
 
     Row(
         modifier = modifier
@@ -240,7 +326,21 @@ private fun FloatingAppNavigationBar(
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 1. The MD3 Sliding Pill Container
+        // The tabs and the search pill share whatever width the bar is given:
+        // the tabs flex down toward icon width so the pill always fits beside
+        // the navigation pill, however narrow the screen.
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val gap = if (searchItem != null) SearchPillGap else 0.dp
+            val tabCount = mainItems.size.coerceAtLeast(1)
+            val tabWidth = ((maxWidth - searchSize - gap) / tabCount)
+                .coerceIn(TabMinWidth, TabMaxWidth)
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+        // 1. Home, Mix and Library, all three inside one pill.
         MaterialLiquidTabBar(
             tabs = mainItems,
             selectedIndex = lastMainIndex,
@@ -250,12 +350,13 @@ private fun FloatingAppNavigationBar(
             pureBlack = pureBlack,
             slimNav = slimNav,
             barHeight = barHeight,
+            tabWidth = tabWidth,
             onItemClick = onItemClick
         )
 
-        // 2. Detached Search FAB
+        // 2. Search, floating on its own
         if (searchItem != null) {
-            Spacer(modifier = Modifier.width(16.dp)) 
+            Spacer(modifier = Modifier.width(gap)) 
             
             val isSearchSelected = remember(currentRoute, searchItem.route) {
                 isRouteSelected(currentRoute, searchItem.route, navigationItems)
@@ -286,6 +387,10 @@ private fun FloatingAppNavigationBar(
                 }
             }
 
+            // A circle carrying nothing but the magnifier and its own
+            // elevation, so search reads as a control in its own right rather
+            // than a fourth tab wedged into the navigation pill. The word was
+            // labelling a control nobody needs labelling.
             Surface(
                 onClick = {
                     if (onSearchLongClick == null) {
@@ -293,22 +398,26 @@ private fun FloatingAppNavigationBar(
                     }
                 },
                 interactionSource = interactionSource,
-                shape = CircleShape,
-                color = if (isSearchSelected) floatingToolbarSelectedItemContainerColor(pureBlack) else floatingToolbarFabContainerColor(pureBlack),
-                contentColor = if (isSearchSelected) floatingToolbarSelectedItemContentColor(pureBlack) else floatingToolbarFabContentColor(pureBlack),
+                shape = RoundedCornerShape(percent = 50),
+                // Accent-filled, so the pill reads as the bar's second control
+                // instead of a tonal blob that disappears into it.
+                color = if (isSearchSelected) floatingToolbarSelectedItemContainerColor(pureBlack) else MaterialTheme.colorScheme.primary,
+                contentColor = if (isSearchSelected) floatingToolbarSelectedItemContentColor(pureBlack) else MaterialTheme.colorScheme.onPrimary,
                 shadowElevation = 12.dp,
-                modifier = Modifier.size(fabSize) 
+                modifier = Modifier.size(searchSize)
             ) {
                 Box(
-                    contentAlignment = Alignment.Center, 
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         painter = painterResource(id = if (isSearchSelected) searchItem.iconIdActive else searchItem.iconIdInactive),
                         contentDescription = stringResource(searchItem.titleId),
-                        modifier = Modifier.size(24.dp) 
+                        modifier = Modifier.size(22.dp)
                     )
                 }
+            }
+        }
             }
         }
     }
@@ -324,11 +433,12 @@ private fun MaterialLiquidTabBar(
     pureBlack: Boolean,
     slimNav: Boolean,
     barHeight: androidx.compose.ui.unit.Dp,
+    /** Width of one tab — the caller decides how much of the bar the pills may take. */
+    tabWidth: androidx.compose.ui.unit.Dp,
     onItemClick: (Screens, Boolean) -> Unit
 ) {
     val tabsCount = tabs.size
     
-    val tabWidth = if (slimNav) 64.dp else 80.dp 
     val blobHeight = if (slimNav) 36.dp else 44.dp 
     
     val tabWidthPx = with(LocalDensity.current) { tabWidth.toPx() }
@@ -565,10 +675,6 @@ private fun StandardAppNavigationBar(
 // ----------------------------------------------------
 @Composable
 private fun floatingToolbarContainerColor(pureBlack: Boolean): Color = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
-@Composable
-private fun floatingToolbarFabContainerColor(pureBlack: Boolean): Color = if (pureBlack) Color.White.copy(alpha = 0.12f) else MaterialTheme.colorScheme.tertiaryContainer
-@Composable
-private fun floatingToolbarFabContentColor(pureBlack: Boolean): Color = if (pureBlack) Color.White else MaterialTheme.colorScheme.onTertiaryContainer
 @Composable
 private fun floatingToolbarSelectedItemContainerColor(pureBlack: Boolean): Color = if (pureBlack) Color.White.copy(alpha = 0.12f) else MaterialTheme.colorScheme.secondaryContainer
 @Composable

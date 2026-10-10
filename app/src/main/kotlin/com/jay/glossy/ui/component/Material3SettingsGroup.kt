@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.res.painterResource
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Card
@@ -34,7 +35,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+
+/**
+ * Vertical gap between a group's title and the rows it labels. Shared so every
+ * settings screen breathes the same way.
+ */
+val SectionTitleGap = 18.dp
 
 /**
  * A Material 3 Expressive style settings group component
@@ -51,20 +60,29 @@ fun Material3SettingsGroup(
         modifier = Modifier
             .fillMaxWidth()
     ) {
-        // Section title
+        // Section title. The bottom inset is deliberately generous: it is what
+        // separates a section's name from the rows it labels, so the label does
+        // not read as the first row of the card.
         title?.let {
             Text(
                 text = it,
                 style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 0.8.sp,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(bottom = 8.dp, top = 8.dp)
+                modifier = Modifier.padding(
+                    start = 8.dp,
+                    end = 8.dp,
+                    top = 16.dp,
+                    bottom = SectionTitleGap,
+                )
             )
         }
 
         // Settings items
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items.forEachIndexed { index, item ->
                 val shape = when {
@@ -203,6 +221,19 @@ private fun Material3SettingsItemRow(
             Spacer(modifier = Modifier.width(8.dp))
             trailing()
         }
+
+        // Affordance for rows that open something. Opt-in, because a row whose
+        // trailing slot already says everything (a switch, a value) does not
+        // need it.
+        if (item.showChevron) {
+            Spacer(modifier = Modifier.width(6.dp))
+            Icon(
+                painter = painterResource(R.drawable.navigate_next),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                modifier = Modifier.size(18.dp)
+            )
+        }
     }
 }
 
@@ -218,5 +249,7 @@ data class Material3SettingsItem(
     val showBadge: Boolean = false,
     val isHighlighted: Boolean = false,
     val enabled: Boolean = true,
+    /** Draws a trailing chevron — set it on rows that navigate somewhere. */
+    val showChevron: Boolean = false,
     val onClick: (() -> Unit)? = null
 )

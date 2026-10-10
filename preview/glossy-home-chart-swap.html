@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Glossy · Chart out, New releases in</title>
+<style>
+  :root {
+    --bg: #0b0d12;
+    --panel: #12151d;
+    --panel2: #171b26;
+    --line: #232936;
+    --text: #e8eaf2;
+    --muted: #8b93a7;
+    --accent: #7c9cff;
+    --accent2: #57e0b8;
+    --warn: #ffb454;
+    --danger: #ff6b81;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', Roboto, -apple-system, sans-serif;
+    padding: 32px 20px 60px;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 1060px; margin: 0 auto; }
+  h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.3px; }
+  h1 .thin { color: var(--muted); font-weight: 400; }
+  .sub { color: var(--muted); margin-top: 6px; font-size: 14px; }
+  .badge {
+    display: inline-block; padding: 3px 10px; border-radius: 999px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.6px; text-transform: uppercase;
+    border: 1px solid var(--line); color: var(--accent2); margin-top: 12px;
+  }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 26px; }
+  @media (max-width: 860px) { .cols { grid-template-columns: 1fr; } }
+  .phone {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    padding: 18px 16px 22px;
+    position: relative;
+    overflow: hidden;
+  }
+  .phone .tag {
+    position: absolute; top: 14px; right: 14px; font-size: 10px; letter-spacing: 1px;
+    text-transform: uppercase; padding: 3px 9px; border-radius: 999px; font-weight: 700;
+  }
+  .tag.before { background: rgba(255,107,129,.12); color: var(--danger); border: 1px solid rgba(255,107,129,.3); }
+  .tag.after  { background: rgba(87,224,184,.12); color: var(--accent2); border: 1px solid rgba(87,224,184,.3); }
+  .greet { font-size: 19px; font-weight: 700; margin: 4px 0 2px; }
+  .greet-sub { color: var(--muted); font-size: 12px; margin-bottom: 16px; }
+  .sechead { margin: 14px 0 10px; }
+  .sechead .kicker { font-size: 9.5px; letter-spacing: 1.6px; color: var(--muted); font-weight: 700; }
+  .sechead .title { font-size: 15.5px; font-weight: 700; margin-top: 2px; display:flex; align-items:center; justify-content: space-between;}
+  .sechead .title .more { color: var(--accent); font-size: 12px; font-weight: 600; cursor: default; }
+  /* removed chart card */
+  .chartcard {
+    border: 1px solid var(--line); background: var(--panel2);
+    border-radius: 20px; padding: 14px; position: relative;
+  }
+  .chartcard .row { display: flex; align-items: center; gap: 12px; }
+  .charticon {
+    width: 42px; height: 42px; border-radius: 13px; flex: none;
+    background: rgba(124,156,255,.12); display: flex; align-items: center; justify-content: center;
+    font-size: 19px;
+  }
+  .chartcard .t { font-weight: 700; font-size: 14px; }
+  .chartcard .c { color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+  .chips { display: flex; gap: 7px; margin-top: 13px; flex-wrap: nowrap; overflow: hidden; }
+  .chip {
+    font-size: 11px; font-weight: 600; padding: 6px 12px; border-radius: 999px;
+    background: #202636; color: var(--muted); white-space: nowrap;
+  }
+  .chip.sel { background: var(--accent); color: #0b0d12; }
+  .strike {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: repeating-linear-gradient(-45deg, rgba(255,107,129,.05) 0 12px, transparent 12px 24px);
+    border-radius: 20px; pointer-events: none;
+  }
+  .strike span {
+    background: rgba(255,107,129,.14); color: var(--danger); border: 1px solid rgba(255,107,129,.35);
+    font-size: 10.5px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase;
+    padding: 6px 14px; border-radius: 999px; transform: rotate(-4deg);
+  }
+  /* new releases shelf */
+  .shelf { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .tile .art {
+    aspect-ratio: 1; border-radius: 14px; display: flex; align-items: center; justify-content: center;
+    font-size: 24px; margin-bottom: 7px; border: 1px solid var(--line);
+  }
+  .a1 { background: linear-gradient(135deg,#2b3a67,#57699f); }
+  .a2 { background: linear-gradient(135deg,#4a2b57,#8a5f9e); }
+  .a3 { background: linear-gradient(135deg,#274538,#4f8a6d); }
+  .tile .n { font-size: 11.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tile .a { font-size: 10.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .faded { opacity: .45; }
+  h2 { font-size: 17px; margin: 40px 0 6px; letter-spacing: -0.2px; }
+  .h2sub { color: var(--muted); font-size: 13px; margin-bottom: 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; }
+  td code, li code {
+    font-family: Consolas, 'JetBrains Mono', monospace; font-size: 12px;
+    background: #1a1f2b; border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px;
+  }
+  td .del { color: var(--danger); }
+  td .add { color: var(--accent2); }
+  ul.notes { margin: 10px 0 0 18px; color: var(--muted); font-size: 13px; }
+  ul.notes li { margin: 5px 0; }
+  ul.notes b { color: var(--text); }
+  .status {
+    margin-top: 34px; border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px;
+    background: var(--panel); font-size: 13px; display: flex; gap: 10px; align-items: center;
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--warn); flex: none; box-shadow: 0 0 10px var(--warn); }
+  .dot.ok { background: var(--accent2); box-shadow: 0 0 10px var(--accent2); }
+  .dot.bad { background: var(--danger); box-shadow: 0 0 10px var(--danger); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Home screen <span class="thin">·</span> Chart out, New releases in</h1>
+  <div class="sub">The Chart card on the Home feed is removed. Its slot is taken by a <b>New releases</b> shelf of fresh albums — data the app already loads with the Explore page, so there is no extra network call. <b>Plus:</b> the greeting header is decluttered — the search icon and the letter avatar next to the user's name are gone.</div>
+  <div class="badge">preview only · no apk built</div>
+
+  <div class="cols">
+    <div class="phone">
+      <div class="tag before">Before</div>
+      <div class="greet">Good evening</div>
+      <div class="greet-sub">Chikku · Thursday</div>
+      <div class="sechead">
+        <div class="kicker">WHAT IS BEST CHOICE TODAY</div>
+        <div class="title">Chart</div>
+      </div>
+      <div class="chartcard">
+        <div class="row">
+          <div class="charticon">📈</div>
+          <div>
+            <div class="t">Charts</div>
+            <div class="c">Top songs by country</div>
+          </div>
+        </div>
+        <div class="chips">
+          <div class="chip">Global</div><div class="chip sel">India</div><div class="chip">US</div><div class="chip">UK</div><div class="chip">Japan</div><div class="chip">Korea</div>
+        </div>
+        <div class="strike"><span>removed</span></div>
+      </div>
+      <div class="sechead faded">
+        <div class="kicker">JUST FOR YOU</div>
+        <div class="title">Quick picks</div>
+      </div>
+      <div class="shelf faded">
+        <div class="tile"><div class="art a1">🎵</div><div class="n">Kesariya</div><div class="a">Arijit Singh</div></div>
+        <div class="tile"><div class="art a2">🎧</div><div class="n">Blinding Lights</div><div class="a">The Weeknd</div></div>
+        <div class="tile"><div class="art a3">🌙</div><div class="n">Channa Mereya</div><div class="a">Arijit Singh</div></div>
+      </div>
+    </div>
+
+    <div class="phone">
+      <div class="tag after">After</div>
+      <div class="greet">Good evening</div>
+      <div class="greet-sub">Chikku · Thursday</div>
+      <div class="sechead">
+        <div class="kicker">FRESH FROM YOUTUBE MUSIC</div>
+        <div class="title">New release albums <span class="more">MORE ›</span></div>
+      </div>
+      <div class="shelf">
+        <div class="tile"><div class="art a2">💿</div><div class="n">Midnight City</div><div class="a">Album · 2026</div></div>
+        <div class="tile"><div class="art a3">🌅</div><div class="n">Golden Hour</div><div class="a">Album · 2026</div></div>
+        <div class="tile"><div class="art a1">⚡</div><div class="n">Neon Skyline</div><div class="a">Album · 2026</div></div>
+      </div>
+      <div class="sechead">
+        <div class="kicker">JUST FOR YOU</div>
+        <div class="title">Quick picks</div>
+      </div>
+      <div class="shelf">
+        <div class="tile"><div class="art a1">🎵</div><div class="n">Kesariya</div><div class="a">Arijit Singh</div></div>
+        <div class="tile"><div class="art a2">🎧</div><div class="n">Blinding Lights</div><div class="a">The Weeknd</div></div>
+        <div class="tile"><div class="art a3">🌙</div><div class="n">Channa Mereya</div><div class="a">Arijit Singh</div></div>
+      </div>
+    </div>
+  </div>
+
+  <h2>Greeting header · search icon &amp; letter avatar removed</h2>
+  <div class="h2sub">The name row used to end with two buttons: a search icon and a circular avatar showing the first letter of the account name. Both are gone — the header is now just the greeting and the name.</div>
+  <div class="cols">
+    <div class="phone">
+      <div class="tag before">Before</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:6px">
+        <div style="flex:1">
+          <div style="font-size:12px;color:#8b93a7;font-weight:600">Good evening</div>
+          <div style="font-size:26px;font-weight:700;letter-spacing:-0.5px">Chikku</div>
+        </div>
+        <div style="width:36px;height:36px;border-radius:12px;background:#202636;display:flex;align-items:center;justify-content:center;font-size:16px" title="search icon">🔍</div>
+        <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#2b3a67,#57699f);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px" title="initial avatar">C</div>
+      </div>
+      <div class="strike" style="margin-top:10px"><span>removed · both</span></div>
+    </div>
+    <div class="phone">
+      <div class="tag after">After</div>
+      <div style="display:flex;align-items:center;margin-top:6px">
+        <div style="flex:1">
+          <div style="font-size:12px;color:#8b93a7;font-weight:600">Good evening</div>
+          <div style="font-size:26px;font-weight:700;letter-spacing:-0.5px">Chikku</div>
+        </div>
+      </div>
+      <div style="margin-top:10px;color:#8b93a7;font-size:12px;line-height:1.6">
+        Search is still one tap away: the floating bottom bar keeps its own <b style="color:#e8eaf2">Search pill</b>, and the Library tab has its search action. Account settings remain in Settings.
+      </div>
+    </div>
+  </div>
+
+  <h2>What changed</h2>
+  <div class="h2sub">Two files touched. Nothing else in the app references the removed pieces.</div>
+  <table>
+    <tr><th>File</th><th>Change</th></tr>
+    <tr>
+      <td><code>viewmodels/HomeViewModel.kt</code></td>
+      <td>
+        <span class="del">−</span> <code>HomeSection.Charts</code> (unconditionally added to every Home feed)<br>
+        <span class="add">+</span> <code>HomeSection.NewReleases</code> — added only when <code>explorePage.newReleaseAlbums</code> is non-empty (the Chart section rendered even when the network had nothing)<br>
+        <span class="add">+</span> inherits the Chart section's old shuffle weight (500) and default position (85), so it sits in the same premium slot near the top
+      </td>
+    </tr>
+    <tr>
+      <td><code>ui/screens/HomeScreen.kt</code></td>
+      <td>
+        <span class="del">−</span> <code>ChartCard</code> + <code>RegionChip</code> composables, <code>ChartRegions</code> list, the whole <code>HomeSection.Charts</code> render branch, and the now-unused <code>TrendingUp</code> import<br>
+        <span class="add">+</span> <code>HomeSection.NewReleases</code> branch: a "New release albums" header that opens the existing <code>new_release</code> screen, and a carousel of album art using the same <code>ytGridItem</code> tiles as the other Home shelves
+      </td>
+    </tr>
+    <tr>
+      <td><code>ui/component/GreetingSection.kt</code></td>
+      <td>
+        <span class="del">−</span> the header's search icon (<code>GlossyIconAction</code>) and the initial-letter avatar (<code>GlossyInitialAvatar</code>), plus the nav controller, tint, and six imports that only served them (~34 lines)<br>
+        <span class="add">+</span> header now renders only the greeting and the name — shared components untouched for MiniPlayer/Library/Settings
+      </td>
+    </tr>
+    <tr>
+      <td><code>ui/screens/Screens.kt</code></td>
+      <td>
+        <span class="add">+</span> doc comment corrected: Search rides the floating bar's pill (the header no longer hosts it)
+      </td>
+    </tr>
+  </table>
+
+  <h2>Why "New releases"</h2>
+  <ul class="notes">
+    <li><b>Zero new network code.</b> The Home view model already downloads the Explore page — which includes <code>newReleaseAlbums</code>, already filtered for hidden-explicit preference — so the shelf costs nothing extra to fill.</li>
+    <li><b>Reuses existing plumbing:</b> the <code>new_release</code> route, <code>NewReleaseScreen</code>, the localized <code>new_release_albums</code> string, and the standard album tile renderer.</li>
+    <li><b>Nothing else was removed.</b> The Charts screen itself, the Explore page's chart rows, and the region picker there are all untouched — only the Home-feed shortcut is gone.</li>
+  </ul>
+
+  <div class="status">
+    <div class="dot ok"></div>
+    <div id="cstat"><b>Verified:</b> <code>:app:compileFossDebugKotlin</code> → BUILD SUCCESSFUL (chart swap: 7m 2s · header cleanup: 1m 57s, low-memory profile, no APK built).</div>
+  </div>
+</div>
+<script>
+  // The compile result is patched into this page by the agent after the build finishes.
+</script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Decorative iridescent glass disc with an etched spiral, for the onboarding
+  backdrop (upper right). Also the placeholder-free "vinyl" nod of the brand.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="112dp"
+    android:height="112dp"
+    android:viewportWidth="112"
+    android:viewportHeight="112">
+
+    <!-- Glass disc. -->
+    <path
+        android:pathData="M56,4 a52,52 0 1 0 0.01,0 z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="42"
+                android:centerY="36"
+                android:gradientRadius="82">
+                <item android:offset="0" android:color="#F2E4D9FF" />
+                <item android:offset="0.42" android:color="#E6A99BFF" />
+                <item android:offset="0.78" android:color="#E68FD8FF" />
+                <item android:offset="1" android:color="#E65B2AB0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Etched spiral. -->
+    <path
+        android:pathData="M56,56 c0,-9 7,-16 16,-16 c12,0 22,9 22,22 c0,16 -13,30 -30,30 c-20,0 -36,-16 -36,-36 c0,-23 19,-42 42,-42"
+        android:strokeColor="#99FFFFFF"
+        android:strokeWidth="5"
+        android:strokeLineCap="round" />
+
+    <!-- Inner groove. -->
+    <path
+        android:pathData="M56,56 c0,-5 4,-9 9,-9 c7,0 12,5 12,12 c0,9 -7,16 -16,16 c-11,0 -20,-9 -20,-20"
+        android:strokeColor="#4DFFFFFF"
+        android:strokeWidth="3"
+        android:strokeLineCap="round" />
+
+    <!-- Glass rim. -->
+    <path
+        android:pathData="M56,4 a52,52 0 1 0 0.01,0 z"
+        android:strokeColor="#59FFFFFF"
+        android:strokeWidth="2" />
+
+    <!-- Specular highlight. -->
+    <path
+        android:pathData="M30,28 a16,10 0 1 0 32,0 a16,10 0 1 0 -32,0 z"
+        android:fillColor="#38FFFFFF" />
+</vector>

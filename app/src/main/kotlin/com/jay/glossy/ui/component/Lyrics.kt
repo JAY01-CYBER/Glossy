@@ -25,7 +25,10 @@ fun Lyrics(
     lyricsViewModel: LyricsViewModel = hiltViewModel(),
     onUserInteract: () -> Unit = {} 
 ) {
-    val (experimentalLyrics, _) = rememberPreference(key = ExperimentalLyricsKey, defaultValue = true)
+    // The original full-screen view is what the app shows by default. The
+    // experimental view is opt-in: it is still there, one switch away in
+    // Appearance, but a default install reads its lyrics the long-standing way.
+    val (experimentalLyrics, _) = rememberPreference(key = ExperimentalLyricsKey, defaultValue = false)
 
     val interactiveModifier = modifier.pointerInput(Unit) {
         awaitPointerEventScope {

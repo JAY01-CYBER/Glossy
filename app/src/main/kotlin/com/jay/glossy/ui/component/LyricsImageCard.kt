@@ -232,7 +232,7 @@ fun LyricsImageCard(
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .fillMaxSize()
-                            .blur(50.dp) // High blur for background
+                            .blur(80.dp) // High blur for background
                             .background(Color.Black.copy(alpha = 0.3f)) // Overlay to ensure text readability
                     )
                 }
@@ -273,7 +273,7 @@ fun LyricsImageCard(
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .fillMaxSize()
-                            .blur(50.dp)
+                            .blur(80.dp)
                             .background(Color.Black.copy(alpha = 0.3f))
                     )
                 }

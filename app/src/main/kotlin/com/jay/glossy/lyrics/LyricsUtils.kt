@@ -14,8 +14,24 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
-val LINE_REGEX = "((\\[\\d\\d:\\d\\d\\.\\d{2,3}\\] ?)+)(.*)".toRegex()
-val TIME_REGEX = "\\[(\\d\\d):(\\d\\d)\\.(\\d{2,3})\\]".toRegex()
+/**
+ * One LRC stamp: one or two minute digits and an optional fraction of one to
+ * three digits, after `.` (or `:`, which a few community files use).
+ *
+ * The old pattern demanded two minute digits *and* a two-or-three digit
+ * fraction, so `[0:12.34]`, `[00:12]` and `[00:12.3]` matched no line at all:
+ * text was then classified as timed by the looser hint regex, parsed to zero
+ * timed entries, and the player showed "Lyrics aren't time-synced" for lyrics
+ * that were timed all along.
+ */
+private const val LRC_STAMP_PATTERN = "\\[(\\d{1,2}):(\\d{2})(?:[.:](\\d{1,3}))?\\]"
+
+/** The same stamp without capture groups, so it can be embedded in a regex. */
+private const val LRC_STAMP_INLINE = "\\[\\d{1,2}:\\d{2}(?:[.:]\\d{1,3})?\\]"
+
+// Group 1 is the run of timestamps, group 2 the lyric text.
+val LINE_REGEX = "((?:$LRC_STAMP_INLINE ?)+)(.*)".toRegex()
+val TIME_REGEX = LRC_STAMP_PATTERN.toRegex()
 
 // Regex for rich sync format: [MM:SS.mm]<MM:SS.mm> word <MM:SS.mm> word ...
 private val RICH_SYNC_LINE_REGEX = "\\[(\\d{1,2}):(\\d{2})\\.(\\d{2,3})\\](.*)".toRegex()
@@ -438,7 +454,7 @@ object LyricsUtils {
 
         val decodedLyrics = decodeHtmlEntities(unescapedLyrics)
 
-        val lines = decodedLyrics.lines()
+        val lines = normalizeLrcLineBreaks(decodedLyrics).lines()
             .filter { 
                 it.isNotBlank() || it.trim().startsWith("[") || it.trim().startsWith("<")
             }
@@ -450,12 +466,114 @@ object LyricsUtils {
             RICH_SYNC_WORD_REGEX.containsMatchIn(line)
         }
 
-        return if (isRichSync) {
-            parseRichSyncLyrics(lines)
-        } else {
-            parseStandardLyrics(lines)
-        }
+        // Files whose only timing tags sit on individual words (`<mm:ss.xx>`)
+        // carry no line-level stamp at all, so the standard LRC parser produced
+        // no timed entries for them and the lyrics fell back to plain text that
+        // never followed the song. Treat them as timed, taking each line's time
+        // from its first word tag.
+        val isWordTimed = !isRichSync && lines.any { WORD_TIMED_LINE_REGEX.containsMatchIn(it) }
+
+        return stripSpeakerPrefixes(
+            when {
+                isRichSync -> parseRichSyncLyrics(lines)
+                isWordTimed -> parseWordTimedLyrics(lines)
+                else -> parseStandardLyrics(lines)
+            },
+        )
     }
+
+    // A stamp only starts a new line when what precedes it is neither a line
+    // break nor another stamp: `][00:15.00]` is one line carrying two stamps
+    // (standard LRC), while `text[00:15.00]` and `text [00:15.00]` are a missing
+    // line break.
+    private val STAMP_SPLIT_REGEX =
+        Regex("""(?<=[^\n\]])\s*(\[\d{1,2}:\d{2}(?:[.:]\d{1,3})?\])""")
+
+    private val ANY_STAMP_REGEX = Regex("""\[\d{1,2}:\d{2}(?:[.:]\d{1,3})?\]""")
+
+    /**
+     * Repairs lyrics whose line breaks are missing. A provider that returns one
+     * lyric line per run without a line break between them delivers the whole
+     * song as a single physical line (`[00:12.34]foo[00:15.00]bar`), which every
+     * timestamp parser — all of which work line by line — sees as no timing at
+     * all. Only text carrying more timestamps than lines is touched, so
+     * well-formed files pass through untouched.
+     */
+    fun normalizeLrcLineBreaks(lyrics: String): String {
+        val stamps = ANY_STAMP_REGEX.findAll(lyrics).count()
+        if (stamps < 2) return lyrics
+        val newlines = lyrics.count { it == '\n' }
+        if (stamps <= newlines + 1) return lyrics
+        return STAMP_SPLIT_REGEX
+            .replace(lyrics) { match -> "\n" + match.groupValues[1] }
+            .trimStart('\n')
+    }
+
+    /** `<mm:ss.xx>` word tag, the only timing marker in word-level-only files. */
+    private val WORD_TIMED_LINE_REGEX = Regex("""<\d{1,2}:\d{2}\.\d{2,3}>""")
+
+    private val WORD_TAG_STRIP_REGEX = Regex("""<\d{1,2}:\d{2}\.\d{2,3}>\s*""")
+
+    private val LINE_STAMP_STRIP_REGEX = Regex("""\[\d{1,2}:\d{2}\.\d{2,3}\]\s*""")
+
+    /**
+     * Parses lyrics that only carry word-level timing. Each line's time is its
+     * first word's time and the word timings are kept so karaoke highlighting
+     * still works. Lines with neither word tags nor an LRC stamp are skipped
+     * rather than pinned to zero, and mixed files keep their LRC-timed lines.
+     */
+    private fun parseWordTimedLyrics(lines: List<String>): List<LyricsEntry> {
+        val result = mutableListOf<LyricsEntry>()
+
+        lines.forEachIndexed { index, line ->
+            val trimmed = line.trim()
+            if (trimmed.isEmpty()) return@forEachIndexed
+
+            val words = parseRichSyncWords(trimmed, index, lines)
+            if (words != null) {
+                val first = words.minByOrNull { it.startTime } ?: return@forEachIndexed
+                val text =
+                    trimmed
+                        .replace(WORD_TAG_STRIP_REGEX, "")
+                        .replace(LINE_STAMP_STRIP_REGEX, "")
+                        .trim()
+                if (text.isEmpty()) return@forEachIndexed
+                result.add(
+                    LyricsEntry(
+                        time = (first.startTime * 1000.0).toLong(),
+                        text = text,
+                        words = words,
+                        agent = null,
+                        isBackground = false,
+                    ),
+                )
+                return@forEachIndexed
+            }
+
+            // Mixed files: keep whatever line-level stamps exist alongside.
+            parseLine(trimmed)?.let { result.addAll(it) }
+        }
+
+        return result.sortedBy { it.time }
+    }
+
+    /**
+     * Some providers prefix duet lines with a bare "v1: " marker after the
+     * timestamp (sometimes with a space before it), which the structured
+     * parsers only recognise in their exact format — the marker then leaks
+     * into the rendered lyric text. Strip it from the text and keep it as the
+     * agent so speaker-based alignment still works.
+     */
+    private val LEADING_SPEAKER_PREFIX = Regex("""^\s*(v\d+):\s*""")
+
+    private fun stripSpeakerPrefixes(entries: List<LyricsEntry>): List<LyricsEntry> =
+        entries.map { entry ->
+            val match = LEADING_SPEAKER_PREFIX.find(entry.text) ?: return@map entry
+            entry.copy(
+                text = entry.text.substring(match.range.last + 1),
+                agent = entry.agent ?: match.groupValues[1],
+            )
+        }
 
     /**
      * Parse rich sync lyrics format: [MM:SS.mm]<MM:SS.mm> word <MM:SS.mm> word ...
@@ -755,7 +873,7 @@ object LyricsUtils {
     private fun parseLine(line: String, words: List<WordTimestamp>? = null): List<LyricsEntry>? {
         val matchResult = LINE_REGEX.matchEntire(line.trim()) ?: return null
         val times = matchResult.groupValues[1]
-        var text = matchResult.groupValues[3]
+        var text = matchResult.groupValues[2]
         val timeMatchResults = TIME_REGEX.findAll(times)
 
         // Parse agent marker {agent:v1}
@@ -776,9 +894,15 @@ object LyricsUtils {
                 val min = timeMatchResult.groupValues[1].toLong()
                 val sec = timeMatchResult.groupValues[2].toLong()
                 val milString = timeMatchResult.groupValues[3]
-                var mil = milString.toLong()
-                if (milString.length == 2) {
-                    mil *= 10
+                // The fraction is milliseconds scaled to its own width, so one
+                // digit means tenths and two mean hundredths — reading a
+                // one-digit fraction as plain milliseconds put the line 270ms
+                // early.
+                val mil = when (milString.length) {
+                    0 -> 0L
+                    1 -> milString.toLong() * 100
+                    2 -> milString.toLong() * 10
+                    else -> milString.toLong()
                 }
                 val time = min * DateUtils.MINUTE_IN_MILLIS + sec * DateUtils.SECOND_IN_MILLIS + mil
                 LyricsEntry(time, text, words, agent = agent, isBackground = isBackground)

@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glossy · canvas resume + Dynamic colour removed</title>
+<style>
+  :root{
+    --bg:#0a0a0c; --card:#15151a; --card2:#1d1d24; --line:#2a2a33;
+    --text:#eceaf2; --dim:#9a97a8; --dimmer:#6b6878;
+    --accent:#b9a4ff; --accent2:#ff9ad5; --good:#66e0a3; --bad:#ff6b81;
+    --warn:#ffcc66;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:34px 22px 90px}
+  header.top{border-bottom:1px solid var(--line);padding-bottom:22px;margin-bottom:34px}
+  h1{font-size:25px;margin:0 0 8px;letter-spacing:-.02em;font-weight:650}
+  .sub{color:var(--dim);font-size:14.5px;max-width:760px}
+  .pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11.5px;font-weight:600;
+    letter-spacing:.04em;text-transform:uppercase;background:#241f33;color:var(--accent);border:1px solid #372e50;margin-bottom:14px}
+  h2{font-size:18px;margin:0 0 6px;letter-spacing:-.01em;font-weight:620}
+  .sec{margin:0 0 56px}
+  .lead{color:var(--dim);font-size:14px;margin:0 0 22px;max-width:800px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+  @media (max-width:900px){.row2{grid-template-columns:1fr}}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px}
+  .panel h3{margin:0 0 4px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);font-weight:600}
+  .panel .note{font-size:13px;color:var(--dimmer);margin:0 0 16px}
+  .tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;letter-spacing:.04em}
+  .tag.before{background:#3a1d24;color:#ff9aa9}
+  .tag.after{background:#16342a;color:var(--good)}
+
+  /* ---- settings mock ---- */
+  .group{background:var(--card2);border:1px solid #23232c;border-radius:16px;overflow:hidden}
+  .ghead{font-size:12px;color:var(--dim);padding:12px 14px 2px;letter-spacing:.05em;text-transform:uppercase;font-weight:600}
+  .grow{display:flex;align-items:center;gap:13px;padding:12px 14px}
+  .grow + .grow{border-top:1px solid #23232c}
+  .gico{width:34px;height:34px;border-radius:11px;background:#262633;display:flex;align-items:center;justify-content:center;flex:none;font-size:15px}
+  .gico.hi{background:linear-gradient(135deg,#4b3d7a,#6d4f8f)}
+  .gtxt{flex:1;min-width:0}
+  .gtxt .t{font-size:14.5px;font-weight:520}
+  .gtxt .d{font-size:12.5px;color:var(--dimmer);margin-top:2px}
+  .chev{color:#4c4a58;font-size:17px}
+  .switch{width:44px;height:26px;border-radius:99px;background:#3a3a46;position:relative;flex:none}
+  .switch.on{background:var(--accent)}
+  .switch:after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.15s}
+  .switch.on:after{left:21px}
+  .rowremoved{position:relative;opacity:.45}
+  .rowremoved:after{
+    content:"";position:absolute;left:12px;right:12px;top:50%;height:1.5px;background:var(--bad);
+    transform:rotate(-1.1deg);border-radius:2px;
+  }
+  .struck{text-decoration:line-through;text-decoration-color:var(--bad);text-decoration-thickness:1.5px}
+
+  /* ---- canvas sim ---- */
+  .sim{display:grid;grid-template-columns:1fr 330px;gap:22px}
+  @media (max-width:980px){.sim{grid-template-columns:1fr}}
+  .phones{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media (max-width:560px){.phones{grid-template-columns:1fr}}
+  .phone{background:#101014;border:1px solid var(--line);border-radius:20px;padding:12px}
+  .plabel{font-size:11.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin:0 0 9px 2px;font-weight:600}
+  .art{
+    position:relative;aspect-ratio:1/1;border-radius:14px;overflow:hidden;background:#000;
+    border:1px solid #26262f;
+  }
+  .cover{
+    position:absolute;inset:0;background:
+      radial-gradient(circle at 30% 25%, #7d4bd8 0%, transparent 55%),
+      radial-gradient(circle at 75% 70%, #d84b96 0%, transparent 55%),
+      linear-gradient(150deg,#241a3a,#3a1f42);
+  }
+  .canvasvid{
+    position:absolute;inset:0;opacity:0;transition:opacity .35s;
+    background:
+      conic-gradient(from 0turn at 50% 50%, #4b2bd0, #c02bd0, #ff7a59, #ffd166, #4b2bd0);
+    filter:saturate(1.25);
+  }
+  .canvasvid.on{opacity:1;animation:spin 7s linear infinite, wob 3.4s ease-in-out infinite alternate}
+  @keyframes spin{to{transform:rotate(1turn)}}
+  @keyframes wob{from{filter:saturate(1.05) hue-rotate(0deg)}to{filter:saturate(1.5) hue-rotate(40deg)}}
+  .dead{position:absolute;inset:0;background:#000;opacity:0;transition:.3s;display:flex;align-items:center;justify-content:center}
+  .dead.on{opacity:.86}
+  .dead span{font-size:12.5px;color:#8b8899;text-align:center;padding:0 14px}
+  .badge{position:absolute;left:9px;bottom:9px;font-size:10.5px;font-weight:700;letter-spacing:.05em;
+    padding:3px 8px;border-radius:6px;background:#000000a8;backdrop-filter:blur(3px);text-transform:uppercase}
+  .badge.up{color:var(--good)} .badge.down{color:var(--bad)}
+
+  .spotor{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+  .spotor .mini{aspect-ratio:16/10;border-radius:11px;flex:1;min-width:120px;position:relative;overflow:hidden;border:1px solid #26262f;background:#000}
+
+  .controls{display:flex;flex-wrap:wrap;gap:9px;margin:18px 0 0}
+  button{
+    font:inherit;font-size:13.5px;font-weight:560;padding:9px 15px;border-radius:11px;cursor:pointer;
+    background:#22222c;color:var(--text);border:1px solid #31313d;transition:.13s;
+  }
+  button:hover{background:#2b2b37}
+  button.primary{background:linear-gradient(135deg,#7b5cf0,#c05cd0);border-color:transparent;color:#fff}
+  button.primary:hover{filter:brightness(1.1)}
+  button:disabled{opacity:.38;cursor:not-allowed}
+  .modesw{display:inline-flex;background:#191920;border:1px solid var(--line);border-radius:12px;padding:3px;margin-bottom:16px}
+  .modesw button{background:transparent;border:none;padding:7px 15px;border-radius:9px;font-size:13px}
+  .modesw button.on{background:#2e2e3b;color:#fff}
+  .modesw button.on.old{background:#4a1f27;color:#ffb3bd}
+  .modesw button.on.new{background:#17352b;color:#8af0bd}
+
+  .state{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px}
+  .srow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #202028;font-size:13px}
+  .srow:last-of-type{border-bottom:none}
+  .srow .k{color:var(--dim)}
+  .srow .v{font-weight:620;font-variant-numeric:tabular-nums}
+  .v.ok{color:var(--good)} .v.no{color:var(--bad)} .v.mid{color:var(--warn)}
+  .budget{display:flex;gap:4px}
+  .dot{width:11px;height:11px;border-radius:50%;background:#34343f}
+  .dot.live{background:var(--good);box-shadow:0 0 8px #66e0a355}
+  .log{margin-top:14px;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    background:#0e0e12;border:1px solid #202028;border-radius:12px;padding:11px;height:186px;overflow:auto}
+  .log div{padding:1px 0;color:#8e8b9c}
+  .log div.hit{color:var(--good)} .log div.miss{color:var(--bad)} .log div.note{color:var(--warn)}
+  .verdict{margin-top:14px;border-radius:13px;padding:12px 14px;font-size:13.2px;border:1px solid}
+  .verdict.bad{background:#2a1418;border-color:#52222c;color:#ffbcc5}
+  .verdict.good{background:#12251d;border-color:#224b39;color:#a9f0cd}
+  .kbd{font:12px ui-monospace,Menlo,Consolas,monospace;background:#22222c;border:1px solid #31313d;border-radius:6px;padding:1px 6px}
+  ul.plain{margin:8px 0 0;padding-left:20px;color:var(--dim);font-size:13.6px}
+  ul.plain li{margin:5px 0}
+  code{font:12.5px ui-monospace,Menlo,Consolas,monospace;background:#20202a;padding:1.5px 6px;border-radius:6px;color:#d9cfff}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="pill">Preview · nothing built yet</div>
+    <h1>Dynamic colour removed, and the animated canvas now survives a trip to the background</h1>
+    <p class="sub">Two changes, shown before anything is compiled. Section 1 is the settings row that goes away. Section 2 is a working simulation of the canvas bug and the fix — press <span class="kbd">Send to background</span> then <span class="kbd">Return</span> in each mode and watch the state panel.</p>
+  </header>
+
+  <!-- ============ SECTION 1 ============ -->
+  <section class="sec">
+    <h2>1 · Dynamic colour, removed</h2>
+    <p class="lead">The row sat in <strong>Settings → Appearance</strong> and was wired to Material You wallpaper sampling. It only ever applied to the classic look, which the design style no longer uses — so it was a switch that could not visibly do anything. The row, its preference read, and the theme branch behind it are all gone. The scheme always comes from your seed colour now.</p>
+    <div class="row2">
+      <div class="panel">
+        <h3><span class="tag before">Before</span></h3>
+        <p class="note">Appearance group — four rows of chrome, one of which did nothing.</p>
+        <div class="group">
+          <div class="ghead">Appearance</div>
+          <div class="grow">
+            <div class="gico">◐</div>
+            <div class="gtxt"><div class="t">Appearance</div><div class="d">Glossy look, colours and layout</div></div>
+            <div class="chev">›</div>
+          </div>
+          <div class="grow">
+            <div class="gico">☾</div>
+            <div class="gtxt"><div class="t">Theme</div><div class="d">Dark</div></div>
+            <div class="chev">›</div>
+          </div>
+          <div class="grow rowremoved">
+            <div class="gico">🎨</div>
+            <div class="gtxt"><div class="t struck">Dynamic color</div><div class="d">Follow your wallpaper colours in the classic look</div></div>
+            <div class="switch"></div>
+          </div>
+          <div class="grow">
+            <div class="gico">▤</div>
+            <div class="gtxt"><div class="t">Color palette</div><div class="d">Rose</div></div>
+            <div class="chev">›</div>
+          </div>
+          <div class="grow">
+            <div class="gico">Aa</div>
+            <div class="gtxt"><div class="t">Font</div></div>
+            <div class="chev">›</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3><span class="tag after">After</span></h3>
+        <p class="note">Three rows, every one of which changes something you can see.</p>
+        <div class="group">
+          <div class="ghead">Appearance</div>
+          <div class="grow">
+            <div class="gico">◐</div>
+            <div class="gtxt"><div class="t">Appearance</div><div class="d">Glossy look, colours and layout</div></div>
+            <div class="chev">›</div>
+          </div>
+          <div class="grow">
+            <div class="gico">☾</div>
+            <div class="gtxt"><div class="t">Theme</div><div class="d">Dark</div></div>
+            <div class="chev">›</div>
+          </div>
+          <div class="grow">
+            <div class="gico hi">▤</div>
+            <div class="gtxt"><div class="t">Color palette</div><div class="d">Rose</div></div>
+            <div class="chev">›</div>
+          </div>
+          <div class="grow">
+            <div class="gico">Aa</div>
+            <div class="gtxt"><div class="t">Font</div></div>
+            <div class="chev">›</div>
+          </div>
+        </div>
+        <ul class="plain">
+          <li><code>SettingsScreen</code> — row and preference read deleted</li>
+          <li><code>Theme.kt</code> — the <code>dynamicDarkColorScheme</code> branch deleted</li>
+          <li>Unused <code>Build</code> / <code>DynamicColorEnabledKey</code> imports cleaned up</li>
+        </ul>
+        <p class="note" style="margin-top:14px">Untouched, because they are different features: <em>Enable dynamic theme</em> (album-art colours) and <em>Dynamic icon colors</em> (launcher icon).</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SECTION 2 ============ -->
+  <section class="sec">
+    <h2>2 · The canvas that did not come back</h2>
+    <p class="lead">Backgrounding the app killed the animated canvas on <em>both</em> surfaces — the player and the Spotlight card — and it stayed dead. Two separate poisoning layers were behind it, and the second one is the reason a restart was the only cure.</p>
+
+    <div class="modesw" id="modesw">
+      <button class="old" data-mode="old">Old behaviour</button>
+      <button class="new on" data-mode="new">Fixed behaviour</button>
+    </div>
+
+    <div class="sim">
+      <div class="panel">
+        <div class="phones">
+          <div class="phone">
+            <p class="plabel">Player · animated canvas</p>
+            <div class="art" id="playerArt">
+              <div class="cover"></div>
+              <div class="canvasvid on" id="playerVid"></div>
+              <div class="dead" id="playerDead"><span>canvas gone — showing still artwork</span></div>
+              <div class="badge up" id="playerBadge">canvas live</div>
+            </div>
+          </div>
+          <div class="phone">
+            <p class="plabel">Home · Spotlight card</p>
+            <div class="spotor">
+              <div class="mini" id="spotArt">
+                <div class="cover"></div>
+                <div class="canvasvid on" id="spotVid"></div>
+                <div class="dead" id="spotDead"><span>still card</span></div>
+              </div>
+            </div>
+            <p class="plabel" style="margin-top:14px">Both read the same URL, so one verdict hits both.</p>
+          </div>
+        </div>
+        <div class="controls">
+          <button class="primary" id="btnBg">Send to background</button>
+          <button id="btnReturn" disabled>Return to foreground</button>
+          <button id="btnReset">Reset</button>
+        </div>
+      </div>
+
+      <div class="state">
+        <div class="srow"><span class="k">Retry budget</span><span class="budget" id="budget"></span></div>
+        <div class="srow"><span class="k">URL verdict</span><span class="v mid" id="health">UNKNOWN</span></div>
+        <div class="srow"><span class="k">Session "no canvas" flag</span><span class="v mid" id="miss">not set</span></div>
+        <div class="srow"><span class="k">Surface attached</span><span class="v ok" id="surf">yes</span></div>
+        <div class="log" id="log"></div>
+        <div class="verdict good" id="verdict">Canvas live on both surfaces. Background the app, then return.</div>
+      </div>
+    </div>
+
+    <div class="row2" style="margin-top:24px">
+      <div class="panel">
+        <h3>What the old code did</h3>
+        <ul class="plain">
+          <li>Stopping the app released the window, and the <code>TextureView</code> surface with it — while the player was still bound to it. The renderer reported an error about a surface that no longer existed.</li>
+          <li>That error was read as a <strong>clip</strong> failure. Three of them emptied the retry budget.</li>
+          <li>The last one wrote <code>UNPLAYABLE</code> against the URL for <strong>30 minutes</strong>.</li>
+          <li>Worse: the next lookup then saw every provider offer that same, now-refused URL. Refusals counted as <em>answered</em>, so the lookup concluded <strong>"this song has no canvas"</strong> — and that flag lives in memory for the whole session.</li>
+          <li>Result: canvas dead on the player and the Spotlight card, and only a restart cleared the second flag.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>What the fix does</h3>
+        <ul class="plain">
+          <li><strong>Detach before the window dies.</strong> <code>setVideoTextureView(null)</code> on <code>ON_STOP</code>, so the renderer has no dead surface to complain about.</li>
+          <li><strong>A settle window.</strong> For 1.5 s after returning, an error is read as "the surface is still coming up", spends no retry, and writes no URL verdict.</li>
+          <li><strong>Fresh budget on return.</strong> Whatever failed, failed on a window that no longer exists.</li>
+          <li><strong>A dead-URL refusal is no longer a definitive miss.</strong> That verdict expires, so the song gets asked again instead of being written off for the session.</li>
+          <li><strong>First frame on a hidden window no longer claims ready</strong>, which stops the canvas fading in over an empty surface.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  var MAX_RETRIES = 3;
+  var SETTLE_MS = 1500;
+
+  var st = {
+    mode: 'new',
+    retries: MAX_RETRIES,
+    health: 'UNKNOWN',
+    miss: false,
+    backgrounded: false,
+    settleUntil: 0,
+    live: true
+  };
+
+  var el = function(id){ return document.getElementById(id); };
+  var logBox = el('log');
+
+  function log(msg, cls){
+    var d = document.createElement('div');
+    if (cls) d.className = cls;
+    d.textContent = msg;
+    logBox.appendChild(d);
+    logBox.scrollTop = logBox.scrollHeight;
+  }
+  function clearLog(){ logBox.innerHTML = ''; }
+
+  function renderSurfaces(){
+    var on = st.live;
+    el('playerVid').classList.toggle('on', on);
+    el('spotVid').classList.toggle('on', on);
+    el('playerDead').classList.toggle('on', !on);
+    el('spotDead').classList.toggle('on', !on);
+    el('playerBadge').textContent = on ? 'canvas live' : 'canvas gone';
+    el('playerBadge').className = 'badge ' + (on ? 'up' : 'down');
+  }
+
+  function renderState(){
+    var b = el('budget'); b.innerHTML = '';
+    for (var i=0;i<MAX_RETRIES;i++){
+      var d = document.createElement('div');
+      d.className = 'dot' + (i < st.retries ? ' live' : '');
+      b.appendChild(d);
+    }
+    var h = el('health');
+    h.textContent = st.health;
+    h.className = 'v ' + (st.health === 'PLAYABLE' ? 'ok' : st.health === 'UNPLAYABLE' ? 'no' : 'mid');
+
+    var m = el('miss');
+    m.textContent = st.miss ? 'SET — song treated as canvas-less' : 'not set';
+    m.className = 'v ' + (st.miss ? 'no' : 'mid');
+
+    var s = el('surf');
+    s.textContent = st.backgrounded ? 'no' : 'yes';
+    s.className = 'v ' + (st.backgrounded ? 'no' : 'ok');
+
+    var v = el('verdict');
+    if (st.miss){
+      v.className = 'verdict bad';
+      v.textContent = 'Canvas dead on both surfaces, and it will not be looked up again this session. This is the bug. Only a restart clears it.';
+    } else if (st.health === 'UNPLAYABLE'){
+      v.className = 'verdict bad';
+      v.textContent = 'URL refused by the verifier for 30 minutes — the canvas is dark on the player and the Spotlight card alike.';
+    } else if (st.backgrounded){
+      v.className = 'verdict bad';
+      v.textContent = 'Backgrounded. Press Return to foreground.';
+    } else {
+      v.className = 'verdict good';
+      v.textContent = 'Canvas live on both surfaces. Background the app, then return.';
+    }
+  }
+
+  function render(){ renderSurfaces(); renderState(); }
+
+  function reset(silent){
+    st.retries = MAX_RETRIES; st.health = 'UNKNOWN'; st.miss = false;
+    st.backgrounded = false; st.settleUntil = 0; st.live = true;
+    if (!silent) clearLog();
+    el('btnBg').disabled = false;
+    el('btnReturn').disabled = true;
+    render();
+  }
+
+  function background(){
+    st.backgrounded = true;
+    el('btnBg').disabled = true;
+    el('btnReturn').disabled = false;
+    st.live = false;
+
+    log('ON_STOP — app goes to the background');
+    if (st.mode === 'new'){
+      log('  setVideoTextureView(null) — surface detached BEFORE the window dies', 'hit');
+      log('  nothing for the renderer to fail against', 'hit');
+    } else {
+      log('  player left bound to a TextureView whose surface is about to be destroyed', 'miss');
+      log('  renderer reports an error against a released surface', 'miss');
+    }
+    log('  playback paused');
+    render();
+  }
+
+  function ret(){
+    st.backgrounded = false;
+    st.live = true;
+
+    log('');
+    log('ON_START — back to the foreground');
+
+    if (st.mode === 'new'){
+      st.settleUntil = Date.now() + SETTLE_MS;
+      st.retries = MAX_RETRIES;
+      log('  new TextureView attached, retry budget reset to ' + MAX_RETRIES, 'hit');
+      log('  settle window open for ' + SETTLE_MS + ' ms', 'note');
+      log('  renderer error during the settle window → read as "surface coming up"', 'hit');
+      log('  spends no retry, writes no URL verdict', 'hit');
+      log('  re-prepare with a full budget → first frame lands on a live window', 'hit');
+      log('  URL verdict: PLAYABLE', 'hit');
+      st.health = 'PLAYABLE';
+      st.live = true;
+    } else {
+      log('  three errors are read as CLIP failures');
+      for (var i=0;i<MAX_RETRIES;i++){
+        st.retries--;
+        log('    error ' + (i+1) + ' → retry spent, budget now ' + st.retries, 'miss');
+      }
+      st.health = 'UNPLAYABLE';
+      log('  budget empty → rememberHealth(UNPLAYABLE), trusted for 30 minutes', 'miss');
+      log('  next lookup: every provider offers that same refused URL', 'miss');
+      log('  a refusal counts as an ANSWER, not a failure', 'miss');
+      log('  winner == null && failed == 0 → markDefinitiveMiss(mediaId)', 'miss');
+      st.miss = true;
+      st.live = false;
+      log('  SESSION FLAG SET — the song is now "canvas-less"', 'miss');
+      log('  player AND Spotlight card both stay dark', 'miss');
+    }
+    render();
+  }
+
+  el('btnBg').addEventListener('click', background);
+  el('btnReturn').addEventListener('click', ret);
+  el('btnReset').addEventListener('click', function(){ reset(); render(); });
+
+  Array.prototype.forEach.call(document.querySelectorAll('#modesw button'), function(b){
+    b.addEventListener('click', function(){
+      st.mode = b.getAttribute('data-mode');
+      Array.prototype.forEach.call(document.querySelectorAll('#modesw button'), function(o){
+        o.classList.remove('on');
+      });
+      b.classList.add('on');
+      clearLog();
+      reset(true);
+      log('mode: ' + (st.mode === 'new' ? 'FIXED behaviour' : 'OLD behaviour'),
+          st.mode === 'new' ? 'hit' : 'miss');
+      log('press "Send to background", then "Return to foreground"');
+      render();
+    });
+  });
+
+  clearLog();
+  log('mode: FIXED behaviour', 'hit');
+  log('press "Send to background", then "Return to foreground"');
+  render();
+})();
+</script>
+</body>
+</html>

@@ -76,6 +76,8 @@
     <string name="hide_player_thumbnail_desc">Replace the album artwork with the app logo in the player</string>
     <string name="crop_album_art">Crop album art</string>
     <string name="crop_album_art_desc">Force a square aspect ratio by cropping video thumbnails</string>
+    <string name="thumbnail_shadow">Thumbnail shadow</string>
+    <string name="thumbnail_shadow_desc">Drop a shadow under the album artwork in the player and mini player</string>
 
     <string name="already_in_playlist">Already in playlist: </string>
 
@@ -128,6 +130,12 @@
     <string name="lyrics_animation_slide">Slide</string>
     <string name="lyrics_animation_karaoke">Karaoke</string>
     <string name="lyrics_animation_apple">Apple Music Style</string>
+    <string name="lyrics_animation_none_desc">Shows the whole line at once, without word-by-word motion.</string>
+    <string name="lyrics_animation_fade_desc">Each word fades in and brightens as it is sung.</string>
+    <string name="lyrics_animation_glow_desc">The word being sung lights up with a soft glow.</string>
+    <string name="lyrics_animation_slide_desc">A highlight sweeps across each word as it is sung.</string>
+    <string name="lyrics_animation_karaoke_desc">Words fill in one after another, like a karaoke sing-along.</string>
+    <string name="lyrics_animation_apple_desc">Words brighten quickly with a gentle glow, in the Apple Music style.</string>
     <string name="lyrics_text_size">Lyrics text size</string>
     <string name="lyrics_line_spacing">Lyrics line spacing</string>
     <string name="enable_lrclib_desc">Community-driven synchronized lyrics database</string>
@@ -141,6 +149,7 @@
     <string name="enable_lyricsplus_desc">Synchronized lyrics from multiple sources</string>
     <string name="lyrics_provider_selection">Provider selection</string>
     <string name="lyrics_provider_selection_desc">Choose which lyrics providers are enabled</string>
+    <string name="lyrics_not_time_synced">Lyrics aren\'t time-synced</string>
     <string name="auto_scroll">Re-sync</string>
     <string name="slim">Slim</string>
     <string name="slim_navbar">Slim bottom navigation bar</string>
@@ -162,6 +171,23 @@
     <string name="skip_silence_desc">Fast-forward through silent parts of songs</string>
     <string name="skip_silence_instant">Instantly skip silence</string>
     <string name="skip_silence_instant_desc">Jump ahead during silent moments instead of speeding up playback</string>
+    <string name="spatial_audio">Spatial audio</string>
+    <string name="spatial_audio_desc">Widen the stereo image for a more immersive soundstage</string>
+    <string name="audio_output">Audio output</string>
+    <string name="cast_device">Cast device</string>
+    <string name="phone_speaker">Phone speaker</string>
+    <string name="wired_headphones">Wired headphones</string>
+    <string name="show_lyrics">Show lyrics</string>
+    <string name="hide_lyrics">Hide lyrics</string>
+    <string name="menu_section_song">Song</string>
+    <string name="menu_section_playback">Playback</string>
+    <string name="menu_section_audio">Audio</string>
+    <string name="menu_section_room">Room</string>
+    <string name="menu_section_more">More</string>
+    <string name="spotlight_canvas">Spotlight Canvas</string>
+    <string name="spotlight_canvas_desc">Animated artwork on the Featured Spotlight cards, one ahead of the card in view. Independent of Canvas Background</string>
+    <string name="canvas_mobile_data">Load canvases on mobile data</string>
+    <string name="canvas_mobile_data_desc">On: animated canvases load on Wi-Fi and mobile data. Off: Wi-Fi only</string>
 
     <string name="advanced_login">Log in with token</string>
     <string name="token_hidden">Tap to show token</string>
@@ -188,7 +214,11 @@
     <string name="last_song_listened">Based on the last song you listened to</string>
     <string name="app_language">App language</string>
     <string name="lyrics_provider_priority">Lyrics provider priority</string>
-    <string name="lyrics_provider_priority_desc">Drag to reorder providers by preference. Higher position means higher priority</string>
+    <string name="lyrics_provider_priority_desc">Move a provider up to ask it first — the highest-ranked provider that has lyrics wins. Switch one off to keep it out of the search</string>
+    <string name="spotify_lyrics">Spotify lyrics</string>
+    <string name="spotify_lyrics_desc">Sync synced lyrics from your signed-in Spotify account and keep them in the app for offline playback. Requires Spotify sign-in</string>
+    <string name="move_up">Move up</string>
+    <string name="move_down">Move down</string>
     <string name="experimental_lyrics">Experimental lyrics</string>
     <string name="experimental_lyrics_desc">Enable the new experimental lyrics component with enhanced animations and performance</string>
     <string name="experimental_lyrics_beta_title">Experimental feature</string>
@@ -913,6 +943,8 @@
 
     <!-- Credits / About Screen -->
     <string name="credits_lead_developer">Lead developer</string>
+    <string name="credits_developer">Developer</string>
+    <string name="credits_glossy_devs">Glossy Devs</string>
     <string name="credits_collaborator">Collaborator</string>
     <string name="credits_collaborators_section">Collaborators</string>
     <string name="credits_license_name">GNU General Public License v3.0</string>
@@ -1060,4 +1092,119 @@
     <string name="stream_source_web_creator_desc">Creator web client.</string>
     <string name="stream_source_android_creator">ANDROID_CREATOR</string>
     <string name="stream_source_android_creator_desc">Android creator client. Off by default; needs DroidGuard.</string>
+
+    <!-- ================= New design system (teal, dark) ================= -->
+    <string name="glossy_explore">Explore</string>
+    <string name="glossy_new_playlist">New playlist</string>
+    <string name="glossy_continue_google">Continue with Google</string>
+    <string name="glossy_cookie_login">Use a cookie / token instead</string>
+    <string name="glossy_continue_guest">Continue as a guest</string>
+    <string name="glossy_credits">Crafted with ❤ by Jay, Chikku &amp; Matrix</string>
+    <string name="glossy_welcome_back">Welcome back, %1$s</string>
+    <string name="glossy_welcome_title">Welcome to Glossy</string>
+    <string name="glossy_welcome_subtitle">A beautifully crafted music player tailored for the way you listen. Smooth, ad-free, and open source.</string>
+    <string name="glossy_tagline">Pure Music · Zero Ads · Free</string>
+    <string name="glossy_legal_footnote">By continuing, you agree to YouTube Music\'s Terms</string>
+    <string name="glossy_good_morning">Good morning</string>
+    <string name="glossy_good_afternoon">Good afternoon</string>
+    <string name="glossy_good_evening">Good evening</string>
+    <string name="glossy_listen_again">Listen again</string>
+    <string name="glossy_energize">Energize</string>
+    <string name="glossy_focus">Focus</string>
+    <string name="glossy_chill">Chill</string>
+    <string name="glossy_playing_from">Playing from %1$s</string>
+    <string name="glossy_dynamic_color">Dynamic color</string>
+    <string name="glossy_dynamic_color_desc">Follow your wallpaper colours in the classic look</string>
+    <string name="glossy_download_wifi_only">Download over Wi-Fi only</string>
+    <string name="glossy_download_wifi_only_desc">Wait for Wi-Fi before starting downloads</string>
+    <string name="glossy_download_wifi_blocked">Downloads wait for Wi-Fi. Turn off \"Download over Wi-Fi only\" to download on mobile data.</string>
+    <string name="glossy_cached_music">Cached music</string>
+    <string name="glossy_used_amount">%1$s used</string>
+    <string name="glossy_signed_in_google">Signed in with Google</string>
+    <string name="glossy_signed_in_guest">Browsing without an account</string>
+    <string name="glossy_teal">Teal</string>
+    <string name="glossy_theme_dark">Dark</string>
+    <string name="glossy_theme_light">Light</string>
+    <string name="glossy_theme_system">System</string>
+    <string name="glossy_section_more">More</string>
+    <string name="glossy_appearance_desc">Theme, colours, player and layout</string>
+    <string name="glossy_font">Font</string>
+    <string name="glossy_section_playback_audio">Playback &amp; audio</string>
+    <string name="glossy_section_content_group">Content</string>
+    <string name="glossy_section_data">Data</string>
+    <string name="glossy_section_integrations">Integrations</string>
+    <string name="glossy_section_about">About</string>
+    <string name="glossy_community_title">You\'re all set</string>
+    <string name="glossy_community_subtitle">Glossy is built in the open. Follow along for release news, support and early builds.</string>
+    <string name="glossy_community_handle">@glossyplayer</string>
+    <string name="glossy_community_instagram_desc">Screenshots, previews and release news</string>
+    <string name="glossy_community_discord_desc">Chat, report bugs and request features</string>
+    <string name="glossy_community_telegram_desc">Instant release alerts and support</string>
+    <string name="glossy_follow_us">Follow us</string>
+    <string name="glossy_no_playlists">Nothing here yet</string>
+    <string name="glossy_library_eyebrow">Your collection</string>
+    <string name="glossy_new_playlist_hint">Build from scratch</string>
+    <string name="glossy_section_app">App</string>
+    <string name="glossy_update_action">Update</string>
+    <string name="glossy_downloaded">Downloaded</string>
+    <string name="glossy_featured">Featured</string>
+    <string name="glossy_explore_charts">Explore charts</string>
+    <string name="glossy_charts_caption">Top 50 \u00b7 refreshed daily</string>
+    <string name="glossy_playlist_songs">%1$d songs</string>
+    <string name="glossy_playlist_songs_offline">%1$d songs \u00b7 offline</string>
+
+    <!-- ================= Audio boost ================= -->
+    <string name="audio_boost">Audio boost</string>
+    <string name="audio_boost_desc">Play louder than the track was mixed</string>
+    <string name="audio_boost_off">Off</string>
+    <string name="audio_boost_light">Light \u00b7 +2.5 dB</string>
+    <string name="audio_boost_strong">Strong \u00b7 +5 dB</string>
+    <string name="audio_boost_maximum">Maximum \u00b7 +9 dB</string>
+    <string name="audio_boost_off_desc">Leave the output exactly as it was mixed</string>
+    <string name="audio_boost_light_desc">A gentle lift for quiet masters and noisy rooms</string>
+    <string name="audio_boost_strong_desc">Clearly louder \u2014 about the limit for a phone speaker</string>
+    <string name="audio_boost_maximum_desc">Maximum loudness. Headphones recommended; loud masters may distort</string>
+    <string name="audio_boost_notice">Audio boost raises the output gain of the same audio effect the equalizer uses. Turning it off restores your equalizer exactly as it was.</string>
+
+    <!-- ================= Canvas preload ================= -->
+    <string name="canvas_preload">Preload canvases</string>
+    <string name="canvas_preload_desc">Prepare the next canvas before it is on screen, so it starts on its first frame instead of buffering</string>
+
+    <!-- ================= Canvas corner size ================= -->
+    <string name="canvas_corner_size">Canvas corner size</string>
+    <string name="canvas_corner_size_desc">How round the animated canvas surfaces are drawn \u2014 the player artwork and the Featured cards</string>
+    <string name="canvas_corner_size_value">%1$d dp</string>
+    <string name="canvas_corner_size_square">Square</string>
+
+    <!-- ================= Mini lyrics style ================= -->
+    <string name="mini_lyrics_style">Mini lyrics style</string>
+    <string name="mini_lyrics_style_desc">How the line being sung is shown on the now-playing screen while "Show lyrics on player" is on</string>
+    <string name="mini_lyrics_style_classic">Classic strip \u2014 lyrics on a card under the artwork</string>
+    <string name="mini_lyrics_style_classic_desc">The original: the active line large and the next line dimmed, in a frosted card. Costs the design some height.</string>
+    <string name="mini_lyrics_style_canvas_glow">Glow on canvas \u2014 current line glows over the artwork</string>
+    <string name="mini_lyrics_style_canvas_glow_desc">The line being sung is drawn on the artwork itself, low, glowing in the accent colour. No height is taken from the design. Works in every player design.</string>
+
+    <!-- ================= Mini lyrics animation style ================= -->
+    <string name="mini_lyrics_animation_style">Mini lyrics animation</string>
+    <string name="mini_lyrics_animation_style_desc">Word-by-word animation style for mini lyrics on the player</string>
+
+    <!-- ================= Canvas check ================= -->
+    <string name="canvas_check">Canvas check</string>
+    <string name="canvas_check_desc">Verify a canvas belongs to the song, and that the clip plays, before the player or the Featured cards use it</string>
+    <string name="canvas_check_none">No canvases checked yet</string>
+    <string name="canvas_check_summary_shown">%1$s \u00b7 shown from %2$s \u00b7 %3$d ms</string>
+    <string name="canvas_check_summary_none">%1$s \u00b7 nothing shown \u00b7 %2$d ms</string>
+    <string name="canvas_check_dialog_title">Canvas check</string>
+    <string name="canvas_check_empty">Nothing has been checked yet. Play a song, or open Home \u2014 the Featured carousel checks its cards before the swipe.</string>
+    <string name="canvas_check_clear">Clear</string>
+    <string name="canvas_check_claimed">clip: %1$s</string>
+    <string name="canvas_check_health_playable">URL checked \u2014 plays</string>
+    <string name="canvas_check_health_unplayable">URL checked \u2014 will not play</string>
+    <string name="canvas_check_health_unknown">URL not checked yet</string>
+    <string name="canvas_check_verdict_matched">matched</string>
+    <string name="canvas_check_verdict_unverified">accepted, unjudged</string>
+    <string name="canvas_check_verdict_wrong_song">wrong song</string>
+    <string name="canvas_check_verdict_empty">nothing</string>
+    <string name="canvas_check_verdict_failed">lookup failed</string>
+    <string name="canvas_check_verdict_dead_url">will not play</string>
 </resources>

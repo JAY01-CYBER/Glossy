@@ -17,6 +17,18 @@ import java.time.ZoneOffset
 
 val EnableHighRefreshRateKey = booleanPreferencesKey("enableHighRefreshRate")
 val EnableLandscapeScalingKey = booleanPreferencesKey("enableLandscapeScaling")
+
+/**
+ * Turns off the app's ambient, always-running animations — the mini player's
+ * equalizer and drifting glow, the wash behind the home header, the notes over
+ * the vinyl record.
+ *
+ * Low-RAM phones start with this on, so a budget device is calm without anyone
+ * having to find the switch. Android's own "Remove animations" developer
+ * setting is obeyed on top of it either way — see
+ * `rememberAmbientMotionEnabled`.
+ */
+val ReduceMotionKey = booleanPreferencesKey("reduceMotion")
 val DynamicThemeKey = booleanPreferencesKey("dynamicTheme")
 val SelectedThemeColorKey = intPreferencesKey("selectedThemeColor")
 val DarkModeKey = stringPreferencesKey("darkMode")
@@ -31,7 +43,26 @@ enum class MiniPlayerBackgroundStyle {
     BLUR,
     GRADIENT,
     PURE_BLACK,
-    ANIMATED_MESH,
+
+    /** Drifting, pulsing artwork-palette glow behind the mini player. */
+    GLOW,
+}
+
+/**
+ * How the mini player marks the track that is playing: the flat equalizer bars,
+ * or small music notes drifting upwards.
+ *
+ * Both are frozen — not hidden — while playback is paused, so the song row never
+ * shifts when the music stops. See `NowPlayingAnimationIndicator`.
+ */
+val MiniPlayerPlayingAnimationKey = stringPreferencesKey("miniPlayerPlayingAnimation")
+
+enum class MiniPlayerPlayingAnimation {
+    /** Four bars that rise and fall. The default, and the cheapest to draw. */
+    BARS,
+
+    /** Three small notes that float out of the indicator and fade away. */
+    NOTES,
 }
 
 val DensityScaleKey = floatPreferencesKey("density_scale_factor")
@@ -74,7 +105,16 @@ enum class PlayerStyle {
     MODERN,
     WAVY,
     VIVI_NEW,
-    APPLE_MUSIC
+    APPLE_MUSIC,
+
+    /** Spinning vinyl record with the animated canvas rendered on the disc. */
+    VINYL,
+
+    /** Maroon gradient with the transport parked inside one dark pill. */
+    CAPSULE,
+
+    /** Full-bleed album artwork behind glass controls. */
+    CINEMATIC
 }
 
 val MiniPlayerStyleKey = stringPreferencesKey("miniPlayerStyle")
@@ -82,12 +122,84 @@ val MiniPlayerStyleKey = stringPreferencesKey("miniPlayerStyle")
 enum class MiniPlayerStyle {
     LEGACY,
     MODERN,
-    GLOSSY_SPECIAL
+    GLOSSY_SPECIAL,
+
+    /** The teal design system's compact bar with a teal progress hairline. */
+    STUDIO
+}
+
+/**
+ * Which visual language the app paints itself with.
+ *
+ * [TEAL] is the dark design system with the fixed palette, and [CLASSIC] is
+ * the previous Material You look. Only dark mode is themed: light mode keeps
+ * the Material You scheme in both cases.
+ */
+val DesignStyleKey = stringPreferencesKey("designStyle")
+
+/**
+ * The look the app actually paints with.
+ *
+ * The app runs the Materialistic skin: the redesigned screens keep their
+ * layout, but every colour comes from the Material 3 scheme — tonal surfaces,
+ * the primary role as the accent, a `primaryContainer` home header — so the
+ * whole app repaints from the seed colour and follows Material You on
+ * Android 12+. The classic near-black/teal palette and the teal design are
+ * still described by [DesignStyle] so those code paths keep compiling, but
+ * nothing selects them.
+ */
+val ActiveDesignStyle = DesignStyle.MATERIALISTIC
+
+/** Nickname a guest picks on the welcome screen. */
+val GuestNameKey = stringPreferencesKey("guest_name")
+
+/**
+ * Set by the sign-in flow right before it restarts the app, so the relaunched
+ * process can show the community page as the last onboarding step instead of
+ * dropping the user straight on Home.
+ */
+val PendingCommunityIntroKey = booleanPreferencesKey("pending_community_intro")
+
+/**
+ * Material You wallpaper colour for the classic look. Off by default so the
+ * app opens on its own brand colour instead of whatever wallpaper is set;
+ * the new design ignores it either way.
+ */
+val DynamicColorEnabledKey = booleanPreferencesKey("dynamicColorEnabled")
+
+/**
+ * Only start downloads on an unmetered (Wi-Fi) connection. On mobile data the
+ * download is skipped with a short explanation instead of silently burning the
+ * user's data plan.
+ */
+val DownloadOverWifiOnlyKey = booleanPreferencesKey("downloadOverWifiOnly")
+
+enum class DesignStyle {
+    /** The hand-tuned dark design with the fixed teal palette. */
+    TEAL,
+
+    /** The previous Material You styling, with the classic Glossy tokens. */
+    CLASSIC,
+
+    /** Material 3 tonal skin: the Glossy tokens read the scheme. */
+    MATERIALISTIC,
+    ;
+
+    companion object {
+        fun fromValue(value: String?): DesignStyle = entries.find { it.name == value } ?: TEAL
+    }
 }
 
 val UseNewMiniPlayerDesignKey = booleanPreferencesKey("useNewMiniPlayerDesign")
 val HidePlayerThumbnailKey = booleanPreferencesKey("hidePlayerThumbnail")
 val CropAlbumArtKey = booleanPreferencesKey("cropAlbumArt")
+
+/**
+ * Drops a shadow under the album artwork in the player and the mini player.
+ * On by default. minSdk is 26, so the shadow stays plain black: a coloured spot
+ * colour is only honoured from API 28 up.
+ */
+val ThumbnailShadowKey = booleanPreferencesKey("thumbnailShadow")
 val SeekExtraSeconds = booleanPreferencesKey("seekExtraSeconds")
 val PauseOnMute = booleanPreferencesKey("pauseOnMute")
 val ResumeOnBluetoothConnectKey = booleanPreferencesKey("resumeOnBluetoothConnect")
@@ -102,12 +214,108 @@ val AlarmEntriesKey = stringPreferencesKey("alarmEntries")
 val DeveloperModeKey = booleanPreferencesKey("developerMode")
 val CanvasThumbnailAnimationKey = booleanPreferencesKey("canvasThumbnailAnimation")
 
+/**
+ * Animated canvases on the home screen's Featured Spotlight carousel.
+ *
+ * Deliberately its own switch, and on by default. The carousel is a browsing
+ * surface, not the player: someone who keeps "Canvas Background" off because a
+ * full-screen moving backdrop behind the lyrics is distracting may still want
+ * the featured cards to move. It also has its own data cost — up to one clip
+ * per visible card — so it is worth being able to turn off on its own.
+ */
+val SpotlightCanvasKey = booleanPreferencesKey("spotlightCanvasAnimation")
+
+/**
+ * Whether animated canvases may also load on mobile data. On by default — a
+ * canvas is a looping video download, so this is the switch to turn off for
+ * anyone who wants animated artwork to stay on Wi-Fi, and with it off a
+ * cellular connection simply keeps the static artwork instead of buffering
+ * video. Governs every canvas surface, the Spotlight carousel included.
+ *
+ * Answered by the connection's transport, not by "metered": Wi-Fi the system
+ * has flagged as metered still counts as Wi-Fi here (see
+ * `isMobileDataConnection`).
+ */
+val CanvasOnMobileDataKey = booleanPreferencesKey("canvasOnMobileData")
+
+/**
+ * Whether upcoming canvases are prepared before they are on screen.
+ *
+ * A canvas is a provider lookup plus a video download, so without this the
+ * card (or the next track) only starts that work once it is already the one
+ * being shown — which is exactly the late arrival the preload exists to fix.
+ * On by default; off means nothing is resolved or downloaded until a canvas is
+ * actually visible. The mobile-data rule still applies on top of it.
+ */
+val CanvasPreloadKey = booleanPreferencesKey("canvasPreload")
+
+/**
+ * Corner radius, in dp, of every animated-canvas surface (the player artwork
+ * and the Featured Spotlight cards). Kept as a plain int so the Appearance
+ * slider can write it directly; 28dp is the Spotlight card's original shape.
+ */
+val CanvasCornerSizeKey = intPreferencesKey("canvasCornerSize")
+
+/** Default [CanvasCornerSizeKey]: the Spotlight card's design radius. */
+const val DefaultCanvasCornerSize = 28
+
+/** Square, so a canvas can be drawn edge to edge in its slot. */
+const val MinCanvasCornerSize = 0
+
+/** Fully round for a square canvas: half of the 252dp Spotlight card. */
+const val MaxCanvasCornerSize = 48
+
+/**
+ * Shows the current synced lyric line on the now-playing screen itself, in
+ * every player design. Toggled from the player overflow menu
+ * ("Show Lyrics" / "Hide Lyrics") and remembered across restarts.
+ */
+val ShowLyricsOnPlayerKey = booleanPreferencesKey("showLyricsOnPlayer")
+
+/**
+ * How the line being sung is shown on the now-playing screen when
+ * [ShowLyricsOnPlayerKey] is on. Chosen in Appearance.
+ */
+val MiniLyricsStyleKey = stringPreferencesKey("miniLyricsStyle")
+
+enum class MiniLyricsStyle {
+    /**
+     * The original strip: a frosted card under the artwork carrying the active
+     * line large and the next line dimmed under it. It lives *beside* the
+     * artwork, so it takes height from the design.
+     */
+    CLASSIC,
+
+    /**
+     * The active line is drawn on the artwork itself, over the animated canvas,
+     * glowing in the accent colour. Nothing is taken from the layout — the lyric
+     * sits in space the design already leaves empty — and tapping it still opens
+     * the full lyrics view.
+     */
+    CANVAS_GLOW,
+}
+
+/**
+ * Word-by-word animation style for mini lyrics on the player.
+ * Chosen in Appearance.
+ */
+val MiniLyricsAnimationStyleKey = stringPreferencesKey("miniLyricsAnimationStyle")
+
+enum class MiniLyricsAnimationStyle {
+    NONE,
+    FADE,
+    GLOW,
+    SLIDE,
+    KARAOKE,
+    APPLE,
+}
+
 /** Which canvas provider strategy to use for animated artwork. */
 val CanvasStyleKey = stringPreferencesKey("canvasStyle")
 enum class CanvasStyle {
     /**
-     * Race every provider (Spotify + ArchiveTune + Tidal + Apple = the
-     * Glossy engine) concurrently and show the first canvas that comes back.
+     * Race every provider (Spotify + ArchiveTune + Tidal + Apple + YouTube =
+     * the Glossy engine) concurrently and show the first canvas that comes back.
      */
     ALL,
     /** Glossy engine: Tidal + Apple Music (original behavior). */
@@ -118,6 +326,8 @@ enum class CanvasStyle {
     BOTH,
     /** Spotify web-player Canvas artwork. */
     SPOTIFY,
+    /** YouTube/InnerTube visualizer clips and #shorts. */
+    YOUTUBE,
 }
 
 val CanvasCacheModeKey = stringPreferencesKey("canvasCacheMode")
@@ -138,6 +348,13 @@ val ContentLanguageKey = stringPreferencesKey("contentLanguage")
 val ContentCountryKey = stringPreferencesKey("contentCountry")
 val EnableKugouKey = booleanPreferencesKey("enableKugou")
 val EnableLrcLibKey = booleanPreferencesKey("enableLrclib")
+
+/**
+ * Lyrics from the logged-in Spotify account. Off by default: it only does
+ * anything once the user is signed in to Spotify, and it stores a local copy
+ * of whatever it fetches.
+ */
+val EnableSpotifyLyricsKey = booleanPreferencesKey("enableSpotifyLyrics")
 val EnableBetterLyricsKey = booleanPreferencesKey("enableBetterLyrics")
 val EnablePaxsenixKey = booleanPreferencesKey("enablePaxsenix")
 val EnableLyricsPlus = booleanPreferencesKey("enableLyricsPlus")
@@ -186,6 +403,9 @@ val SkipSilenceKey = booleanPreferencesKey("skipSilence")
 val SkipSilenceInstantKey = booleanPreferencesKey("skipSilenceInstant")
 val AudioNormalizationKey = booleanPreferencesKey("audioNormalization")
 
+/** Mid/side stereo widening ("Spatial Audio") applied in the audio sink. */
+val SpatialAudioKey = booleanPreferencesKey("spatialAudio")
+
 val LoudnessLevelKey = stringPreferencesKey("loudnessLevel")
 
 enum class LoudnessLevel(
@@ -210,6 +430,16 @@ val SoundFxVirtualizerEnabledKey = booleanPreferencesKey("soundFxVirtualizerEnab
 val SoundFxVirtualizerStrengthKey = intPreferencesKey("soundFxVirtualizerStrength")
 val SoundFxAutoHeadroomKey = booleanPreferencesKey("soundFxAutoHeadroom")
 val SoundFxProfilesJsonKey = stringPreferencesKey("soundFxProfilesJson")
+
+/**
+ * The one-tap loudness boost, stored as the name of a
+ * [com.jay.glossy.eq.soundfx.AudioBoostLevel]. It is not a separate audio
+ * effect: the level is folded into the sound fx settings as they are applied to
+ * the live session, so it drives the very same LoudnessEnhancer the equalizer
+ * screen writes to, and it rides along with the existing "settings changed"
+ * observer in MusicService.
+ */
+val AudioBoostLevelKey = stringPreferencesKey("audioBoostLevel")
 
 val AutoLoadMoreKey = booleanPreferencesKey("autoLoadMore")
 val AutoRadioQueueKey = booleanPreferencesKey("autoRadioQueue")
@@ -274,10 +504,17 @@ val ListenTogetherAutoApprovalKey = booleanPreferencesKey("listenTogetherAutoApp
 val ListenTogetherAutoApproveSuggestionsKey = booleanPreferencesKey("listenTogetherAutoApproveSuggestions")
 val ListenTogetherSyncVolumeKey = booleanPreferencesKey("listenTogetherSyncVolume")
 val ListenTogetherBlockedUsersKey = stringPreferencesKey("listenTogetherBlockedUsers")
+val ListenTogetherPendingActionsKey = stringPreferencesKey("listenTogetherPendingActions")
 val ListenTogetherInTopBarKey = booleanPreferencesKey("listenTogetherInTopBar")
 
 val ListenTogetherSessionTokenKey = stringPreferencesKey("listenTogetherSessionToken")
 val ListenTogetherRoomCodeKey = stringPreferencesKey("listenTogetherRoomCode")
+
+/**
+ * After a Listen Together reconnect, ask the host for the current state again
+ * (instead of trusting the state snapshot that arrived with the event).
+ */
+val ListenTogetherSmartResyncKey = booleanPreferencesKey("listenTogetherSmartResync")
 val ListenTogetherUserIdKey = stringPreferencesKey("listenTogetherUserId")
 val ListenTogetherIsHostKey = booleanPreferencesKey("listenTogetherIsHost")
 val ListenTogetherSessionTimestampKey = longPreferencesKey("listenTogetherSessionTimestamp")
