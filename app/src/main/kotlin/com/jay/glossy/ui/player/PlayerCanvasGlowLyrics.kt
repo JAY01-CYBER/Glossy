@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.sp
 import com.jay.glossy.constants.MiniLyricsAnimationStyle
 import com.jay.glossy.constants.MiniLyricsAnimationStyleKey
 import com.jay.glossy.ui.component.applyWordAnimation
+import com.jay.glossy.ui.component.withSynthesisedWords
 import com.jay.glossy.utils.rememberEnumPreference
 import com.metrolist.models.MediaMetadata
 
@@ -256,17 +257,19 @@ fun PlayerCanvasGlowLyrics(
                             ) {
                                 val activeLine = preview.lines.getOrNull(active)
                                 // Word-by-word animation for the line being sung,
-                                // when one was chosen and the provider timed the
-                                // words; otherwise the line is drawn whole. The
-                                // clock read in the arguments keeps each tick's
-                                // recomposition inside this one line.
+                                // when one was chosen. Lines without provider word
+                                // timings get synthesised ones spread over their
+                                // own window; otherwise the line is drawn whole.
+                                // The clock read in the arguments keeps each
+                                // tick's recomposition inside this one line.
                                 val animatedLine =
                                     if (activeLine != null &&
-                                        activeLine.words?.isNotEmpty() == true &&
                                         miniLyricsAnimationStyle != MiniLyricsAnimationStyle.NONE
                                     ) {
                                         applyWordAnimation(
-                                            item = activeLine,
+                                            item = activeLine.withSynthesisedWords(
+                                                preview.lines.getOrNull(active + 1)?.time,
+                                            ),
                                             animationStyle = miniLyricsAnimationStyle,
                                             isActiveLine = true,
                                             effectivePlaybackPosition = preview.effectivePlaybackPosition,

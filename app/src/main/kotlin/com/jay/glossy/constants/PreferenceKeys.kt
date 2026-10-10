@@ -314,8 +314,8 @@ enum class MiniLyricsAnimationStyle {
 val CanvasStyleKey = stringPreferencesKey("canvasStyle")
 enum class CanvasStyle {
     /**
-     * Race every provider (Spotify + ArchiveTune + Tidal + Apple = the
-     * Glossy engine) concurrently and show the first canvas that comes back.
+     * Race every provider (Spotify + ArchiveTune + Tidal + Apple + YouTube =
+     * the Glossy engine) concurrently and show the first canvas that comes back.
      */
     ALL,
     /** Glossy engine: Tidal + Apple Music (original behavior). */
@@ -326,6 +326,8 @@ enum class CanvasStyle {
     BOTH,
     /** Spotify web-player Canvas artwork. */
     SPOTIFY,
+    /** YouTube/InnerTube visualizer clips and #shorts. */
+    YOUTUBE,
 }
 
 val CanvasCacheModeKey = stringPreferencesKey("canvasCacheMode")

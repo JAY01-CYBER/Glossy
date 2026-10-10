@@ -3,12 +3,13 @@
  * Licensed under GPL-3.0 | See git history for contributors
  *
  * Canvas resolver — picks providers according to the user's Canvas style:
- *  - ALL:          Race Spotify + ArchiveTune + Glossy (Tidal + Apple) in
- *                  parallel and show the first animated canvas that lands.
+ *  - ALL:          Race Spotify + ArchiveTune + Glossy (Tidal + Apple) + YouTube
+ *                  in parallel and show the first animated canvas that lands.
  *  - GLOSSY:       Tidal + Apple Music (original Glossy engine)
  *  - ARCHIVE_TUNE: BetterLyrics community service (ported from ArchiveTune)
  *  - BOTH:         BetterLyrics first, then Tidal + Apple Music as fallback
  *  - SPOTIFY:      Spotify web-player Canvas, Glossy fallback
+ *  - YOUTUBE:      YouTube/InnerTube visualizer clips and #shorts
  *
  * Results are cached per mediaId in CanvasArtworkPlaybackCache so switching
  * songs back and forth is instant. Also exposes prefetch() so the service and
@@ -35,6 +36,7 @@ import com.jay.glossy.constants.CanvasStyle
 import com.jay.glossy.constants.CanvasStyleKey
 import com.jay.glossy.spotify.SpotifyCanvasProvider
 import com.jay.glossy.spotify.SpotifySession
+import com.jay.glossy.ui.player.YouTubeCanvasProvider
 import com.jay.glossy.utils.dataStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -62,6 +64,7 @@ object CanvasResolver {
     private const val ArchiveTuneProvider = "ArchiveTune"
     private const val TidalProvider = "Tidal"
     private const val AppleProvider = "Apple Music"
+    private const val YouTubeProvider = "YouTube"
 
     /**
      * Songs whose lookup was answered "no canvas" by every provider, with none
@@ -244,6 +247,7 @@ object CanvasResolver {
                 CanvasStyle.BOTH ->
                     fetchArchiveTune(query, answers)
                         ?: fetchGlossy(query, answers)
+                        ?: fetchYouTube(query, answers)
 
                 CanvasStyle.SPOTIFY -> {
                     val credentials = spotifyCredentials(context)
@@ -267,6 +271,8 @@ object CanvasResolver {
                     // Glossy engine so an animated canvas still shows instead of nothing.
                     spotify ?: fetchGlossy(query, answers)
                 }
+
+                CanvasStyle.YOUTUBE -> fetchYouTube(query, answers)
 
                 CanvasStyle.ALL -> raceAllProviders(query, answers)
             }
@@ -502,6 +508,7 @@ object CanvasResolver {
                         } ?: AppleMusicCanvasProvider.getBySongArtist(query.title, query.artist, query.album, query.storefront)
                     }
                 },
+                launch { ask(YouTubeProvider) { YouTubeCanvasProvider.getBySongArtist(query.title, query.artist, query.album) } },
             )
 
         var winner: CanvasArtwork? = null
@@ -590,6 +597,23 @@ object CanvasResolver {
             answers,
         )
     }
+
+    /**
+     * YOUTUBE style: Search YouTube/InnerTube for visualizer clips and #shorts
+     * matching the song and artist.
+     */
+    private suspend fun fetchYouTube(
+        query: CanvasQuery,
+        answers: MutableList<CanvasDiagnostics.Answer>,
+    ): CanvasArtwork? =
+        verify(
+            query,
+            YouTubeProvider,
+            askProvider(YouTubeProvider, answers) {
+                YouTubeCanvasProvider.getBySongArtist(query.title, query.artist, query.album)
+            },
+            answers,
+        )
 
     /**
      * Runs one provider and turns a failure into a recorded one.

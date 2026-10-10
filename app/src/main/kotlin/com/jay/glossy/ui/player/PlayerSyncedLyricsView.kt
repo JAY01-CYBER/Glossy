@@ -85,6 +85,7 @@ import com.jay.glossy.lyrics.LyricsEntry
 import com.jay.glossy.lyrics.LyricsUtils
 import com.jay.glossy.lyrics.lyricsTextLooksSynced
 import com.jay.glossy.ui.component.applyWordAnimation
+import com.jay.glossy.ui.component.withSynthesisedWords
 import com.jay.glossy.utils.rememberEnumPreference
 import com.metrolist.models.MediaMetadata
 import dagger.hilt.android.EntryPointAccessors
@@ -267,18 +268,22 @@ fun PlayerSyncedLyricsView(
                         for (offset in 0..LYRICS_LOOKAHEAD_LINES) {
                             val line = preview.lines.getOrNull(index + offset) ?: continue
                             val isActive = offset == 0
-                            // Word-by-word animation, when one was chosen and the
-                            // provider timed the words. The styles drive alpha,
-                            // weight and glow only, so they are applied in the
-                            // strip's own white: the accent the canvas glow uses
-                            // would repaint a line that has always been white.
+                            // Word-by-word animation, when one was chosen. Lines
+                            // without provider word timings get synthesised
+                            // ones spread over their own window, so the
+                            // highlight always has something to follow. The
+                            // styles drive alpha, weight and glow only, so
+                            // they are applied in the strip's own white: the
+                            // accent the canvas glow uses would repaint a line
+                            // that has always been white.
                             val animated =
                                 if (isActive &&
-                                    line.words?.isNotEmpty() == true &&
                                     miniLyricsAnimationStyle != MiniLyricsAnimationStyle.NONE
                                 ) {
                                     applyWordAnimation(
-                                        item = line,
+                                        item = line.withSynthesisedWords(
+                                            preview.lines.getOrNull(index + offset + 1)?.time,
+                                        ),
                                         animationStyle = miniLyricsAnimationStyle,
                                         isActiveLine = true,
                                         // Reading the clock here keeps each tick's

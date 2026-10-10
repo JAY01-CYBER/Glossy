@@ -405,7 +405,12 @@ fun ListenTogetherSettings(
                                 Text(
                                     selectedServer?.let { server ->
                                         "${server.name} - ${server.location}"
-                                    } ?: ListenTogetherServers.serverAddressLabel(serverUrl),
+                                        // A custom address is never printed here: it can
+                                        // carry the owner's handle (e.g. a Cloudflare
+                                        // account label), so the row just says a
+                                        // custom server is in use. The address itself
+                                        // stays inside the chooser's text field.
+                                    } ?: stringResource(R.string.listen_together_custom_server),
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                 )

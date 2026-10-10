@@ -14,6 +14,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.geometry.Offset
 import com.jay.glossy.constants.MiniLyricsAnimationStyle
 import com.jay.glossy.lyrics.LyricsEntry
+import com.jay.glossy.lyrics.WordTimestamp
 
 /**
  * Applies one step of a word-by-word animation to a single lyric line.
@@ -41,25 +42,65 @@ fun applyWordAnimation(
     effectivePlaybackPosition: Long,
     accent: Color,
 ): androidx.compose.ui.text.AnnotatedString {
-    val hasWordTimings = item.words?.isNotEmpty() == true
+    // Providers without per-word timings used to render the line dead: no
+    // words, no highlight, nothing to follow. Spread the line's own window
+    // across its words instead, so every timed line animates the same way.
+    val animatedItem = item.withLineSpreadWords()
+    val hasWordTimings = animatedItem.words?.isNotEmpty() == true
 
     if (!hasWordTimings) {
         return buildAnnotatedString {
             withStyle(SpanStyle(color = accent, fontWeight = FontWeight.Bold)) {
-                append(item.text)
+                append(animatedItem.text)
             }
         }
     }
 
     return when (animationStyle) {
-        MiniLyricsAnimationStyle.NONE -> applyNoneAnimation(item, isActiveLine, effectivePlaybackPosition, accent)
-        MiniLyricsAnimationStyle.FADE -> applyFadeAnimation(item, isActiveLine, effectivePlaybackPosition, accent)
-        MiniLyricsAnimationStyle.GLOW -> applyGlowAnimation(item, isActiveLine, effectivePlaybackPosition, accent)
-        MiniLyricsAnimationStyle.SLIDE -> applySlideAnimation(item, isActiveLine, effectivePlaybackPosition, accent)
-        MiniLyricsAnimationStyle.KARAOKE -> applyKaraokeAnimation(item, isActiveLine, effectivePlaybackPosition, accent)
-        MiniLyricsAnimationStyle.APPLE -> applyAppleAnimation(item, isActiveLine, effectivePlaybackPosition, accent)
+        MiniLyricsAnimationStyle.NONE -> applyNoneAnimation(animatedItem, isActiveLine, effectivePlaybackPosition, accent)
+        MiniLyricsAnimationStyle.FADE -> applyFadeAnimation(animatedItem, isActiveLine, effectivePlaybackPosition, accent)
+        MiniLyricsAnimationStyle.GLOW -> applyGlowAnimation(animatedItem, isActiveLine, effectivePlaybackPosition, accent)
+        MiniLyricsAnimationStyle.SLIDE -> applySlideAnimation(animatedItem, isActiveLine, effectivePlaybackPosition, accent)
+        MiniLyricsAnimationStyle.KARAOKE -> applyKaraokeAnimation(animatedItem, isActiveLine, effectivePlaybackPosition, accent)
+        MiniLyricsAnimationStyle.APPLE -> applyAppleAnimation(animatedItem, isActiveLine, effectivePlaybackPosition, accent)
     }
 }
+
+/**
+ * Fallback for providers that time lines but not words: spread this line's
+ * own window evenly across space-separated words. The helper takes an extra
+ * [nextLineTimeMs] so the open-ended last line can run to the next line
+ * instead of freezing mid-line on its short default window. Callers pass
+ * what they are already showing, so no new plumbing reaches the players.
+ */
+fun LyricsEntry.withSynthesisedWords(nextLineTimeMs: Long? = null): LyricsEntry {
+    if (!words.isNullOrEmpty()) return this
+    val tokens = text.split(Regex("\\s+")).filter { it.isNotEmpty() }
+    if (tokens.size < 2) return this
+    val startSec = time / 1000.0
+    // Never run backwards: a zero gap means the next line starts on top of
+    // this one, so keep a small floor instead.
+    val endSec = nextLineTimeMs?.let { (it / 1000.0).coerceAtLeast(startSec + 0.4) }
+        ?: (startSec + tokens.size * 0.4)
+    if (endSec <= startSec) return this
+    val span = endSec - startSec
+    return copy(
+        words = tokens.mapIndexed { index, token ->
+            WordTimestamp(
+                text = token,
+                startTime = startSec + span * index / tokens.size,
+                endTime = startSec + span * (index + 1) / tokens.size,
+                hasTrailingSpace = index < tokens.lastIndex,
+            )
+        },
+    )
+}
+
+/**
+ * Same fallback without a next line in scope. Kept so existing single-entry
+ * callers keep compiling; new code should prefer [withSynthesisedWords].
+ */
+fun LyricsEntry.withLineSpreadWords(): LyricsEntry = withSynthesisedWords()
 
 /**
  * Shared timing kit for the mini lyrics word animation.

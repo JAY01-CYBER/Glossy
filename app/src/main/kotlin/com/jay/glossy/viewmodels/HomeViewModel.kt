@@ -29,6 +29,7 @@ import com.metrolist.innertube.pages.ExplorePage
 import com.metrolist.innertube.pages.HomePage
 import com.metrolist.innertube.utils.completed
 import com.jay.glossy.constants.AccountNameKey
+import com.jay.glossy.constants.DataSyncIdKey
 import com.jay.glossy.constants.HideExplicitKey
 import com.jay.glossy.constants.HideVideoSongsKey
 import com.jay.glossy.constants.HideYoutubeShortsKey
@@ -37,6 +38,7 @@ import com.jay.glossy.constants.QuickPicks
 import com.jay.glossy.constants.QuickPicksKey
 import com.jay.glossy.constants.RandomizeHomeOrderKey
 import com.jay.glossy.constants.ShowWrappedCardKey
+import com.jay.glossy.constants.VisitorDataKey
 import com.jay.glossy.constants.WrappedSeenKey
 import com.jay.glossy.db.MusicDatabase
 import com.jay.glossy.db.entities.Album
@@ -927,6 +929,23 @@ class HomeViewModel @Inject constructor(
 
                 if (!cookie.isNullOrEmpty()) {
                     YouTube.cookie = cookie
+                    
+                    // Also load visitorData and dataSyncId to ensure they're set for playback
+                    val visitorData = context.dataStore.data
+                        .map { it[VisitorDataKey] }
+                        .distinctUntilChanged()
+                        .first()
+                    if (!visitorData.isNullOrBlank()) {
+                        YouTube.visitorData = visitorData
+                    }
+                    
+                    val dataSyncId = context.dataStore.data
+                        .map { it[DataSyncIdKey] }
+                        .distinctUntilChanged()
+                        .first()
+                    if (!dataSyncId.isNullOrBlank()) {
+                        YouTube.dataSyncId = dataSyncId.substringBefore("||")
+                    }
                 }
 
                 isHomeDataLoaded = true

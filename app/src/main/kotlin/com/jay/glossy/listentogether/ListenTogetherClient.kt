@@ -222,6 +222,17 @@ sealed class ListenTogetherEvent {
         val state: SyncStatePayload,
     ) : ListenTogetherEvent()
 
+    /**
+     * A suggestion the host approved. The client only dismissed its
+     * notification before, so the track never reached any player queue.
+     * The host inserts it locally (which fans out via SYNC_QUEUE); guests
+     * just learn the outcome.
+     */
+    data class SuggestionApproved(
+        val suggestionId: String,
+        val trackInfo: TrackInfo,
+    ) : ListenTogetherEvent()
+
     // Error events
     data class ServerError(
         val code: String,
@@ -1548,8 +1559,13 @@ class ListenTogetherClient
                         suggestionNotifications.remove(payload.suggestionId)?.let { notifId ->
                             NotificationManagerCompat.from(context).cancel(notifId)
                         }
+                        _pendingSuggestions.value =
+                            _pendingSuggestions.value.filter { it.suggestionId != payload.suggestionId }
 
-                        // For guests, optionally notify via events; UI can react if needed
+                        // The host queue insertion lives in the manager: this
+                        // event is what tells it to put the track in the local
+                        // player. Guests just learn the outcome.
+                        emitEvent(ListenTogetherEvent.SuggestionApproved(payload.suggestionId, payload.trackInfo))
                     }
 
                     MessageTypes.SUGGESTION_REJECTED -> {
