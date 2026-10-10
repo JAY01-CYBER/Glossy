@@ -526,6 +526,7 @@ fun AppearanceSettings(
                     CanvasStyle.ARCHIVE_TUNE -> "ArchiveTune (BetterLyrics)"
                     CanvasStyle.BOTH -> "Both (ArchiveTune first, Glossy fallback)"
                     CanvasStyle.SPOTIFY -> "Spotify Canvas"
+                    CanvasStyle.YOUTUBE -> "YouTube (InnerTube visualizer)"
                 }
             },
         )
@@ -1850,6 +1851,7 @@ fun AppearanceSettings(
                                             CanvasStyle.ARCHIVE_TUNE -> "ArchiveTune (BetterLyrics)"
                                             CanvasStyle.BOTH -> "Both (ArchiveTune first, Glossy fallback)"
                                             CanvasStyle.SPOTIFY -> "Spotify Canvas"
+                                            CanvasStyle.YOUTUBE -> "YouTube (InnerTube visualizer)"
                                         }
                                     )
                                 },
