@@ -321,9 +321,9 @@ class ListenTogetherManager
                 }
 
                 // The block above does not swallow a guest's taps: a play
-                // intent becomes a suggestion the host must approve, and
-                // queue edits go straight out as guest queue_add messages.
-                connection?.onGuestPlayRequest = { items -> suggestFromGuest(items) }
+                // intent is queued next in the room, and queue edits go
+                // straight out as guest queue_add messages.
+                connection?.onGuestPlayRequest = { items -> guestQueueAdd(items, insertNext = true) }
                 connection?.onGuestQueueAdd = { items, insertNext -> guestQueueAdd(items, insertNext) }
 
                 // Add listener if in room
@@ -2094,26 +2094,27 @@ class ListenTogetherManager
         fun suggestTrack(track: TrackInfo) = client.suggestTrack(track)
 
         /**
-         * A guest tapped something that means "play this". The guest never
-         * touches the room's playback: the track is sent as a suggestion and
-         * the host decides from the popup whether the room hears it.
-         */
-        fun suggestFromGuest(items: List<MediaItem>) {
-            if (!isInRoom || isHost) return
-            items.firstOrNull()?.let { client.suggestTrack(it.toTrackInfo()) }
-        }
-
-        /**
-         * A guest's own queue edit. Appending needs no host approval, so the
-         * track is relayed straight to the server and applied optimistically
-         * here as well; the host's next SYNC_QUEUE reconciles every device.
+         * A guest's own queue edit, and the destination of a guest's play
+         * tap. Appending needs no host approval, so the track is relayed
+         * straight to the server and applied optimistically here as well; the
+         * host's next SYNC_QUEUE reconciles every device.
+         *
+         * A guest never takes the room's current track off the host's hands:
+         * the track is queued after whatever is playing, so the room keeps its
+         * own order and the guest's pick is heard next.
          */
         fun guestQueueAdd(
             items: List<MediaItem>,
             insertNext: Boolean,
         ) {
             if (!isInRoom || isHost || items.isEmpty()) return
-            items.forEach { client.sendQueueAdd(it.toTrackInfo(), insertNext) }
+            // Only the first track jumps ahead of the room queue. Queueing the
+            // rest ahead of it too would relay them in reverse - each unshift
+            // pushes the previous one further back - so a multi-track request
+            // arrives as one block in the order it was tapped.
+            items.forEachIndexed { index, item ->
+                client.sendQueueAdd(item.toTrackInfo(), insertNext && index == 0)
+            }
 
             val connection = playerConnection ?: return
             connection.allowInternalSync = true

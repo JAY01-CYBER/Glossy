@@ -295,14 +295,14 @@ fun AlbumScreen(
                                 .fillMaxWidth()
                                 .animateItem()
                                 .combinedClickable(
-                                    onClick = {
-                                        if (inSelectMode) {
-                                            onCheckedChange(song.id !in selection)
-                                        } else if (!isListenTogetherGuest) {
-                                            if (song.id == mediaMetadata?.id) {
-                                                playerConnection.togglePlayPause()
-                                            } else {
-                                                playerConnection.service.getAutomix(playlistId)
+                                     onClick = {
+                                         if (inSelectMode) {
+                                             onCheckedChange(song.id !in selection)
+                                         } else {
+                                             if (song.id == mediaMetadata?.id) {
+                                                 playerConnection.togglePlayPause()
+                                             } else {
+                                                 playerConnection.service.getAutomix(playlistId)
                                                 playerConnection.playQueue(LocalAlbumRadio(currentAlbum, startIndex = index))
                                             }
                                         }
@@ -613,7 +613,7 @@ private fun AlbumHeader(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                onClick = { if (!isListenTogetherGuest) onShuffleClick() },
+                onClick = onShuffleClick,
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.surfaceVariant,
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -626,7 +626,7 @@ private fun AlbumHeader(
             }
 
             Surface(
-                onClick = { if (!isListenTogetherGuest) onPlayClick() },
+                onClick = onPlayClick,
                 shape = RoundedCornerShape(50),
                 color = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,

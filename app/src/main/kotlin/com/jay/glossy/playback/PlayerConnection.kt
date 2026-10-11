@@ -249,9 +249,10 @@ class PlayerConnection(
 
     fun playQueue(queue: Queue) {
         // Block if Listen Together guest (unless internal sync). The tap is
-        // not wasted: it is forwarded as a suggestion the host can accept.
+        // not wasted: it is queued next in the room, so every device in the
+        // session hears it once the current track ends.
         if (!allowInternalSync && shouldBlockPlaybackChanges?.invoke() == true) {
-            Timber.tag("PlayerConnection").d("playQueue blocked - Listen Together guest; sending suggestion")
+            Timber.tag("PlayerConnection").d("playQueue blocked - Listen Together guest; queueing next in room")
             onGuestPlayRequest?.let { forward ->
                 scope.launch {
                     val status = runCatching { queue.getInitialStatus() }.getOrNull() ?: return@launch

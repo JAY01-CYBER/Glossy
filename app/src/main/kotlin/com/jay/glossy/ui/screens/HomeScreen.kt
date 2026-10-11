@@ -124,7 +124,7 @@ import com.metrolist.innertube.models.YTItem
 import com.metrolist.innertube.utils.completed
 import com.metrolist.innertube.utils.parseCookieString
 import com.jay.glossy.LocalDatabase
-import com.jay.glossy.LocalListenTogetherManager
+import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.constants.AutoRadioQueueKey
@@ -382,8 +382,6 @@ fun CommunityPlaylistCard(
 ) {
     val database = LocalDatabase.current
     val playerConnection = LocalPlayerConnection.current
-    val listenTogetherManager = LocalListenTogetherManager.current
-    val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
     val scope = rememberCoroutineScope()
     val isDark = isSystemInDarkTheme()
     val context = LocalContext.current
@@ -545,10 +543,8 @@ fun CommunityPlaylistCard(
             ) {
                 IconButton(
                     onClick = {
-                        if (!isListenTogetherGuest) {
-                            item.playlist.playEndpoint?.let {
-                                playerConnection?.playQueue(YouTubeQueue(it))
-                            }
+                        item.playlist.playEndpoint?.let {
+                            playerConnection?.playQueue(YouTubeQueue(it))
                         }
                     },
                     modifier =
@@ -566,10 +562,8 @@ fun CommunityPlaylistCard(
 
                 IconButton(
                     onClick = {
-                        if (!isListenTogetherGuest) {
-                            item.playlist.radioEndpoint?.let {
-                                playerConnection?.playQueue(YouTubeQueue(it))
-                            }
+                        item.playlist.radioEndpoint?.let {
+                            playerConnection?.playQueue(YouTubeQueue(it))
                         }
                     },
                     modifier =
@@ -789,8 +783,6 @@ fun HomeScreen(
     val database = LocalDatabase.current
     val playerConnection = LocalPlayerConnection.current ?: return
     val haptic = LocalHapticFeedback.current
-    val listenTogetherManager = LocalListenTogetherManager.current
-    val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
     val context = LocalContext.current
 
     val isPlaying by playerConnection.isEffectivelyPlaying.collectAsStateWithLifecycle()
@@ -893,7 +885,7 @@ fun HomeScreen(
         BackHandler { viewModel.toggleChip(selectedChip) }
     }
 
-    val localGridItem: @Composable (LocalItem) -> Unit = remember(mediaMetadata, isPlaying, autoRadioQueue, isListenTogetherGuest, haptic) {
+    val localGridItem: @Composable (LocalItem) -> Unit = remember(mediaMetadata, isPlaying, autoRadioQueue, haptic) {
         {
             when (it) {
                 is Song -> {
@@ -903,15 +895,13 @@ fun HomeScreen(
                             .fillMaxWidth()
                             .combinedClickable(
                                 onClick = {
-                                    if (!isListenTogetherGuest) {
-                                        if (it.id == mediaMetadata?.id) {
-                                            playerConnection.togglePlayPause()
-                                        } else {
-                                            playerConnection.playQueue(
-                                                if (autoRadioQueue) YouTubeQueue.radio(it.toMediaMetadata())
-                                                else ListQueue(title = it.title, items = listOf(it.toMediaItem()))
-                                            )
-                                        }
+                                    if (it.id == mediaMetadata?.id) {
+                                        playerConnection.togglePlayPause()
+                                    } else {
+                                        playerConnection.playQueue(
+                                            if (autoRadioQueue) YouTubeQueue.radio(it.toMediaMetadata())
+                                            else ListQueue(title = it.title, items = listOf(it.toMediaItem()))
+                                        )
                                     }
                                 },
                                 onLongClick = {
@@ -959,7 +949,7 @@ fun HomeScreen(
         }
     }
 
-    val ytGridItem: @Composable (YTItem) -> Unit = remember(mediaMetadata, isPlaying, autoRadioQueue, isListenTogetherGuest, haptic, pinnedSpeedDialItems) {
+    val ytGridItem: @Composable (YTItem) -> Unit = remember(mediaMetadata, isPlaying, autoRadioQueue, haptic, pinnedSpeedDialItems) {
         { item ->
             YouTubeGridItem(
                 item = item,
@@ -972,21 +962,17 @@ fun HomeScreen(
                         onClick = {
                             when (item) {
                                 is SongItem -> {
-                                    if (!isListenTogetherGuest) {
-                                        playerConnection.playQueue(
-                                            if (autoRadioQueue) YouTubeQueue(item.endpoint ?: WatchEndpoint(videoId = item.id), item.toMediaMetadata())
-                                            else ListQueue(title = item.title, items = listOf(item.toMediaItem()))
-                                        )
-                                    }
+                                    playerConnection.playQueue(
+                                        if (autoRadioQueue) YouTubeQueue(item.endpoint ?: WatchEndpoint(videoId = item.id), item.toMediaMetadata())
+                                        else ListQueue(title = item.title, items = listOf(item.toMediaItem()))
+                                    )
                                 }
                                 is AlbumItem -> navController.navigate("album/${item.id}")
                                 is ArtistItem -> navController.navigate("artist/${item.id}")
                                 is PlaylistItem -> navController.navigate("online_playlist/${item.id}")
                                 is PodcastItem -> navController.navigate("online_podcast/${item.id}")
                                 is EpisodeItem -> {
-                                    if (!isListenTogetherGuest) {
-                                        playerConnection.playQueue(ListQueue(title = item.title, items = listOf(item.toMediaMetadata().toMediaItem())))
-                                    }
+                                    playerConnection.playQueue(ListQueue(title = item.title, items = listOf(item.toMediaMetadata().toMediaItem())))
                                 }
                             }
                         },
@@ -1315,12 +1301,10 @@ fun HomeScreen(
                                             .clip(RoundedCornerShape(spotlightCanvasCorner))
                                             .combinedClickable(
                                                 onClick = {
-                                                    if (!isListenTogetherGuest) {
-                                                        playerConnection.playQueue(
-                                                            if (autoRadioQueue) YouTubeQueue(item.endpoint ?: WatchEndpoint(videoId = item.id), item.toMediaMetadata())
-                                                            else ListQueue(title = item.title, items = listOf(item.toMediaItem()))
-                                                        )
-                                                    }
+                                                    playerConnection.playQueue(
+                                                        if (autoRadioQueue) YouTubeQueue(item.endpoint ?: WatchEndpoint(videoId = item.id), item.toMediaMetadata())
+                                                        else ListQueue(title = item.title, items = listOf(item.toMediaItem()))
+                                                    )
                                                 },
                                                 onLongClick = {
                                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -1408,12 +1392,10 @@ fun HomeScreen(
                                                 .clip(RoundedCornerShape(percent = 50))
                                                 .background(Color.White)
                                                 .clickable {
-                                                    if (!isListenTogetherGuest) {
-                                                        playerConnection.playQueue(
-                                                            if (autoRadioQueue) YouTubeQueue(item.endpoint ?: WatchEndpoint(videoId = item.id), item.toMediaMetadata())
-                                                            else ListQueue(title = item.title, items = listOf(item.toMediaItem()))
-                                                        )
-                                                    }
+                                                    playerConnection.playQueue(
+                                                        if (autoRadioQueue) YouTubeQueue(item.endpoint ?: WatchEndpoint(videoId = item.id), item.toMediaMetadata())
+                                                        else ListQueue(title = item.title, items = listOf(item.toMediaItem()))
+                                                    )
                                                 }
                                                 .padding(start = 7.dp, end = 16.dp, top = 7.dp, bottom = 7.dp),
                                             verticalAlignment = Alignment.CenterVertically,
@@ -1519,18 +1501,16 @@ fun HomeScreen(
                                                                         isLoading = isRandomizing,
                                                                         onClick = {
                                                                             if (isRandomizing) randomizeJob?.cancel()
-                                                                            else if (!isListenTogetherGuest) {
-                                                                                randomizeJob = scope.launch {
-                                                                                    val randomItem = viewModel.getRandomItem()
-                                                                                    if (randomItem != null) {
-                                                                                        when (randomItem) {
-                                                                                            is SongItem -> playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue(randomItem.endpoint ?: WatchEndpoint(videoId = randomItem.id), randomItem.toMediaMetadata()) else ListQueue(title = randomItem.title, items = listOf(randomItem.toMediaItem())))
-                                                                                            is AlbumItem -> navController.navigate("album/${randomItem.id}")
-                                                                                            is ArtistItem -> navController.navigate("artist/${randomItem.id}")
-                                                                                            is PlaylistItem -> navController.navigate("online_playlist/${randomItem.id}")
-                                                                                            is PodcastItem -> navController.navigate("online_podcast/${randomItem.id}")
-                                                                                            is EpisodeItem -> playerConnection.playQueue(ListQueue(title = randomItem.title, items = listOf(randomItem.toMediaMetadata().toMediaItem())))
-                                                                                        }
+                                                                            else randomizeJob = scope.launch {
+                                                                                val randomItem = viewModel.getRandomItem()
+                                                                                if (randomItem != null) {
+                                                                                    when (randomItem) {
+                                                                                        is SongItem -> playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue(randomItem.endpoint ?: WatchEndpoint(videoId = randomItem.id), randomItem.toMediaMetadata()) else ListQueue(title = randomItem.title, items = listOf(randomItem.toMediaItem())))
+                                                                                        is AlbumItem -> navController.navigate("album/${randomItem.id}")
+                                                                                        is ArtistItem -> navController.navigate("artist/${randomItem.id}")
+                                                                                        is PlaylistItem -> navController.navigate("online_playlist/${randomItem.id}")
+                                                                                        is PodcastItem -> navController.navigate("online_podcast/${randomItem.id}")
+                                                                                        is EpisodeItem -> playerConnection.playQueue(ListQueue(title = randomItem.title, items = listOf(randomItem.toMediaMetadata().toMediaItem())))
                                                                                     }
                                                                                 }
                                                                             }
@@ -1550,28 +1530,24 @@ fun HomeScreen(
                                                                         modifier = Modifier
                                                                             .fillMaxSize()
                                                                             .combinedClickable(
-                                                                                onClick = {
-                                                                                    when (item) {
-                                                                                        is SongItem -> {
-                                                                                            if (!isListenTogetherGuest) {
-                                                                                                playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue(item.endpoint ?: WatchEndpoint(videoId = item.id), item.toMediaMetadata()) else ListQueue(title = item.title, items = listOf(item.toMediaItem())))
-                                                                                            }
-                                                                                        }
-                                                                                        is AlbumItem -> navController.navigate("album/${item.id}")
-                                                                                        is ArtistItem -> navController.navigate("artist/${item.id}")
-                                                                                        is PlaylistItem -> {
-                                                                                            val rawType = pinnedSpeedDialItems.find { it.id == item.id }?.type
-                                                                                            if (rawType == "LOCAL_PLAYLIST") navController.navigate("local_playlist/${item.id}")
-                                                                                            else navController.navigate("online_playlist/${item.id}")
-                                                                                        }
-                                                                                        is PodcastItem -> navController.navigate("online_podcast/${item.id}")
-                                                                                        is EpisodeItem -> {
-                                                                                            if (!isListenTogetherGuest) {
-                                                                                                playerConnection.playQueue(ListQueue(title = item.title, items = listOf(item.toMediaMetadata().toMediaItem())))
-                                                                                            }
-                                                                                        }
-                                                                                    }
-                                                                                },
+                                                                        onClick = {
+                                                                            when (item) {
+                                                                                is SongItem -> {
+                                                                                    playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue(item.endpoint ?: WatchEndpoint(videoId = item.id), item.toMediaMetadata()) else ListQueue(title = item.title, items = listOf(item.toMediaItem())))
+                                                                                }
+                                                                                is AlbumItem -> navController.navigate("album/${item.id}")
+                                                                                is ArtistItem -> navController.navigate("artist/${item.id}")
+                                                                                is PlaylistItem -> {
+                                                                                    val rawType = pinnedSpeedDialItems.find { it.id == item.id }?.type
+                                                                                    if (rawType == "LOCAL_PLAYLIST") navController.navigate("local_playlist/${item.id}")
+                                                                                    else navController.navigate("online_playlist/${item.id}")
+                                                                                }
+                                                                                is PodcastItem -> navController.navigate("online_podcast/${item.id}")
+                                                                                is EpisodeItem -> {
+                                                                                    playerConnection.playQueue(ListQueue(title = item.title, items = listOf(item.toMediaMetadata().toMediaItem())))
+                                                                                }
+                                                                            }
+                                                                        },
                                                                                 onLongClick = {
                                                                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                                                                     menuState.show {
@@ -1649,16 +1625,14 @@ fun HomeScreen(
                                             NavigationTitle(
                                                 title = quickPicksTitle,
                                                 label = "MADE FOR YOU",
-                                                onPlayAllClick = if (!isListenTogetherGuest) {
-                                                    {
-                                                        playerConnection.playQueue(
-                                                            ListQueue(
-                                                                title = quickPicksTitle,
-                                                                items = quickPicksList.map { it.toMediaItem() },
-                                                            )
+                                                onPlayAllClick = {
+                                                    playerConnection.playQueue(
+                                                        ListQueue(
+                                                            title = quickPicksTitle,
+                                                            items = quickPicksList.map { it.toMediaItem() },
                                                         )
-                                                    }
-                                                } else null,
+                                                    )
+                                                },
                                             )
                                         }
                                     } else {
@@ -1715,15 +1689,13 @@ fun HomeScreen(
                                                     isActive = currentSong.id == mediaMetadata?.id,
                                                     isPlaying = isPlaying,
                                                     onClick = {
-                                                        if (!isListenTogetherGuest) {
-                                                            if (currentSong.id == mediaMetadata?.id) {
-                                                                playerConnection.togglePlayPause()
-                                                            } else {
-                                                                playerConnection.playQueue(
-                                                                    if (autoRadioQueue) YouTubeQueue.radio(currentSong.toMediaMetadata())
-                                                                    else ListQueue(title = currentSong.title, items = listOf(currentSong.toMediaItem()))
-                                                                )
-                                                            }
+                                                        if (currentSong.id == mediaMetadata?.id) {
+                                                            playerConnection.togglePlayPause()
+                                                        } else {
+                                                            playerConnection.playQueue(
+                                                                if (autoRadioQueue) YouTubeQueue.radio(currentSong.toMediaMetadata())
+                                                                else ListQueue(title = currentSong.title, items = listOf(currentSong.toMediaItem()))
+                                                            )
                                                         }
                                                     },
                                                     onLongClick = {
@@ -1763,12 +1735,10 @@ fun HomeScreen(
                                                     imageUrl = currentSong.thumbnailUrl,
                                                     isActive = currentSong.id == mediaMetadata?.id,
                                                     onClick = {
-                                                        if (!isListenTogetherGuest) {
-                                                            if (currentSong.id == mediaMetadata?.id) {
-                                                                playerConnection.togglePlayPause()
-                                                            } else {
-                                                                playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue.radio(currentSong.toMediaMetadata()) else ListQueue(title = currentSong.title, items = listOf(currentSong.toMediaItem())))
-                                                            }
+                                                        if (currentSong.id == mediaMetadata?.id) {
+                                                            playerConnection.togglePlayPause()
+                                                        } else {
+                                                            playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue.radio(currentSong.toMediaMetadata()) else ListQueue(title = currentSong.title, items = listOf(currentSong.toMediaItem())))
                                                         }
                                                     },
                                                     onLongClick = {
@@ -1826,12 +1796,10 @@ fun HomeScreen(
                                                             .width(horizontalLazyGridItemWidth)
                                                             .combinedClickable(
                                                                 onClick = {
-                                                                    if (!isListenTogetherGuest) {
-                                                                        if ((song as Song).id == mediaMetadata?.id) {
-                                                                            playerConnection.togglePlayPause()
-                                                                        } else {
-                                                                            playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue.radio((song as Song).toMediaMetadata()) else ListQueue(title = (song as Song).title, items = listOf((song as Song).toMediaItem())))
-                                                                        }
+                                                                    if ((song as Song).id == mediaMetadata?.id) {
+                                                                        playerConnection.togglePlayPause()
+                                                                    } else {
+                                                                        playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue.radio((song as Song).toMediaMetadata()) else ListQueue(title = (song as Song).title, items = listOf((song as Song).toMediaItem())))
                                                                     }
                                                                 },
                                                                 onLongClick = {
@@ -1889,12 +1857,10 @@ fun HomeScreen(
                                                         .clip(currentShape)
                                                         .combinedClickable(
                                                             onClick = {
-                                                                if (!isListenTogetherGuest) {
-                                                                    if ((song as Song).id == mediaMetadata?.id) {
-                                                                        playerConnection.togglePlayPause()
-                                                                    } else {
-                                                                        playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue.radio((song as Song).toMediaMetadata()) else ListQueue(title = (song as Song).title, items = listOf((song as Song).toMediaItem())))
-                                                                    }
+                                                                if ((song as Song).id == mediaMetadata?.id) {
+                                                                    playerConnection.togglePlayPause()
+                                                                } else {
+                                                                    playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue.radio((song as Song).toMediaMetadata()) else ListQueue(title = (song as Song).title, items = listOf((song as Song).toMediaItem())))
                                                                 }
                                                             },
                                                             onLongClick = {
@@ -1935,12 +1901,10 @@ fun HomeScreen(
                                                         Box(
                                                             modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp).size(40.dp).background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f), CircleShape)
                                                                 .clickable(
-                                                                    onClick = {
-                                                                        if (!isListenTogetherGuest) {
-                                                                            if ((song as Song).id == mediaMetadata?.id) playerConnection.togglePlayPause()
-                                                                            else playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue.radio((song as Song).toMediaMetadata()) else ListQueue(title = (song as Song).title, items = listOf((song as Song).toMediaItem())))
-                                                                        }
-                                                                    }
+                                                                     onClick = {
+                                                                         if ((song as Song).id == mediaMetadata?.id) playerConnection.togglePlayPause()
+                                                                         else playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue.radio((song as Song).toMediaMetadata()) else ListQueue(title = (song as Song).title, items = listOf((song as Song).toMediaItem())))
+                                                                     }
                                                                 ),
                                                             contentAlignment = Alignment.Center
                                                         ) {
@@ -1975,14 +1939,12 @@ fun HomeScreen(
                                                     navController.navigate("online_playlist/${item.playlist.id.removePrefix("VL")}")
                                                 },
                                                 onSongClick = { song ->
-                                                    if (!isListenTogetherGuest) {
-                                                        playerConnection.playQueue(
-                                                            YouTubeQueue(
-                                                                song.endpoint ?: WatchEndpoint(videoId = song.id),
-                                                                song.toMediaMetadata(),
-                                                            ),
-                                                        )
-                                                    }
+                                                    playerConnection.playQueue(
+                                                        YouTubeQueue(
+                                                            song.endpoint ?: WatchEndpoint(videoId = song.id),
+                                                            song.toMediaMetadata(),
+                                                        ),
+                                                    )
                                                 },
                                             )
                                         }
@@ -2025,15 +1987,13 @@ fun HomeScreen(
                                             DailyDiscoverCard(
                                                 dailyDiscover = item,
                                                 onClick = {
-                                                    if (!isListenTogetherGuest) {
-                                                        val song = item.recommendation as? SongItem
-                                                        val mediaMetadata = song?.toMediaMetadata()
-                                                        if (mediaMetadata != null) {
-                                                            playerConnection.playQueue(
-                                                                if (autoRadioQueue) YouTubeQueue(song.endpoint ?: WatchEndpoint(videoId = song.id), mediaMetadata)
-                                                                else ListQueue(title = song.title, items = listOf(song.toMediaItem()))
-                                                            )
-                                                        }
+                                                    val song = item.recommendation as? SongItem
+                                                    val mediaMetadata = song?.toMediaMetadata()
+                                                    if (mediaMetadata != null) {
+                                                        playerConnection.playQueue(
+                                                            if (autoRadioQueue) YouTubeQueue(song.endpoint ?: WatchEndpoint(videoId = song.id), mediaMetadata)
+                                                            else ListQueue(title = song.title, items = listOf(song.toMediaItem()))
+                                                        )
                                                     }
                                                 },
                                                 modifier = Modifier.clip(MaterialTheme.shapes.extraLarge),
@@ -2072,7 +2032,7 @@ fun HomeScreen(
                                                     seed = entry.id,
                                                     imageUrl = entry.thumbnailUrl,
                                                     onClick = {
-                                                        if (!isListenTogetherGuest && entry is Song) {
+                                                        if (entry is Song) {
                                                             if (entry.id == mediaMetadata?.id) {
                                                                 playerConnection.togglePlayPause()
                                                             } else {
@@ -2146,9 +2106,9 @@ fun HomeScreen(
                                         NavigationTitle(
                                             title = forgottenFavoritesTitle,
                                             label = "FRESH FINDS, OLD FAVORITES",
-                                            onPlayAllClick = if (!isListenTogetherGuest) {
-                                                { playerConnection.playQueue(ListQueue(title = forgottenFavoritesTitle, items = forgottenFavorites.map { it.toMediaItem() })) }
-                                            } else null,
+                                            onPlayAllClick = {
+                                                playerConnection.playQueue(ListQueue(title = forgottenFavoritesTitle, items = forgottenFavorites.map { it.toMediaItem() }))
+                                            },
                                         )
                                     }
                                 }
@@ -2191,10 +2151,8 @@ fun HomeScreen(
                                                     .width(horizontalLazyGridItemWidth)
                                                     .combinedClickable(
                                                         onClick = {
-                                                            if (!isListenTogetherGuest) {
-                                                                if (song!!.id == mediaMetadata?.id) playerConnection.togglePlayPause()
-                                                                else playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue.radio(song!!.toMediaMetadata()) else ListQueue(title = song!!.title, items = listOf(song!!.toMediaItem())))
-                                                            }
+                                                            if (song!!.id == mediaMetadata?.id) playerConnection.togglePlayPause()
+                                                            else playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue.radio(song!!.toMediaMetadata()) else ListQueue(title = song!!.title, items = listOf(song!!.toMediaItem())))
                                                         },
                                                         onLongClick = {
                                                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -2268,7 +2226,7 @@ fun HomeScreen(
                                                     }
                                                 }
                                             },
-                                            onPlayAllClick = if (hasPlayableSongs && !isListenTogetherGuest) {
+                                            onPlayAllClick = if (hasPlayableSongs) {
                                                 { playerConnection.playQueue(ListQueue(title = sectionData.title, items = sectionSongs.map { it.toMediaMetadata().toMediaItem() })) }
                                             } else null,
                                         )
@@ -2309,9 +2267,7 @@ fun HomeScreen(
                                                                 .width(horizontalLazyGridItemWidth)
                                                                 .combinedClickable(
                                                                     onClick = {
-                                                                        if (!isListenTogetherGuest) {
-                                                                            playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue(song.endpoint ?: WatchEndpoint(videoId = song.id), song.toMediaMetadata()) else ListQueue(title = song.title, items = listOf(song.toMediaItem())))
-                                                                        }
+                                                                        playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue(song.endpoint ?: WatchEndpoint(videoId = song.id), song.toMediaMetadata()) else ListQueue(title = song.title, items = listOf(song.toMediaItem())))
                                                                     },
                                                                     onLongClick = {
                                                                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -2367,9 +2323,7 @@ fun HomeScreen(
                                                             .clip(currentShape)
                                                             .combinedClickable(
                                                                 onClick = {
-                                                                    if (!isListenTogetherGuest) {
-                                                                        playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue(song.endpoint ?: WatchEndpoint(videoId = song.id), song.toMediaMetadata()) else ListQueue(title = song.title, items = listOf(song.toMediaItem())))
-                                                                    }
+                                                                    playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue(song.endpoint ?: WatchEndpoint(videoId = song.id), song.toMediaMetadata()) else ListQueue(title = song.title, items = listOf(song.toMediaItem())))
                                                                 },
                                                                 onLongClick = {
                                                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -2408,13 +2362,11 @@ fun HomeScreen(
                                                             }
                                                             Box(
                                                                 modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp).size(40.dp).background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f), CircleShape)
-                                                                    .clickable(
-                                                                        onClick = {
-                                                                            if (!isListenTogetherGuest) {
-                                                                                playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue(song.endpoint ?: WatchEndpoint(videoId = song.id), song.toMediaMetadata()) else ListQueue(title = song.title, items = listOf(song.toMediaItem())))
-                                                                            }
-                                                                        }
-                                                                    ),
+                                                                     .clickable(
+                                                                         onClick = {
+                                                                             playerConnection.playQueue(if (autoRadioQueue) YouTubeQueue(song.endpoint ?: WatchEndpoint(videoId = song.id), song.toMediaMetadata()) else ListQueue(title = song.title, items = listOf(song.toMediaItem())))
+                                                                         }
+                                                                     ),
                                                                 contentAlignment = Alignment.Center
                                                             ) {
                                                                 Icon(painter = painterResource(if (song.id == mediaMetadata?.id && isPlaying) R.drawable.pause else R.drawable.play), contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(20.dp))
@@ -2507,32 +2459,30 @@ fun HomeScreen(
                 lazyListState = lazylistState,
                 icon = R.drawable.shuffle,
                 onClick = {
-                    if (!isListenTogetherGuest) {
-                        val local = when {
-                            allLocalItems.isNotEmpty() && allYtItems.isNotEmpty() -> Random.nextFloat() < 0.5
-                            allLocalItems.isNotEmpty() -> true
-                            else -> false
-                        }
-                        scope.launch(Dispatchers.Main) {
-                            if (local) {
-                                when (val luckyItem = allLocalItems.random()) {
-                                    is Song -> playerConnection.playQueue(YouTubeQueue.radio(luckyItem.toMediaMetadata()))
-                                    is Album -> {
-                                        val albumWithSongs = withContext(Dispatchers.IO) { database.albumWithSongs(luckyItem.id).first() }
-                                        albumWithSongs?.let { playerConnection.playQueue(LocalAlbumRadio(it)) }
-                                    }
-                                    is Artist -> {}
-                                    is Playlist -> {}
+                    val local = when {
+                        allLocalItems.isNotEmpty() && allYtItems.isNotEmpty() -> Random.nextFloat() < 0.5
+                        allLocalItems.isNotEmpty() -> true
+                        else -> false
+                    }
+                    scope.launch(Dispatchers.Main) {
+                        if (local) {
+                            when (val luckyItem = allLocalItems.random()) {
+                                is Song -> playerConnection.playQueue(YouTubeQueue.radio(luckyItem.toMediaMetadata()))
+                                is Album -> {
+                                    val albumWithSongs = withContext(Dispatchers.IO) { database.albumWithSongs(luckyItem.id).first() }
+                                    albumWithSongs?.let { playerConnection.playQueue(LocalAlbumRadio(it)) }
                                 }
-                            } else {
-                                when (val luckyItem = allYtItems.random()) {
-                                    is SongItem -> playerConnection.playQueue(YouTubeQueue.radio(luckyItem.toMediaMetadata()))
-                                    is AlbumItem -> playerConnection.playQueue(YouTubeAlbumRadio(luckyItem.playlistId))
-                                    is ArtistItem -> luckyItem.radioEndpoint?.let { playerConnection.playQueue(YouTubeQueue(it)) }
-                                    is PlaylistItem -> luckyItem.playEndpoint?.let { playerConnection.playQueue(YouTubeQueue(it)) }
-                                    is PodcastItem -> luckyItem.playEndpoint?.let { playerConnection.playQueue(YouTubeQueue(it)) }
-                                    is EpisodeItem -> playerConnection.playQueue(ListQueue(title = luckyItem.title, items = listOf(luckyItem.toMediaMetadata().toMediaItem())))
-                                }
+                                is Artist -> {}
+                                is Playlist -> {}
+                            }
+                        } else {
+                            when (val luckyItem = allYtItems.random()) {
+                                is SongItem -> playerConnection.playQueue(YouTubeQueue.radio(luckyItem.toMediaMetadata()))
+                                is AlbumItem -> playerConnection.playQueue(YouTubeAlbumRadio(luckyItem.playlistId))
+                                is ArtistItem -> luckyItem.radioEndpoint?.let { playerConnection.playQueue(YouTubeQueue(it)) }
+                                is PlaylistItem -> luckyItem.playEndpoint?.let { playerConnection.playQueue(YouTubeQueue(it)) }
+                                is PodcastItem -> luckyItem.playEndpoint?.let { playerConnection.playQueue(YouTubeQueue(it)) }
+                                is EpisodeItem -> playerConnection.playQueue(ListQueue(title = luckyItem.title, items = listOf(luckyItem.toMediaMetadata().toMediaItem())))
                             }
                         }
                     }
