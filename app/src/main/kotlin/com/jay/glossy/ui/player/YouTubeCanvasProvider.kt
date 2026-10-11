@@ -35,6 +35,7 @@ import com.jay.glossy.canvas.CanvasLookupUnavailable
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.YouTube.SearchFilter
 import com.metrolist.innertube.models.WatchEndpoint.WatchEndpointMusicSupportedConfigs.WatchEndpointMusicConfig.Companion.MUSIC_VIDEO_TYPE_ATV
+import com.metrolist.innertube.models.WatchEndpoint.WatchEndpointMusicSupportedConfigs.WatchEndpointMusicConfig.Companion.MUSIC_VIDEO_TYPE_OMV
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.YouTubeClient
 import com.metrolist.innertube.models.response.PlayerResponse
@@ -107,8 +108,11 @@ object YouTubeCanvasProvider {
      *
      * [MUSIC_VIDEO_TYPE_ATV] is YouTube Music's auto-generated "- Topic"
      * upload: the audio over one still frame, so playing it would freeze the
-     * canvas exactly where the still artwork already was. Everything else —
-     * an official music video (OMV), an artist video, a plain upload — moves.
+     * canvas exactly where the still artwork already was. An official music
+     * video ([MUSIC_VIDEO_TYPE_OMV]) or an upload from the artist's own
+     * channel moves and is accepted; a stranger's upload of the song — however
+     * closely its title matches — is somebody's edit, not the song's canvas,
+     * and falls through to the search below.
      */
     private suspend fun getTrackVideoCanvas(
         videoId: String,
@@ -143,6 +147,16 @@ object YouTubeCanvasProvider {
             // title says so — a stale or foreign id must not paint a
             // different song's video under this title.
             if (songTokens.isNotEmpty() && !songTokens.all { title.contains(it, true) }) return null
+
+            // ...and only when the id *is* the song's own release. A stranger's
+            // upload of the song — a "person edit", a dance clip, a re-upload —
+            // carries the song's name in its title too, and letting it stand in
+            // is how somebody's edit became the canvas. An official music video
+            // (OMV) is accepted outright; anything else must come from a channel
+            // that names the artist or is a VEVO channel. A user upload that is
+            // neither is refused, edit or not.
+            if (details.musicVideoType != MUSIC_VIDEO_TYPE_OMV && !isOfficialUpload(author, artist)) return null
+            if (looksLikeFanEdit(title, song)) return null
 
             val videoUrl = bestVideoUrl(response) ?: continue
             return CanvasArtwork(
@@ -234,9 +248,19 @@ object YouTubeCanvasProvider {
             """\bfan\s*-?\s*made\b""",
             """\bcreations?\b""",
             """\breactions?\b""",
-            """\blyrical\s+video\b""",
+            """\blyric(al)?\s+videos?\b""",
             """\bbehind\s+the\s+scenes\b""",
             """\btrailer\b""",
+            // A WhatsApp-status clip and a dance/person edit are the two
+            // shapes a fan re-upload of a song usually takes, and neither
+            // title always carries the word "edit".
+            """\bstatus\b""",
+            """\bwhats\s*-?\s*app\b""",
+            """\bfan\b""",
+            """\btributes?\b""",
+            """\bparod(y|ies)\b""",
+            """\bmeme(s)?\b""",
+            """\bediting\b""",
         ).map { Regex(it, RegexOption.IGNORE_CASE) }
 
     private fun looksLikeFanEdit(
@@ -255,6 +279,15 @@ object YouTubeCanvasProvider {
      */
     private fun isMashupTitle(title: String): Boolean =
         Regex("""\s+[x×]\s+|\s+vs\.?\s+""", RegexOption.IGNORE_CASE).containsMatchIn(title)
+
+    /**
+     * Titles that say the clip *is* the song's own release rather than
+     * somebody's footage of it: "(Official Video)", "Music Video", "OMV".
+     * "Official audio" deliberately does not count — those uploads are a
+     * still image over the audio, which has nothing to animate.
+     */
+    private val ownVideoClaim =
+        Regex("""\b(official|music)\s+video\b|\bomv\b|\bmvm\b""", RegexOption.IGNORE_CASE)
 
     /**
      * Whether the upload looks like the song's own release rather than a fan
@@ -277,7 +310,7 @@ object YouTubeCanvasProvider {
         val item: SongItem,
         val title: String,
         val uploader: String,
-        val isVisualizer: Boolean,
+        val claimsOwnAnimation: Boolean,
     )
 
     /**
@@ -312,6 +345,13 @@ object YouTubeCanvasProvider {
                 val resultTitle = item.title
                 val uploader = item.artists.firstOrNull()?.name.orEmpty()
 
+                // A "- Topic" upload is YouTube Music's auto-generated audio
+                // over one still frame — the same upload the direct path
+                // refuses — and it ranks first here as an "official" channel,
+                // so it must be refused too or a frozen artwork wins as the
+                // canvas.
+                if (uploader.endsWith("Topic", ignoreCase = true)) return@mapNotNull null
+
                 // Every word of the song's own title has to appear in the
                 // clip's title. The substring test this replaces let a clip
                 // through on one shared word, which is how a canvas belonging
@@ -334,20 +374,36 @@ object YouTubeCanvasProvider {
 
                 val durationSeconds = item.duration ?: 0
                 val isShort = durationSeconds > 0 && durationSeconds <= MAX_VIDEO_DURATION_SECONDS
-                val isVisualizer =
+
+                // A title that claims to *be* the song's own animation or
+                // release: a visualizer, a canvas clip, an official music
+                // video. "#shorts" deliberately does not count — it only says
+                // the clip is short, and a stranger's Short of somebody
+                // dancing to the song is exactly the fan edit that must not
+                // win here.
+                val claimsOwnAnimation =
                     resultTitle.contains("visualizer", true) ||
                         resultTitle.contains("canvas", true) ||
-                        resultTitle.contains("#shorts", true)
+                        ownVideoClaim.containsMatchIn(resultTitle) ||
+                        item.musicVideoType == MUSIC_VIDEO_TYPE_OMV
 
-                if (!isShort && !isVisualizer && durationSeconds > MAX_VIDEO_DURATION_SECONDS) return@mapNotNull null
+                if (!isShort && !claimsOwnAnimation && durationSeconds > MAX_VIDEO_DURATION_SECONDS) return@mapNotNull null
 
-                Candidate(item, resultTitle, uploader, isVisualizer)
+                // A channel that is not the song's own — no artist name, no
+                // VEVO, no OMV type — may only stand in when the title
+                // explicitly claims to be the song's own animation. A bare
+                // re-upload from a stranger is somebody's edit of the song
+                // however closely the title matches, and it is what used to
+                // show up as the canvas.
+                if (!isOfficialUpload(uploader, artistValidation) && !claimsOwnAnimation) return@mapNotNull null
+
+                Candidate(item, resultTitle, uploader, claimsOwnAnimation)
             }
 
         // The song's own uploads come first, then clips whose title names the
-        // artist, and only then anything left that matched — a visualizer
-        // title wins a tie. Taking the first search hit as-is is what let a
-        // fan edit outrank the label's own canvas.
+        // artist, and only then anything left that matched — a title that
+        // claims the song's own animation wins a tie. Taking the first search
+        // hit as-is is what let a fan edit outrank the label's own canvas.
         val ordered =
             candidates.sortedWith(
                 compareBy<Candidate> { candidate ->
@@ -356,7 +412,7 @@ object YouTubeCanvasProvider {
                         artistValidation.isNotBlank() && candidate.title.contains(artistValidation, true) -> 1
                         else -> 2
                     }
-                }.thenByDescending { it.isVisualizer },
+                }.thenByDescending { it.claimsOwnAnimation },
             )
 
         for (candidate in ordered) {
