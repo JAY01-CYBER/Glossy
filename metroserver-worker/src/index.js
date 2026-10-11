@@ -579,8 +579,13 @@ export class RoomHub {
       // room was live. It is accepted and dropped — no room state changes and
       // nothing is relayed — so the room's volume stays the host's.
       if (action === P.A_SET_VOLUME) return;
-      await this.#sendError(ws, P.E_NOT_HOST, 'only the host controls playback');
-      return;
+      // A guest may append to the queue: it changes nothing that is playing,
+      // so it needs no host approval. Every other action controls the room
+      // and stays host-only.
+      if (action !== P.A_QUEUE_ADD) {
+        await this.#sendError(ws, P.E_NOT_HOST, 'only the host controls playback');
+        return;
+      }
     }
 
     const trackId = fields.string(2);

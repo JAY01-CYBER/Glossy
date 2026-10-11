@@ -145,6 +145,7 @@ internal object CanvasVerifier {
         answerTitle: String?,
         answerArtist: String?,
         alternativeTitle: String? = null,
+        rawSongTitle: String = songTitle,
     ): CanvasMatch {
         val answerName = answerTitle.orEmpty().trim()
         val answerBy = answerArtist.orEmpty().trim()
@@ -153,6 +154,15 @@ internal object CanvasVerifier {
         if (answerName.isBlank() && answerBy.isBlank()) return CanvasMatch.UNVERIFIED
 
         if (answerName.isNotBlank()) {
+            // A clip branded as a different mix or edit of the song — a remix, a
+            // slowed reverb, a mashup with another song — is a different
+            // recording wearing this song's name. It is compared against the
+            // *raw* title, because normalization strips "(Remix)" and would make
+            // "Kalyani" and "Kalyani Remix" indistinguishable. An answer that
+            // carries a version tag the song's own title does not is the wrong
+            // clip, however much the base name overlaps.
+            if (isForeignVersion(answerName, rawSongTitle)) return CanvasMatch.MISMATCH
+
             val normalizedAnswer = normalizeCanvasSongTitle(answerName)
             val titleScore = similarity(songTitle, normalizedAnswer)
             val alternativeScore =
@@ -171,6 +181,68 @@ internal object CanvasVerifier {
         }
         return CanvasMatch.MATCHED
     }
+
+    /**
+     * Whether the answer is a *different version* of the song — a remix, an
+     * edit, a slowed/sped reverb, a mashup — rather than the song itself.
+     *
+     * This is the check that normalization cannot make: `normalizeCanvasSongTitle`
+     * strips "(Remix)", "(Edit)" and "(Mix)" so that "Kalyani" and
+     * "Kalyani Remix" normalize to the same string, and the similarity score
+     * then calls them a match. That is exactly how "Kalyani" ended up showing
+     * "Kalyani Remix"'s canvas, and how a request for "Kalyani Remix" pulled a
+     * "Kalyani x <other song>" edit off YouTube.
+     *
+     * It is judged on the *raw* titles, and it is symmetric: an answer is a
+     * foreign version only when it carries a version marker the song's own title
+     * does not. So a track genuinely called "Kalyani Remix" still matches its own
+     * remix canvas (both carry "remix"), while the plain "Kalyani" refuses a
+     * clip branded "Kalyani (Remix)".
+     *
+     * "Live" is deliberately not a version marker here: the similarity step is
+     * built to accept "Song" and "Song (Live at Home)" as the same song, and
+     * overruling that would refuse a live clip for the studio track.
+     */
+    private fun isForeignVersion(answerTitle: String, rawSongTitle: String): Boolean {
+        val answerTags = versionTagMarkers.filter { it.containsMatchIn(answerTitle) }
+        val songTags = versionTagMarkers.filter { it.containsMatchIn(rawSongTitle) }
+        if (answerTags.any { it !in songTags }) return true
+        // A clip that mashes two songs together is never either one's canvas.
+        if (isMashupTitle(answerTitle) && !isMashupTitle(rawSongTitle)) return true
+        return false
+    }
+
+    /**
+     * Markers that make a clip a different mix or edit of a song. Kept apart
+     * from the `notCanvasMarkers` list in the YouTube provider because this one
+     * is a provider-agnostic backstop: Spotify, Tidal and Apple canvases are
+     * matched here too, and every provider's answer for the wrong variant must
+     * be refused the same way.
+     */
+    private val versionTagMarkers =
+        listOf(
+            """\bremix(es)?\b""",
+            """\bmix(es)?\b""",
+            """\bedits?\b""",
+            """\bmashups?\b""",
+            """\bmedley\b""",
+            """\bslowed\b""",
+            """\breverb\b""",
+            """\bsped\s*-?\s*up\b""",
+            """\bnightcore\b""",
+            """\bbass\s*-?\s*boost(ed)?\b""",
+            """\blo\s*-?\s*fi\b""",
+            """\b8d\b""",
+            """\bbootleg\b""",
+            """\brework\b""",
+            """\bflip\b""",
+            """\bkaraoke\b""",
+            """\binstrumental\b""",
+        ).map { Regex(it, RegexOption.IGNORE_CASE) }
+
+    /** A title that joins two songs with " x ", "×" or " vs ". */
+    private fun isMashupTitle(title: String): Boolean =
+        Regex("""\s+[x×]\s+|\s+vs\.?\s+""", RegexOption.IGNORE_CASE).containsMatchIn(title)
 
     /**
      * How much two names look like the same thing, 0..1.

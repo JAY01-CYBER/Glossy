@@ -213,11 +213,21 @@ object YouTubeCanvasProvider {
             """\bedits?\b""",
             """\bcovers?\b""",
             """\bmashups?\b""",
+            """\bmedley\b""",
+            """\bremix(es)?\b""",
+            """\bmix(es)?\b""",
             """\bslowed\b""",
             """\breverb\b""",
-            """\bsped\s+up\b""",
+            """\bsped\s*-?\s*up\b""",
             """\bnightcore\b""",
-            """\bbass\s+boost(ed)?\b""",
+            """\bbass\s*-?\s*boost(ed)?\b""",
+            """\blo\s*-?\s*fi\b""",
+            """\b8d\b""",
+            """\bbootleg\b""",
+            """\brework\b""",
+            """\bflip\b""",
+            """\bkaraoke\b""",
+            """\binstrumental\b""",
             """\bai\s+(art|images?|video|generated|covers?|edits?)\b""",
             """\bai\b""",
             """\bamv\b""",
@@ -232,7 +242,19 @@ object YouTubeCanvasProvider {
     private fun looksLikeFanEdit(
         resultTitle: String,
         songTitle: String,
-    ): Boolean = notCanvasMarkers.any { marker -> marker.containsMatchIn(resultTitle) && !marker.containsMatchIn(songTitle) }
+    ): Boolean =
+        notCanvasMarkers.any { marker -> marker.containsMatchIn(resultTitle) && !marker.containsMatchIn(songTitle) } ||
+            (isMashupTitle(resultTitle) && !isMashupTitle(songTitle))
+
+    /**
+     * A title that mashes two songs together — "SongA x SongB", "SongA × SongB",
+     * "SongA vs SongB". The song being resolved is a single track, so a clip that
+     * joins it to another song is an edit of two recordings, never this one's own
+     * canvas. The same test is applied to the song's own title first, so a track
+     * genuinely released as a collaboration ("A x B") is not refused for it.
+     */
+    private fun isMashupTitle(title: String): Boolean =
+        Regex("""\s+[x×]\s+|\s+vs\.?\s+""", RegexOption.IGNORE_CASE).containsMatchIn(title)
 
     /**
      * Whether the upload looks like the song's own release rather than a fan
@@ -379,23 +401,33 @@ object YouTubeCanvasProvider {
         return null
     }
 
-    /** The largest video-only rendition that carries a usable address. */
+    /**
+     * The highest-quality video-only rendition this response can actually hand
+     * over as a playable address.
+     *
+     * Renditions are walked from the largest down and the first that yields a
+     * usable URL wins. Picking the single largest with `maxByOrNull` and then
+     * trying to decrypt only that one was the quality problem: the very top
+     * rendition is often delivered solely as a signature cipher whose signature
+     * this cannot compute, so the whole client was abandoned — and with it every
+     * lower rendition beneath it that carried a plain, playable URL. Walking the
+     * list keeps the best quality that truly plays instead of throwing the
+     * client away for the sake of one unplayable top entry.
+     */
     private fun bestVideoUrl(response: PlayerResponse): String? {
         val formats = response.streamingData?.adaptiveFormats.orEmpty()
         val videoFormats =
             formats
                 .filter { !it.isAudio && it.mimeType.startsWith("video/") }
                 .filter { it.width != null && it.height != null }
+                .sortedByDescending { (it.height ?: 0) * (it.width ?: 0) }
 
-        val best =
-            videoFormats
-                .filter { !it.url.isNullOrBlank() || !it.signatureCipher.isNullOrBlank() || !it.cipher.isNullOrBlank() }
-                .maxByOrNull { (it.height ?: 0) * (it.width ?: 0) }
-                ?: return null
-
-        return best.url?.takeIf { it.isNotBlank() }
-            ?: best.signatureCipher?.let { decryptSignature(it) }
-            ?: best.cipher?.let { decryptSignature(it) }
+        for (format in videoFormats) {
+            format.url?.takeIf { it.isNotBlank() }?.let { return it }
+            format.signatureCipher?.let { decryptSignature(it) }?.let { return it }
+            format.cipher?.let { decryptSignature(it) }?.let { return it }
+        }
+        return null
     }
 
     /**

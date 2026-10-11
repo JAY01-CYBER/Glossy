@@ -1069,7 +1069,12 @@ public final class MetroServer {
 
         private void playbackAction(byte[] payload, WsConn conn) {
             Room room = conn.room;
-            if (!requireHost(conn, room)) return;
+            // The host check runs after the action is parsed: a guest may
+            // append to the queue, every other action stays host-only.
+            if (room == null) {
+                conn.send(T.ERROR, Msgs.error("not_in_room", "Join a room first"));
+                return;
+            }
 
             String action = "";
             String trackId = "";
@@ -1104,6 +1109,14 @@ public final class MetroServer {
                     case 11 -> capturedAt = r.readVarint();
                     default -> r.skip();
                 }
+            }
+
+            // A guest may append to the queue: it changes nothing that is
+            // playing, so it needs no host approval. Every other action
+            // controls the room and stays host-only.
+            if (conn.userId == null || (!conn.userId.equals(room.hostId) && !action.equals(T.QUEUE_ADD))) {
+                conn.send(T.ERROR, Msgs.error("not_host", "Only the host can do that"));
+                return;
             }
 
             long serverTime = capturedAt > 0 ? capturedAt : now();

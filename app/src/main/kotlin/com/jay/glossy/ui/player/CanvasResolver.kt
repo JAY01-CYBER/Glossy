@@ -131,6 +131,12 @@ object CanvasResolver {
         val artist: String,
         val album: String,
         val storefront: String,
+        /**
+         * The title exactly as it came in, before normalization. Normalization
+         * strips "(Remix)", "(Edit)" and "(Mix)", so the version check needs the
+         * untouched title to tell "Kalyani" from "Kalyani Remix".
+         */
+        val rawTitle: String = title,
     )
 
     @Volatile
@@ -222,6 +228,7 @@ object CanvasResolver {
                 artist = normalizedArtist,
                 album = albumName,
                 storefront = storefront,
+                rawTitle = songTitle,
             )
 
         // Instant path: playback cache first — and still checked. A cached
@@ -319,6 +326,7 @@ object CanvasResolver {
                 artwork.name,
                 artwork.artist,
                 alternativeTitle = alternativeTitle,
+                rawSongTitle = query.rawTitle,
             )
         if (match == CanvasMatch.MISMATCH) {
             answers += CanvasDiagnostics.Answer(provider, CanvasDiagnostics.Verdict.WRONG_SONG, claimed)
@@ -439,15 +447,19 @@ object CanvasResolver {
 
     /**
      * ALL style: fire every provider at once (Spotify, ArchiveTune/BetterLyrics,
-     * Tidal, Apple Music) and return the first canvas that answers *and passes
-     * the check*. Losers are cancelled the moment a winner lands, so this costs
-     * no more than the fastest provider instead of the sum of all four.
+     * Tidal, Apple Music, YouTube) and return the best *verified* canvas, judged
+     * by provider priority rather than by who merely replied first.
      *
-     * The check is what makes racing safe. Without it the fastest provider wins
-     * outright, and the fastest provider is the one most likely to have matched
-     * on a title alone; with it, an answer for another song is discarded and the
-     * race keeps waiting, so the winner is the first provider that had this song
-     * rather than the first to reply about something.
+     * The verification is what makes racing safe: an answer for another song is
+     * discarded and the race keeps waiting, so the winner is a provider that
+     * actually had this song rather than the first to reply about something.
+     *
+     * When two providers both answer, the higher-priority one wins. Spotify's
+     * canvas is the song's own artwork and so the most accurate, so its answer is
+     * preferred and a faster but less authoritative clip (YouTube's search-based
+     * guess, say) is held until Spotify has reported — not discarded, in case
+     * Spotify had nothing. A faster lower-priority answer is therefore only used
+     * when nothing that outranks it has a canvas, so accuracy outranks speed.
      *
      * A provider that answered nothing and a provider that fell over are
      * recorded apart. If every provider answered and none had a canvas for this
@@ -478,13 +490,27 @@ object CanvasResolver {
             results.send(answer)
         }
 
+        // Provider ranking for this race; lower is better. Spotify's canvas is
+        // the song's own artwork and so the most accurate, so when it is signed
+        // in its answer is preferred and YouTube drops to second. Signed out,
+        // Spotify's job fails instantly (no cookie) and drops out of the pending
+        // set, so YouTube — next in rank — is accepted without any extra wait.
+        // Credentials are therefore still fetched inside the Spotify job, in
+        // parallel with the others, rather than ahead of the race.
+        fun rankOf(provider: String): Int =
+            when (provider) {
+                SpotifyProvider -> 0
+                YouTubeProvider -> 1
+                else -> 2
+            }
+
         val jobs =
             listOf(
                 launch {
                     ask(SpotifyProvider) {
                         // Signed out is a known state, not a broken lookup: it is
                         // recorded as FAILED, and that verdict is what keeps the
-                        // miss below from being written on the other three
+                        // miss below from being written on the other four
                         // providers' say-so (see the answer check).
                         val credentials =
                             spotifyCredentials(query.context)
@@ -516,16 +542,32 @@ object CanvasResolver {
             )
 
         var winner: CanvasArtwork? = null
-        var answered = 0
+        var winnerRank = Int.MAX_VALUE
         var failed = 0
-        while (answered < jobs.size && winner == null) {
+        // Providers that have not reported yet. The loop watches this so it can
+        // tell whether a higher-priority answer might still be on its way.
+        val pendingProviders =
+            mutableSetOf(SpotifyProvider, ArchiveTuneProvider, TidalProvider, AppleProvider, YouTubeProvider)
+        while (pendingProviders.isNotEmpty()) {
+            // Stop as soon as the best verified answer so far outranks everything
+            // still running. A faster, lower-priority provider that replied first
+            // is therefore held back — not discarded — until the providers that
+            // outrank it have had their say, so the most accurate source wins
+            // rather than merely the quickest.
+            if (winner != null && pendingProviders.none { rankOf(it) < winnerRank }) break
             val answer = results.receive()
-            answered++
+            pendingProviders.remove(answer.provider)
             if (answer.failed) {
                 failed++
                 answers += CanvasDiagnostics.Answer(answer.provider, CanvasDiagnostics.Verdict.FAILED)
             } else {
-                verify(query, answer.provider, answer.artwork, answers, answer.alternativeTitle)?.let { winner = it }
+                verify(query, answer.provider, answer.artwork, answers, answer.alternativeTitle)?.let { verified ->
+                    val rank = rankOf(answer.provider)
+                    if (rank < winnerRank) {
+                        winner = verified
+                        winnerRank = rank
+                    }
+                }
             }
         }
         jobs.forEach { it.cancel() }

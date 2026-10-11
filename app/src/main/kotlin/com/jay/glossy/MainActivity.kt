@@ -202,6 +202,7 @@ import com.jay.glossy.ui.component.rememberBottomSheetState
 import com.jay.glossy.ui.component.shimmer.ShimmerTheme
 import com.jay.glossy.ui.menu.YouTubeSongMenu
 import com.jay.glossy.ui.player.BottomSheetPlayer
+import com.jay.glossy.ui.screens.ListenTogetherSuggestionDialog
 import com.jay.glossy.ui.screens.Screens
 import com.jay.glossy.ui.screens.navigationBuilder
 import com.jay.glossy.ui.screens.settings.ChangelogScreen
@@ -1027,6 +1028,10 @@ class MainActivity : ComponentActivity() {
                     if (showChangelog.value) {
                         ChangelogScreen(onDismiss = { showChangelog.value = false })
                     }
+
+                    // A guest's suggestion must be answerable from anywhere in
+                    // the app, not only from the Listen Together screen.
+                    ListenTogetherSuggestionDialog(listenTogetherManager)
 
                     Scaffold(
                         snackbarHost = { SnackbarHost(snackbarHostState) },

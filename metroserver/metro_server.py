@@ -979,14 +979,17 @@ class Server:
         if room is None:
             await self.send_error(conn, E_NOT_IN_ROOM, "not in a room")
             return
-        if conn.user_id != room.host_id and not conn.is_host:
-            await self.send_error(conn, E_NOT_HOST, "only the host controls playback")
-            return
-
         fields = Fields(payload)
         action = fields.string(1)
         if action not in PLAYBACK_ACTIONS:
             await self.send_error(conn, E_INVALID_MESSAGE, f"unknown action {action}")
+            return
+        # A guest may append to the queue: it changes nothing that is playing,
+        # so it needs no host approval. Every other action controls the room
+        # and stays host-only.
+        if (conn.user_id != room.host_id and not conn.is_host
+                and action != A_QUEUE_ADD):
+            await self.send_error(conn, E_NOT_HOST, "only the host controls playback")
             return
 
         track_id = fields.string(2)

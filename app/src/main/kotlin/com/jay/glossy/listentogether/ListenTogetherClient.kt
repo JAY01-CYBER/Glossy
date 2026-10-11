@@ -1988,6 +1988,30 @@ class ListenTogetherClient
         }
 
         /**
+         * A guest's queue edit. Unlike every other playback action this one
+         * needs no host approval - appending changes nothing that is playing
+         * - so it is the single PLAYBACK_ACTION a non-host socket may send;
+         * the servers allow QUEUE_ADD from a guest.
+         */
+        fun sendQueueAdd(
+            trackInfo: TrackInfo,
+            insertNext: Boolean = false,
+        ) {
+            if (!isInRoom || _role.value == RoomRole.HOST) {
+                log(LogLevel.ERROR, "Cannot queue track", "Not a guest in a room")
+                return
+            }
+            sendMessage(
+                MessageTypes.PLAYBACK_ACTION,
+                PlaybackActionPayload(
+                    action = PlaybackActions.QUEUE_ADD,
+                    trackInfo = trackInfo,
+                    insertNext = insertNext,
+                ),
+            )
+        }
+
+        /**
          * Approve a suggestion (host only)
          */
         fun approveSuggestion(suggestionId: String) {

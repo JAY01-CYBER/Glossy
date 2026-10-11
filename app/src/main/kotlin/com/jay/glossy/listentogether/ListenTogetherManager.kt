@@ -306,6 +306,8 @@ class ListenTogetherManager
                 oldConnection?.onSkipPrevious = null
                 oldConnection?.onSkipNext = null
                 oldConnection?.onRestartSong = null
+                oldConnection?.onGuestPlayRequest = null
+                oldConnection?.onGuestQueueAdd = null
 
                 cancelDriftCorrection()
                 invalidatePendingQueueMutations()
@@ -317,6 +319,12 @@ class ListenTogetherManager
                     // Block if we're in a room as a guest (not host)
                     isInRoom && !isHost
                 }
+
+                // The block above does not swallow a guest's taps: a play
+                // intent becomes a suggestion the host must approve, and
+                // queue edits go straight out as guest queue_add messages.
+                connection?.onGuestPlayRequest = { items -> suggestFromGuest(items) }
+                connection?.onGuestQueueAdd = { items, insertNext -> guestQueueAdd(items, insertNext) }
 
                 // Add listener if in room
                 if (connection != null && isInRoom) {
@@ -694,10 +702,11 @@ class ListenTogetherManager
 
                 is ListenTogetherEvent.SuggestionApproved -> {
                     // Both servers broadcast SUGGESTION_APPROVED once the host
-                    // approves (auto or manual), but neither inserts the track
-                    // into the host's player — so nothing played for anyone.
-                    // The queue observer then fans the insert out to guests
-                    // via SYNC_QUEUE.
+                    // approves (auto or manual). The host's player inserts the
+                    // track and plays it right away; because the player listener
+                    // stays active, the track change and PLAY fan out to guests
+                    // like a host-initiated skip, then the queue observer
+                    // follows with SYNC_QUEUE.
                     if (isHost && isInRoom) {
                         enqueueApprovedSuggestion(event.trackInfo)
                     }
@@ -1260,7 +1269,12 @@ class ListenTogetherManager
 
                     PlaybackActions.QUEUE_ADD -> {
                         val track = action.trackInfo
-                        if (action.revision > 0L) {
+                        // The host is the queue's authority: a guest's add is
+                        // appended to the local queue (the server's copy may lag
+                        // this player's queue by the observer's debounce) and
+                        // the queue observer then fans the result out with
+                        // SYNC_QUEUE. Non-hosts keep applying the canonical list.
+                        if (action.revision > 0L && !isHost) {
                             applyCanonicalUpcomingQueue(connection, action.queue.orEmpty(), action.queueTitle)
                         } else if (track == null) {
                             Timber.tag(TAG).w("QUEUE_ADD missing trackInfo")
@@ -1992,12 +2006,14 @@ class ListenTogetherManager
         }
 
         /**
-         * Put an approved suggestion into the host's local queue. The running
-         * queue observer picks the insert up and pushes it to guests with
-         * SYNC_QUEUE, so the track plays for the whole room.
+         * Play an approved suggestion on the host right away. The track is
+         * inserted after the current one and jumped to; because no internal
+         * sync flag is set, the host's own player listener broadcasts the
+         * track change and PLAY to every guest exactly like a host-initiated
+         * skip, and the queue observer then syncs the queue itself.
          */
         private fun enqueueApprovedSuggestion(track: TrackInfo) {
-            Timber.tag(TAG).d("Host: queueing approved suggestion ${track.title}")
+            Timber.tag(TAG).d("Host: playing approved suggestion ${track.title}")
             val connection = playerConnection ?: return
             val actionQueueGeneration = queueSyncGeneration
             enqueueQueueMutation(actionQueueGeneration) {
@@ -2013,16 +2029,28 @@ class ListenTogetherManager
                             ?.copy(
                                 suggestedBy = track.suggestedBy,
                             )?.toMediaItem()
-                    if (mediaItem != null) {
-                        connection.allowInternalSync = true
-                        try {
-                            connection.addToQueue(mediaItem)
-                        } finally {
-                            connection.allowInternalSync = false
-                        }
-                    } else {
+                    if (mediaItem == null) {
                         Timber.tag(TAG).w("Approved suggestion failed to resolve media item for ${track.id}")
+                        return@onSuccess
                     }
+                    val player = connection.player
+                    if (player.currentMediaItem?.mediaId == mediaItem.mediaId) {
+                        // Already the current song - just make sure it plays.
+                        connection.play()
+                        return@onSuccess
+                    }
+                    // playNext inserts after the current item; seek straight to
+                    // it so the suggestion plays now instead of lining up behind
+                    // whatever is already playing. No internal-sync flag here:
+                    // the host's own listener must broadcast the track change.
+                    connection.playNext(mediaItem)
+                    val insertIndex =
+                        (0 until player.mediaItemCount)
+                            .firstOrNull { player.getMediaItemAt(it).mediaId == mediaItem.mediaId }
+                    if (insertIndex != null && insertIndex != player.currentMediaItemIndex) {
+                        player.seekTo(insertIndex, 0L)
+                    }
+                    connection.play()
                 }.onFailure {
                     Timber.tag(TAG).e(it, "Approved suggestion metadata fetch failed")
                 }
@@ -2064,6 +2092,57 @@ class ListenTogetherManager
          * Suggest the given track to the host (guest only)
          */
         fun suggestTrack(track: TrackInfo) = client.suggestTrack(track)
+
+        /**
+         * A guest tapped something that means "play this". The guest never
+         * touches the room's playback: the track is sent as a suggestion and
+         * the host decides from the popup whether the room hears it.
+         */
+        fun suggestFromGuest(items: List<MediaItem>) {
+            if (!isInRoom || isHost) return
+            items.firstOrNull()?.let { client.suggestTrack(it.toTrackInfo()) }
+        }
+
+        /**
+         * A guest's own queue edit. Appending needs no host approval, so the
+         * track is relayed straight to the server and applied optimistically
+         * here as well; the host's next SYNC_QUEUE reconciles every device.
+         */
+        fun guestQueueAdd(
+            items: List<MediaItem>,
+            insertNext: Boolean,
+        ) {
+            if (!isInRoom || isHost || items.isEmpty()) return
+            items.forEach { client.sendQueueAdd(it.toTrackInfo(), insertNext) }
+
+            val connection = playerConnection ?: return
+            connection.allowInternalSync = true
+            try {
+                if (insertNext) {
+                    connection.playNext(items)
+                } else {
+                    connection.addToQueue(items)
+                }
+            } finally {
+                connection.allowInternalSync = false
+            }
+        }
+
+        /**
+         * Wire-format track info for a suggestion or queue edit.
+         */
+        private fun MediaItem.toTrackInfo(): TrackInfo {
+            val meta = metadata ?: return TrackInfo(id = mediaId, title = mediaId, artist = "", duration = 0L)
+            return TrackInfo(
+                id = meta.id,
+                title = meta.title,
+                artist = meta.artists.joinToArtistString(getArtistSeparator(context)) { it.name },
+                album = meta.album?.title,
+                duration = if (meta.duration > 0) meta.duration.toLong() * 1000 else 180_000L,
+                thumbnail = meta.thumbnailUrl,
+                suggestedBy = meta.suggestedBy,
+            )
+        }
 
         /**
          * Approve a suggestion (host only)
