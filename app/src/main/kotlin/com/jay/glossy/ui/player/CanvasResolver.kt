@@ -67,6 +67,13 @@ object CanvasResolver {
     private const val YouTubeProvider = "YouTube"
 
     /**
+     * Where the YouTube search sits in the race: last. Everything that answers
+     * about the track itself is worth waiting for, and a search only wins a song
+     * none of those has an animation for.
+     */
+    private const val YouTubeRank = 2
+
+    /**
      * Songs whose lookup was answered "no canvas" by every provider, with none
      * of them failing on the way.
      *
@@ -490,18 +497,28 @@ object CanvasResolver {
             results.send(answer)
         }
 
-        // Provider ranking for this race; lower is better. Spotify's canvas is
-        // the song's own artwork and so the most accurate, so when it is signed
-        // in its answer is preferred and YouTube drops to second. Signed out,
-        // Spotify's job fails instantly (no cookie) and drops out of the pending
-        // set, so YouTube — next in rank — is accepted without any extra wait.
-        // Credentials are therefore still fetched inside the Spotify job, in
-        // parallel with the others, rather than ahead of the race.
+        // Provider ranking for this race; lower is better.
+        //
+        // The services that answer with the song's *own* animation — the
+        // artist's canvas, the label's motion artwork — come first, and the
+        // YouTube search comes last. That order is the whole reason this race
+        // exists: the other four answer about a track, while YouTube answers a
+        // *query*, so its answer is a guess that somebody's re-upload can win,
+        // and it used to outrank Tidal, Apple Music and the artwork service.
+        // That is how a person's clip ended up painted under the song's own
+        // title while the label's animated cover sat unused in the same race.
+        // A guess may only stand when nothing that owns the song has an
+        // animation.
+        //
+        // Spotify keeps the top rank because its canvas is uploaded for the
+        // track itself. Signed out its job fails instantly (no cookie) and
+        // drops out of the pending set, so nothing waits on it: credentials are
+        // still fetched inside its job, in parallel with the others.
         fun rankOf(provider: String): Int =
             when (provider) {
                 SpotifyProvider -> 0
-                YouTubeProvider -> 1
-                else -> 2
+                YouTubeProvider -> YouTubeRank
+                else -> 1
             }
 
         val jobs =

@@ -16,11 +16,12 @@
  *    past a card, swiping away from it or flipping to the next track no longer
  *    cancels the work that card asked for. Previously the prefetch ran inside
  *    the card's own composition and died with it.
- *  - **It warms the video, not just the URL.** The first [WarmBytes] of the
- *    clip are pulled into the very same [SimpleCache] the player reads from
- *    (same cache, same default key — the URI), so when the card does start it
- *    decodes from local disk and shows its first frame almost immediately
- *    instead of after a download.
+ *  - **It warms the video, not just the URL.** A canvas-sized clip is pulled
+ *    into the very same [SimpleCache] the player reads from (same cache, same
+ *    default key — the URI), so when the card does start it decodes from local
+ *    disk and shows its first frame almost immediately instead of after a
+ *    download — and, because the whole clip is there, the loop wraps around
+ *    without ever going back to the network.
  *  - **It is polite.** Two lookups run at once at most, a song is looked up
  *    once per session, each URL is warmed once, and everything is skipped on
  *    mobile data unless the user allowed canvases there.
@@ -61,11 +62,16 @@ object CanvasPrefetcher {
     private const val WarmedUrlLimit = 48
 
     /**
-     * How much of an upcoming canvas is pulled into the player's cache. Enough
-     * for the opening seconds of a looping clip, which is all a swipe needs to
-     * look instant; the rest streams as usual.
+     * How big a clip may be and still be warmed *whole*.
+     *
+     * Whole, never part: the cache entry is keyed by the URI playback opens, so
+     * a partial entry is a lie about the clip's length — the player reads to the
+     * end of what is stored, cannot continue, and gives up a couple of seconds
+     * in, over and over. Warming only what fits keeps the entry truthful and
+     * keeps the loop on disk. Anything larger than this is not a canvas anyway;
+     * it streams, and playback caches it correctly by itself.
      */
-    private const val WarmBytes = 3L * 1024 * 1024
+    private const val WarmMaxClipBytes = 8L * 1024 * 1024
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val lookups = Semaphore(MaxConcurrentLookups)
@@ -135,8 +141,13 @@ object CanvasPrefetcher {
                     // to a decoder and fading the artwork out for a frame that
                     // never comes.
                     val known = CanvasVerifier.health(url)
-                    val health = if (known == CanvasUrlHealth.UNKNOWN) CanvasVerifier.probe(url) else known
-                    if (health == CanvasUrlHealth.UNPLAYABLE) {
+                    val probe =
+                        if (known == CanvasUrlHealth.UNKNOWN) {
+                            CanvasVerifier.probe(url)
+                        } else {
+                            CanvasProbe(known)
+                        }
+                    if (probe.health == CanvasUrlHealth.UNPLAYABLE) {
                         // Drop it, so the next lookup for this song asks the
                         // providers again rather than being answered from the
                         // cache with a clip that will not play.
@@ -150,7 +161,10 @@ object CanvasPrefetcher {
                     }
 
                     markHandled(mediaId)
-                    if (warmVideo) warmVideoCache(appContext, url)
+                    // The probe normally carries the size; a URL whose verdict
+                    // was already known reports it from the same record.
+                    val clipBytes = probe.contentLengthBytes ?: CanvasVerifier.contentLength(url)
+                    if (warmVideo) warmVideoCache(appContext, url, clipBytes)
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -163,17 +177,33 @@ object CanvasPrefetcher {
     }
 
     /**
-     * Writes the first [WarmBytes] of [url] into the cache the player reads
-     * from. The write is a plain ranged read of the same URI playback will use,
-     * so the cache entry lines up exactly: the player finds the opening bytes
-     * already on disk and only has to fetch what it still needs.
+     * Writes the whole of [url] into the cache the player reads from, when it is
+     * a clip small enough to be a canvas.
+     *
+     * The write is an unbounded read of the same URI playback will open — no
+     * subrange — so the cached entry's length *is* the clip's length and the
+     * player, reading through [CacheDataSource], finds a complete file where it
+     * expected one. Its own [CacheWriter] then has nothing left to fetch, and
+     * the loop never leaves the disk.
      *
      * A canvas that is already cached is left alone — [CacheWriter] verifies
-     * the range it is asked for and returns without touching the network.
+     * what it is asked for and returns without touching the network.
      */
     @androidx.annotation.OptIn(UnstableApi::class)
-    private suspend fun warmVideoCache(context: Context, url: String) {
+    private suspend fun warmVideoCache(
+        context: Context,
+        url: String,
+        contentLengthBytes: Long?,
+    ) {
         if (!url.startsWith("http", ignoreCase = true)) return
+        // A playlist is not the animation: it is a few hundred bytes that expire.
+        // Caching one would pin *stale* segment addresses — signed URLs that stop
+        // working — and the canvas would then fail at the same point forever,
+        // from disk, no matter what the network did. HLS clips stream.
+        if (url.contains(".m3u8", ignoreCase = true)) return
+        // Whole or nothing. See [WarmMaxClipBytes].
+        val clipBytes = contentLengthBytes ?: return
+        if (clipBytes <= 0L || clipBytes > WarmMaxClipBytes) return
         // With the video cache switched off, playback reads straight from the
         // network and a warm entry would never be consulted.
         val cacheMode =
@@ -198,7 +228,7 @@ object CanvasPrefetcher {
             try {
                 CacheWriter(
                     dataSource,
-                    DataSpec(Uri.parse(url)).subrange(0, WarmBytes),
+                    DataSpec(Uri.parse(url)),
                     ByteArray(CacheWriter.DEFAULT_BUFFER_SIZE_BYTES),
                     null,
                 ).cache()

@@ -71,6 +71,20 @@ internal enum class CanvasMatch {
     MISMATCH,
 }
 
+/**
+ * What one probe of a canvas URL learned.
+ *
+ * The size is reported because a canvas is a *loop*: it is read in full, over
+ * and over, and a clip that is already on disk wraps around without touching
+ * the network. Whoever is about to cache it has to know how big it is before it
+ * decides — see `CanvasPrefetcher`.
+ */
+data class CanvasProbe(
+    val health: CanvasUrlHealth,
+    /** The clip's size in bytes, when the server says; null when it does not. */
+    val contentLengthBytes: Long? = null,
+)
+
 /** Whether a canvas URL is known to play. */
 enum class CanvasUrlHealth {
     /** Nothing has been learned about this URL yet. */
@@ -125,7 +139,18 @@ internal object CanvasVerifier {
     private const val ProbeConnectTimeoutMillis = 3_000
     private const val ProbeReadTimeoutMillis = 4_000
 
-    private class HealthEntry(val health: CanvasUrlHealth, val expiresAtMillis: Long)
+    private class HealthEntry(
+        val health: CanvasUrlHealth,
+        val expiresAtMillis: Long,
+        /**
+         * The clip's size, when a probe learned it.
+         *
+         * Kept beside the verdict because the two arrive together: the answer
+         * "this URL plays" short-circuits the next probe, and the preloader
+         * still has to know how big the clip is before it may cache it whole.
+         */
+        val contentLengthBytes: Long? = null,
+    )
 
     private val healthCache = Collections.synchronizedMap(LinkedHashMap<String, HealthEntry>())
 
@@ -292,12 +317,35 @@ internal object CanvasVerifier {
 
     /** Records a verdict learned elsewhere — the player's own retry budget. */
     fun rememberHealth(url: String?, health: CanvasUrlHealth) {
+        remember(url, health, null)
+    }
+
+    /** The clip's size, if some probe already learned it. Never a network call. */
+    fun contentLength(url: String?): Long? {
+        val key = url?.trim().orEmpty()
+        if (key.isEmpty()) return null
+        synchronized(healthCache) {
+            val entry = healthCache[key]
+            if (entry == null || entry.expiresAtMillis <= System.currentTimeMillis()) return null
+            return entry.contentLengthBytes
+        }
+    }
+
+    private fun remember(
+        url: String?,
+        health: CanvasUrlHealth,
+        contentLengthBytes: Long?,
+    ) {
         val key = url?.trim().orEmpty()
         if (key.isEmpty() || health == CanvasUrlHealth.UNKNOWN) return
         val ttl = if (health == CanvasUrlHealth.PLAYABLE) PlayableTtlMillis else UnplayableTtlMillis
         synchronized(healthCache) {
             if (healthCache.size >= HealthLimit) healthCache.clear()
-            healthCache[key] = HealthEntry(health, System.currentTimeMillis() + ttl)
+            // A verdict learned from playback carries no size of its own, so an
+            // earlier probe's size is carried over rather than wiped: the
+            // preloader decides whether it may cache a clip whole on it.
+            val knownSize = contentLengthBytes ?: healthCache[key]?.contentLengthBytes
+            healthCache[key] = HealthEntry(health, System.currentTimeMillis() + ttl, knownSize)
         }
     }
 
@@ -308,13 +356,18 @@ internal object CanvasVerifier {
      * would reject a perfectly good canvas because the network was briefly
      * busy.
      */
-    suspend fun probe(url: String): CanvasUrlHealth = withContext(Dispatchers.IO) {
+    suspend fun probe(url: String): CanvasProbe = withContext(Dispatchers.IO) {
         val known = health(url)
-        if (known != CanvasUrlHealth.UNKNOWN) return@withContext known
+        if (known != CanvasUrlHealth.UNKNOWN) {
+            // Already decided: reuse both halves of the answer instead of asking
+            // the network again, and keep the size a verdict-only call would
+            // otherwise drop.
+            return@withContext CanvasProbe(known, contentLength(url))
+        }
 
-        val verdict = headRequest(url) ?: rangedGetRequest(url)
-        rememberHealth(url, verdict)
-        verdict
+        val probed = headRequest(url) ?: rangedGetRequest(url)
+        remember(url, probed.health, probed.contentLengthBytes)
+        probed
     }
 
     /**
@@ -322,7 +375,7 @@ internal object CanvasVerifier {
      * 405, 501) is not a clip that will not play, so that answers null and the
      * ranged GET below decides.
      */
-    private fun headRequest(url: String): CanvasUrlHealth? {
+    private fun headRequest(url: String): CanvasProbe? {
         var connection: HttpURLConnection? = null
         return try {
             connection = open(url, "HEAD")
@@ -331,14 +384,17 @@ internal object CanvasVerifier {
             when {
                 code in 200..399 ->
                     if (contentType.startsWith("text/html", ignoreCase = true)) {
-                        CanvasUrlHealth.UNPLAYABLE
+                        CanvasProbe(CanvasUrlHealth.UNPLAYABLE)
                     } else {
-                        CanvasUrlHealth.PLAYABLE
+                        CanvasProbe(
+                            CanvasUrlHealth.PLAYABLE,
+                            connection.contentLengthLong.takeIf { it > 0L },
+                        )
                     }
 
                 // A definitive "no such clip".
                 code == HttpURLConnection.HTTP_NOT_FOUND ||
-                    code == HttpURLConnection.HTTP_GONE -> CanvasUrlHealth.UNPLAYABLE
+                    code == HttpURLConnection.HTTP_GONE -> CanvasProbe(CanvasUrlHealth.UNPLAYABLE)
 
                 // Everything else a server can answer — 403 from a CDN that
                 // dislikes the client, 405 from one that refuses HEAD, 408, 429,
@@ -355,7 +411,7 @@ internal object CanvasVerifier {
     }
 
     /** One byte of the clip — the smallest request that proves it is served. */
-    private fun rangedGetRequest(url: String): CanvasUrlHealth {
+    private fun rangedGetRequest(url: String): CanvasProbe {
         var connection: HttpURLConnection? = null
         return try {
             connection =
@@ -367,26 +423,43 @@ internal object CanvasVerifier {
             when {
                 code in 200..399 ->
                     if (contentType.startsWith("text/html", ignoreCase = true)) {
-                        CanvasUrlHealth.UNPLAYABLE
+                        CanvasProbe(CanvasUrlHealth.UNPLAYABLE)
                     } else {
-                        CanvasUrlHealth.PLAYABLE
+                        // A 206 answers with `Content-Range: bytes 0-0/<total>`,
+                        // which is the only place the total is stated when the
+                        // server refuses HEAD. A 200 to a ranged request states
+                        // it the ordinary way.
+                        CanvasProbe(
+                            CanvasUrlHealth.PLAYABLE,
+                            totalFromContentRange(connection.getHeaderField("Content-Range"))
+                                ?: connection.contentLengthLong.takeIf { it > 0L },
+                        )
                     }
 
                 code == HttpURLConnection.HTTP_NOT_FOUND ||
-                    code == HttpURLConnection.HTTP_GONE -> CanvasUrlHealth.UNPLAYABLE
+                    code == HttpURLConnection.HTTP_GONE -> CanvasProbe(CanvasUrlHealth.UNPLAYABLE)
 
                 // A refusal, a rate limit or a server error is not evidence
                 // about the clip. The player learns the truth the moment it
                 // actually feeds the URL to a decoder.
-                else -> CanvasUrlHealth.UNKNOWN
+                else -> CanvasProbe(CanvasUrlHealth.UNKNOWN)
             }
         } catch (e: Exception) {
             // The request never completed: unknown, not unplayable.
-            CanvasUrlHealth.UNKNOWN
+            CanvasProbe(CanvasUrlHealth.UNKNOWN)
         } finally {
             runCatching { connection?.disconnect() }
         }
     }
+
+    /** `bytes 0-0/1234` → 1234; null for an unknown or absent total. */
+    private fun totalFromContentRange(header: String?): Long? =
+        header
+            ?.substringAfter('/', missingDelimiterValue = "")
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() && it != "*" }
+            ?.toLongOrNull()
+            ?.takeIf { it > 0L }
 
     private fun open(url: String, method: String): HttpURLConnection =
         (URL(url).openConnection() as HttpURLConnection).apply {

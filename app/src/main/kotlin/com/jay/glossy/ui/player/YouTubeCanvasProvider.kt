@@ -158,6 +158,15 @@ object YouTubeCanvasProvider {
             if (details.musicVideoType != MUSIC_VIDEO_TYPE_OMV && !isOfficialUpload(author, artist)) return null
             if (looksLikeFanEdit(title, song)) return null
 
+            // A canvas is a *loop*, so its length is part of what makes it one.
+            // A full-length music video is the opposite of what YouTube Music
+            // paints behind a song — the app shows the animated cover and keeps
+            // the video for its own watch page — and repeating three minutes of
+            // somebody's footage behind the controls is not an animated canvas.
+            // Refusing it here sends the song to the providers that answer with
+            // the cover itself.
+            if ((details.lengthSeconds.toLongOrNull() ?: 0L) > MAX_VIDEO_DURATION_SECONDS) return null
+
             val videoUrl = bestVideoUrl(response) ?: continue
             return CanvasArtwork(
                 name = title,
@@ -372,9 +381,6 @@ object YouTubeCanvasProvider {
 
                 if (looksLikeFanEdit(resultTitle, songValidation)) return@mapNotNull null
 
-                val durationSeconds = item.duration ?: 0
-                val isShort = durationSeconds > 0 && durationSeconds <= MAX_VIDEO_DURATION_SECONDS
-
                 // A title that claims to *be* the song's own animation or
                 // release: a visualizer, a canvas clip, an official music
                 // video. "#shorts" deliberately does not count — it only says
@@ -387,7 +393,16 @@ object YouTubeCanvasProvider {
                         ownVideoClaim.containsMatchIn(resultTitle) ||
                         item.musicVideoType == MUSIC_VIDEO_TYPE_OMV
 
-                if (!isShort && !claimsOwnAnimation && durationSeconds > MAX_VIDEO_DURATION_SECONDS) return@mapNotNull null
+                // Length is a hard part of the answer, not a tie-break. This
+                // used to be waived for anything whose title claimed to be the
+                // song's own video, so an "(Official Video)" entry — minutes of
+                // footage with people in it — passed the canvas window and
+                // became the animation. A claimed title changes *whose* clip it
+                // is, never *what kind* of clip it is; only a loop is a canvas.
+                // An unknown length is left to the checks above rather than
+                // refused on a number the search did not give.
+                val durationSeconds = item.duration ?: 0
+                if (durationSeconds > MAX_VIDEO_DURATION_SECONDS) return@mapNotNull null
 
                 // A channel that is not the song's own — no artist name, no
                 // VEVO, no OMV type — may only stand in when the title
@@ -471,7 +486,21 @@ object YouTubeCanvasProvider {
      * client away for the sake of one unplayable top entry.
      */
     private fun bestVideoUrl(response: PlayerResponse): String? {
-        val formats = response.streamingData?.adaptiveFormats.orEmpty()
+        val streaming = response.streamingData
+
+        // A plain-file rendition first, when the client offers one. A canvas is
+        // read in a loop — seek, play, wrap around — so the address it plays
+        // from has to behave like a file: one address, range-capable, whole.
+        // The adaptive video-only entries are transport-fragmented streams;
+        // they are a fine way to drive a one-shot watch, and a poor one to keep
+        // a loop alive on. Resolution is the price and it is a cheap one: a
+        // canvas is drawn at artwork size, not full screen.
+        playableUrlFrom(streaming?.formats.orEmpty())?.let { return it }
+        return playableUrlFrom(streaming?.adaptiveFormats.orEmpty())
+    }
+
+    /** The largest rendition in [formats] that yields a usable address. */
+    private fun playableUrlFrom(formats: List<PlayerResponse.StreamingData.Format>): String? {
         val videoFormats =
             formats
                 .filter { !it.isAudio && it.mimeType.startsWith("video/") }
