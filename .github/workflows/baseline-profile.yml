@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: [gms, foss]
+        variant: [gms, foss, izzy]
 
     steps:
       - name: Checkout source
@@ -74,7 +74,7 @@ jobs:
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
           script: |
             adb devices
-            ./gradlew :baselineprofile:connected${{ matrix.variant == 'gms' && 'Gms' || 'Foss' }}NonMinifiedReleaseAndroidTest --stacktrace
+            ./gradlew :baselineprofile:connected${{ matrix.variant == 'gms' && 'Gms' || matrix.variant == 'foss' && 'Foss' || 'Izzy' }}NonMinifiedReleaseAndroidTest --stacktrace
 
       - name: Build release variant
         run: |
@@ -105,7 +105,8 @@ jobs:
           path: |
             app/build/outputs/apk/**
             app/build/outputs/mapping/**
-            app/src/**/baseline-prof.txt
+            app/src/**/baselineProfiles/*.txt
+            app/src/**/generated/baselineProfiles/*.txt
             baselineprofile/build/outputs/**
           if-no-files-found: warn
           retention-days: 14
