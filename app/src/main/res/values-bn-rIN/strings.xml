@@ -305,6 +305,7 @@
     <string name="preview">Preview</string>
     <string name="about">সম্পর্কিত</string>
     <string name="app_version">অ্যাপ সংস্করণ</string>
+    <string name="discord_information">Metrolist uses the KizzyRPC library to set your Discord account status. This involves using a Discord Gateway connection, which may be considered a violation of Discord\'s Terms of Service. However, there are no known instances of user accounts being banned for this reason. Use at your own risk. \n \nMetrolist will only extract your access token, and everything else will be stored locally.</string>
     <string name="new_version_available">New version available</string>
     <string name="translation_models">Translation Models</string>
     <string name="clear_translation_models">Clear translation models</string>
