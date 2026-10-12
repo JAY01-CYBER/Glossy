@@ -75,6 +75,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
@@ -303,12 +304,17 @@ fun ListenTogetherScreen(
                     )
                 }
 
-                // Connected users
-                val connectedUsers = room.users.filter { it.isConnected }
+                // Every member the room knows about, connected or not. The
+                // servers hold a dropped member's seat for a while, so filtering
+                // the disconnected out meant the host vanished from a live room
+                // the moment their phone's socket blipped — read as "the host is
+                // gone" while the room was still theirs. The avatar says who is
+                // reconnecting instead.
+                val roomMembers = room.users
                 val currentUserIdValue = userId ?: ""
                 item {
                     ConnectedUsersSection(
-                        users = connectedUsers,
+                        users = roomMembers,
                         isHost = isHost,
                         currentUserId = currentUserIdValue,
                         onUserClick = { clickedUserId, username ->
@@ -771,6 +777,7 @@ private fun ConnectedUsersSection(
     currentUserId: String,
     onUserClick: (String, String) -> Unit,
 ) {
+    val reconnecting = users.count { !it.isConnected }
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -788,6 +795,13 @@ private fun ConnectedUsersSection(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
             )
+            if (reconnecting > 0) {
+                Text(
+                    text = "$reconnecting ${stringResource(R.string.listen_together_reconnecting)}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             Spacer(modifier = Modifier.height(12.dp))
 
             Row(
@@ -822,6 +836,9 @@ private fun UserAvatar(
         modifier =
             Modifier
                 .width(72.dp)
+                // A member inside the server's reconnect window keeps their
+                // seat, so the row stays and fades instead of disappearing.
+                .alpha(if (user.isConnected) 1f else 0.45f)
                 .clickable(enabled = isClickable, onClick = onClick),
     ) {
         Box(
@@ -895,7 +912,13 @@ private fun UserAvatar(
             textAlign = TextAlign.Center,
         )
 
-        if (user.isHost) {
+        if (!user.isConnected) {
+            Text(
+                text = stringResource(R.string.listen_together_reconnecting),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else if (user.isHost) {
             Text(
                 text = stringResource(R.string.host_label),
                 style = MaterialTheme.typography.labelSmall,
