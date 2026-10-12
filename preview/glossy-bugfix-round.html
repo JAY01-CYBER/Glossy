@@ -117,7 +117,6 @@
   <h2><span class="num">4</span>Lyrics sometimes never followed the song</h2>
   <p class="symptom">Some songs showed lyrics that never moved (raw <code>&lt;00:12.34&gt;</code> tags visible), and occasionally the view opened parked at the end of the song during its first seconds.</p>
   <p class="why"><b>Two separate causes.</b> (a) The lyrics pipeline used a regex hint (<code>[mm:ss</code>) to decide whether to parse — but word-timed payloads
-  (Spotify/Musixmatch rich format) carry no line stamps at all, so they were dumped into the plain-text fallback with their tags still in the text.
   The real parser now makes that call, exactly like every other lyrics surface. (b) The full-screen view’s scroll target is
   <code>rememberSaveable</code>, so a restored index from the previous song could survive into the next one when the lyrics object was identical —
   it now resets per <b>media id</b>, so every song starts from its beginning.</p>

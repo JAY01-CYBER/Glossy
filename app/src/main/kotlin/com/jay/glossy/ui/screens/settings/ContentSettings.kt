@@ -67,7 +67,6 @@ import com.jay.glossy.constants.EnableKugouKey
 import com.jay.glossy.constants.EnableLrcLibKey
 import com.jay.glossy.constants.EnablePaxsenixKey
 import com.jay.glossy.constants.EnableLyricsPlus
-import com.jay.glossy.constants.EnableMusixmatchKey
 import com.jay.glossy.constants.EnableYouLyPlusKey
 import com.jay.glossy.constants.EnableUnisonKey
 import com.jay.glossy.constants.EnableBiniLyricsKey
@@ -135,7 +134,6 @@ fun ContentSettings(
     val (enableBetterLyrics, onEnableBetterLyricsChange) = rememberPreference(key = EnableBetterLyricsKey, defaultValue = true)
     val (enablePaxsenix, onEnablePaxsenixChange) = rememberPreference(key = EnablePaxsenixKey, defaultValue = true)
     val (enableLyricsPlus, onEnableLyricsPlusChange) = rememberPreference(key = EnableLyricsPlus, defaultValue = true)
-    val (enableMusixmatch, onEnableMusixmatchChange) = rememberPreference(key = EnableMusixmatchKey, defaultValue = true)
     val (enableYouLyPlus, onEnableYouLyPlusChange) = rememberPreference(key = EnableYouLyPlusKey, defaultValue = true)
     val (enableUnison, onEnableUnisonChange) = rememberPreference(key = EnableUnisonKey, defaultValue = true)
     val (enableBiniLyrics, onEnableBiniLyricsChange) = rememberPreference(key = EnableBiniLyricsKey, defaultValue = true)
@@ -187,7 +185,6 @@ fun ContentSettings(
             "LrcLib" to "LrcLib",
             "KuGou" to "KuGou",
             "LyricsPlus" to "LyricsPlus",
-            "Musixmatch" to "Musixmatch",
             "YouLyPlus" to "YouLyPlus",
             "Unison" to "Unison",
             "BiniLyrics" to "Bini Lyrics",
@@ -447,35 +444,6 @@ fun ContentSettings(
                                 Icon(
                                     painter = painterResource(
                                         id = if (enableMegalobiz) R.drawable.check else R.drawable.close
-                                    ),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(SwitchDefaults.IconSize)
-                                )
-                            }
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Enable Musixmatch")
-                            Text(
-                                text = "Fetch high quality rich synced lyrics from Musixmatch API",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = enableMusixmatch,
-                            onCheckedChange = onEnableMusixmatchChange,
-                            thumbContent = {
-                                Icon(
-                                    painter = painterResource(
-                                        id = if (enableMusixmatch) R.drawable.check else R.drawable.close
                                     ),
                                     contentDescription = null,
                                     modifier = Modifier.size(SwitchDefaults.IconSize)
@@ -868,7 +836,6 @@ fun ContentSettings(
         val providerSwitches: Map<String, Pair<Boolean, (Boolean) -> Unit>> = mapOf(
             "NetEase" to (enableNetEase to onEnableNetEaseChange),
             "Spotify" to (enableSpotifyLyrics to onEnableSpotifyLyricsChange),
-            "Musixmatch" to (enableMusixmatch to onEnableMusixmatchChange),
             "YouLyPlus" to (enableYouLyPlus to onEnableYouLyPlusChange),
             "Unison" to (enableUnison to onEnableUnisonChange),
             "BiniLyrics" to (enableBiniLyrics to onEnableBiniLyricsChange),
