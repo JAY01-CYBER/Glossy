@@ -49,7 +49,7 @@ class LyricsViewModel @Inject constructor() : ViewModel() {
                     emptyList()
                 } else {
                     // The parser decides, not a regex hint. Word-timed payloads
-                    // (the rich formats Spotify and Musixmatch deliver) carry no
+                    // (the rich formats Spotify delivers) carry no
                     // [mm:ss line stamps at all, so the hint sent them to the
                     // plain-text fallback: the song rendered with raw <mm:ss.xx>
                     // tags and nothing that followed the music, while every other
