@@ -11,6 +11,16 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
+ * Room codes are a fixed length on every server: the bundled Python
+ * `metro_server.py` and the Cloudflare Worker in `metroserver-worker/` both
+ * build them from `ROOM_CODE_ALPHABET` with `ROOM_CODE_LENGTH = 6`. The app
+ * used to gate the join action on 8 characters, so a real code could never be
+ * entered far enough to enable Join. Everything that reads or bounds the code
+ * goes through this constant.
+ */
+const val ROOM_CODE_LENGTH = 6
+
+/**
  * Message types for Listen Together protocol
  */
 object MessageTypes {

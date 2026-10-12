@@ -31,6 +31,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -59,6 +60,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -90,12 +92,17 @@ import com.jay.glossy.ui.component.LibrarySearchEmptyPlaceholder
 import com.jay.glossy.ui.component.LibrarySearchHeader
 import com.jay.glossy.ui.component.LibraryPlaylistGridItem
 import com.jay.glossy.ui.component.LibraryPlaylistListItem
+import com.jay.glossy.constants.ActiveDesignStyle
+import com.jay.glossy.constants.DesignStyle
+import com.jay.glossy.ui.component.GlossyPlaylistListRow
 import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.component.PlaylistGridItem
 import com.jay.glossy.ui.component.PlaylistListItem
 import com.jay.glossy.ui.component.SortHeader
 import com.jay.glossy.extensions.matchesNormalizedQuery
 import com.jay.glossy.extensions.normalizeForSearch
+import com.jay.glossy.spotify.SpotifyAccountViewModel
+import com.jay.glossy.spotifycore.models.SpotifyPlaylist
 import com.jay.glossy.utils.rememberEnumPreference
 import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.viewmodels.LibraryPlaylistsViewModel
@@ -125,7 +132,17 @@ fun LibraryPlaylistsScreen(
 
     val coroutineScope = rememberCoroutineScope()
 
+    // The redesigned Library showed a continuous list of rows. It is pinned off
+    // now, so the stored grid/list preference always wins.
+    val newDesign = ActiveDesignStyle == DesignStyle.TEAL
+
     var viewType by rememberEnumPreference(PlaylistViewTypeKey, LibraryViewType.GRID)
+
+    LaunchedEffect(newDesign) {
+        if (newDesign && viewType != LibraryViewType.LIST) {
+            viewType = LibraryViewType.LIST
+        }
+    }
     val (sortType, onSortTypeChange) = rememberEnumPreference(
         PlaylistSortTypeKey,
         PlaylistSortType.CREATE_DATE
@@ -294,6 +311,20 @@ fun LibraryPlaylistsScreen(
     val lazyListState = rememberLazyListState()
     val lazyGridState = rememberLazyGridState()
 
+    // Spotify playlists surface directly in this screen — alongside the auto
+    // and local playlists — whenever the account is connected, instead of
+    // only behind the dedicated Spotify filter chip.
+    val spotifyViewModel: SpotifyAccountViewModel = hiltViewModel()
+    val spotifyAccount by spotifyViewModel.uiState.collectAsStateWithLifecycle()
+    val spotifyPlaylists by spotifyViewModel.playlists.collectAsStateWithLifecycle()
+    val visibleSpotifyPlaylists = remember(spotifyPlaylists, spotifyAccount, normalizedQuery) {
+        if (!spotifyAccount.isAuthenticated) {
+            emptyList()
+        } else {
+            spotifyPlaylists.filter { matchesNormalizedQuery(normalizedQuery, it.name) }
+        }
+    }
+
     val backStackEntry by navController.currentBackStackEntryAsState()
     val scrollToTop =
         backStackEntry?.savedStateHandle?.getStateFlow("scrollToTop", false)?.collectAsStateWithLifecycle()
@@ -377,8 +408,8 @@ fun LibraryPlaylistsScreen(
             Text(
                 text = pluralStringResource(
                     R.plurals.n_playlist,
-                    visibleResults.count { !it.autoPlaylist },
-                    visibleResults.count { !it.autoPlaylist },
+                    visibleResults.count { !it.autoPlaylist } + visibleSpotifyPlaylists.size,
+                    visibleResults.count { !it.autoPlaylist } + visibleSpotifyPlaylists.size,
                 ),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.secondary,
@@ -469,6 +500,54 @@ fun LibraryPlaylistsScreen(
                     val autoPlaylists = visibleResults.filter { it.autoPlaylist }
                     val regularPlaylists = visibleResults.filter { !it.autoPlaylist }
 
+                    if (newDesign) {
+                        items(
+                            items = autoPlaylists,
+                            key = { "auto_row_${it.key}" },
+                            contentType = { CONTENT_TYPE_PLAYLIST },
+                        ) { item ->
+                            val offline = item.route?.contains("download") == true ||
+                                item.route?.contains("cache") == true
+                            GlossyPlaylistListRow(
+                                playlist = item.playlist,
+                                route = item.route,
+                                subtitle = if (offline) {
+                                    stringResource(
+                                        R.string.glossy_playlist_songs_offline,
+                                        item.playlist.songCount,
+                                    )
+                                } else {
+                                    null
+                                },
+                                modifier = Modifier.animateItem(),
+                            )
+                        }
+
+                        items(
+                            items = regularPlaylists,
+                            key = { it.key },
+                            contentType = { CONTENT_TYPE_PLAYLIST },
+                        ) { item ->
+                            GlossyPlaylistListRow(
+                                playlist = item.playlist,
+                                menuState = menuState,
+                                coroutineScope = coroutineScope,
+                                modifier = Modifier.animateItem(),
+                            )
+                        }
+
+                        items(
+                            items = visibleSpotifyPlaylists,
+                            key = { "spotify_row_${it.id}" },
+                            contentType = { CONTENT_TYPE_PLAYLIST },
+                        ) { playlist ->
+                            GlossyPlaylistListRow(
+                                playlist = playlist.asLibraryPlaylist(),
+                                route = "spotify_playlist/${playlist.id}",
+                                modifier = Modifier.animateItem(),
+                            )
+                        }
+                    } else {
                     autoPlaylists.chunked(2).forEach { rowItems ->
                         item(
                             key = "auto_row_${rowItems.first().key}",
@@ -506,6 +585,23 @@ fun LibraryPlaylistsScreen(
                             playlist = item.playlist,
                             modifier = Modifier.animateItem(),
                         )
+                    }
+
+                    items(
+                        items = visibleSpotifyPlaylists,
+                        key = { "spotify_row_${it.id}" },
+                        contentType = { CONTENT_TYPE_PLAYLIST },
+                    ) { playlist ->
+                        PlaylistListItem(
+                            playlist = playlist.asLibraryPlaylist(),
+                            badges = {},
+                            modifier = Modifier
+                                .animateItem()
+                                .combinedClickable(
+                                    onClick = { navController.navigate("spotify_playlist/${playlist.id}") },
+                                ),
+                        )
+                    }
                     }
                 }
             }
@@ -571,6 +667,24 @@ fun LibraryPlaylistsScreen(
                             )
                         }
                     }
+
+                    items(
+                        items = visibleSpotifyPlaylists,
+                        key = { "spotify_grid_${it.id}" },
+                        contentType = { CONTENT_TYPE_PLAYLIST },
+                    ) { playlist ->
+                        PlaylistGridItem(
+                            playlist = playlist.asLibraryPlaylist(),
+                            fillMaxWidth = true,
+                            badges = {},
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .animateItem()
+                                .combinedClickable(
+                                    onClick = { navController.navigate("spotify_playlist/${playlist.id}") },
+                                ),
+                        )
+                    }
                 }
             }
         }
@@ -600,72 +714,98 @@ private fun AutoPlaylistGridItem(
     modifier: Modifier = Modifier
 ) {
     val title = playlist.playlist.name
-    
-    val (iconRes, iconTint, gradientColors) = when {
+
+    // Saturated two-stop gradient per collection — the old flat pastel washes
+    // read as placeholders next to real artwork cards.
+    val (iconRes, startColor, endColor) = when {
         title.contains("Liked", ignoreCase = true) || title.contains("पसंद", ignoreCase = true) -> Triple(
-            R.drawable.favorite, 
-            Color(0xFFD32F2F),
-            listOf(Color(0xFFFCE3E3), Color(0xFFF3E5F5))
+            R.drawable.favorite,
+            Color(0xFFFF5C7A),
+            Color(0xFFD62E56),
         )
         title.contains("Offline", ignoreCase = true) || title.contains("Downloaded", ignoreCase = true) -> Triple(
-            R.drawable.download, 
-            Color(0xFF1976D2),
-            listOf(Color(0xFFE3F2FD), Color(0xFFF3E5F5))
+            R.drawable.download,
+            Color(0xFF6C7BFF),
+            Color(0xFF3646C9),
         )
         title.contains("Cached", ignoreCase = true) -> Triple(
-            R.drawable.sync, 
-            Color(0xFF5E35B1),
-            listOf(Color(0xFFEDE7F6), Color(0xFFF3E5F5))
+            R.drawable.sync,
+            Color(0xFFA66BFF),
+            Color(0xFF6B37D6),
         )
         title.contains("Uploaded", ignoreCase = true) -> Triple(
             R.drawable.upload,
-            Color(0xFF1976D2),
-            listOf(Color(0xFFE3F2FD), Color(0xFFF3E5F5))
+            Color(0xFF4CC9B0),
+            Color(0xFF12897B),
         )
         title.contains("Top", ignoreCase = true) -> Triple(
-            R.drawable.trending_up, 
-            Color(0xFF455A64),
-            listOf(Color(0xFFF5F5F5), Color(0xFFE8EAF6))
+            R.drawable.trending_up,
+            Color(0xFF5B6C7A),
+            Color(0xFF24313B),
         )
         else -> Triple(
             R.drawable.playlist_play,
-            Color(0xFF1E1E1E),
-            listOf(Color(0xFFF5F5F5), Color(0xFFE8EAF6))
+            Color(0xFF7C86FF),
+            Color(0xFF3A3F8F),
         )
     }
 
     Box(
         modifier = modifier
-            .padding(8.dp) 
+            .padding(8.dp)
             .fillMaxWidth()
             .height(115.dp)
             .clip(RoundedCornerShape(20.dp))
-            .background(Brush.linearGradient(colors = gradientColors))
+            .background(Brush.linearGradient(colors = listOf(startColor, endColor)))
             .clickable(onClick = onClick)
             .padding(14.dp)
     ) {
+        // Off-corner glow ring; clipped by the card shape so it just peeks in.
+        Box(
+            modifier = Modifier
+                .size(96.dp)
+                .align(Alignment.TopEnd)
+                .offset(x = 30.dp, y = (-28).dp)
+                .background(Color.White.copy(alpha = 0.10f), CircleShape),
+        )
         Box(
             modifier = Modifier
                 .size(38.dp)
                 .clip(CircleShape)
-                .background(Color.White)
+                .background(Color.White.copy(alpha = 0.22f))
                 .align(Alignment.TopStart),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 painter = painterResource(id = iconRes),
                 contentDescription = title,
-                tint = iconTint,
+                tint = Color.White,
                 modifier = Modifier.size(20.dp)
             )
         }
-        
+
         Text(
             text = title,
-            color = Color(0xFF1E1E1E),
+            color = Color.White,
             fontSize = 15.sp,
-            fontWeight = FontWeight.Medium,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.align(Alignment.BottomStart)
         )
     }
 }
+
+
+
+/**
+ * Adapter so Spotify playlists ride through the same cards as YouTube
+ * playlists — the library shows one consistent playlist grid instead of a
+ * separate Spotify-only section.
+ */
+private fun SpotifyPlaylist.asLibraryPlaylist(): Playlist =
+    Playlist(
+        playlist = PlaylistEntity(id = id, name = name),
+        songCount = tracks?.total ?: 0,
+        songThumbnails = images.map { it.url },
+    )

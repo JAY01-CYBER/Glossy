@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Decorative iridescent glass cassette for the onboarding backdrop (left, below
+  the brand mark).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="132dp"
+    android:height="92dp"
+    android:viewportWidth="132"
+    android:viewportHeight="92">
+
+    <!-- Tape shell. -->
+    <path
+        android:pathData="M22,4 h88 a18,18 0 0 1 18,18 v48 a18,18 0 0 1 -18,18 h-88 a18,18 0 0 1 -18,-18 v-48 a18,18 0 0 1 18,-18 z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="2"
+                android:startY="4"
+                android:endX="130"
+                android:endY="88">
+                <item android:offset="0" android:color="#E6A8F0FF" />
+                <item android:offset="0.3" android:color="#E6C0A8FF" />
+                <item android:offset="0.62" android:color="#E6FFA8DC" />
+                <item android:offset="1" android:color="#E6FFD79A" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Paper label. -->
+    <path
+        android:pathData="M28,20 h76 a8,8 0 0 1 8,8 v26 a8,8 0 0 1 -8,8 h-76 a8,8 0 0 1 -8,-8 v-26 a8,8 0 0 1 8,-8 z"
+        android:fillColor="#B3FFFFFF" />
+
+    <!-- Reels. -->
+    <path
+        android:pathData="M32,41 a13,13 0 1 0 26,0 a13,13 0 1 0 -26,0 z"
+        android:fillColor="#CC120A24" />
+    <path
+        android:pathData="M40,41 a5,5 0 1 0 10,0 a5,5 0 1 0 -10,0 z"
+        android:fillColor="#CCF3EDFF" />
+    <path
+        android:pathData="M74,41 a13,13 0 1 0 26,0 a13,13 0 1 0 -26,0 z"
+        android:fillColor="#CC120A24" />
+    <path
+        android:pathData="M82,41 a5,5 0 1 0 10,0 a5,5 0 1 0 -10,0 z"
+        android:fillColor="#CCF3EDFF" />
+
+    <!-- Bottom lip. -->
+    <path
+        android:pathData="M40,64 h52 a6,6 0 0 1 6,6 v4 a6,6 0 0 1 -6,6 h-52 a6,6 0 0 1 -6,-6 v-4 a6,6 0 0 1 6,-6 z"
+        android:fillColor="#4DFFFFFF" />
+
+    <!-- Top highlight. -->
+    <path
+        android:pathData="M22,4 h88 a18,18 0 0 1 18,18 v4 h-124 v-4 a18,18 0 0 1 18,-18 z"
+        android:fillColor="#4DFFFFFF" />
+</vector>

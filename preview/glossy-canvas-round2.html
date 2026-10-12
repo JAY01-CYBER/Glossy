@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glossy · canvas round 2 — why “checked” did not show</title>
+<style>
+  :root{
+    --bg:#0a0a0c; --card:#15151a; --card2:#1d1d24; --line:#2a2a33;
+    --text:#eceaf2; --dim:#9a97a8; --dimmer:#6b6878;
+    --accent:#b9a4ff; --good:#66e0a3; --bad:#ff6b81; --warn:#ffcc66;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:34px 22px 90px}
+  header.top{border-bottom:1px solid var(--line);padding-bottom:22px;margin-bottom:30px}
+  h1{font-size:25px;margin:0 0 8px;letter-spacing:-.02em;font-weight:650}
+  .sub{color:var(--dim);font-size:14.5px;max-width:800px}
+  .sub code{background:#20202a;border:1px solid #2c2c38;border-radius:6px;padding:1px 6px;font-size:12.5px}
+  .pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11.5px;font-weight:600;
+    letter-spacing:.04em;text-transform:uppercase;background:#241f33;color:var(--accent);border:1px solid #372e50;margin-bottom:14px}
+  .fix{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;margin:0 0 22px}
+  .fix h2{font-size:17.5px;margin:0 0 6px;letter-spacing:-.01em;font-weight:640;display:flex;align-items:center;gap:10px}
+  .num{width:26px;height:26px;border-radius:9px;background:#2b2440;color:var(--accent);
+    display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex:none}
+  .symptom{color:var(--warn);font-size:13.5px;margin:0 0 10px 36px}
+  .why{color:var(--dim);font-size:14px;margin:0 0 14px 36px;max-width:830px}
+  .why b{color:var(--text);font-weight:600}
+  .why code{font-size:12.5px;background:#20202a;border:1px solid #2c2c38;border-radius:6px;padding:1px 5px}
+  .ba{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-left:36px}
+  @media (max-width:860px){.ba{grid-template-columns:1fr}}
+  .side{background:var(--card2);border:1px solid #23232c;border-radius:14px;overflow:hidden}
+  .side .hd{padding:9px 13px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid #23232c}
+  .side.before .hd{color:#ff9aa9;background:#2a161b}
+  .side.after .hd{color:var(--good);background:#12271f}
+  pre{margin:0;padding:13px;overflow:auto;font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap}
+  .del{color:#ff9aa9;background:rgba(255,107,129,.09);display:block}
+  .ins{color:#8ff0bd;background:rgba(102,224,163,.09);display:block}
+  .pl{color:var(--dimmer);display:block}
+  .files{margin:14px 0 0 36px;display:flex;flex-wrap:wrap;gap:7px}
+  .file{font:12px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#20202a;border:1px solid #2c2c38;
+    color:var(--dim);border-radius:8px;padding:4px 9px}
+  .file b{color:var(--text);font-weight:600}
+  footer{margin-top:34px;padding-top:18px;border-top:1px solid var(--line);color:var(--dimmer);font-size:13px}
+  table{border-collapse:collapse;width:100%;margin:8px 0 0 0;font-size:13.5px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--dimmer);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;font-weight:700}
+  td code{font-size:12.5px;background:#20202a;border:1px solid #2c2c38;border-radius:6px;padding:1px 5px}
+  .ok{color:var(--good);font-weight:600}
+  .warn{color:var(--warn);font-weight:600}
+  .bad{color:var(--bad);font-weight:600}
+  .lead{color:var(--dim);font-size:14px;margin:0 0 18px}
+  .lead b{color:var(--text)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div class="pill">Before build · canvas changes · no APK</div>
+  <h1>The canvas was found — then something else took it away</h1>
+  <p class="sub">You said some canvases load and some never do, that the Canvas&nbsp;check showed a canvas was found while nothing
+  played anywhere (Spotify included), and that the Spotlight cards stayed still. Those three symptoms turned out to have
+  <b>five</b> separate causes in the canvas pipeline. All of them are fixed on disk and the whole change compiles
+  (<code>:app:compileFossReleaseKotlin</code> ✓, 3 Kotlin modules recompiled, <code>BUILD SUCCESSFUL</code>).
+  <b>No APK was built</b> — this page is the preview.</p>
+</header>
+
+<p class="lead">Short version: the check was telling the truth about the moment it ran, and then a <b>second</b> step —
+the background probe that verifies the URL — silently threw the clip away and never told the report. Meanwhile real
+failures (a rate limit, an expired token, a provider that could not be asked yet) were being stored as
+“this song has no canvas” for <b>the rest of the session</b>. That is why it looked random per song. Below is each cause,
+the evidence, and what changed.</p>
+
+<!-- 1 -->
+<section class="fix">
+  <h2><span class="num">1</span>Spotify canvas could never answer (429)</h2>
+  <p class="symptom">Spotify Canvas style: nothing, for every song. Canvas check: Spotify “nothing” or “lookup failed”.</p>
+  <p class="why">The canvases endpoint lives on <code>spclient.wg.spotify.com</code>, and both that host and
+  <code>api.spotify.com</code> turn away a request that carries only a bearer token — they want the web player's second
+  header, <b>Client-Token</b>. The session object already knew how to mint one (<code>clientToken()</code>), but
+  <b>nothing ever called it</b>: it was dead code. Worse, the canvas path asked with the <b>library</b> token, which is
+  minted by replaying <code>/api/token</code> with a computed TOTP — exactly the token those two hosts refuse with 429.
+  The 429 was swallowed inside the provider, so it looked like “Spotify has no canvas for this song”.</p>
+  <div class="ba">
+    <div class="side before"><div class="hd">Before</div><pre><span class="pl">CanvasResolver — Spotify path</span><span class="del">token = freshAccessToken()   // library / TOTP token</span><span class="pl">SpotifyCanvasProvider.getBySongArtist(song, artist, token)</span>
+<span class="pl">CanvasProvider — request</span><span class="del">header("Authorization", "Bearer $token")
+// no Client-Token → spclient 429
+// 429 swallowed → null → "nothing"</span></pre></div>
+    <div class="side after"><div class="hd">After</div><pre><span class="pl">SpotifySession</span><span class="ins">canvasCredentials() = harvested web token + clientToken()</span>
+<span class="pl">CanvasProvider — every request</span><span class="ins">header("Authorization", "Bearer …")
+header("Client-Token", clientToken)</span>
+<span class="pl">429 / 5xx</span><span class="ins">throw CanvasLookupUnavailable — a failure, not "no canvas"</span></pre></div>
+  </div>
+  <div class="files">
+    <span class="file"><b>SpotifySession.kt</b></span>
+    <span class="file"><b>SpotifyCanvasProvider.kt</b></span>
+    <span class="file"><b>CanvasResolver.kt</b></span>
+  </div>
+</section>
+
+<!-- 2 -->
+<section class="fix">
+  <h2><span class="num">2</span>“Canvas check says it was checked — but nothing shows it”</h2>
+  <p class="symptom">The check row read “shown from Tidal / URL checked — plays”, yet no surface ever drew a frame.</p>
+  <p class="why">Two steps happen to a canvas: the lookup <b>accepts</b> a clip, and then the preloader <b>probes</b> the URL
+  to see whether it really serves video. The old probe treated <b>any</b> non-2xx HEAD answer as “will not play” — including
+  403 from a CDN that dislikes the client, 405 from a host that refuses HEAD, 429 and every 5xx. A perfectly good canvas
+  was dropped from the cache there, and because the drop happened outside the report, the check kept saying a canvas was
+  shown. The verdict it wrote was also trusted for <b>30 minutes</b>, so one bad probe refused that clip on every surface
+  for half an hour.</p>
+  <div class="ba">
+    <div class="side before"><div class="hd">Before</div><pre><span class="pl">CanvasVerifier.headRequest()</span><span class="del">code in 2xx..3xx  → PLAYABLE
+403 / 405 / 501   → try GET
+everything else   → UNPLAYABLE   // 429, 408, all 5xx</span>
+<span class="pl">UNPLAYABLE trusted for</span><span class="del">30 minutes</span>
+<span class="pl">CanvasPrefetcher — drop</span><span class="del">remove(mediaId)   // report never hears about it</span></pre></div>
+    <div class="side after"><div class="hd">After</div><pre><span class="ins">200s → playable (unless HTML)
+404 / 410 → unplayable
+403 / 405 / 408 / 429 / 5xx → fall through to ranged GET,
+                              else UNKNOWN</span>
+<span class="pl">UNPLAYABLE trusted for</span><span class="ins">5 minutes</span>
+<span class="pl">CanvasPrefetcher — drop</span><span class="ins">remove(mediaId) + CanvasDiagnostics.noteUrlRefused()</span>
+<span class="ins">→ row flips to "nothing shown", detail shows "Probe: will not play"</span></pre></div>
+  </div>
+  <div class="files">
+    <span class="file"><b>CanvasVerifier.kt</b></span>
+    <span class="file"><b>CanvasPrefetcher.kt</b></span>
+  </div>
+</section>
+
+<!-- 3 -->
+<section class="fix">
+  <h2><span class="num">3</span>Some songs were written off for the whole session</h2>
+  <p class="symptom">A song shows a canvas on one play and never again; or other songs have one while this one “never does”.</p>
+  <p class="why">Every provider — Tidal, BetterLyrics, Apple — <b>swallowed its own failures into <code>null</code></b>.
+  The resolver has a deliberate distinction between “a provider answered, and it had nothing” and “a provider fell over”,
+  but with nothing ever throwing, the second case <b>could not happen</b>. So a lookup that ran while the network was still
+  coming up, while Spotify was not connected yet, or while a provider was rate-limiting was recorded as
+  <b>“this song has no canvas” — for the entire session</b>, and the player's retry gave up on it. That is the randomness:
+  it depended on what the first lookup of that song happened to hit.</p>
+  <div class="ba">
+    <div class="side before"><div class="hd">Before</div><pre><span class="pl">TidalCanvasProvider</span><span class="del">} catch (e: Exception) { e.printStackTrace() }
+return null            // looks exactly like "no canvas"</span>
+<span class="pl">CanvasResolver.raceAllProviders</span><span class="del">if (winner == null &amp;&amp; failed == 0) markDefinitiveMiss(id)
+// failed is never true → every all-null answer is permanent</span></pre></div>
+    <div class="side after"><div class="hd">After</div><pre><span class="pl">Providers (Tidal · BetterLyrics · Apple · Spotify 429/5xx)</span><span class="ins">throw CanvasLookupUnavailable(...)   // could not ask</span>
+<span class="pl">CanvasResolver</span><span class="ins">records FAILED · never a definitive miss
+miss only when every provider answered EMPTY
+miss expires after 15 min · cleared on style change</span></pre></div>
+  </div>
+  <div class="files">
+    <span class="file"><b>CanvasLookupUnavailable.kt</b> (new)</span>
+    <span class="file"><b>TidalCanvasProvider.kt</b></span>
+    <span class="file"><b>BetterLyricsCanvasProvider.kt</b></span>
+    <span class="file"><b>AppleMusicCanvasProvider.kt</b></span>
+    <span class="file"><b>CanvasResolver.kt</b></span>
+  </div>
+</section>
+
+<!-- 4 -->
+<section class="fix">
+  <h2><span class="num">4</span>Apple Music: dead credential + album canvases always refused</h2>
+  <p class="symptom">Apple-sourced canvases never appear; the check shows Apple as “wrong song” or “nothing”.</p>
+  <p class="why">Two independent bugs. <b>(a)</b> The Apple token had no timeouts, was cached <b>forever</b> (Apple's live
+  about an hour), and when the scrape failed it fell back to a <b>hardcoded JWT that expired in June 2026</b> — so Apple was
+  asked with a dead credential and every 401 read as “this song has no canvas”. <b>(b)</b> Album-level motion artwork is named
+  after the <b>album</b>, and the check compared it to the <b>song</b> title — so the album lookup was refused as the wrong
+  song, always. That whole provider path could never paint anything.</p>
+  <div class="ba">
+    <div class="side before"><div class="hd">Before</div><pre><span class="pl">AppleMusicTokenProvider</span><span class="del">cachedToken never expires
+catch → hardcoded JWT (exp: Jun 2026)</span>
+<span class="pl">CanvasVerifier.match(song, artist, albumHit…)</span><span class="del">songScore &lt; 0.62 → WRONG_SONG
+// album name can never match a song title → refused</span></pre></div>
+    <div class="side after"><div class="hd">After</div><pre><span class="ins">HttpTimeout + read `exp` from the token
+re-scrape before it lapses; failure throws
+no dead fallback credential</span>
+<span class="ins">match(..., alternativeTitle = album)
+accept the song's name OR its album's; artist still enforced</span></pre></div>
+  </div>
+  <div class="files">
+    <span class="file"><b>AppleMusicTokenProvider.kt</b></span>
+    <span class="file"><b>CanvasVerifier.kt</b></span>
+    <span class="file"><b>CanvasResolver.kt</b></span>
+  </div>
+</section>
+
+<!-- 5 -->
+<section class="fix">
+  <h2><span class="num">5</span>The prefetch and the screen were asking different questions</h2>
+  <p class="symptom">Spotlight/next-track canvases ready for one song, still artwork for the one that actually plays.</p>
+  <p class="why">The service that warms canvases in the background passed <b>only the first artist</b>
+  (“Pritam”), while the player, the Spotlight card and the Apple Music design pass the <b>full credit</b>
+  (“Pritam, Arijit Singh &amp; Amitabh Bhattacharya”). Different query → different provider results → a warmed answer that the
+  screen never asks for. Both now build the artist string the same way. The Spotify provider also stopped handing back
+  <b>another track's canvas</b> when the requested track was not in the response — a “matched” Spotify clip is now this song's.</p>
+  <div class="files">
+    <span class="file"><b>MusicService.kt</b></span>
+    <span class="file"><b>SpotifyCanvasProvider.kt</b></span>
+  </div>
+</section>
+
+<h2 style="font-size:16px;margin:34px 0 4px">How to read the Canvas check now</h2>
+<table>
+  <tr><th>Line</th><th>Means</th></tr>
+  <tr><td><code>matched</code> / <code>accepted, unjudged</code></td><td>That provider's clip was usable <b>at that moment</b> (belongs to this song / no names to judge).</td></tr>
+  <tr><td><code>nothing</code></td><td>The provider was asked and had nothing. If <b>all</b> of them say this, the song is remembered as canvas-less for 15 minutes — then asked again.</td></tr>
+  <tr><td><code>lookup failed</code></td><td>The provider could not answer (offline, 429, expired token, not connected). <b>The song is not written off</b> — a later attempt can still find a canvas.</td></tr>
+  <tr><td><code>will not play</code></td><td>The URL was refused — by the background probe or by the actual decoder. Trusted for 5 minutes, then re-tried.</td></tr>
+  <tr><td><code>wrong song</code></td><td>A clip came back that belongs to something else (cover, remix, another track). Refused; the other providers keep going.</td></tr>
+  <tr><td>Summary row</td><td>Says <code>shown from …</code> only while a clip is actually there. If the probe takes it away, the row flips to <code>nothing shown</code> and a <code>Probe: will not play</code> line is added.</td></tr>
+</table>
+
+<footer>
+  <b>Not built:</b> no APK in this round, as asked — changes are on disk and compile cleanly.
+  When you do want a build, the FOSS release APK is the one to run; Spotify canvas needs the Spotify account connected
+  (the token login), and the first lookup after connecting may take a few seconds while it harvests the web-player token.<br><br>
+  Files touched: CanvasResolver · CanvasVerifier · CanvasPrefetcher · SpotifySession · SpotifyCanvasProvider ·
+  AppleMusicTokenProvider · AppleMusicCanvasProvider · TidalCanvasProvider · BetterLyricsCanvasProvider · MusicService ·
+  new CanvasLookupUnavailable.
+</footer>
+
+</div>
+</body>
+</html>

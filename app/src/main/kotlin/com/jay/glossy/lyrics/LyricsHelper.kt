@@ -33,6 +33,14 @@ private const val MAX_LYRICS_FETCH_MS = 12000L
 private const val PER_PROVIDER_TIMEOUT_MS = 3500L
 private const val PROVIDER_NONE = ""
 
+/**
+ * How long a plain-text answer is held back while the other racing providers get
+ * a chance to return a time-synced version of the same song. Only lyrics with
+ * timestamps can be followed by the player, so a synced result is always worth
+ * this short wait.
+ */
+private const val SYNCED_PREFERENCE_WINDOW_MS = 1500L
+
 /** How long a negative ("no lyrics found") result is remembered before retrying. */
 private const val NEGATIVE_RESULT_TTL_MS = 24 * 60 * 60 * 1000L
 
@@ -73,26 +81,38 @@ constructor(
         }
     }
 
-    suspend fun getLyrics(mediaMetadata: MediaMetadata): LyricsWithProvider {
+    /**
+     * @param forceRefresh skips every cache and races all enabled providers at
+     * once, so a timed version anywhere in the provider order can replace an
+     * untimed one that is already stored. The player asks for this when the
+     * lyrics it holds cannot be followed; normal playback keeps the tiered fast
+     * race and the caches.
+     */
+    suspend fun getLyrics(mediaMetadata: MediaMetadata, forceRefresh: Boolean = false): LyricsWithProvider {
         currentLyricsJob?.cancel()
 
         val songKey = "${mediaMetadata.artists.joinToString { it.name }}-${mediaMetadata.title}".replace(" ", "").lowercase()
 
-        // Check memory cache first (instant 0ms return)
-        singleLyricsCache.get(mediaMetadata.id)?.let { return it }
-        singleLyricsCache.get(songKey)?.let { return it }
+        // Check memory cache first (instant 0ms return). A forced refresh exists
+        // to replace a stale result, so it has to step over the caches holding
+        // that very result: otherwise the retry hands back the same untimed text
+        // it was meant to replace and the player never recovers for that song.
+        if (!forceRefresh) {
+            singleLyricsCache.get(mediaMetadata.id)?.let { return it }
+            singleLyricsCache.get(songKey)?.let { return it }
 
-        // Also check if we have results in allLyricsCache
-        allLyricsCache.get(songKey)?.firstOrNull()?.let {
-            val result = LyricsWithProvider(it.lyrics, it.providerName)
-            singleLyricsCache.put(mediaMetadata.id, result)
-            singleLyricsCache.put(songKey, result)
-            return result
+            // Also check if we have results in allLyricsCache
+            allLyricsCache.get(songKey)?.firstOrNull()?.let {
+                val result = LyricsWithProvider(it.lyrics, it.providerName)
+                singleLyricsCache.put(mediaMetadata.id, result)
+                singleLyricsCache.put(songKey, result)
+                return result
+            }
         }
 
         // Skip providers entirely for songs that recently returned no lyrics
         pruneNegativeCache()
-        if (negativeResultCache.get(mediaMetadata.id) != null) {
+        if (!forceRefresh && negativeResultCache.get(mediaMetadata.id) != null) {
             return LyricsWithProvider(LYRICS_NOT_FOUND, PROVIDER_NONE)
         }
 
@@ -117,6 +137,31 @@ constructor(
             Timber.tag("LyricsHelper").d("Fast parallel lyrics fetch: $cleanedTitle by $artists across ${enabledProviders.size} providers")
 
             if (enabledProviders.isEmpty()) {
+                return@withTimeoutOrNull LyricsWithProvider(LYRICS_NOT_FOUND, PROVIDER_NONE)
+            }
+
+            if (forceRefresh) {
+                // One race across the whole order, keeping the same
+                // synced-preference window the tiers use: an untimed answer is
+                // only accepted if no provider in the order can time the song.
+                val refreshed = raceProviders(
+                    providers = enabledProviders,
+                    mediaId = mediaMetadata.id,
+                    cleanedTitle = cleanedTitle,
+                    artists = artists,
+                    duration = mediaMetadata.duration,
+                    album = mediaMetadata.album?.title,
+                )
+                if (refreshed != null) {
+                    Timber.tag("LyricsHelper").i("Refresh got lyrics from ${refreshed.provider}")
+                    singleLyricsCache.put(mediaMetadata.id, refreshed)
+                    singleLyricsCache.put(songKey, refreshed)
+                    return@withTimeoutOrNull refreshed
+                }
+                // Deliberately no negative-cache entry: a refresh that finds
+                // nothing must not stop the normal path from serving the lyrics
+                // that are already stored for this song.
+                Timber.tag("LyricsHelper").w("Refresh found nothing")
                 return@withTimeoutOrNull LyricsWithProvider(LYRICS_NOT_FOUND, PROVIDER_NONE)
             }
 
@@ -173,7 +218,17 @@ constructor(
     }
 
     /**
-     * Races the given providers concurrently; returns the first non-blank successful lyrics result.
+     * Races the given providers concurrently, but the winner is chosen by
+     * *rank*, not by who answers fastest: [providers] is already in the user's
+     * priority order, a synced answer from the top of the list wins instantly,
+     * and a synced answer from anyone lower gets [SYNCED_PREFERENCE_WINDOW_MS]
+     * to see whether a higher-ranked synced answer turns up before it is
+     * locked in. Plain text still only ever serves as the fallback, held the
+     * same short window against a timed answer appearing.
+     *
+     * Racing by raw speed alone is what made moving a provider up or down in
+     * Settings meaningless — the fastest scraper always won no matter where it
+     * sat in the list.
      */
     private suspend fun raceProviders(
         providers: List<LyricsProvider>,
@@ -214,10 +269,50 @@ constructor(
             channel.close()
         }
 
-        val winner = channel.receiveCatching().getOrNull()
-        jobs.forEach { it.cancel() }
-        monitorJob.cancel()
-        winner
+        try {
+            // Rank here is the provider's position in the user's priority list.
+            val rank = providers.withIndex().associate { (index, provider) -> provider.name to index }
+            var bestSynced: Pair<Int, LyricsWithProvider>? = null
+            var plainFallback: Pair<Int, LyricsWithProvider>? = null
+            // When the collecting loop is allowed to settle; every answer that
+            // arrives from a lower rank than the best one yet pushes this out,
+            // bounded by the preference window.
+            var settleAtMillis = Long.MAX_VALUE
+
+            while (true) {
+                val remaining = settleAtMillis - System.currentTimeMillis()
+                val result = if (remaining == Long.MAX_VALUE) {
+                    // Nothing worth waiting for has arrived yet; block until
+                    // an answer does or every provider has had its timeout.
+                    channel.receiveCatching().getOrNull() ?: break
+                } else {
+                    withTimeoutOrNull(remaining.coerceAtLeast(1L)) {
+                        channel.receiveCatching().getOrNull()
+                    } ?: break // the window closed, or the channel did
+                }
+                val position = rank[result.provider] ?: Int.MAX_VALUE
+
+                if (lyricsTextLooksSynced(result.lyrics)) {
+                    if (bestSynced == null || position < bestSynced.first) {
+                        bestSynced = position to result
+                        if (position == 0) break // the top of the list answered; nothing outranks it
+                        settleAtMillis = minOf(
+                            settleAtMillis,
+                            System.currentTimeMillis() + SYNCED_PREFERENCE_WINDOW_MS,
+                        )
+                    }
+                } else if (plainFallback == null || position < plainFallback.first) {
+                    plainFallback = position to result
+                    if (settleAtMillis == Long.MAX_VALUE) {
+                        settleAtMillis = System.currentTimeMillis() + SYNCED_PREFERENCE_WINDOW_MS
+                    }
+                }
+            }
+            bestSynced?.second ?: plainFallback?.second
+        } finally {
+            jobs.forEach { it.cancel() }
+            monitorJob.cancel()
+        }
     }
 
     suspend fun getAllLyrics(
@@ -311,12 +406,24 @@ constructor(
 
     private fun resolveLyricsProviders(preferences: androidx.datastore.preferences.core.Preferences): List<LyricsProvider> {
         val providerOrder = preferences[LyricsProviderOrderKey].orEmpty()
-        if (providerOrder.isNotBlank()) {
-            return LyricsProviderRegistry.getOrderedProviders(providerOrder)
-        }
+        val configured =
+            if (providerOrder.isNotBlank()) {
+                LyricsProviderRegistry.getOrderedProviders(providerOrder)
+            } else {
+                LyricsProviderRegistry.getDefaultProviderOrder()
+                    .mapNotNull { LyricsProviderRegistry.getProviderByName(it) }
+            }
 
-        return LyricsProviderRegistry.getDefaultProviderOrder()
+        // A provider added after the stored order was written — "Spotify" is
+        // the case that motivated this — would otherwise never take part in
+        // the race at all: an old order string cannot mention it, and the
+        // priority screen cannot show what the resolver drops. They join at
+        // the bottom, where the user can see them and move them up.
+        val missing = LyricsProviderRegistry.getDefaultProviderOrder()
             .mapNotNull { LyricsProviderRegistry.getProviderByName(it) }
+            .filter { known -> configured.none { it.name == known.name } }
+
+        return configured + missing
     }
 
     companion object {

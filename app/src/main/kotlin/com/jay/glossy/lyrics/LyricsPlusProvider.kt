@@ -182,8 +182,11 @@ object LyricsPlusProvider : LyricsProvider {
         val response = client.get("$url/v2/lyrics/get") {
             parameter("title", title)
             parameter("artist", artist)
-            // LyricsPlus expects duration in seconds, while MediaMetadata stores milliseconds.
-            if (duration > 0) parameter("duration", duration / 1000)
+            // Duration arrives in seconds (MediaMetadata stores seconds), which
+            // is the unit this endpoint expects. Dividing it again by 1000 sent
+            // "0" for every real song, so the server had nothing to disambiguate
+            // tracks by and could answer with another song's lyrics.
+            if (duration > 0) parameter("duration", duration)
             if (!album.isNullOrBlank()) parameter("album", album)
         }
         if (response.status == HttpStatusCode.OK) response.body<LyricsPlusResponse>() else null

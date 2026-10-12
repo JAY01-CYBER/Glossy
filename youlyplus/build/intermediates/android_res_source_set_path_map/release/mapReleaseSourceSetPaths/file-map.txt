@@ -1,0 +1,9 @@
+com.jay.glossy.youlyplus-pngs-0 C:\Users\Chikku\Downloads\Glossy-test-master\youlyplus\build\generated\res\pngs\release
+com.jay.glossy.youlyplus-updated_navigation_xml-1 C:\Users\Chikku\Downloads\Glossy-test-master\youlyplus\build\generated\updated_navigation_xml\release
+com.jay.glossy.youlyplus-mergeReleaseResources-2 C:\Users\Chikku\Downloads\Glossy-test-master\youlyplus\build\intermediates\incremental\release\mergeReleaseResources\merged.dir
+com.jay.glossy.youlyplus-mergeReleaseResources-3 C:\Users\Chikku\Downloads\Glossy-test-master\youlyplus\build\intermediates\incremental\release\mergeReleaseResources\stripped.dir
+com.jay.glossy.youlyplus-release-4 C:\Users\Chikku\Downloads\Glossy-test-master\youlyplus\build\intermediates\merged_res\release\mergeReleaseResources
+com.jay.glossy.youlyplus-release-5 C:\Users\Chikku\Downloads\Glossy-test-master\youlyplus\build\intermediates\packaged_res\release\packageReleaseResources
+com.jay.glossy.youlyplus-main-6 C:\Users\Chikku\Downloads\Glossy-test-master\youlyplus\src\main\res
+com.jay.glossy.youlyplus-release-7 C:\Users\Chikku\Downloads\Glossy-test-master\youlyplus\src\release\res
+gradleHome-0 C:\Users\Chikku\.gradle

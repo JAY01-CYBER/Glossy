@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Decorative iridescent glass lightning bolt for the onboarding backdrop (right,
+  between the tagline and the action card).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="96dp"
+    android:height="128dp"
+    android:viewportWidth="96"
+    android:viewportHeight="128">
+
+    <!-- Bolt body. -->
+    <path
+        android:pathData="M60,2 L14,68 h24 L36,126 L82,58 h-26 z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="14"
+                android:startY="2"
+                android:endX="82"
+                android:endY="126">
+                <item android:offset="0" android:color="#E67BE3FF" />
+                <item android:offset="0.38" android:color="#E6A99BFF" />
+                <item android:offset="0.72" android:color="#E6FF9BD1" />
+                <item android:offset="1" android:color="#D9FFE08A" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Inner facet, so the bolt reads as cut glass rather than a flat fill. -->
+    <path
+        android:pathData="M55,16 L22,66 h20 L40,112 L73,64 h-22 z"
+        android:fillColor="#33FFFFFF" />
+
+    <!-- Glass rim. -->
+    <path
+        android:pathData="M60,2 L14,68 h24 L36,126 L82,58 h-26 z"
+        android:strokeColor="#66FFFFFF"
+        android:strokeWidth="2.5" />
+</vector>

@@ -47,7 +47,10 @@ fun LibrarySpotifyPlaylistsScreen(
                 filterContent()
             }
 
-            if (!uiState.isAuthenticated) {
+            // Only when there is nothing saved to show: a playlist that is
+            // already on the device does not stop existing because the phone
+            // has no network, so the connect prompt is for an empty list.
+            if (!uiState.isAuthenticated && playlists.isEmpty()) {
                 item(key = "unauthenticated") {
                     Box(modifier = Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {

@@ -29,6 +29,18 @@ val AppBarHeight = 64.dp
 
 val ListItemHeight = 64.dp
 val SuggestionItemHeight = 56.dp
+
+/**
+ * Home "Quick picks": the caption block under a tile's artwork — the title row,
+ * the artist row and the gap above them.
+ *
+ * The artwork above it is square and takes the whole width of its column, so a
+ * tile's total height is "column width + this". The height is worked out in the
+ * grid from the space the screen actually has rather than being a constant,
+ * because at this size it depends on the device.
+ */
+val QuickPickCaptionHeight = 46.dp
+
 val SearchFilterHeight = 48.dp
 val ListThumbnailSize = 48.dp
 val SmallGridThumbnailHeight = 104.dp

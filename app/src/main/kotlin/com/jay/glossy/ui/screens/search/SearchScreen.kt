@@ -73,6 +73,7 @@ import com.jay.glossy.constants.SearchSourceKey
 import com.jay.glossy.db.entities.SearchHistory
 import com.jay.glossy.playback.queues.YouTubeQueue
 import com.jay.glossy.ui.component.HideOnScrollFAB
+import com.jay.glossy.ui.component.TiledListRows
 import com.jay.glossy.utils.SearchRoutes
 import com.jay.glossy.utils.rememberEnumPreference
 import com.jay.glossy.utils.rememberPreference
@@ -315,23 +316,29 @@ fun SearchScreen(
                     .padding(top = paddingValues.calculateTopPadding())
                     .fillMaxSize(),
         ) {
+            // Both search surfaces draw their rows as tiles; no other list in
+            // the app does (see TiledListRows).
             when (searchSource) {
                 SearchSource.LOCAL -> {
-                    LocalSearchScreen(
-                        query = query.text,
-                        onDismiss = { navController.navigateUp() },
-                        pureBlack = pureBlack,
-                    )
+                    TiledListRows {
+                        LocalSearchScreen(
+                            query = query.text,
+                            onDismiss = { navController.navigateUp() },
+                            pureBlack = pureBlack,
+                        )
+                    }
                 }
 
                 SearchSource.ONLINE -> {
-                    OnlineSearchScreen(
-                        query = query.text,
-                        onQueryChange = { query = it },
-                        onSearch = onSearchFromSuggestion,
-                        onDismiss = { /* Don't dismiss when searching from suggestions */ },
-                        pureBlack = pureBlack,
-                    )
+                    TiledListRows {
+                        OnlineSearchScreen(
+                            query = query.text,
+                            onQueryChange = { query = it },
+                            onSearch = onSearchFromSuggestion,
+                            onDismiss = { /* Don't dismiss when searching from suggestions */ },
+                            pureBlack = pureBlack,
+                        )
+                    }
                 }
             }
 

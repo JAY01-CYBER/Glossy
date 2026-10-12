@@ -1,0 +1,9 @@
+com.metrolist.paxsenix-pngs-0 C:\Users\Chikku\Downloads\Glossy-test-master\paxsenix\build\generated\res\pngs\release
+com.metrolist.paxsenix-updated_navigation_xml-1 C:\Users\Chikku\Downloads\Glossy-test-master\paxsenix\build\generated\updated_navigation_xml\release
+com.metrolist.paxsenix-mergeReleaseResources-2 C:\Users\Chikku\Downloads\Glossy-test-master\paxsenix\build\intermediates\incremental\release\mergeReleaseResources\merged.dir
+com.metrolist.paxsenix-mergeReleaseResources-3 C:\Users\Chikku\Downloads\Glossy-test-master\paxsenix\build\intermediates\incremental\release\mergeReleaseResources\stripped.dir
+com.metrolist.paxsenix-release-4 C:\Users\Chikku\Downloads\Glossy-test-master\paxsenix\build\intermediates\merged_res\release\mergeReleaseResources
+com.metrolist.paxsenix-release-5 C:\Users\Chikku\Downloads\Glossy-test-master\paxsenix\build\intermediates\packaged_res\release\packageReleaseResources
+com.metrolist.paxsenix-main-6 C:\Users\Chikku\Downloads\Glossy-test-master\paxsenix\src\main\res
+com.metrolist.paxsenix-release-7 C:\Users\Chikku\Downloads\Glossy-test-master\paxsenix\src\release\res
+gradleHome-0 C:\Users\Chikku\.gradle

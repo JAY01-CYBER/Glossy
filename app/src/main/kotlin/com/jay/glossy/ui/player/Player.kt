@@ -117,6 +117,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -180,6 +181,9 @@ import com.jay.glossy.constants.SleepTimerFadeOutKey
 import com.jay.glossy.constants.SleepTimerStopAfterCurrentSongKey
 import com.jay.glossy.constants.SliderStyle
 import com.jay.glossy.constants.SliderStyleKey
+import com.jay.glossy.constants.MiniLyricsStyle
+import com.jay.glossy.constants.MiniLyricsStyleKey
+import com.jay.glossy.constants.ShowLyricsOnPlayerKey
 import com.jay.glossy.constants.SquigglySliderKey
 import com.jay.glossy.constants.ThumbnailCornerRadius
 import com.jay.glossy.constants.UseNewPlayerDesignKey
@@ -189,8 +193,10 @@ import com.jay.glossy.extensions.togglePlayPause
 import com.jay.glossy.extensions.toggleRepeatMode
 import com.jay.glossy.listentogether.RoomRole
 import com.metrolist.models.MediaMetadata
+import com.jay.glossy.ui.component.BlurredArtworkBackdrop
 import com.jay.glossy.ui.component.BottomSheet
 import com.jay.glossy.ui.component.BottomSheetState
+import com.jay.glossy.ui.component.GlassBackdrop
 import com.jay.glossy.ui.component.LocalBottomSheetPageState
 import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.component.Lyrics
@@ -199,6 +205,7 @@ import com.jay.glossy.ui.component.ResizableIconButton
 import com.jay.glossy.ui.component.SquigglySlider
 import com.jay.glossy.ui.component.WavySlider
 import com.jay.glossy.ui.menu.PlayerMenu
+import com.jay.glossy.ui.player.applemusic.toHighRes
 import com.jay.glossy.ui.screens.settings.DarkMode
 import com.jay.glossy.ui.theme.PlayerColorExtractor
 import com.jay.glossy.ui.theme.PlayerSliderColors
@@ -232,7 +239,6 @@ fun BottomSheetPlayer(
     val context = LocalContext.current
     val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     val menuState = LocalMenuState.current
-    val sleepTimerDefaultSetTemplate = stringResource(R.string.sleep_timer_default_set)
     val copiedTitleStr = stringResource(R.string.copied_title)
     val copiedArtistStr = stringResource(R.string.copied_artist)
     val bottomSheetPageState = LocalBottomSheetPageState.current
@@ -249,6 +255,8 @@ fun BottomSheetPlayer(
     }
 
     val (hidePlayerThumbnail, onHidePlayerThumbnailChange) = rememberPreference(HidePlayerThumbnailKey, false)
+    val showLyricsOnPlayer by rememberPreference(ShowLyricsOnPlayerKey, defaultValue = false)
+    val (miniLyricsStyle) = rememberEnumPreference(MiniLyricsStyleKey, defaultValue = MiniLyricsStyle.CLASSIC)
     val (hideStatusBarOnFullscreen) = rememberPreference(HideStatusBarOnFullscreenKey, false)
     val cropAlbumArt by rememberPreference(CropAlbumArtKey, false)
 
@@ -492,72 +500,8 @@ fun BottomSheetPlayer(
     val scope = rememberCoroutineScope()
     var showSleepTimerDialog by remember { mutableStateOf(false) }
 
-    val sleepTimerDefault by rememberPreference(SleepTimerDefaultKey, 30f)
-    var sleepTimerValue by remember { mutableFloatStateOf(sleepTimerDefault) }
-    val isAtDefault by remember { derivedStateOf { sleepTimerValue.roundToInt() == sleepTimerDefault.roundToInt() } }
-    LaunchedEffect(sleepTimerDefault) { sleepTimerValue = sleepTimerDefault }
-    val sleepTimerStopAfterCurrentSong by rememberPreference(SleepTimerStopAfterCurrentSongKey, false)
-    val sleepTimerFadeOut by rememberPreference(SleepTimerFadeOutKey, false)
-
     if (showSleepTimerDialog) {
-        AlertDialog(
-            properties = DialogProperties(usePlatformDefaultWidth = false),
-            onDismissRequest = { showSleepTimerDialog = false },
-            icon = { Icon(painter = painterResource(R.drawable.bedtime), contentDescription = null) },
-            title = { Text(stringResource(R.string.sleep_timer)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    showSleepTimerDialog = false
-                    playerConnection.service.sleepTimer?.start(
-                        minute = sleepTimerValue.roundToInt(),
-                        stopAfterCurrentSong = sleepTimerStopAfterCurrentSong,
-                        fadeOut = sleepTimerFadeOut,
-                    )
-                }) { Text(stringResource(android.R.string.ok)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showSleepTimerDialog = false }) { Text(stringResource(android.R.string.cancel)) }
-            },
-            text = {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = pluralStringResource(R.plurals.minute, sleepTimerValue.roundToInt(), sleepTimerValue.roundToInt()),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                    Slider(
-                        value = sleepTimerValue,
-                        onValueChange = { sleepTimerValue = it },
-                        valueRange = 5f..120f,
-                        steps = (120 - 5) / 5 - 1,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        if (isAtDefault) {
-                            Button(
-                                onClick = {
-                                    scope.launch { context.safeDataStoreEdit { settings -> settings[SleepTimerDefaultKey] = sleepTimerValue } }
-                                    Toast.makeText(context, String.format(sleepTimerDefaultSetTemplate, sleepTimerValue.roundToInt()), Toast.LENGTH_SHORT).show()
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
-                            ) { Text(stringResource(R.string.set_as_default)) }
-                        } else {
-                            OutlinedButton(
-                                onClick = {
-                                    scope.launch { context.safeDataStoreEdit { settings -> settings[SleepTimerDefaultKey] = sleepTimerValue } }
-                                    Toast.makeText(context, String.format(sleepTimerDefaultSetTemplate, sleepTimerValue.roundToInt()), Toast.LENGTH_SHORT).show()
-                                }
-                            ) { Text(stringResource(R.string.set_as_default)) }
-                        }
-                        OutlinedButton(
-                            onClick = {
-                                showSleepTimerDialog = false
-                                playerConnection.service.sleepTimer?.start(minute = -1)
-                            }
-                        ) { Text(stringResource(R.string.end_of_song)) }
-                    }
-                }
-            },
-        )
+        SleepTimerPrompt(onDismiss = { showSleepTimerDialog = false })
     }
 
     var showChoosePlaylistDialog by rememberSaveable { mutableStateOf(false) }
@@ -601,7 +545,17 @@ fun BottomSheetPlayer(
         }
     }
 
-    val actualPeekHeight = if (playerStyle.name == "WAVY") 0.dp else QueuePeekHeight
+    // Wavy and Vinyl both draw their own bottom dock, so they opt
+    // out of the shared queue-peek strip — otherwise it sits under their dock
+    // repeating the same Queue / Lyrics / Repeat controls a second time.
+    val actualPeekHeight =
+        if (playerStyle.name == "WAVY" || playerStyle.name == "VINYL" ||
+            playerStyle.name == "CAPSULE" || playerStyle.name == "CINEMATIC"
+        ) {
+            0.dp
+        } else {
+            QueuePeekHeight
+        }
     val dismissedBound = actualPeekHeight + WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
     val queueSheetState = com.jay.glossy.ui.component.rememberBottomSheetState(
@@ -611,8 +565,43 @@ fun BottomSheetPlayer(
         initialAnchor = 1,
     )
 
-    val bottomSheetBackgroundColor = when (playerBackground) {
-        PlayerBackgroundStyle.BLUR, PlayerBackgroundStyle.GRADIENT, PlayerBackgroundStyle.ANIMATED_MESH -> MaterialTheme.colorScheme.surfaceContainer
+    // The sheet is drawn inside a content box that begins below the status bar,
+    // so this colour paints the band above the player's own background. The
+    // fully custom designs have their own base colour, and leaving the theme's
+    // surfaceContainer there is what produced the two-tone strip at the top.
+    // Capsule's background comes from the artwork, so the strip the sheet paints
+    // above the content has to be that gradient's own first stop — anything fixed
+    // here would show as a band across the top. With Blur / Gradient / Mesh
+    // picked the design steps aside and the sheet paints those instead.
+    val capsuleGradient =
+        if (playerStyle.name == "CAPSULE") {
+            capsuleGradientStops(
+                animatedArtworkColors(
+                    rememberArtworkPalette(
+                        mediaId = mediaMetadata?.id,
+                        thumbnailUrl = mediaMetadata?.thumbnailUrl,
+                        fallback = CapsuleFallbackColors,
+                    ),
+                ),
+            )
+        } else {
+            null
+        }
+
+    val styleBackground = when {
+        playerStyle.name == "VINYL" && playerBackground != PlayerBackgroundStyle.DEFAULT -> null
+        playerStyle.name == "VINYL" -> Color(0xFF1B1712)
+        playerStyle.name == "CAPSULE" ->
+            if (playerBackground == PlayerBackgroundStyle.DEFAULT) capsuleGradient?.firstOrNull() else null
+        playerStyle.name == "CINEMATIC" -> Color.Black
+        playerStyle.name == "APPLE_MUSIC" -> Color(0xFF121212)
+        else -> null
+    }
+    val bottomSheetBackgroundColor = when {
+        styleBackground != null -> styleBackground
+        playerBackground == PlayerBackgroundStyle.BLUR ||
+            playerBackground == PlayerBackgroundStyle.GRADIENT ||
+            playerBackground == PlayerBackgroundStyle.ANIMATED_MESH -> MaterialTheme.colorScheme.surfaceContainer
         else -> if (useBlackBackground) Color.Black else MaterialTheme.colorScheme.surfaceContainer
     }
     val backgroundAlpha = state.progress.coerceIn(0f, 1f)
@@ -628,11 +617,12 @@ fun BottomSheetPlayer(
                             AnimatedContent(targetState = mediaMetadata?.thumbnailUrl, transitionSpec = { fadeIn(tween(800)).togetherWith(fadeOut(tween(800))) }, label = "blurBackground") { thumbnailUrl ->
                                 if (thumbnailUrl != null) {
                                     Box(modifier = Modifier.alpha(backgroundAlpha)) {
-                                        AsyncImage(
-                                            model = ImageRequest.Builder(context).data(thumbnailUrl).size(100, 100).allowHardware(false).build(),
-                                            contentDescription = null,
-                                            contentScale = ContentScale.Crop,
-                                            modifier = Modifier.fillMaxSize().blur(if (useDarkTheme) 150.dp else 100.dp),
+                                        // Blurred on the CPU, so it is a real blur on
+                                        // every Android version instead of a
+                                        // stretched 100px thumbnail.
+                                        BlurredArtworkBackdrop(
+                                            url = thumbnailUrl,
+                                            blurStrength = if (useDarkTheme) 0.72f else 0.5f,
                                         )
                                         Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.3f)))
                                     }
@@ -674,6 +664,30 @@ fun BottomSheetPlayer(
             MiniPlayer(positionState = positionState, durationState = durationState, onClick = { state.expandSoft() })
         },
     ) {
+        // Queue peek overlay shared by the fully custom player designs. Apple
+        // Music draws its own queue view, so it opts out of this one.
+        val queueOverlay: @Composable () -> Unit = {
+            AnimatedVisibility(
+                visible = !isFullScreen,
+                enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                exit = shrinkVertically(shrinkTowards = Alignment.Top) + slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+            ) {
+                Queue(
+                    state = queueSheetState,
+                    playerBottomSheetState = state,
+                    background = if (useBlackBackground) Color.Black else MaterialTheme.colorScheme.surfaceContainer,
+                    onBackgroundColor = onBackgroundColor,
+                    TextBackgroundColor = TextBackgroundColor,
+                    textButtonColor = textButtonColor,
+                    iconButtonColor = iconButtonColor,
+                    pureBlack = pureBlack,
+                    showInlineLyrics = showInlineLyrics,
+                    playerBackground = playerBackground,
+                    onToggleLyrics = { showInlineLyrics = !showInlineLyrics },
+                )
+            }
+        }
+
         if (playerStyle.name == "APPLE_MUSIC") {
             com.jay.glossy.ui.player.applemusic.NowPlayingContentAppleMusic(
                 bottomSheetState = state,
@@ -681,6 +695,37 @@ fun BottomSheetPlayer(
                 duration = duration,
                 modifier = Modifier.fillMaxSize()
             )
+        } else if (playerStyle.name == "VINYL") {
+            VinylNowPlaying(
+                bottomSheetState = state,
+                position = { effectivePosition },
+                duration = duration,
+                onOpenQueue = { scope.launch { queueSheetState.expandSoft() } },
+                bottomInset = queueSheetState.collapsedBound,
+                modifier = Modifier.fillMaxSize(),
+            )
+            queueOverlay()
+        } else if (playerStyle.name == "CAPSULE") {
+            CapsuleNowPlaying(
+                bottomSheetState = state,
+                position = { effectivePosition },
+                duration = duration,
+                backgroundStops = capsuleGradient ?: capsuleGradientStops(CapsuleFallbackColors),
+                onOpenQueue = { scope.launch { queueSheetState.expandSoft() } },
+                bottomInset = queueSheetState.collapsedBound,
+                modifier = Modifier.fillMaxSize(),
+            )
+            queueOverlay()
+        } else if (playerStyle.name == "CINEMATIC") {
+            CinematicNowPlaying(
+                bottomSheetState = state,
+                position = { effectivePosition },
+                duration = duration,
+                onOpenQueue = { scope.launch { queueSheetState.expandSoft() } },
+                bottomInset = queueSheetState.collapsedBound,
+                modifier = Modifier.fillMaxSize(),
+            )
+            queueOverlay()
         } else {
             val controlsContent: @Composable ColumnScope.(MediaMetadata) -> Unit = { mediaMetadata ->
                 if (playerStyle.name == "VIVI_NEW") {
@@ -1582,11 +1627,26 @@ fun BottomSheetPlayer(
                                         sliderPositionProvider = sliderPositionProvider,
                                         modifier = Modifier.animateContentSize(),
                                         isPlayerExpanded = isExpandedProvider,
-                                        isLandscape = true,
-                                        isListenTogetherGuest = isListenTogetherGuest,
-                                    )
-                                }
+                                    isLandscape = true,
+                                    isListenTogetherGuest = isListenTogetherGuest,
+                                )
                             }
+
+                            // Canvas-glow mini lyrics go on the artwork itself,
+                            // low, so the design keeps the height it had: this
+                            // artwork is the canvas, and the line belongs on it.
+                            if (showLyricsOnPlayer && !showInlineLyrics && miniLyricsStyle == MiniLyricsStyle.CANVAS_GLOW) {
+                                PlayerCanvasGlowLyrics(
+                                    mediaMetadata = mediaMetadata,
+                                    positionProvider = { effectivePosition },
+                                    onExpand = { showInlineLyrics = true },
+                                    modifier = Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .fillMaxWidth()
+                                        .padding(bottom = 6.dp),
+                                )
+                            }
+                        }
                         }
 
                         Column(
@@ -1597,6 +1657,14 @@ fun BottomSheetPlayer(
                                 .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top)),
                         ) {
                             Spacer(Modifier.weight(1f))
+
+                            if (showLyricsOnPlayer && !showInlineLyrics && miniLyricsStyle == MiniLyricsStyle.CLASSIC) {
+                                PlayerSyncedLyricsView(
+                                    mediaMetadata = mediaMetadata,
+                                    positionProvider = { effectivePosition },
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
 
                             mediaMetadata?.let {
                                 controlsContent(it)
@@ -1650,6 +1718,29 @@ fun BottomSheetPlayer(
                                     )
                                 }
                             }
+
+                            // Canvas-glow mini lyrics go on the artwork itself,
+                            // low, so the design keeps the height it had: this
+                            // artwork is the canvas, and the line belongs on it.
+                            if (showLyricsOnPlayer && !showInlineLyrics && miniLyricsStyle == MiniLyricsStyle.CANVAS_GLOW) {
+                                PlayerCanvasGlowLyrics(
+                                    mediaMetadata = mediaMetadata,
+                                    positionProvider = { effectivePosition },
+                                    onExpand = { showInlineLyrics = true },
+                                    modifier = Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .fillMaxWidth()
+                                        .padding(bottom = 6.dp),
+                                )
+                            }
+                        }
+
+                        if (showLyricsOnPlayer && !showInlineLyrics && miniLyricsStyle == MiniLyricsStyle.CLASSIC) {
+                            PlayerSyncedLyricsView(
+                                mediaMetadata = mediaMetadata,
+                                positionProvider = { effectivePosition },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
                         }
 
                         mediaMetadata?.let {
@@ -1776,9 +1867,21 @@ fun InlineLyricsView(
     }
 
     Box(
-        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)),
+        modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
+        // Apple Music-style frosted glass: the artwork blurred behind the text,
+        // so the full-screen lyrics view looks the same in every player design.
+        // Full-bleed with square corners on purpose: rounded corners used to cut
+        // out little triangles that revealed the (often much lighter) sheet
+        // behind as white corner padding. The backdrop fades in down the panel,
+        // so the blur builds up from the top instead of starting at a hard edge.
+        GlassBackdrop(
+            thumbnailUrl = mediaMetadata?.thumbnailUrl?.toHighRes(),
+            shape = RectangleShape,
+            border = null,
+            modifier = Modifier.fillMaxSize(),
+        )
         // Buttery-smooth cross-state animation: scale + fade between loading,
         // not-found and loaded states instead of an abrupt swap.
         AnimatedContent(

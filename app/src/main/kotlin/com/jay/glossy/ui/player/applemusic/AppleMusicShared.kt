@@ -29,7 +29,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.*
@@ -44,6 +43,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.jay.glossy.ui.component.GlassBackdrop
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.jay.glossy.R
@@ -68,6 +68,24 @@ internal val AppleMusicTextSecondary = Color.White.copy(alpha = 0.72f)
 internal val AppleMusicPillInactive = Color.White.copy(alpha = 0.24f)
 internal val AppleMusicTrackInactive = Color.White.copy(alpha = 0.26f)
 internal val AppleMusicTrackActive = Color.White.copy(alpha = 0.92f)
+
+/**
+ * Horizontal inset of the design's text from the screen edge, and the value
+ * `AppleMusicMainTitleRow` pads itself by.
+ *
+ * The canvas-glow mini lyrics are drawn over artwork that is full-bleed and so
+ * carries no padding of its own. Without this inset they sat hard against the
+ * left edge of the screen while the song name floated 20dp inside it, and the
+ * two stopped reading as a single block.
+ */
+internal val AppleMusicGutter = 20.dp
+
+/**
+ * Where the glow line sits inside its own block: flush to [AppleMusicGutter]
+ * horizontally so it shares the song name's left edge, and near-flush
+ * vertically because the title row sits immediately below it.
+ */
+internal val AppleMusicGlowInset = PaddingValues(start = AppleMusicGutter, end = AppleMusicGutter)
 
 internal fun appleMusicGradientColorAt(seedColor: Color, fraction: Float): Color {
     val top = lerp(seedColor, Color.Black, 0.05f)
@@ -500,6 +518,10 @@ internal fun AppleMusicBottomCluster(
  * Premium frosted-glass sheet for the bottom of the Apple Music style player:
  * a heavily blurred, darkened crop of the current artwork sits behind the
  * controls with a hairline glass edge on top.
+ *
+ * The sheet fades in from its top edge rather than starting at full strength,
+ * so the blur and the darkening build up across the transport, volume and dock
+ * rows instead of the cluster separating from the artwork above it.
  */
 @Composable
 internal fun FrostedBottomPanel(
@@ -510,46 +532,28 @@ internal fun FrostedBottomPanel(
     val shape = RoundedCornerShape(topStart = cornerRadius, topEnd = cornerRadius)
     val playerConnection = LocalPlayerConnection.current
     val mediaMetadata = playerConnection?.mediaMetadata?.collectAsStateWithLifecycle()?.value
-    val context = LocalContext.current
     val artworkUrl = remember(mediaMetadata?.thumbnailUrl) {
         mediaMetadata?.thumbnailUrl?.toHighRes()
     }
 
     Box(modifier = modifier.clip(shape)) {
-        if (artworkUrl != null) {
-            AsyncImage(
-                model = ImageRequest.Builder(context)
-                    .data(artworkUrl)
-                    .crossfade(400)
-                    .build(),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .matchParentSize()
-                    .graphicsLayer {
-                        scaleX = 1.4f
-                        scaleY = 1.4f
-                    }
-                    .blur(56.dp)
-                    .alpha(0.55f),
-            )
-        }
-        Box(
-            Modifier
-                .matchParentSize()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            Color.Black.copy(alpha = 0.50f),
-                            Color.Black.copy(alpha = 0.22f),
-                        ),
-                    ),
+        // A CPU Gaussian blur rather than `Modifier.blur`: RenderEffect only
+        // exists from API 31, so the frosted panel used to render as a plain
+        // sharp, stretched crop of the artwork on older devices.
+        GlassBackdrop(
+            thumbnailUrl = artworkUrl,
+            shape = shape,
+            blurStrength = 0.85f,
+            artworkAlpha = 0.92f,
+            // Legibility scrim over the frosted glass — light enough that the
+            // blur still reads as blur.
+            scrim = Brush.verticalGradient(
+                listOf(
+                    Color.Black.copy(alpha = 0.46f),
+                    Color.Black.copy(alpha = 0.20f),
                 ),
-        )
-        Box(
-            Modifier
-                .matchParentSize()
-                .border(1.dp, Color.White.copy(alpha = 0.10f), shape),
+            ),
+            modifier = Modifier.matchParentSize(),
         )
         content()
     }

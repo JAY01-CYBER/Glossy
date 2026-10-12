@@ -1,0 +1,16 @@
+-- Merging decision tree log ---
+manifest
+ADDED from C:\Users\Chikku\Downloads\Glossy-test-master\netease\build\intermediates\tmp\ProcessLibraryManifest\release\tempAndroidManifest6586421148028413617.xml:2:13-83
+INJECTED from C:\Users\Chikku\Downloads\Glossy-test-master\netease\build\intermediates\tmp\ProcessLibraryManifest\release\tempAndroidManifest6586421148028413617.xml:2:13-83
+	package
+		INJECTED from C:\Users\Chikku\Downloads\Glossy-test-master\netease\build\intermediates\tmp\ProcessLibraryManifest\release\tempAndroidManifest6586421148028413617.xml
+	xmlns:android
+		ADDED from C:\Users\Chikku\Downloads\Glossy-test-master\netease\build\intermediates\tmp\ProcessLibraryManifest\release\tempAndroidManifest6586421148028413617.xml:2:23-81
+uses-sdk
+INJECTED from C:\Users\Chikku\Downloads\Glossy-test-master\netease\build\intermediates\tmp\ProcessLibraryManifest\release\tempAndroidManifest6586421148028413617.xml reason: use-sdk injection requested
+INJECTED from C:\Users\Chikku\Downloads\Glossy-test-master\netease\build\intermediates\tmp\ProcessLibraryManifest\release\tempAndroidManifest6586421148028413617.xml
+INJECTED from C:\Users\Chikku\Downloads\Glossy-test-master\netease\build\intermediates\tmp\ProcessLibraryManifest\release\tempAndroidManifest6586421148028413617.xml
+	android:targetSdkVersion
+		INJECTED from C:\Users\Chikku\Downloads\Glossy-test-master\netease\build\intermediates\tmp\ProcessLibraryManifest\release\tempAndroidManifest6586421148028413617.xml
+	android:minSdkVersion
+		INJECTED from C:\Users\Chikku\Downloads\Glossy-test-master\netease\build\intermediates\tmp\ProcessLibraryManifest\release\tempAndroidManifest6586421148028413617.xml

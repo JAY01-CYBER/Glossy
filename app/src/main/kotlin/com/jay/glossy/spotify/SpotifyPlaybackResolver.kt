@@ -18,13 +18,32 @@ object SpotifyPlaybackResolver {
     private const val CACHE_MAX_SIZE = 512
 
     private val mutex = Mutex()
-    private val cache = object : LinkedHashMap<String, MediaMetadata>(CACHE_MAX_SIZE, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, MediaMetadata>?): Boolean = size > CACHE_MAX_SIZE
+    private val cache = object : LinkedHashMap<String, SongItem>(CACHE_MAX_SIZE, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, SongItem>?): Boolean = size > CACHE_MAX_SIZE
     }
 
     suspend fun resolveToMediaItem(track: SpotifyTrack): MediaItem? = resolveToMetadata(track)?.toMediaItem()
 
-    suspend fun resolveToMetadata(track: SpotifyTrack): MediaMetadata? = withContext(Dispatchers.IO) {
+    suspend fun resolveToMetadata(track: SpotifyTrack): MediaMetadata? =
+        resolveToSongItem(track)?.let { best ->
+            val bestMetadata = best.toMediaMetadata()
+            bestMetadata.copy(
+                thumbnailUrl = SpotifyMapper.getTrackThumbnail(track) ?: best.thumbnail,
+                duration = if (track.durationMs > 0) track.durationMs / 1000 else best.duration ?: -1,
+                explicit = track.explicit || best.explicit,
+                album = track.album?.let { MediaMetadata.Album(id = it.id, title = it.name) } ?: bestMetadata.album
+            )
+        }
+
+    /**
+     * The best YouTube match for a Spotify track, cached by the Spotify id.
+     *
+     * Playback only needs the [MediaMetadata] above, but a surface that opens the
+     * standard song menu needs the whole song — the menu reads the id, the
+     * artists and the library state off it — so the match itself is what is
+     * cached and the metadata is derived from it.
+     */
+    suspend fun resolveToSongItem(track: SpotifyTrack): SongItem? = withContext(Dispatchers.IO) {
         mutex.withLock {
             cache[track.id]?.let { return@withContext it }
         }
@@ -37,7 +56,7 @@ object SpotifyPlaybackResolver {
         val candidates = searchResult.items
             .filterIsInstance<SongItem>()
             .distinctBy { it.id }
-        
+
         if (candidates.isEmpty()) return@withContext null
 
         val precomputed = mutex.withLock {
@@ -58,20 +77,12 @@ object SpotifyPlaybackResolver {
                 )
             }.maxByOrNull { it.second }
         } ?: return@withContext null
-        
+
         if (score < MIN_MATCH_THRESHOLD) return@withContext null
 
-        val bestMetadata = best.toMediaMetadata()
-        val metadata = bestMetadata.copy(
-            thumbnailUrl = SpotifyMapper.getTrackThumbnail(track) ?: best.thumbnail,
-            duration = if (track.durationMs > 0) track.durationMs / 1000 else best.duration ?: -1,
-            explicit = track.explicit || best.explicit,
-            album = track.album?.let { MediaMetadata.Album(id = it.id, title = it.name) } ?: bestMetadata.album
-        )
-
         mutex.withLock {
-            cache[track.id] = metadata
+            cache[track.id] = best
         }
-        metadata
+        best
     }
 }

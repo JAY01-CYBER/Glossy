@@ -1,0 +1,5 @@
+Fix lyrics padding in the component that actually renders
+
+The padding fix landed in OriginalLyrics, but ExperimentalLyrics is what draws the lyrics: Lyrics.kt picks it whenever ExperimentalLyricsKey is on, and that key defaults to true. OriginalLyrics is only reached once a user explicitly turns the experimental view off, so the top inset was still present in every default install.
+
+That inset is LYRICS_ANCHOR_RATIO. Every line is placed at anchorY plus its offset from the active line, so the ratio is also the empty band above the first line when a song starts: at 0.35 a third of the screen was blank backdrop before any text appeared. Dropped to 0.12, leaving the active line near the top with room for the lines above it to scroll in from.

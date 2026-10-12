@@ -3272,17 +3272,32 @@ object YouTube {
     }
 
 
+    /** `[mm:ss.xx]`-style stamp, any of the variants the lyrics shelf uses. */
+    private val LYRICS_TIMESTAMP_REGEX = Regex("""\[\d{1,2}:\d{2}(?:[.:]\d{1,3})?\]""")
+
     suspend fun lyrics(endpoint: BrowseEndpoint): Result<String?> =
         runCatching {
             val response = innerTube.browse(WEB_REMIX, endpoint.browseId, endpoint.params).body<BrowseResponse>()
-            response.contents
+            val runs = response.contents
                 ?.sectionListRenderer
                 ?.contents
                 ?.firstOrNull { it.musicDescriptionShelfRenderer != null }
                 ?.musicDescriptionShelfRenderer
                 ?.description
                 ?.runs
-                ?.joinToString(separator = "") { it.text }
+                ?: return@runCatching null
+
+            val joined = runs.joinToString(separator = "") { it.text }
+            // The shelf normally carries its own line breaks inside the run
+            // text. A timed shelf that does not would otherwise arrive as one
+            // unbroken line, which no line-based timestamp parser can split —
+            // so when the text is timed but has no line break, each run becomes
+            // a line. Plain lyrics are left exactly as the server sent them.
+            if (joined.contains('\n') || !LYRICS_TIMESTAMP_REGEX.containsMatchIn(joined)) {
+                joined
+            } else {
+                runs.joinToString(separator = "\n") { it.text.trim() }
+            }
         }
 
     suspend fun related(endpoint: BrowseEndpoint): Result<RelatedPage> =

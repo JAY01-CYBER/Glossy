@@ -1,0 +1,9 @@
+com.jay.glossy.musixmatch-pngs-0 C:\Users\Chikku\Downloads\Glossy-test-master\musixmatch\build\generated\res\pngs\release
+com.jay.glossy.musixmatch-updated_navigation_xml-1 C:\Users\Chikku\Downloads\Glossy-test-master\musixmatch\build\generated\updated_navigation_xml\release
+com.jay.glossy.musixmatch-mergeReleaseResources-2 C:\Users\Chikku\Downloads\Glossy-test-master\musixmatch\build\intermediates\incremental\release\mergeReleaseResources\merged.dir
+com.jay.glossy.musixmatch-mergeReleaseResources-3 C:\Users\Chikku\Downloads\Glossy-test-master\musixmatch\build\intermediates\incremental\release\mergeReleaseResources\stripped.dir
+com.jay.glossy.musixmatch-release-4 C:\Users\Chikku\Downloads\Glossy-test-master\musixmatch\build\intermediates\merged_res\release\mergeReleaseResources
+com.jay.glossy.musixmatch-release-5 C:\Users\Chikku\Downloads\Glossy-test-master\musixmatch\build\intermediates\packaged_res\release\packageReleaseResources
+com.jay.glossy.musixmatch-main-6 C:\Users\Chikku\Downloads\Glossy-test-master\musixmatch\src\main\res
+com.jay.glossy.musixmatch-release-7 C:\Users\Chikku\Downloads\Glossy-test-master\musixmatch\src\release\res
+gradleHome-0 C:\Users\Chikku\.gradle

@@ -1,0 +1,9 @@
+com.metrolist.betterlyrics-pngs-0 C:\Users\Chikku\Downloads\Glossy-test-master\betterlyrics\build\generated\res\pngs\release
+com.metrolist.betterlyrics-updated_navigation_xml-1 C:\Users\Chikku\Downloads\Glossy-test-master\betterlyrics\build\generated\updated_navigation_xml\release
+com.metrolist.betterlyrics-mergeReleaseResources-2 C:\Users\Chikku\Downloads\Glossy-test-master\betterlyrics\build\intermediates\incremental\release\mergeReleaseResources\merged.dir
+com.metrolist.betterlyrics-mergeReleaseResources-3 C:\Users\Chikku\Downloads\Glossy-test-master\betterlyrics\build\intermediates\incremental\release\mergeReleaseResources\stripped.dir
+com.metrolist.betterlyrics-release-4 C:\Users\Chikku\Downloads\Glossy-test-master\betterlyrics\build\intermediates\merged_res\release\mergeReleaseResources
+com.metrolist.betterlyrics-release-5 C:\Users\Chikku\Downloads\Glossy-test-master\betterlyrics\build\intermediates\packaged_res\release\packageReleaseResources
+com.metrolist.betterlyrics-main-6 C:\Users\Chikku\Downloads\Glossy-test-master\betterlyrics\src\main\res
+com.metrolist.betterlyrics-release-7 C:\Users\Chikku\Downloads\Glossy-test-master\betterlyrics\src\release\res
+gradleHome-0 C:\Users\Chikku\.gradle

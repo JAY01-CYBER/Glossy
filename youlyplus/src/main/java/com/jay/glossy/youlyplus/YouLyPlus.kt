@@ -15,6 +15,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.selects.select
 import kotlinx.serialization.json.Json
+import java.util.Locale
 import java.util.concurrent.atomic.AtomicReference
 
 object YouLyPlus {
@@ -79,11 +80,16 @@ object YouLyPlus {
                 }
                 remaining.removeAll { it.first == winServer }
 
-                val lrc = winLyrics?.let { resp ->
-                    resp.syncedLyrics?.takeIf { it.isNotBlank() }
-                        ?: resp.lyrics?.convertToLrc()?.takeIf { it.isNotBlank() }
-                        ?: resp.plainLyrics?.takeIf { it.isNotBlank() }
-                }
+                // A server that answers with another song's lyrics is skipped
+                // and the remaining servers are still asked — see matchesQuery.
+                val lrc =
+                    winLyrics
+                        ?.takeIf { matchesQuery(it, title, artist, duration) }
+                        ?.let { resp ->
+                            resp.syncedLyrics?.takeIf { it.isNotBlank() }
+                                ?: resp.lyrics?.convertToLrc()?.takeIf { it.isNotBlank() }
+                                ?: resp.plainLyrics?.takeIf { it.isNotBlank() }
+                        }
                 if (!lrc.isNullOrBlank()) {
                     lastWorkingServer.set(winServer)
                     return@runCatching lrc
@@ -109,7 +115,7 @@ object YouLyPlus {
             scope.async {
                 runCatching {
                     val response = fetchFromServer(server, title, artist, duration, album, id, isrc)
-                    if (response != null) {
+                    if (response != null && matchesQuery(response, title, artist, duration)) {
                         response.syncedLyrics?.takeIf { it.isNotBlank() }
                             ?: response.lyrics?.convertToLrc()?.takeIf { it.isNotBlank() }
                             ?: response.plainLyrics?.takeIf { it.isNotBlank() }
@@ -130,6 +136,68 @@ object YouLyPlus {
             scope.coroutineContext.cancelChildren()
         }
     }
+
+    /**
+     * Whether a server's answer is plausibly for the song that was asked for.
+     *
+     * The servers match loosely and the first one to answer used to win
+     * outright, which is how the lyrics of a same-named song — or another
+     * version of the track — ended up displayed under this song's title.
+     * A response that names the track and disagrees is refused, and the other
+     * servers are still asked. A response that carries no names cannot be
+     * judged and is let through.
+     */
+    private fun matchesQuery(
+        response: LyricsResponse,
+        title: String,
+        artist: String,
+        duration: Int,
+    ): Boolean {
+        val wantedTitle = title.lowercase(Locale.ROOT).trim()
+        val answeredTitle = response.trackName?.lowercase(Locale.ROOT)?.trim().orEmpty()
+        if (wantedTitle.isNotBlank() && answeredTitle.isNotBlank() && wantedTitle != answeredTitle) {
+            val contained = wantedTitle.contains(answeredTitle) || answeredTitle.contains(wantedTitle)
+            val wantedTokens = wordTokens(wantedTitle)
+            val shared = wordTokens(answeredTitle).count { it in wantedTokens }
+            if (!contained && (wantedTokens.isEmpty() || shared * 2 < wantedTokens.size)) return false
+        }
+
+        // The query carries every credited artist joined, while the server
+        // usually names only the lead — so either side naming the other counts.
+        val wantedArtist = artist.lowercase(Locale.ROOT).trim()
+        val answeredArtist = response.artistName?.lowercase(Locale.ROOT)?.trim().orEmpty()
+        if (wantedArtist.isNotBlank() && answeredArtist.isNotBlank() &&
+            !wantedArtist.contains(answeredArtist) && !answeredArtist.contains(wantedArtist)
+        ) {
+            val wantedTokens = wordTokens(wantedArtist)
+            val answeredTokens = wordTokens(answeredArtist)
+            val shared = wantedTokens.count { it in answeredTokens }
+            if (wantedTokens.isNotEmpty() && answeredTokens.isNotEmpty() &&
+                shared * 2 < minOf(wantedTokens.size, answeredTokens.size)
+            ) {
+                return false
+            }
+        }
+
+        // Duration is part of how these servers pick a track, so a answer that
+        // disagrees with the song's own length is almost always another song.
+        // Some server reports milliseconds; either scale is accepted.
+        val answeredSeconds = response.duration?.let { if (it > 3_600) it / 1000 else it }
+        if (duration > 0 && answeredSeconds != null && answeredSeconds > 0 &&
+            kotlin.math.abs(answeredSeconds - duration) > DurationToleranceSeconds
+        ) {
+            return false
+        }
+        return true
+    }
+
+    /** Two seconds apart is a different recording; ten is a different song. */
+    private const val DurationToleranceSeconds = 10
+
+    private fun wordTokens(raw: String): Set<String> =
+        raw.split(Regex("[^\\p{L}\\p{N}]+"))
+            .filter { it.isNotBlank() }
+            .toSet()
 
     private fun List<com.jay.glossy.youlyplus.models.LyricsItem>.convertToLrc(): String? {
         if (isEmpty()) return null

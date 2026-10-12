@@ -39,12 +39,14 @@ import com.jay.glossy.constants.AccountEmailKey
 import com.jay.glossy.constants.AccountNameKey
 import com.jay.glossy.constants.DataSyncIdKey
 import com.jay.glossy.constants.InnerTubeCookieKey
+import com.jay.glossy.constants.PendingCommunityIntroKey
 import com.jay.glossy.constants.VisitorDataKey
 import com.jay.glossy.ui.component.IconButton
 import com.jay.glossy.ui.utils.backToMain
 import com.jay.glossy.utils.reportException
 import com.jay.glossy.utils.safeDataStoreEdit
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -110,6 +112,10 @@ fun LoginScreen(navController: NavController) {
                             settings[AccountNameKey] = info.name
                             settings[AccountEmailKey] = info.email.orEmpty()
                             settings[AccountChannelHandleKey] = info.channelHandle.orEmpty()
+                            // The process is restarted below, so the onboarding
+                            // flow picks the user up on the community page
+                            // instead of dropping them straight on Home.
+                            settings[PendingCommunityIntroKey] = true
                         }
                     }
 
@@ -147,6 +153,7 @@ fun LoginScreen(navController: NavController) {
                             view: WebView,
                             url: String?,
                         ) {
+                            // Always request visitor data and dataSyncId when page loads
                             loadUrl("javascript:Android.onRetrieveVisitorData(window.yt.config_.VISITOR_DATA)")
                             loadUrl("javascript:Android.onRetrieveDataSyncId(window.yt.config_.DATASYNC_ID)")
 
@@ -157,8 +164,19 @@ fun LoginScreen(navController: NavController) {
                                 CookieManager.getInstance().getCookie("https://music.youtube.com").orEmpty()
                                     .isNotBlank()
                             ) {
-                                Timber.d("Login: Detected authenticated session on music.youtube.com, completing login...")
-                                completeLogin(navController::navigateUp)
+                                // Wait for visitorData and dataSyncId to be populated before completing login
+                                // JavaScript callbacks are async, so we poll for them
+                                coroutineScope.launch {
+                                    var attempts = 0
+                                    while ((visitorDataFromWeb.isBlank() || dataSyncIdFromWeb.isBlank()) && attempts < 50) {
+                                        delay(100)
+                                        attempts++
+                                    }
+                                    if (visitorDataFromWeb.isBlank() || dataSyncIdFromWeb.isBlank()) {
+                                        Timber.w("Login: visitorData or dataSyncId not populated after 5 seconds, proceeding anyway")
+                                    }
+                                    completeLogin(navController::navigateUp)
+                                }
                             }
                         }
                     }

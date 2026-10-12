@@ -12,6 +12,8 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.Icon
+import android.net.ConnectivityManager
+import android.widget.Toast
 import androidx.media3.common.util.NotificationUtil
 import androidx.media3.common.util.Util
 import androidx.media3.exoplayer.offline.Download
@@ -20,8 +22,12 @@ import androidx.media3.exoplayer.offline.DownloadNotificationHelper
 import androidx.media3.exoplayer.offline.DownloadService
 import androidx.media3.exoplayer.scheduler.PlatformScheduler
 import androidx.media3.exoplayer.scheduler.Scheduler
+import com.jay.glossy.constants.DownloadOverWifiOnlyKey
+import com.jay.glossy.utils.dataStore
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 
 
 @AndroidEntryPoint
@@ -41,7 +47,25 @@ class ExoDownloadService : DownloadService(
                 downloadManager.removeDownload(download.request.id)
             }
         }
+
+        // "Download over Wi-Fi only": hold new downloads back while the device
+        // is on mobile data, and explain why nothing started.
+        if (intent?.action == ACTION_ADD_DOWNLOAD && blockDownloadOnMeteredNetwork()) {
+            Toast.makeText(this, R.string.glossy_download_wifi_blocked, Toast.LENGTH_LONG).show()
+            return START_STICKY
+        }
+
         return super.onStartCommand(intent, flags, startId)
+    }
+
+    private fun blockDownloadOnMeteredNetwork(): Boolean {
+        val wifiOnly = runCatching {
+            runBlocking { dataStore.data.first()[DownloadOverWifiOnlyKey] ?: true }
+        }.getOrDefault(true)
+        if (!wifiOnly) return false
+
+        val manager = getSystemService(ConnectivityManager::class.java) ?: return false
+        return manager.isActiveNetworkMetered
     }
 
     override fun getDownloadManager() = downloadUtil.downloadManager

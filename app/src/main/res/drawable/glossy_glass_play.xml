@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Decorative iridescent glass tile for the onboarding backdrop (top-left of the
+  sign-in screen). Drawn as a vector so it stays crisp at any density instead of
+  shipping a raster.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="132dp"
+    android:height="104dp"
+    android:viewportWidth="132"
+    android:viewportHeight="104">
+
+    <!-- Glass body. -->
+    <path
+        android:pathData="M26,2 h80 a24,24 0 0 1 24,24 v52 a24,24 0 0 1 -24,24 h-80 a24,24 0 0 1 -24,-24 v-52 a24,24 0 0 1 24,-24 z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="4"
+                android:startY="2"
+                android:endX="128"
+                android:endY="102">
+                <item android:offset="0" android:color="#E67BE3FF" />
+                <item android:offset="0.34" android:color="#E0B79BFF" />
+                <item android:offset="0.68" android:color="#E0FF9BD1" />
+                <item android:offset="1" android:color="#D9FFE08A" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Inner screen. -->
+    <path
+        android:pathData="M38,14 h56 a14,14 0 0 1 14,14 v48 a14,14 0 0 1 -14,14 h-56 a14,14 0 0 1 -14,-14 v-48 a14,14 0 0 1 14,-14 z"
+        android:fillColor="#D90C0716" />
+
+    <!-- Play mark. -->
+    <path
+        android:pathData="M57,35 L85,52 L57,69 Z"
+        android:fillColor="#F2FFFFFF" />
+
+    <!-- Glass highlight along the top edge. -->
+    <path
+        android:pathData="M26,2 h80 a24,24 0 0 1 24,24 v8 h-128 v-8 a24,24 0 0 1 24,-24 z"
+        android:fillColor="#4DFFFFFF" />
+</vector>

@@ -1,0 +1,31 @@
+{
+  // Cloudflare Worker + Durable Object room server for Glossy's Listen Together.
+  //
+  //   npx wrangler dev      local room server on http://127.0.0.1:8787
+  //   npx wrangler deploy   publish it; the printed URL + /ws is the server address
+  //
+  // Every WebSocket lands on the single RoomHub instance, which owns all rooms
+  // (the same shape as the single-process Python server). The SQLite-backed
+  // class keeps this available on the Workers free plan.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "glossy-listen-together",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-01",
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "ROOM_HUB",
+        "class_name": "RoomHub"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["RoomHub"]
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}

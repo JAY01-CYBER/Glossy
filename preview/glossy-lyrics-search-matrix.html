@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glossy · lyrics view, Search tiles, Matrix's place</title>
+<style>
+  :root{
+    --ink:#f4f1f2; --dim:#a9a2a5; --line:#2c2a2f; --card:#17161a; --page:#0d0c0f;
+    --accent:#ff6d7a; --ok:#6ee7a8; --warn:#ffcf6d;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--page);color:var(--ink);
+       font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
+  .wrap{max-width:1180px;margin:0 auto;padding:40px 24px 80px}
+  h1{font-size:27px;line-height:1.25;margin:0 0 10px;letter-spacing:-.2px}
+  h2{font-size:18px;margin:48px 0 6px;letter-spacing:-.1px}
+  h2 .n{color:var(--accent);font-variant-numeric:tabular-nums}
+  p.lede{color:var(--dim);margin:0 0 4px;max-width:78ch}
+  code{background:#211f25;border:1px solid var(--line);border-radius:5px;padding:1px 5px;
+       font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:#ffd9dd}
+  .row{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start;margin-top:20px}
+  .col{flex:0 0 auto}
+  .cap{font-size:13px;color:var(--dim);margin:10px 0 0;max-width:42ch}
+  .cap b{color:var(--ink);font-weight:600}
+  .tag{display:inline-block;font-size:10.5px;letter-spacing:.10em;text-transform:uppercase;
+       padding:3px 8px;border-radius:99px;border:1px solid var(--line);color:var(--dim);margin-bottom:9px}
+  .tag.bad{color:#ffb3ba;border-color:#5a2b31;background:#2a1418}
+  .tag.good{color:var(--ok);border-color:#24503a;background:#0f2419}
+  .note{margin-top:30px;background:#141317;border:1px solid var(--line);border-left:3px solid var(--warn);
+        border-radius:10px;padding:14px 16px;color:#cfc8cb;font-size:13.5px;max-width:96ch}
+  .note b{color:var(--ink)}
+
+  /* ---------------- phone shell ---------------- */
+  .phone{position:relative;width:360px;height:800px;border-radius:30px;overflow:hidden;
+         border:1px solid #35323a;background:#000;flex:0 0 auto;
+         box-shadow:0 18px 50px rgba(0,0,0,.55)}
+  .statusbar{position:absolute;top:0;left:0;right:0;height:34px;padding:8px 18px 0;
+             display:flex;justify-content:space-between;font-size:11.5px;color:#fff;
+             opacity:.9;letter-spacing:.2px;z-index:5}
+  /* ---------------- lyrics screens ---------------- */
+  .bg-exp{position:absolute;inset:0;background:
+       radial-gradient(120% 60% at 70% 4%, rgba(198,168,214,.75), transparent 62%),
+       radial-gradient(95% 50% at 22% 30%, rgba(160,110,150,.55), transparent 70%),
+       linear-gradient(180deg,#8d7f9b 0%, #6b5568 34%, #3a2a38 70%, #150f17 100%);}
+  .bg-org{position:absolute;inset:0;background:
+       radial-gradient(120% 58% at 26% 6%, rgba(232,126,140,.80), transparent 62%),
+       radial-gradient(95% 46% at 78% 22%, rgba(158,64,86,.62), transparent 68%),
+       linear-gradient(180deg,#8f545c 0%, #4a262c 42%, #1a1013 78%, #0b0709 100%);}
+  .fade{position:absolute;left:0;right:0;bottom:0;height:300px;
+        background:linear-gradient(180deg,transparent, rgba(0,0,0,.72) 55%, rgba(0,0,0,.9))}
+  .band{position:absolute;left:0;right:0;top:34px;height:150px;
+        background:repeating-linear-gradient(45deg,rgba(255,255,255,.05) 0 8px,transparent 8px 16px);
+        border-bottom:1px dashed rgba(255,255,255,.3)}
+  .bandlabel{position:absolute;right:10px;top:96px;font-size:10px;letter-spacing:.08em;
+             text-transform:uppercase;color:#fff;opacity:.85}
+  .provider{position:absolute;left:0;right:0;top:186px;text-align:center;font-size:11px;
+            color:#fff;opacity:.42}
+  .lyrs{position:absolute;left:0;right:0;top:34px;height:520px;overflow:hidden;
+        -webkit-mask-image:linear-gradient(180deg,transparent 0,rgba(0,0,0,.55) 9%,#000 24%,#000 76%,transparent 100%);
+        mask-image:linear-gradient(180deg,transparent 0,rgba(0,0,0,.55) 9%,#000 24%,#000 76%,transparent 100%)}
+  /* experimental: small, left, quiet */
+  .xl{position:absolute;left:22px;right:22px;font-weight:400;font-size:15px;line-height:21px;
+      color:#f0e8ee;opacity:.55;letter-spacing:.1px}
+  .xl.near{opacity:.34}
+  .xl.far{opacity:.2}
+  /* original: large, centred, bold, active line lit */
+  .ol{position:absolute;left:34px;right:34px;text-align:center;font-weight:700;font-size:20px;
+      line-height:27px;color:#efe3e6;opacity:.34;letter-spacing:.1px}
+  .ol.act{color:#fff;opacity:1;font-size:21px}
+  .ol.far{opacity:.16}
+  /* player bar */
+  .pmeta{position:absolute;left:18px;right:78px;bottom:104px}
+  .pmeta .t{font-size:17px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pmeta .a{font-size:12px;color:#e7dbdd;opacity:.82;margin-top:3px;
+            white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pmini{position:absolute;right:16px;bottom:106px;display:flex;gap:14px;opacity:.9}
+  .pmini svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:1.8}
+  .pctl{position:absolute;left:26px;right:26px;bottom:34px;display:flex;align-items:center;justify-content:space-between}
+  .pctl svg{width:25px;height:25px;stroke:#fff;fill:none;stroke-width:1.7}
+  .round{width:44px;height:44px;border:1.6px solid rgba(255,255,255,.75);border-radius:50%;
+         display:flex;align-items:center;justify-content:center}
+  .pair{display:flex;gap:12px}
+
+  /* ---------------- search screens (light pink theme) ---------------- */
+  .sbg{position:absolute;inset:0;background:
+       radial-gradient(90% 40% at 20% 0%, #fdf3f1 0%, transparent 70%),
+       linear-gradient(180deg,#fdf5f3 0%, #fbeceA 46%, #fbeeec 100%);}
+  .sbar{position:absolute;top:44px;left:14px;right:14px;height:52px;border-radius:26px;
+        background:#f7dfdb;display:flex;align-items:center;padding:0 14px;gap:12px}
+  .sbar .q{flex:1;font-size:16px;color:#7b6a6a}
+  .sbar svg{width:20px;height:20px;stroke:#8a6f6f;fill:none;stroke-width:1.9}
+  .chips{position:absolute;top:108px;left:14px;right:14px;display:flex;gap:8px;overflow:hidden}
+  .chip{font-size:12.5px;padding:6px 14px;border-radius:99px;background:#f7e2de;color:#8c6d6d;
+        white-space:nowrap;font-weight:600}
+  .chip.on{background:#f3cbc4;color:#6d4441}
+  .list{position:absolute;top:152px;left:0;right:0;bottom:0;overflow:hidden}
+  .sec{display:flex;align-items:center;gap:9px;margin:10px 0 6px;padding:0 16px;
+       font-size:17px;font-weight:700;color:#4a3b3b}
+  .sec .bar{width:3px;height:19px;border-radius:2px;background:#e5908a}
+  .srow{display:flex;align-items:center;gap:12px;margin:0 8px;padding:8px 10px;border-radius:16px}
+  .srow.tile{background:#fdf1ef}
+  .srow .th{width:46px;height:46px;border-radius:9px;flex:0 0 auto}
+  .th.a{background:linear-gradient(135deg,#8fc2d6,#5f8fae)}
+  .th.b{background:linear-gradient(135deg,#cfe3ea,#7ba0b3)}
+  .th.c{background:linear-gradient(135deg,#f0d3b8,#c39a76)}
+  .th.d{background:linear-gradient(135deg,#b6c7de,#6d8199)}
+  .th.e{background:linear-gradient(135deg,#e8e2d4,#b3a998)}
+  .th.f{background:linear-gradient(135deg,#d9b9c8,#9c6d86)}
+  .th.g{background:linear-gradient(135deg,#f3e0c8,#c9a06f)}
+  .srow .tx{flex:1;min-width:0}
+  .srow .t{font-size:14.5px;font-weight:600;color:#40353a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .srow .s{font-size:12.5px;color:#8d7c7c;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dots{color:#9a8787;font-size:17px;letter-spacing:0;line-height:1}
+  .snav{position:absolute;left:0;right:0;bottom:0;height:74px;background:#fdf6f4;
+        border-top:1px solid #f0dedb;display:flex;align-items:center;justify-content:space-around;
+        font-size:11px;color:#8c7575;padding-bottom:10px}
+  .snav .it{display:flex;flex-direction:column;align-items:center;gap:4px}
+  .snav svg{width:20px;height:20px;stroke:#8c7575;fill:none;stroke-width:1.8}
+  .fab{position:absolute;right:16px;bottom:92px;width:52px;height:52px;border-radius:50%;
+       background:#f3cbc4;display:flex;align-items:center;justify-content:center;
+       box-shadow:0 6px 16px rgba(160,110,110,.35)}
+  .fab svg{width:22px;height:22px;stroke:#8c5b58;fill:none;stroke-width:2}
+  .hint{position:absolute;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;
+        color:#b58f8a;font-weight:700}
+  .ghostmark{position:absolute;left:8px;right:8px;border:1px dashed #dfaeA6;border-radius:16px}
+
+  /* ---------------- about screen (dark) ---------------- */
+  .abg{position:absolute;inset:0;background:#121114}
+  .acard{position:absolute;left:14px;right:14px;border-radius:26px;background:#1e1d21;
+          border:1px solid #2b2a30;padding:16px 16px 14px}
+  .arow{display:flex;align-items:center;gap:14px}
+  .av{width:62px;height:62px;border-radius:50%;flex:0 0 auto;
+      background:linear-gradient(135deg,#6f6472,#3c3540)}
+  .av.sm{width:34px;height:34px}
+  .anm{font-size:22px;font-weight:900;letter-spacing:-.4px}
+  .arl{font-size:12.5px;font-weight:600;color:#f08b95;margin-top:2px}
+  .abtn{margin-top:12px;height:40px;border-radius:20px;background:#332e39;
+        display:flex;align-items:center;justify-content:center}
+  .abtn svg{width:20px;height:20px;stroke:#e6dee2;fill:none;stroke-width:1.8}
+  .sup{margin-top:14px;border-radius:18px;background:#2a2730;border:1px solid #33303a;
+       padding:10px 12px;display:flex;align-items:center;gap:12px}
+  .sup .lb{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#a49aa0}
+  .sup .nm{font-size:15px;font-weight:700;margin-top:1px}
+  .sup .rl{font-size:11.5px;color:#a49aa0;margin-top:1px}
+  .sup svg{width:18px;height:18px;stroke:#a49aa0;fill:none;stroke-width:1.8;margin-left:auto}
+  .gtitle{position:absolute;left:22px;font-size:13px;font-weight:700;color:#cfc4c9}
+  .gitem{position:absolute;left:14px;right:14px;height:58px;border-radius:16px;background:#1e1d21;
+         border:1px solid #2b2a30;display:flex;align-items:center;gap:12px;padding:0 12px}
+  .gone{position:absolute;left:14px;right:14px;text-align:center;font-size:11.5px;color:#6f666c}
+
+  /* ---------------- change list ---------------- */
+  .changes{margin-top:14px;display:flex;gap:22px;flex-wrap:wrap}
+  .cl{flex:1 1 340px;min-width:320px;background:var(--card);border:1px solid var(--line);
+      border-radius:14px;padding:16px 18px}
+  .cl h3{margin:0 0 10px;font-size:13.5px;letter-spacing:.03em;text-transform:uppercase;color:#d9d2d6}
+  .cl p{margin:8px 0 0;font-size:13.5px;color:#c8c1c5}
+  table{border-collapse:collapse;width:100%;margin-top:10px}
+  td{font-size:13px;color:#c8c1c5;border-top:1px dashed #26242a;padding:7px 0;vertical-align:top}
+  td.f{color:#ffd9dd;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;
+       white-space:nowrap;padding-right:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Lyrics back to the original view, tiles in Search, and Matrix under Chikku</h1>
+  <p class="lede">Three edits, drawn from your screenshots at their own geometry: the phone on the left of each
+    pair is what the app did, the phone on the right is what it does now. No APK was built — this page is the
+    preview.</p>
+
+  <!-- ==================== 1 · LYRICS ==================== -->
+  <h2><span class="n">1</span> · The lyrics view — the original full-screen view draws again</h2>
+  <p class="lede">Two views were reachable through one switch: <code>ExperimentalLyrics</code> (the newer one,
+    with the faint provider label and the empty band at the top) and <code>OriginalLyrics</code>. The switch
+    defaulted <em>on</em>, so every install that never opened that settings row got the newer view. It now
+    defaults off — the original view is what the app shows, and the experimental one is one tap away in
+    Appearance exactly as before.</p>
+
+  <div class="row">
+    <!-- BEFORE -->
+    <div class="col">
+      <span class="tag bad">before · experimental view</span>
+      <div class="phone">
+        <div class="bg-exp"></div>
+        <div class="fade"></div>
+        <div class="statusbar"><span>8:13</span><span>5G &nbsp; 84%</span></div>
+        <div class="band"></div>
+        <div class="bandlabel">blank band</div>
+        <div class="lyrs">
+          <div class="provider">Lyrics from Spotify</div>
+          <div class="xl" style="top:214px">J'lui ai dit : « Aime-moi,<br>prends-moi dans tes bras, je n'ai<br>plus personne »</div>
+          <div class="xl near" style="top:296px">Ne laisse pas ton odeur<br>imprégner mes draps, et si tu<br>m'abandonnes</div>
+          <div class="xl far" style="top:378px">J'suis pas celle que tu crois,<br>aucun cabrón ne m'a touché</div>
+          <div class="xl far" style="top:438px">À part toi, caballero, personne<br>ne m'a touché</div>
+        </div>
+        <div class="pmeta"><div class="t">Clandestina (JVSTIN Remi</div><div class="a">LV, Edmofo, Emma Peters and JVSTIN</div></div>
+        <div class="pmini">
+          <svg viewBox="0 0 24 24"><path d="M4 6h16M4 11h10M4 16h7"/></svg>
+          <svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg>
+        </div>
+        <div class="pctl">
+          <svg viewBox="0 0 24 24"><path d="M4 7h12M4 12h12M4 17h8M19 14v6M16 17h6"/></svg>
+          <div class="pair">
+            <div class="round"><svg viewBox="0 0 24 24"><path d="M16 5l-8 7 8 7z"/></svg></div>
+            <div class="round"><svg viewBox="0 0 24 24"><path d="M8 5l8 7-8 7z"/></svg></div>
+          </div>
+          <svg viewBox="0 0 24 24"><path d="M4 8h3l7-4v16l-7-4H4z"/><path d="M17 9c1 1.6 1 4.4 0 6"/></svg>
+        </div>
+      </div>
+      <p class="cap"><b>What you saw:</b> small, left-aligned lines at 60 % opacity, a “Lyrics from …” label the
+        same weight as the lyrics, and a third of the screen empty before the first line. This view is still
+        in the build — it is simply no longer the default.</p>
+    </div>
+
+    <!-- AFTER -->
+    <div class="col">
+      <span class="tag good">after · original view</span>
+      <div class="phone">
+        <div class="bg-org"></div>
+        <div class="fade"></div>
+        <div class="statusbar"><span>8:14</span><span>5G &nbsp; 84%</span></div>
+        <div class="lyrs">
+          <div class="ol far" style="top:52px">v1: J'lui ai<br>dit : « Aime-moi,<br>prends-moi dans tes<br>bras</div>
+          <div class="ol act" style="top:196px">v1: Et je n'ai plus<br>personne</div>
+          <div class="ol" style="top:316px">v1: Et ne laisse pas<br>ton odeur imprégner<br>mes draps</div>
+          <div class="ol" style="top:450px">v1: Et si tu<br>m'abandonnes</div>
+        </div>
+        <div class="pmeta"><div class="t">Clandestina (Cocaina Rem</div><div class="a">FILV and Edmofo</div></div>
+        <div class="pmini">
+          <svg viewBox="0 0 24 24"><path d="M4 6h16M4 11h10M4 16h7"/></svg>
+          <svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg>
+        </div>
+        <div class="pctl">
+          <svg viewBox="0 0 24 24"><path d="M4 7h12M4 12h12M4 17h8M19 14v6M16 17h6"/></svg>
+          <div class="pair">
+            <div class="round"><svg viewBox="0 0 24 24"><path d="M16 5l-8 7 8 7z"/></svg></div>
+            <div class="round"><svg viewBox="0 0 24 24"><path d="M8 5l8 7-8 7z"/></svg></div>
+          </div>
+          <svg viewBox="0 0 24 24"><path d="M4 8h3l7-4v16l-7-4H4z"/><path d="M17 9c1 1.6 1 4.4 0 6"/></svg>
+        </div>
+      </div>
+      <p class="cap"><b>The old view:</b> large bold centred lines with the sung line lit white and the
+        neighbours dimmed behind it, starting at the top of the screen — the view from your first screenshot.</p>
+    </div>
+  </div>
+
+  <!-- ==================== 2 · SEARCH ==================== -->
+  <h2><span class="n">2</span> · Search rows are tiles — every other list keeps the ghost row</h2>
+  <p class="lede">Every row in the app is a <em>ghost</em> row: it paints nothing at rest and only tints while it
+    is playing or selected. Search now asks for tiles instead, so its results carry a resting fill under the
+    artwork and title, the way your screenshot shows. The rule lives in one place (<code>TiledListRows</code>)
+    and is provided by the search screens only — local-library search and online results both, including the
+    suggestion overlay opened on top of a result. No other list asks for it, so nothing else changes.</p>
+
+  <div class="row">
+    <!-- BEFORE -->
+    <div class="col">
+      <span class="tag bad">before · ghost rows</span>
+      <div class="phone">
+        <div class="sbg"></div>
+        <div class="statusbar"><span>8:15</span><span>5G &nbsp; 84%</span></div>
+        <div class="sbar">
+          <svg viewBox="0 0 24 24"><path d="M20 12H5M11 6l-6 6 6 6"/></svg>
+          <span class="q">Suzume</span>
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </div>
+        <div class="chips">
+          <span class="chip on">✓ All</span><span class="chip">Songs</span><span class="chip">Videos</span>
+          <span class="chip">Albums</span><span class="chip">Artists</span>
+        </div>
+        <div class="list">
+          <div class="sec"><span class="bar"></span>Top result</div>
+          <div class="srow">
+            <div class="th a"></div>
+            <div class="tx"><div class="t">すずめ - Suzume (feat. Toaka)</div><div class="s">RADWIMPS · 3:57</div></div>
+            <div class="dots">⋮</div>
+          </div>
+          <div class="sec"><span class="bar"></span>Songs</div>
+          <div class="srow">
+            <div class="th a"></div>
+            <div class="tx"><div class="t">Dreaming on Ferris Wheel</div><div class="s">Kazuma Jinnouchi and RADWIMPS</div></div>
+            <div class="dots">⋮</div>
+          </div>
+          <div class="srow">
+            <div class="th d"></div>
+            <div class="tx"><div class="t">Abandoned School</div><div class="s">Kazuma Jinnouchi</div></div>
+            <div class="dots">⋮</div>
+          </div>
+          <div class="srow">
+            <div class="th f"></div>
+            <div class="tx"><div class="t">Suzume</div><div class="s">Sungha Jung</div></div>
+            <div class="dots">⋮</div>
+          </div>
+          <div class="srow">
+            <div class="th b"></div>
+            <div class="tx"><div class="t">Aftermath</div><div class="s">Kazuma Jinnouchi</div></div>
+            <div class="dots">⋮</div>
+          </div>
+        </div>
+        <div class="fab"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M15.5 15.5L20 20"/></svg></div>
+        <div class="snav">
+          <div class="it"><svg viewBox="0 0 24 24"><path d="M4 10l8-6 8 6v9H4z"/></svg>Home</div>
+          <div class="it"><svg viewBox="0 0 24 24"><path d="M4 12h3l2-4 3 9 2-5h6"/></svg>Mix</div>
+          <div class="it"><svg viewBox="0 0 24 24"><path d="M5 5h5v14H5zM14 5h5v14h-5z"/></svg>Library</div>
+        </div>
+      </div>
+      <p class="cap"><b>What you had:</b> the artwork, title and menu are all there, but the row itself is
+        invisible — the results read as loose text on the page background.</p>
+    </div>
+
+    <!-- AFTER -->
+    <div class="col">
+      <span class="tag good">after · filled tiles in Search</span>
+      <div class="phone">
+        <div class="sbg"></div>
+        <div class="statusbar"><span>8:15</span><span>5G &nbsp; 84%</span></div>
+        <div class="sbar">
+          <svg viewBox="0 0 24 24"><path d="M20 12H5M11 6l-6 6 6 6"/></svg>
+          <span class="q">Suzume</span>
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </div>
+        <div class="chips">
+          <span class="chip on">✓ All</span><span class="chip">Songs</span><span class="chip">Videos</span>
+          <span class="chip">Albums</span><span class="chip">Artists</span>
+        </div>
+        <div class="list">
+          <div class="sec"><span class="bar"></span>Top result</div>
+          <div class="srow tile">
+            <div class="th a"></div>
+            <div class="tx"><div class="t">すずめ - Suzume (feat. Toaka)</div><div class="s">RADWIMPS · 3:57</div></div>
+            <div class="dots">⋮</div>
+          </div>
+          <div class="sec"><span class="bar"></span>Songs</div>
+          <div class="srow tile">
+            <div class="th a"></div>
+            <div class="tx"><div class="t">Dreaming on Ferris Wheel</div><div class="s">Kazuma Jinnouchi and RADWIMPS</div></div>
+            <div class="dots">⋮</div>
+          </div>
+          <div class="srow tile">
+            <div class="th d"></div>
+            <div class="tx"><div class="t">Abandoned School</div><div class="s">Kazuma Jinnouchi</div></div>
+            <div class="dots">⋮</div>
+          </div>
+          <div class="srow tile">
+            <div class="th f"></div>
+            <div class="tx"><div class="t">Suzume</div><div class="s">Sungha Jung</div></div>
+            <div class="dots">⋮</div>
+          </div>
+          <div class="srow tile">
+            <div class="th b"></div>
+            <div class="tx"><div class="t">Aftermath</div><div class="s">Kazuma Jinnouchi</div></div>
+            <div class="dots">⋮</div>
+          </div>
+        </div>
+        <div class="fab"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M15.5 15.5L20 20"/></svg></div>
+        <div class="snav">
+          <div class="it"><svg viewBox="0 0 24 24"><path d="M4 10l8-6 8 6v9H4z"/></svg>Home</div>
+          <div class="it"><svg viewBox="0 0 24 24"><path d="M4 12h3l2-4 3 9 2-5h6"/></svg>Mix</div>
+          <div class="it"><svg viewBox="0 0 24 24"><path d="M5 5h5v14H5zM14 5h5v14h-5z"/></svg>Library</div>
+        </div>
+      </div>
+      <p class="cap"><b>What you get:</b> every result sits on its own soft tile in the theme's tonal step
+        (<code>surfaceContainer</code>), so the artwork and the row read as one card. In your light pink theme
+        that tile comes out the pale rose in this mock-up; the playing row still takes the accent tint on top of
+        it, and the tiles are only in this screen.</p>
+    </div>
+  </div>
+
+  <!-- ==================== 3 · MATRIX ==================== -->
+  <h2><span class="n">3</span> · Matrix moves to the foot of Chikku's card</h2>
+  <p class="lede">Matrix (M4TRX) sat in a “Special Helpers” group of their own, far below the two lead developer
+    cards. That credit is now the last block inside Chikku's card — a “Supported by” line with their avatar,
+    name and helper role, tappable through to their GitHub profile. With the group empty it no longer draws at
+    all, so the section and its title are gone until someone new joins it.</p>
+
+  <div class="row">
+    <!-- BEFORE -->
+    <div class="col">
+      <span class="tag bad">before · two separate places</span>
+      <div class="phone" style="height:640px">
+        <div class="abg"></div>
+        <div class="statusbar"><span>8:20</span><span>5G &nbsp; 84%</span></div>
+        <div class="acard" style="top:56px">
+          <div class="arow">
+            <div class="av"></div>
+            <div>
+              <div class="anm">Chikku</div>
+              <div class="arl">UI Design and Styling</div>
+            </div>
+          </div>
+          <div class="abtn"><svg viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.9c0-1.1.1-1.5-.6-2.1 3-.3 6.1-1.5 6.1-6.8 0-1.5-.5-2.8-1.4-3.8.2-.4.6-1.8-.1-3.6 0 0-1.2-.4-3.8 1.4-2.2-.6-4.6-.6-6.8 0C6.9 1.7 5.7 2.1 5.7 2.1c-.7 1.8-.3 3.2-.1 3.6A5.4 5.4 0 0 0 4.1 9.5c0 5.3 3.1 6.5 6.1 6.8-.5.5-.6 1-.6 2v4.7"/></svg></div>
+        </div>
+        <div class="gtitle" style="top:300px">Special Helpers</div>
+        <div class="gitem" style="top:326px">
+          <div class="av sm"></div>
+          <div>
+            <div style="font-size:15px;font-weight:700">M4TRX</div>
+            <div style="font-size:12px;color:#a49aa0">Special Helper</div>
+          </div>
+          <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:#a49aa0;fill:none;stroke-width:1.8;margin-left:auto"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.9c0-1.1.1-1.5-.6-2.1 3-.3 6.1-1.5 6.1-6.8 0-1.5-.5-2.8-1.4-3.8.2-.4.6-1.8-.1-3.6 0 0-1.2-.4-3.8 1.4-2.2-.6-4.6-.6-6.8 0C6.9 1.7 5.7 2.1 5.7 2.1c-.7 1.8-.3 3.2-.1 3.6A5.4 5.4 0 0 0 4.1 9.5c0 5.3 3.1 6.5 6.1 6.8-.5.5-.6 1-.6 2v4.7"/></svg>
+        </div>
+        <div class="gone" style="top:410px">… Metrolist Devs, Special Helpers, Community &amp; Info</div>
+      </div>
+      <p class="cap"><b>What you had:</b> the helper was a row of its own in a section further down the page,
+        disconnected from the developer they actually work with.</p>
+    </div>
+
+    <!-- AFTER -->
+    <div class="col">
+      <span class="tag good">after · inside Chikku's card</span>
+      <div class="phone" style="height:640px">
+        <div class="abg"></div>
+        <div class="statusbar"><span>8:20</span><span>5G &nbsp; 84%</span></div>
+        <div class="acard" style="top:56px">
+          <div class="arow">
+            <div class="av"></div>
+            <div>
+              <div class="anm">Chikku</div>
+              <div class="arl">UI Design and Styling</div>
+            </div>
+          </div>
+          <div class="abtn"><svg viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.9c0-1.1.1-1.5-.6-2.1 3-.3 6.1-1.5 6.1-6.8 0-1.5-.5-2.8-1.4-3.8.2-.4.6-1.8-.1-3.6 0 0-1.2-.4-3.8 1.4-2.2-.6-4.6-.6-6.8 0C6.9 1.7 5.7 2.1 5.7 2.1c-.7 1.8-.3 3.2-.1 3.6A5.4 5.4 0 0 0 4.1 9.5c0 5.3 3.1 6.5 6.1 6.8-.5.5-.6 1-.6 2v4.7"/></svg></div>
+          <div class="sup">
+            <div class="av sm"></div>
+            <div>
+              <div class="lb">Supported by</div>
+              <div class="nm">M4TRX</div>
+              <div class="rl">Special Helper</div>
+            </div>
+            <svg viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.9c0-1.1.1-1.5-.6-2.1 3-.3 6.1-1.5 6.1-6.8 0-1.5-.5-2.8-1.4-3.8.2-.4.6-1.8-.1-3.6 0 0-1.2-.4-3.8 1.4-2.2-.6-4.6-.6-6.8 0C6.9 1.7 5.7 2.1 5.7 2.1c-.7 1.8-.3 3.2-.1 3.6A5.4 5.4 0 0 0 4.1 9.5c0 5.3 3.1 6.5 6.1 6.8-.5.5-.6 1-.6 2v4.7"/></svg>
+          </div>
+        </div>
+        <div class="gtitle" style="top:400px">… Metrolist Devs</div>
+        <div class="gone" style="top:428px">no “Special Helpers” section — it is empty now</div>
+      </div>
+      <p class="cap"><b>What you get:</b> the credit reads as the bottom of Chikku's block — “Supported by /
+        M4TRX / Special Helper” — and the section it used to live in stays out of the way until it has
+        someone in it again.</p>
+    </div>
+  </div>
+
+  <!-- ==================== 4 · WHAT CHANGED ==================== -->
+  <h2><span class="n">4</span> · The files behind it</h2>
+  <div class="changes">
+    <div class="cl">
+      <h3>Lyrics</h3>
+      <table>
+        <tr><td class="f">Lyrics.kt</td><td>The view switch now defaults off, so the original full-screen view is what draws.</td></tr>
+        <tr><td class="f">AppearanceSettings.kt</td><td>Same default on the Appearance row, so the switch reads “off” and the beta dialog still turns the experimental view on.</td></tr>
+      </table>
+    </div>
+    <div class="cl">
+      <h3>Search tiles</h3>
+      <table>
+        <tr><td class="f">Items.kt</td><td>New <code>TiledListRows</code> provider and <code>LocalListRowsTiled</code>; both row shapes (<code>ListItem</code>, <code>YouTubeListItem</code>) paint <code>surfaceContainer</code> at rest when it is on.</td></tr>
+        <tr><td class="f">SearchScreen.kt</td><td>Wraps local-library search and online search — both of the Search tab's surfaces.</td></tr>
+        <tr><td class="f">OnlineSearchResult.kt</td><td>Wraps the results list and the suggestion overlay opened on top of it.</td></tr>
+      </table>
+    </div>
+    <div class="cl">
+      <h3>Matrix</h3>
+      <table>
+        <tr><td class="f">AboutScreen.kt</td><td>M4TRX moves out of the helpers list into a “Supported by” block at the foot of Chikku's card; the empty helpers group stops drawing.</td></tr>
+        <tr><td class="f">glossy_strings.xml</td><td>One new English string for the caption: <code>credits_supported_by</code>.</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>How this was checked.</b> The code compiles — <code>:app:compileFossDebugKotlin</code> was run, which builds
+    the Kotlin but no APK, as you asked. It has <b>not</b> been run on a device, so these pictures are drawn from
+    the layout values in the code and from your three screenshots, not captured from the app: expect the tile
+    tint to shift slightly with whatever theme a device is using, and the lyrics line breaks to depend on the
+    lyric source of the song playing.
+  </div>
+
+</div>
+</body>
+</html>

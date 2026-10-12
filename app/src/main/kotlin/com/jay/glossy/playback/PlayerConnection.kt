@@ -55,7 +55,7 @@ class PlayerConnection(
     context: Context,
     binder: MusicBinder,
     val database: MusicDatabase,
-    scope: CoroutineScope,
+    private val scope: CoroutineScope,
 ) : Player.Listener {
     private companion object {
         private const val TAG = "PlayerConnection"
@@ -203,6 +203,15 @@ class PlayerConnection(
     var onSkipPrevious: (() -> Unit)? = null
     var onSkipNext: (() -> Unit)? = null
 
+    /**
+     * Listen Together guest intents, forwarded instead of silently dropped.
+     * A guest never touches playback directly: a play intent becomes a
+     * suggestion the host must approve, and queue edits become queue_add
+     * messages the servers accept from a guest without host approval.
+     */
+    var onGuestPlayRequest: ((List<MediaItem>) -> Unit)? = null
+    var onGuestQueueAdd: ((items: List<MediaItem>, insertNext: Boolean) -> Unit)? = null
+
     private var attachedPlayer: Player? = null
 
     init {
@@ -239,9 +248,18 @@ class PlayerConnection(
     }
 
     fun playQueue(queue: Queue) {
-        // Block if Listen Together guest (unless internal sync)
+        // Block if Listen Together guest (unless internal sync). The tap is
+        // not wasted: it is queued next in the room, so every device in the
+        // session hears it once the current track ends.
         if (!allowInternalSync && shouldBlockPlaybackChanges?.invoke() == true) {
-            Timber.tag("PlayerConnection").d("playQueue blocked - Listen Together guest")
+            Timber.tag("PlayerConnection").d("playQueue blocked - Listen Together guest; queueing next in room")
+            onGuestPlayRequest?.let { forward ->
+                scope.launch {
+                    val status = runCatching { queue.getInitialStatus() }.getOrNull() ?: return@launch
+                    val item = status.items.getOrNull(status.mediaItemIndex) ?: return@launch
+                    forward(listOf(item))
+                }
+            }
             return
         }
         if (!playerReadinessFlow.value) {
@@ -275,9 +293,12 @@ class PlayerConnection(
     fun playNext(item: MediaItem) = playNext(listOf(item))
 
     fun playNext(items: List<MediaItem>) {
-        // Block if Listen Together guest (unless internal sync)
+        // Block if Listen Together guest (unless internal sync) - but relay
+        // the intent: inserting after the current track changes nothing that
+        // is playing, so it travels as a plain queue_add.
         if (!allowInternalSync && shouldBlockPlaybackChanges?.invoke() == true) {
-            Timber.tag("PlayerConnection").d("playNext blocked - Listen Together guest")
+            Timber.tag("PlayerConnection").d("playNext blocked - relaying as guest queue add")
+            onGuestQueueAdd?.invoke(items, true)
             return
         }
         try {
@@ -291,9 +312,12 @@ class PlayerConnection(
     fun addToQueue(item: MediaItem) = addToQueue(listOf(item))
 
     fun addToQueue(items: List<MediaItem>) {
-        // Block if Listen Together guest (unless internal sync)
+        // Block if Listen Together guest (unless internal sync) - but relay
+        // the edit: appending needs no host permission, so it travels as a
+        // plain queue_add the servers accept from a guest.
         if (!allowInternalSync && shouldBlockPlaybackChanges?.invoke() == true) {
-            Timber.tag("PlayerConnection").d("addToQueue blocked - Listen Together guest")
+            Timber.tag("PlayerConnection").d("addToQueue blocked - relaying as guest queue add")
+            onGuestQueueAdd?.invoke(items, false)
             return
         }
         try {

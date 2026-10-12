@@ -7,14 +7,11 @@ package com.jay.glossy.ui.theme
 
 import com.jay.glossy.R
 import android.graphics.Bitmap
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
@@ -31,7 +28,10 @@ import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamiccolor.ColorSpec
 import com.materialkolor.rememberDynamicColorScheme
 import com.materialkolor.score.Score
+import androidx.compose.runtime.CompositionLocalProvider
+import com.jay.glossy.constants.ActiveDesignStyle
 import com.jay.glossy.constants.AppFont
+import com.jay.glossy.constants.DesignStyle
 import com.jay.glossy.constants.SelectedFontKey
 import com.jay.glossy.utils.rememberPreference
 
@@ -62,21 +62,29 @@ fun MetrolistTheme(
         }
     }
 
-    val typography = remember(brandFont) {
-        getTypography(brandFont = brandFont, plainFont = brandFont)
+    // The new design is dark-only: in light mode we keep the Material You
+    // scheme so the app still has a proper light look. The design style is
+    // pinned to classic — see [ActiveDesignStyle].
+    val useNewDesign = ActiveDesignStyle == DesignStyle.TEAL && darkTheme
+
+    val typography = remember(brandFont, useNewDesign) {
+        val base = getTypography(brandFont = brandFont, plainFont = brandFont)
+        if (useNewDesign) glossTypography(base) else base
     }
 
-    val useSystemDynamicColor = (themeColor == DefaultThemeColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
-
-    val baseColorScheme = if (useSystemDynamicColor) {
-        if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-    } else {
-        rememberDynamicColorScheme(
-            seedColor = themeColor,
-            isDark = darkTheme,
-            specVersion = ColorSpec.SpecVersion.SPEC_2025,
-            style = PaletteStyle.Expressive 
-        )
+    // Dynamic colour (Material You wallpaper sampling) was removed: it only ever
+    // applied to the classic look, which the design style no longer uses, and a
+    // wallpaper palette fought the seed colour every other surface is built
+    // from. The scheme now always comes from the chosen seed colour.
+    val baseColorScheme = when {
+        useNewDesign -> glossyDarkColorScheme()
+        else ->
+            rememberDynamicColorScheme(
+                seedColor = themeColor,
+                isDark = darkTheme,
+                specVersion = ColorSpec.SpecVersion.SPEC_2025,
+                style = PaletteStyle.Expressive
+            )
     }
 
     val colorScheme = remember(baseColorScheme, pureBlack, darkTheme) {
@@ -87,12 +95,27 @@ fun MetrolistTheme(
         }
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = typography,
-        shapes = GlossyShapes,
-        content = content
-    )
+    // The redesigned surfaces (Settings and the Glossy components it is built
+    // from) read these tokens instead of hardcoded colours, so they follow the
+    // theme: near-black in dark mode, near-white in light mode. Under the
+    // Materialistic style they are derived from the Material 3 scheme instead,
+    // so every screen repaints tonally from the seed colour.
+    val materialistic = ActiveDesignStyle == DesignStyle.MATERIALISTIC
+    val glossyColors = when {
+        materialistic -> materialisticColors(colorScheme)
+        !darkTheme -> GlossyColors.Light
+        pureBlack -> GlossyColors.PureBlack
+        else -> GlossyColors.Dark
+    }
+
+    CompositionLocalProvider(LocalGlossyColors provides glossyColors) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = typography,
+            shapes = GlossyShapes,
+            content = content
+        )
+    }
 }
 
 /**

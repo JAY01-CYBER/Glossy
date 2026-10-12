@@ -48,18 +48,24 @@ class LyricsViewModel @Inject constructor() : ViewModel() {
                 if (lyrics == null || lyrics == LYRICS_NOT_FOUND) {
                     emptyList()
                 } else {
-                    val isLrc = timestampRegex.containsMatchIn(lyrics)
-                    val parsedLines = if (isLrc) LyricsUtils.parseLyrics(lyrics) else emptyList()
+                    // The parser decides, not a regex hint. Word-timed payloads
+                    // (the rich formats Spotify and Musixmatch deliver) carry no
+                    // [mm:ss line stamps at all, so the hint sent them to the
+                    // plain-text fallback: the song rendered with raw <mm:ss.xx>
+                    // tags and nothing that followed the music, while every other
+                    // lyrics surface parsed the same text fine.
+                    val parsedLines = LyricsUtils.parseLyrics(lyrics)
                     
                     if (parsedLines.isNotEmpty()) {
                         listOf(LyricsEntry.HEAD_LYRICS_ENTRY) + parsedLines
                     } else {
-                        // Fallback for unsynced or invalid LRC
-                        val baseTime = 1000000L
+                        // Genuinely unsynced text: shown as plain lines, never
+                        // followed. The stamp-filter keeps metadata lines like
+                        // [offset:…] or [by:…] out of the rendered text.
                         lyrics.lines()
                             .filter { it.isNotBlank() && !timestampRegex.containsMatchIn(it) }
                             .mapIndexed { index, line ->
-                                LyricsEntry(baseTime + index, line)
+                                LyricsEntry(index * 1000L, line)
                             }
                     }
                 }

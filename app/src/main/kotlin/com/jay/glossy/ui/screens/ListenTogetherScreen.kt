@@ -95,6 +95,7 @@ import com.jay.glossy.constants.ListenTogetherUsernameKey
 import com.jay.glossy.listentogether.ConnectionState
 import com.jay.glossy.listentogether.JoinRequestPayload
 import com.jay.glossy.listentogether.ListenTogetherEvent
+import com.jay.glossy.listentogether.ROOM_CODE_LENGTH
 import com.jay.glossy.listentogether.RoomRole
 import com.jay.glossy.listentogether.SuggestionReceivedPayload
 import com.jay.glossy.listentogether.UserInfo
@@ -136,12 +137,14 @@ fun ListenTogetherScreen(
 
     var isCreatingRoom by rememberSaveable { mutableStateOf(false) }
     var isJoiningRoom by rememberSaveable { mutableStateOf(false) }
+    var isWaitingForHost by rememberSaveable { mutableStateOf(false) }
     var joinErrorMessage by rememberSaveable { mutableStateOf<String?>(null) }
 
     var selectedUserForMenu by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedUsername by rememberSaveable { mutableStateOf<String?>(null) }
 
     val waitingForApprovalText = stringResource(R.string.waiting_for_approval)
+    val waitingForHostText = stringResource(R.string.listen_together_waiting_for_host)
     val invalidRoomCodeText = stringResource(R.string.invalid_room_code)
     val joinRequestDeniedText = stringResource(R.string.join_request_denied)
 
@@ -163,16 +166,27 @@ fun ListenTogetherScreen(
                             else -> "$joinRequestDeniedText: $reason"
                         }
                     isJoiningRoom = false
+                    isWaitingForHost = false
                     isCreatingRoom = false
+                }
+
+                is ListenTogetherEvent.WaitingForHost -> {
+                    // The request is standing at the host's door: say so instead of
+                    // letting the join spinner look like it is stuck.
+                    isJoiningRoom = true
+                    isWaitingForHost = true
+                    joinErrorMessage = null
                 }
 
                 is ListenTogetherEvent.JoinApproved -> {
                     isJoiningRoom = false
+                    isWaitingForHost = false
                     joinErrorMessage = null
                 }
 
                 is ListenTogetherEvent.RoomCreated -> {
                     isCreatingRoom = false
+                    isWaitingForHost = false
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
                     val clip = android.content.ClipData.newPlainText("ListenTogetherRoom", event.roomCode)
                     clipboard.setPrimaryClip(clip)
@@ -362,8 +376,10 @@ fun ListenTogetherScreen(
                     onRoomCodeChange = { roomCodeInput = it },
                     savedUsername = savedUsername,
                     isJoiningRoom = isJoiningRoom,
+                    isWaitingForHost = isWaitingForHost,
                     joinErrorMessage = joinErrorMessage,
                     waitingForApprovalText = waitingForApprovalText,
+                    waitingForHostText = waitingForHostText,
                     bringIntoViewRequester = bringIntoViewRequester,
                     onCreateRoom = {
                         val username = usernameInput.takeIf { it.isNotBlank() } ?: savedUsername
@@ -373,6 +389,7 @@ fun ListenTogetherScreen(
                             Toast.makeText(context, R.string.creating_room, Toast.LENGTH_SHORT).show()
                             isCreatingRoom = true
                             isJoiningRoom = false
+                            isWaitingForHost = false
                             joinErrorMessage = null
                             listenTogetherManager.connect()
                             listenTogetherManager.createRoom(finalUsername)
@@ -392,6 +409,7 @@ fun ListenTogetherScreen(
                                     Toast.LENGTH_SHORT,
                                 ).show()
                             isJoiningRoom = true
+                            isWaitingForHost = false
                             isCreatingRoom = false
                             joinErrorMessage = null
                             listenTogetherManager.connect()
@@ -1058,8 +1076,10 @@ private fun JoinCreateRoomSection(
     onRoomCodeChange: (String) -> Unit,
     savedUsername: String,
     isJoiningRoom: Boolean,
+    isWaitingForHost: Boolean,
     joinErrorMessage: String?,
     waitingForApprovalText: String,
+    waitingForHostText: String,
     bringIntoViewRequester: BringIntoViewRequester,
     onCreateRoom: () -> Unit,
     onJoinRoom: () -> Unit,
@@ -1119,9 +1139,16 @@ private fun JoinCreateRoomSection(
             // Room code input
             OutlinedTextField(
                 value = roomCodeInput,
-                onValueChange = { if (it.length <= 8) onRoomCodeChange(it.uppercase()) },
+                onValueChange = { if (it.length <= ROOM_CODE_LENGTH) onRoomCodeChange(it.uppercase()) },
                 label = { Text(stringResource(R.string.room_code)) },
                 placeholder = { Text(stringResource(R.string.enter_room_code)) },
+                supportingText = {
+                    Text(
+                        text = "${roomCodeInput.length}/$ROOM_CODE_LENGTH",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                },
                 leadingIcon = {
                     Icon(
                         painterResource(R.drawable.group),
@@ -1152,7 +1179,8 @@ private fun JoinCreateRoomSection(
                         .onFocusChanged { if (it.isFocused) onFieldFocused() },
             )
 
-            // Waiting for approval indicator
+            // Waiting for approval indicator. Once the doorbell has rung the guest
+            // is told it is waiting on the host, not that something timed out.
             AnimatedVisibility(
                 visible = isJoiningRoom,
                 enter = fadeIn() + slideInVertically(),
@@ -1163,27 +1191,41 @@ private fun JoinCreateRoomSection(
                     shape = RoundedCornerShape(12.dp),
                     color = MaterialTheme.colorScheme.primaryContainer,
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
                         modifier =
                             Modifier
                                 .fillMaxWidth()
                                 .padding(16.dp),
                     ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = waitingForApprovalText,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            fontWeight = FontWeight.Medium,
-                            textAlign = TextAlign.Center,
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = if (isWaitingForHost) waitingForHostText else waitingForApprovalText,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                fontWeight = FontWeight.Medium,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                        if (isWaitingForHost) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = stringResource(R.string.listen_together_waiting_for_host_desc),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
                     }
                 }
             }
@@ -1227,7 +1269,7 @@ private fun JoinCreateRoomSection(
 
             // Action buttons
             val hasUsername = usernameInput.trim().isNotBlank() || savedUsername.isNotBlank()
-            val hasRoomCode = roomCodeInput.length == 8
+            val hasRoomCode = roomCodeInput.length == ROOM_CODE_LENGTH
 
             // Create Room button - visible when username is provided
             AnimatedVisibility(visible = hasUsername && !hasRoomCode) {

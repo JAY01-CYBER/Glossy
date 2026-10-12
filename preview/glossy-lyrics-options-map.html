@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glossy · where the lyrics options live</title>
+<style>
+  :root{
+    --bg:#0a0a0c; --card:#15151a; --card2:#1d1d24; --line:#2a2a33;
+    --text:#eceaf2; --dim:#9a97a8; --dimmer:#6b6878;
+    --accent:#b9a4ff; --good:#66e0a3; --bad:#ff6b81; --warn:#ffcc66;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1200px;margin:0 auto;padding:34px 22px 90px}
+  header.top{border-bottom:1px solid var(--line);padding-bottom:22px;margin-bottom:32px}
+  h1{font-size:25px;margin:0 0 8px;letter-spacing:-.02em;font-weight:650}
+  .sub{color:var(--dim);font-size:14.5px;max-width:820px}
+  .pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11.5px;font-weight:600;
+    letter-spacing:.04em;text-transform:uppercase;background:#241f33;color:var(--accent);
+    border:1px solid #372e50;margin-bottom:14px}
+  h2{font-size:18px;margin:0 0 6px;font-weight:620;letter-spacing:-.01em}
+  .sec{margin:0 0 52px}
+  .lead{color:var(--dim);font-size:14px;margin:0 0 20px;max-width:860px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+  @media (max-width:940px){.row2{grid-template-columns:1fr}}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px}
+  .panel h3{margin:0 0 4px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);font-weight:600}
+  .panel .note{font-size:13px;color:var(--dimmer);margin:0 0 14px}
+
+  /* nav path */
+  .path{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13.5px;margin:0 0 20px}
+  .chip{background:#20202a;border:1px solid #31313d;border-radius:9px;padding:6px 12px;font-weight:540}
+  .chip.hot{background:#2a2340;border-color:#463a68;color:#d9cfff}
+  .arrow{color:#4c4a58;font-weight:700}
+
+  .group{background:var(--card2);border:1px solid #23232c;border-radius:16px;overflow:hidden}
+  .ghead{font-size:12px;color:var(--dim);padding:12px 14px 2px;letter-spacing:.05em;text-transform:uppercase;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+  .ghead .sc{font-size:10.5px;color:var(--warn);letter-spacing:0;text-transform:none;font-weight:600}
+  .grow{display:flex;align-items:center;gap:13px;padding:12px 14px}
+  .grow + .grow{border-top:1px solid #23232c}
+  .gico{width:34px;height:34px;border-radius:11px;background:#262633;display:flex;align-items:center;justify-content:center;flex:none;font-size:15px}
+  .gico.new{background:linear-gradient(135deg,#4b3d7a,#6d4f8f)}
+  .gtxt{flex:1;min-width:0}
+  .gtxt .t{font-size:14.5px;font-weight:520;display:flex;align-items:center;gap:8px}
+  .gtxt .d{font-size:12.5px;color:var(--dimmer);margin-top:2px}
+  .chev{color:#4c4a58;font-size:17px}
+  .switch{width:44px;height:26px;border-radius:99px;background:#3a3a46;position:relative;flex:none}
+  .switch.on{background:var(--accent)}
+  .switch:after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.15s}
+  .switch.on:after{left:21px}
+  .badge{font-size:10px;font-weight:800;letter-spacing:.05em;padding:2px 7px;border-radius:5px;
+    background:#17352b;color:#8af0bd;text-transform:uppercase;flex:none}
+  .badge.only{background:#3a2f14;color:#ffd98a}
+  .faded{opacity:.34}
+  .scrollhint{text-align:center;font-size:12px;color:var(--warn);margin:10px 0;
+    border-top:1px dashed #3a3320;border-bottom:1px dashed #3a3320;padding:8px 0}
+
+  /* dialog mock */
+  .dialog{background:#22222b;border:1px solid #33333f;border-radius:22px;padding:18px;max-width:430px}
+  .dialog .dt{font-size:16.5px;font-weight:640;margin:0 0 12px}
+  .dialog .dc{max-height:330px;overflow:auto;padding-right:4px}
+  .prow{display:flex;align-items:center;gap:12px;padding:9px 0}
+  .prow + .prow{border-top:1px solid #2b2b35}
+  .prow .pt{flex:1;font-size:14px}
+  .prow .pd{font-size:12px;color:var(--dimmer)}
+  .prow.hot{background:#2a2340;border-radius:10px;padding:9px 10px;border-top-color:transparent}
+  .prow.hot + .prow{border-top-color:transparent}
+  .dbtns{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+  .dbtn{font-size:13.5px;font-weight:600;padding:8px 14px;border-radius:10px;background:#2c2c37;border:1px solid #383844}
+
+  /* priority editor */
+  .prio{background:#22222b;border:1px solid #33333f;border-radius:22px;padding:18px;max-width:430px}
+  .prerow{display:flex;align-items:center;gap:8px;padding:6px 0}
+  .prerow .num{width:20px;font-size:12px;color:var(--dimmer);font-variant-numeric:tabular-nums}
+  .prerow .pname{flex:1;font-size:14px}
+  .prerow .pdesc{font-size:11.5px;color:var(--dimmer)}
+  .icb{width:30px;height:30px;border-radius:9px;background:#2c2c37;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--dim);flex:none}
+  .icb.off{opacity:.3}
+  .mrow{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #2b2b35}
+  .mrow:last-child{border-bottom:none}
+  .mrow .mt{flex:1;font-size:14px}
+  .mrow .ms{font-size:11.5px;color:var(--dimmer)}
+  .sw2{width:38px;height:22px;border-radius:99px;background:#3a3a46;position:relative;flex:none}
+  .sw2.on{background:var(--accent)}
+  .sw2:after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff}
+  .sw2.on:after{left:19px}
+
+  .checklist{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px}
+  .checklist h3{margin:0 0 12px;font-size:15px;font-weight:620}
+  .ck{display:flex;gap:11px;padding:9px 0;border-bottom:1px solid #202028;font-size:14px}
+  .ck:last-child{border-bottom:none}
+  .ck .box{width:19px;height:19px;border-radius:5px;border:1.5px solid #4a4a58;flex:none;margin-top:1px}
+  .ck .what{flex:1;color:var(--dim)}
+  .ck .what b{color:var(--text);font-weight:600}
+  code{font:12.5px ui-monospace,Menlo,Consolas,monospace;background:#20202a;padding:1.5px 6px;border-radius:6px;color:#d9cfff}
+  .build{display:inline-block;font:12px ui-monospace,Menlo,Consolas,monospace;background:#20202a;
+    border:1px solid #31313d;border-radius:7px;padding:2px 8px;color:#d9cfff}
+  .warnbox{background:#2a2214;border:1px solid #4d3d1c;border-radius:14px;padding:14px 16px;font-size:13.6px;color:#ffdca8;margin-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="pill">Preview · nothing built</div>
+    <h1>Where every lyrics option lives</h1>
+    <p class="sub">This is the settings tree as the code renders it, so you can compare it against your phone and tell me which piece is missing. Every row below exists in the source right now; I traced the screen and there is no condition hiding them.</p>
+  </header>
+
+  <div class="path">
+    <span class="chip">⚙ Settings</span><span class="arrow">›</span>
+    <span class="chip">Content group</span><span class="arrow">›</span>
+    <span class="chip hot">Content</span><span class="arrow">›</span>
+    <span class="chip">scroll to the bottom</span><span class="arrow">›</span>
+    <span class="chip hot">Lyrics</span>
+  </div>
+
+  <!-- ============ WHAT SHOULD BE THERE ============ -->
+  <section class="sec">
+    <h2>1 · The Lyrics group</h2>
+    <p class="lead">Last group on the Content screen. It sits below General, Playback, Artist, Search, Proxy and Wrapped — which is why it is easy to miss, and the reason I am showing the scroll position.</p>
+
+    <div class="row2">
+      <div class="panel">
+        <h3>Settings → Content</h3>
+        <p class="note">The Lyrics group is the <em>last</em> group on a long screen.</p>
+        <div class="group">
+          <div class="ghead">General</div>
+          <div class="grow faded"><div class="gico">≡</div><div class="gtxt"><div class="t">Hide explicit songs</div><div class="d">…</div></div><div class="switch on"></div></div>
+          <div class="grow faded"><div class="gico">≡</div><div class="gtxt"><div class="t">Hide video songs</div><div class="d">…</div></div><div class="switch"></div></div>
+        </div>
+        <div class="scrollhint">↓ Playback · Artist · Search · Proxy · Wrapped ↓</div>
+        <div class="group">
+          <div class="ghead">Lyrics</div>
+          <div class="grow"><div class="gico">☰</div>
+            <div class="gtxt"><div class="t">Provider selection</div><div class="d">Choose which lyrics providers are enabled</div></div>
+            <div class="chev">›</div></div>
+          <div class="grow"><div class="gico new">⟳</div>
+            <div class="gtxt"><div class="t">Spotify lyrics <span class="badge">New</span></div><div class="d">Sync synced lyrics from your signed-in Spotify account…</div></div>
+            <div class="switch"></div></div>
+          <div class="grow"><div class="gico">☰</div>
+            <div class="gtxt"><div class="t">Lyrics provider priority</div><div class="d">Move a provider up to ask it first…</div></div>
+            <div class="chev">›</div></div>
+          <div class="grow"><div class="gico">가</div>
+            <div class="gtxt"><div class="t">Lyrics romanization</div><div class="d">…</div></div>
+            <div class="chev">›</div></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Tap path, in words</h3>
+        <p class="note">Four taps, and the last part is a scroll rather than a tap.</p>
+        <div class="group">
+          <div class="grow"><div class="gico">1</div><div class="gtxt"><div class="t">Open Settings</div><div class="d">the gear, from the home sidebar</div></div></div>
+          <div class="grow"><div class="gico">2</div><div class="gtxt"><div class="t">Find the <b>Content</b> group</div><div class="d">not the Content row yet — the section header</div></div></div>
+          <div class="grow"><div class="gico">3</div><div class="gtxt"><div class="t">Tap the <b>Content</b> row</div><div class="d">opens the Content settings screen</div></div></div>
+          <div class="grow"><div class="gico">4</div><div class="gtxt"><div class="t">Scroll to the very bottom</div><div class="d">Lyrics is the last group, under Wrapped</div></div></div>
+        </div>
+        <div class="warnbox">
+          This is the part worth fixing. Six groups stand between the top of the Content screen and the lyrics options, and there is no clue that they are down there — which is why a dedicated <b>Lyrics</b> entry higher up would be the real cure, rather than a fourth reminder of where to scroll.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DIALOG ============ -->
+  <section class="sec">
+    <h2>2 · Spotify lyrics, inside “Provider selection”</h2>
+    <p class="lead">This is the older of the two places Spotify appears. It is the <strong>fourth switch</strong> in the list, under NetEase, Megalobiz and Musixmatch — so if you open this dialog and do not scroll, you may stop before reaching it. This is where it lived <em>before</em> it got its own row.</p>
+    <div class="row2">
+      <div class="panel">
+        <h3>Provider selection dialog</h3>
+        <p class="note">Spotify is 4th of 13.</p>
+        <div class="dialog">
+          <p class="dt">Provider selection</p>
+          <div class="dc">
+            <div class="mrow"><div class="mt">Enable NetEase Music<div class="ms">Fetch word-by-word synced YRC lyrics from NetEase</div></div><div class="sw2 on"></div></div>
+            <div class="mrow"><div class="mt">Enable Megalobiz<div class="ms">…</div></div><div class="sw2 on"></div></div>
+            <div class="mrow"><div class="mt">Enable Musixmatch<div class="ms">…</div></div><div class="sw2 on"></div></div>
+            <div class="mrow" style="background:#2a2340;border-radius:11px;padding:10px"><div class="mt"><b>Spotify lyrics</b> <span class="badge">New</span><div class="ms">Sync synced lyrics from your signed-in Spotify account and keep them in the app for offline playback. Requires Spotify sign-in</div></div><div class="sw2 on"></div></div>
+            <div class="mrow"><div class="mt">Enable YouLyPlus<div class="ms">…</div></div><div class="sw2 on"></div></div>
+            <div class="mrow" style="opacity:.55"><div class="mt">Enable Unison<div class="ms">…</div></div><div class="sw2 on"></div></div>
+            <div class="mrow" style="opacity:.55"><div class="mt">Enable Better Lyrics<div class="ms">…</div></div><div class="sw2 on"></div></div>
+          </div>
+          <div class="dbtns"><div class="dbtn">Close</div></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Lyrics provider priority dialog</h3>
+        <p class="note">Numbered rows, a toggle and ▲ ▼ on each. Spotify is a row here too, so it can be moved.</p>
+        <div class="prio">
+          <p class="dt">Lyrics provider priority</p>
+          <p class="ms" style="margin:0 0 10px">Move a provider up to ask it first — the highest-ranked provider that has lyrics wins. Switch one off to keep it out of the search</p>
+          <div class="prerow"><span class="num">1</span><span class="pname">Better Lyrics</span><span class="icb off">▲</span><span class="icb">▼</span><div class="sw2 on"></div></div>
+          <div class="prerow"><span class="num">2</span><span class="pname">Paxsenix</span><span class="icb">▲</span><span class="icb">▼</span><div class="sw2 on"></div></div>
+          <div class="prerow" style="background:#2a2340;border-radius:11px;padding:6px 8px"><span class="num">3</span><span><span class="pname" style="display:block">Spotify <span class="badge">New</span></span><span class="pdesc">Sync synced lyrics from your Spotify account</span></span><span class="icb">▲</span><span class="icb">▼</span><div class="sw2 on"></div></div>
+          <div class="prerow"><span class="num">4</span><span class="pname">LrcLib</span><span class="icb">▲</span><span class="icb">▼</span><div class="sw2 on"></div></div>
+          <div class="prerow" style="opacity:.55"><span class="num">5</span><span class="pname">NetEase Music</span><span class="icb">▲</span><span class="icb">▼</span><div class="sw2 on"></div></div>
+          <div class="prerow" style="opacity:.55"><span class="num">6</span><span class="pname">YouTube Subtitles</span><span class="icb">▲</span><span class="icb">▼</span><div class="sw2"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CHECKLIST ============ -->
+  <section class="sec">
+    <h2>3 · Which of these is missing on your phone?</h2>
+    <p class="lead">The build matters here, and it is the likeliest answer. The first build to contain the dedicated Spotify row is <span class="build">1 Oct 11:54</span> — the one you said you were on is <span class="build">1 Oct 11:32</span>, which predates it.</p>
+    <div class="checklist">
+      <h3>Tick what you see, and I will know exactly what to fix</h3>
+      <div class="ck"><div class="box"></div><div class="what"><b>Settings → Content</b> opens and shows groups like General, Playback, Proxy, Wrapped — but <b>no Lyrics group at the bottom</b></div></div>
+      <div class="ck"><div class="box"></div><div class="what"><b>The Lyrics group is there, with 3 rows</b> (Provider selection, Lyrics provider priority, Lyrics romanization) — but <b>no Spotify row</b></div></div>
+      <div class="ck"><div class="box"></div><div class="what"><b>Provider selection opens</b>, but <b>Spotify is not among the switches</b></div></div>
+      <div class="ck"><div class="box"></div><div class="what"><b>Lyrics provider priority opens</b>, but has no ▲ ▼ arrows, or <b>no Spotify entry</b></div></div>
+      <div class="ck"><div class="box"></div><div class="what"><b>I cannot reach Settings → Content at all</b> — there is no Content row</div></div>
+      <div class="ck"><div class="box"></div><div class="what"><b>All of it is there</b> and the trouble is something else — the lyrics view in the player itself</div></div>
+    </div>
+    <div class="warnbox">
+      The first two boxes are almost certainly the answer: the dedicated row is new, and the 11:32 build cannot show it. The third box would mean the dialog needs scrolling. If it is the last box, the problem is not settings at all and I should be looking at <code>PlayerSyncedLyricsView</code> instead.
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

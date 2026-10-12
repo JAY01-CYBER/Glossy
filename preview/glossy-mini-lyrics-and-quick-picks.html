@@ -1,0 +1,851 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Glossy — Quick picks rebuilt + mini lyrics styles</title>
+<style>
+  :root {
+    --bg: #10130a;
+    --panel: #1a1f10;
+    --ink: #f4f7dc;
+    --ink-dim: #b9c29a;
+    --accent: #dce98f;
+    --accent-soft: rgba(220, 233, 143, .55);
+    --line: rgba(244, 247, 220, .12);
+    /* the app's pale skin, as in the screenshot */
+    --app-bg: #f4f7da;
+    --app-surface: #ffffff;
+    --app-ink: #23281a;
+    --app-dim: #6b7355;
+    --app-accent: #2f3a18;
+    --app-active: #e4edb4;
+    --mini: #171c0f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 28px 22px 80px;
+    background: radial-gradient(1200px 700px at 20% -10%, #232a13, var(--bg) 60%);
+    color: var(--ink);
+    font: 15px/1.5 -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+  h1 { font-size: 24px; margin: 0 0 6px; letter-spacing: -.2px; }
+  .sub { color: var(--ink-dim); max-width: 78ch; margin: 0 0 26px; }
+  h2 {
+    font-size: 15px; text-transform: uppercase; letter-spacing: 1.4px;
+    color: var(--accent); margin: 40px 0 4px; font-weight: 700;
+  }
+  h2 + p.lede { color: var(--ink-dim); margin: 0 0 18px; max-width: 80ch; }
+  .row { display: flex; flex-wrap: wrap; gap: 26px; align-items: flex-start; }
+  .card { flex: 0 0 auto; }
+  .card > .label {
+    font-size: 13px; font-weight: 700; letter-spacing: .4px;
+    margin: 0 0 8px; display: flex; align-items: center; gap: 8px;
+  }
+  .tag {
+    font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 999px;
+    background: var(--line); color: var(--ink-dim); letter-spacing: .5px;
+  }
+  .tag.new { background: var(--accent); color: #17200c; }
+  .card > .caption { font-size: 12.5px; color: var(--ink-dim); margin: 10px 0 0; max-width: 360px; }
+
+  /* ---------- quick picks: four candidate directions ---------- */
+  .sheet {
+    width: 300px; border-radius: 20px; background: var(--app-bg); color: var(--app-ink);
+    padding: 12px 14px 16px; box-shadow: 0 10px 26px rgba(0,0,0,.28);
+  }
+
+  /* A — art-forward grid: square artwork, name underneath */
+  .qp-a { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 12px; }
+  .qp-a .art { width: 100%; height: auto; aspect-ratio: 1; border-radius: 16px; box-shadow: 0 6px 16px rgba(0,0,0,.22); }
+  .qp-a .title { font-size: 13px; font-weight: 700; margin-top: 8px; }
+  .qp-a .artist { font-size: 11.5px; color: var(--app-dim); }
+
+  /* B — numbered chart rows */
+  .qp-b .pick { display: flex; align-items: center; gap: 12px; padding: 7px 0; border-bottom: 1px solid rgba(35,40,26,.10); }
+  .qp-b .pick:last-child { border-bottom: none; }
+  .qp-b .num { width: 24px; font-size: 19px; font-weight: 800; color: var(--app-dim); font-variant-numeric: tabular-nums; }
+  .qp-b .pick.active .num { color: #5d7a12; }
+  .qp-b .art { width: 46px; height: 46px; border-radius: 12px; }
+
+  /* C — large swipeable cards, one and a bit per screen */
+  .qp-c { display: flex; gap: 12px; }
+  .qp-c .pick { width: 186px; flex: 0 0 auto; }
+  .qp-c .art { width: 186px; height: 186px; border-radius: 20px; box-shadow: 0 8px 20px rgba(0,0,0,.24); }
+  .qp-c .title { font-size: 14px; font-weight: 700; margin-top: 9px; }
+  .qp-c .artist { font-size: 12px; color: var(--app-dim); }
+
+  /* D — artwork as the tile, name over it */
+  .qp-d { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .qp-d .pick { position: relative; aspect-ratio: 1.08; border-radius: 18px; overflow: hidden; color: #fff; }
+  .qp-d .art { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 0; box-shadow: none; }
+  .qp-d .shade { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(0,0,0,.80), transparent 64%); }
+  .qp-d .txt { position: absolute; left: 10px; right: 10px; bottom: 9px; }
+  .qp-d .txt .title { font-size: 13px; font-weight: 800; }
+  .qp-d .txt .artist { font-size: 11px; color: rgba(255,255,255,.74); }
+  .qp-d .txt .title.active { color: #ffd479; }
+
+  /* ---------- phone ---------- */
+  .phone {
+    width: 352px; border-radius: 30px; padding: 10px;
+    background: #0b0d06; border: 1px solid rgba(255,255,255,.09);
+    box-shadow: 0 24px 50px rgba(0,0,0,.5);
+  }
+  .screen {
+    border-radius: 22px; overflow: hidden; background: var(--app-bg);
+    color: var(--app-ink); position: relative;
+  }
+  .status {
+    display: flex; justify-content: space-between; font-size: 11px; font-weight: 700;
+    padding: 9px 14px 5px; color: var(--app-ink);
+  }
+  .app-head { display: flex; align-items: center; gap: 8px; padding: 4px 14px 10px; border-bottom: 1px solid rgba(35,40,26,.09); }
+  .app-head .logo {
+    width: 26px; height: 26px; border-radius: 8px; background: var(--app-accent);
+    display: grid; place-items: center; color: var(--accent); font-weight: 900; font-size: 13px;
+  }
+  .app-head .name { font-weight: 800; font-size: 15px; }
+  .app-head .sub2 { font-size: 10px; color: var(--app-dim); }
+  .app-body { padding: 12px 14px 14px; }
+
+  .sect { display: flex; align-items: center; gap: 10px; margin: 4px 0 8px; }
+  .sect .bar { width: 3px; height: 20px; border-radius: 2px; background: var(--app-accent); }
+  .sect .t { font-size: 18px; font-weight: 800; }
+  .sect .pill {
+    margin-left: auto; font-size: 11px; font-weight: 700; padding: 5px 12px;
+    border-radius: 999px; border: 1.2px solid rgba(35,40,26,.35); display: flex; gap: 5px; align-items: center;
+  }
+
+  /* old quick picks: tonal cards */
+  .q-old { display: flex; flex-direction: column; gap: 8px; }
+  .q-old .tile {
+    display: flex; align-items: center; gap: 13px; padding: 8px 8px 8px 8px;
+    border-radius: 18px; background: #e7ecc4; box-shadow: inset 0 0 0 1px rgba(35,40,26,.05);
+  }
+  /* new quick picks: two compact tiles per row, four rows deep */
+  .q-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; }
+  .q-grid .tile2 { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .q-grid .art { width: 46px; height: 46px; border-radius: 12px; box-shadow: 0 3px 7px rgba(0,0,0,.16); }
+  .q-grid .meta .title { font-size: 13px; }
+  .q-grid .meta .artist { font-size: 11.5px; }
+
+  /* section 4: the shared list row — old filled card vs ghost tile */
+  .listpaper { background: var(--app-bg); border-radius: 14px; padding: 8px 6px; }
+  .grows { display: flex; flex-direction: column; }
+  .grow {
+    display: flex; align-items: center; gap: 12px; padding: 9px 12px;
+    border-radius: 16px; transition: background .25s ease;
+  }
+  .grow .art { width: 54px; height: 54px; border-radius: 12px; box-shadow: 0 3px 8px rgba(0,0,0,.15); }
+  .grow.active { background: rgba(122, 148, 40, .10); }
+  .grow.picked { background: rgba(122, 148, 40, .18); }
+  .grow .menu { color: var(--app-dim); font-weight: 700; padding: 0 2px; }
+
+  /* section 5: provider priority editor */
+  .pr { display: flex; flex-direction: column; }
+  .pr-row {
+    display: flex; align-items: center; gap: 8px; padding: 7px 4px;
+    border-bottom: 1px solid rgba(35,40,26,.07);
+  }
+  .pr-row:last-child { border-bottom: 0; }
+  .pr-rank { width: 20px; font-size: 11px; font-weight: 800; color: var(--app-dim); text-align: center; }
+  .pr-name { flex: 1 1 auto; min-width: 0; }
+  .pr-name .h { font-size: 12.5px; font-weight: 700; color: var(--app-ink); }
+  .pr-name .d { font-size: 9.5px; color: var(--app-dim); line-height: 1.3; margin-top: 1px; }
+  .pr-arrows { display: flex; flex-direction: column; gap: 1px; }
+  .pr-arrows i {
+    font-style: normal; font-size: 9px; line-height: 11px; width: 18px; height: 12px;
+    display: grid; place-items: center; border-radius: 5px;
+    background: rgba(35,40,26,.08); color: var(--app-accent);
+  }
+  .pr-arrows i.dead { opacity: .25; }
+  .pr-sw {
+    width: 30px; height: 17px; border-radius: 999px; background: var(--app-accent);
+    position: relative; flex: 0 0 auto;
+  }
+  .pr-sw::after {
+    content: ""; position: absolute; top: 2.5px; right: 3px; width: 12px; height: 12px;
+    border-radius: 50%; background: #f4f7da;
+  }
+  .pr-sw.off { background: rgba(35,40,26,.22); }
+  .pr-sw.off::after { right: auto; left: 3px; }
+  .pr-row.off .pr-name .h { opacity: .42; }
+  .pr-row.hot { background: rgba(122,148,40,.10); border-radius: 10px; }
+  .strike { text-decoration: line-through; opacity: .5; }
+
+  .art {
+    width: 56px; height: 56px; border-radius: 14px; flex: 0 0 auto;
+    background: linear-gradient(135deg, #8e5dff, #ff7ac2 55%, #ffd479);
+    box-shadow: 0 4px 10px rgba(0,0,0,.18);
+    position: relative; overflow: hidden;
+  }
+  .art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255,255,255,.22), transparent 60%); }
+  .art.g2 { background: linear-gradient(135deg, #2b3a7a, #6f8dff 60%, #c9d8ff); }
+  .art.g3 { background: linear-gradient(135deg, #16c1a1, #7fe3c2 60%, #f6ffd8); }
+  .art.g4 { background: linear-gradient(135deg, #3d2354, #b04cff 55%, #ff9ad5); }
+  .meta { flex: 1 1 auto; min-width: 0; }
+  .meta .title { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .meta .artist { font-size: 12px; color: var(--app-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .meta .title.active { color: #5d7a12; }
+  .dots { color: var(--app-dim); font-size: 18px; line-height: 1; letter-spacing: 1px; padding: 0 6px; }
+  .badge-e {
+    display: inline-grid; place-items: center; width: 12px; height: 12px; border-radius: 3px;
+    background: rgba(35,40,26,.65); color: #f4f7da; font-size: 8px; font-weight: 800; margin-right: 4px;
+  }
+  .miniplayer {
+    margin: 10px 8px 8px; border-radius: 18px; background: var(--mini);
+    color: #f4f7dc; padding: 8px; display: flex; align-items: center; gap: 10px;
+  }
+  .miniplayer .art { width: 42px; height: 42px; border-radius: 10px; }
+  .miniplayer .meta .artist { color: #9aa384; }
+  .controls { margin-left: auto; display: flex; align-items: center; gap: 12px; color: #e8eecb; font-size: 15px; }
+  .play { width: 30px; height: 30px; border-radius: 999px; background: #e8eecb; color: #171c0f; display: grid; place-items: center; }
+
+  /* ---------- player mocks ---------- */
+  .player {
+    height: 620px; border-radius: 22px; overflow: hidden; position: relative;
+    color: #fff; display: flex; flex-direction: column;
+  }
+  .canvas {
+    position: absolute; inset: 0; z-index: 0;
+    background:
+      radial-gradient(120% 90% at 30% 20%, rgba(255,122,194,.85), transparent 55%),
+      radial-gradient(110% 80% at 80% 40%, rgba(120,90,255,.85), transparent 60%),
+      radial-gradient(120% 120% at 50% 100%, rgba(255,196,86,.7), transparent 60%),
+      linear-gradient(160deg, #241033, #0b0714);
+    animation: drift 14s ease-in-out infinite alternate;
+    filter: saturate(1.1);
+  }
+  @keyframes drift {
+    0% { transform: scale(1.06) translate3d(-1.5%, -1%, 0); }
+    100% { transform: scale(1.14) translate3d(1.5%, 1.5%, 0); }
+  }
+  .scrim-top { position: absolute; inset: 0 0 auto 0; height: 150px; z-index: 1;
+    background: linear-gradient(180deg, rgba(0,0,0,.8), transparent); }
+  .scrim-bot { position: absolute; inset: auto 0 0 0; height: 300px; z-index: 1;
+    background: linear-gradient(0deg, rgba(0,0,0,.88), transparent); }
+  .p-top { position: relative; z-index: 2; display: flex; align-items: center; gap: 10px; padding: 14px 16px; }
+  .p-top .gbtn {
+    width: 34px; height: 34px; border-radius: 999px; display: grid; place-items: center;
+    background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.16); font-size: 14px;
+  }
+  .p-top .spacer { flex: 1; }
+
+  /* the glow block, drawn on the canvas */
+  .glowwrap {
+    position: relative; z-index: 3; flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 10px; padding: 0 22px; text-align: center;
+  }
+  /* the pocket of darkness follows the words, wherever they sit */
+  .glowwrap::before {
+    content: ""; position: absolute; inset: 24% 2% 18% 2%; border-radius: 45%;
+    background: radial-gradient(closest-side, rgba(0,0,0,.58), rgba(0,0,0,.22) 60%, transparent 100%);
+  }
+  /* the new style sits at the bottom of the canvas, just above the song info */
+  .glowwrap.low { justify-content: flex-end; padding-bottom: 6px; }
+  .glowwrap.low::before { inset: auto 2% 0 2%; height: 190px; }
+  /* centred in the artwork: the words float over the middle of the cover or the
+     record, with the top of the song name as the nearest edge they can reach */
+  .glowwrap.mid { justify-content: center; padding-bottom: 0; }
+  .glowwrap.mid::before { inset: 24% 2% 18% 2%; height: auto; }
+  /* the pocket painted with no words under it: the block had a size (its own
+     padding) so `drawCircle` still had something to draw around. That is the
+     black dot. */
+  .bugdot {
+    position: absolute; left: 18px; bottom: 182px; width: 32px; height: 32px; border-radius: 999px; z-index: 3;
+    background: radial-gradient(closest-side, rgba(0,0,0,.74), rgba(0,0,0,.32) 62%, transparent 100%);
+  }
+  .glow-line {
+    position: relative; font-size: 27px; line-height: 1.18; font-weight: 800; letter-spacing: .2px;
+    color: #fff; text-shadow:
+      0 0 10px var(--accent-soft),
+      0 0 26px var(--accent-soft),
+      0 0 60px var(--accent-soft),
+      0 0 2px rgba(255,255,255,.9),
+      0 2px 6px rgba(0,0,0,.55);
+    animation: pulse 2.6s ease-in-out infinite;
+    transition: opacity .42s ease, transform .42s ease;
+  }
+  @keyframes pulse {
+    0%, 100% { text-shadow: 0 0 9px var(--accent-soft), 0 0 22px var(--accent-soft), 0 0 48px var(--accent-soft), 0 0 2px rgba(255,255,255,.95), 0 2px 6px rgba(0,0,0,.55); }
+    50% { text-shadow: 0 0 14px var(--accent), 0 0 36px var(--accent-soft), 0 0 80px var(--accent-soft), 0 0 2px #fff, 0 2px 6px rgba(0,0,0,.55); }
+  }
+  .next-line { position: relative; color: rgba(255,255,255,.42); font-size: 15px; font-weight: 600; }
+  .p-meta { margin-top: auto; position: relative; z-index: 3; padding: 0 22px 6px; }
+  .p-meta .t { font-size: 24px; font-weight: 800; }
+  .p-meta .a { font-size: 13px; color: rgba(255,255,255,.82); }
+  .p-bar { position: relative; z-index: 3; height: 3px; margin: 14px 22px 4px; border-radius: 2px; background: rgba(255,255,255,.22); }
+  .p-bar i { display: block; height: 100%; width: 38%; border-radius: 2px; background: #fff; }
+  .p-times { position: relative; z-index: 3; display: flex; justify-content: space-between; font-size: 10.5px; color: rgba(255,255,255,.6); margin: 0 22px 12px; }
+  .p-transport { position: relative; z-index: 3; display: flex; align-items: center; justify-content: center; gap: 26px; font-size: 20px; padding: 0 22px 22px; }
+  .p-transport .big { width: 52px; height: 52px; border-radius: 999px; background: #fff; color: #14100c; display: grid; place-items: center; font-size: 20px; }
+
+  /* classic strip, inside the same player so the two can be compared */
+  .art-big {
+    width: 210px; height: 210px; border-radius: 20px; margin: 0 auto;
+    background: linear-gradient(135deg, #8e5dff, #ff7ac2 55%, #ffd479);
+    box-shadow: 0 16px 30px rgba(0,0,0,.45); position: relative; overflow: hidden;
+  }
+  .strip {
+    margin: 16px 22px 0; border-radius: 18px; padding: 12px 14px;
+    background: linear-gradient(180deg, rgba(255,255,255,.16), rgba(0,0,0,.34));
+    border: 1px solid rgba(255,255,255,.10);
+    backdrop-filter: blur(10px);
+  }
+  .strip .l1 { font-size: 19px; font-weight: 800; color: #fff; }
+  .strip .l2 { font-size: 15px; color: rgba(255,255,255,.5); margin-top: 3px; }
+  .strip .expand { font-size: 10.5px; color: rgba(255,255,255,.55); margin-top: 8px; }
+
+  /* ---------- appearance ---------- */
+  .settings {
+    background: var(--app-surface); color: var(--app-ink);
+    border-radius: 20px; padding: 6px 4px; width: 352px;
+    box-shadow: 0 20px 40px rgba(0,0,0,.4);
+  }
+  .group-title { font-size: 12.5px; font-weight: 800; letter-spacing: .6px; color: #4b5530; padding: 12px 14px 6px; text-transform: uppercase; }
+  .item { display: flex; align-items: center; gap: 14px; padding: 12px 14px; }
+  .item + .item { border-top: 1px solid rgba(35,40,26,.08); }
+  .item .ico { width: 30px; height: 30px; border-radius: 9px; background: var(--app-active); display: grid; place-items: center; font-size: 15px; }
+  .item .txt .h { font-size: 14px; font-weight: 700; }
+  .item .txt .d { font-size: 12px; color: var(--app-dim); }
+  .item.hot { background: #eef4d0; }
+  .dialog {
+    background: var(--app-surface); border-radius: 24px; padding: 18px 6px 10px; width: 340px;
+    box-shadow: 0 20px 40px rgba(0,0,0,.4); color: var(--app-ink);
+  }
+  .dialog h3 { margin: 0 0 6px; padding: 0 20px; font-size: 16px; }
+  .opt { display: flex; gap: 12px; padding: 12px 20px; align-items: flex-start; }
+  .opt + .opt { border-top: 1px solid rgba(35,40,26,.07); }
+  .radio { width: 18px; height: 18px; border-radius: 999px; border: 2px solid #8a9270; flex: 0 0 auto; margin-top: 2px; }
+  .radio.on { border-color: #2f3a18; box-shadow: inset 0 0 0 4px #2f3a18; }
+  .opt .txt .h { font-weight: 700; font-size: 14px; }
+  .opt .txt .d { font-size: 12px; color: var(--app-dim); }
+  /* compact player cards: the same glow, one per player design */
+  .pmini { width: 170px; height: 292px; border-radius: 20px; overflow: hidden; position: relative; background: #0b0d06; box-shadow: 0 16px 34px rgba(0,0,0,.45); }
+  .pmini .glowwrap { padding: 0 12px; }
+  /* Vinyl and Apple Music put the song title immediately under the artwork, so
+     the glowing line floats over the middle of the artwork instead — nowhere
+     near the name, and centred on the cover or the disc. */
+  .pmini .glowwrap.mid { padding-bottom: 0; }
+  .pmini .glow-line { font-size: 15px; }
+  .pmini .next-line { font-size: 10.5px; }
+  .pmini .disc { position: absolute; inset: 26px 16px 96px 16px; border-radius: 999px; background: conic-gradient(from 0deg, #2a2340, #4b3a6e, #2a2340 45%, #5a4a86 70%, #2a2340); box-shadow: inset 0 0 0 8px #12101c; }
+  .pmini .cap { position: absolute; left: 0; right: 0; bottom: 0; z-index: 4; padding: 34px 13px 12px; background: linear-gradient(0deg, rgba(0,0,0,.9), transparent); }
+  .pmini .cap b { font-size: 13px; display: block; }
+  .pmini .cap span { font-size: 10.5px; color: rgba(255,255,255,.68); display: block; }
+
+  .note {
+    margin-top: 34px; padding: 14px 18px; border-radius: 14px;
+    background: rgba(220,233,143,.08); border: 1px solid rgba(220,233,143,.22);
+    color: var(--ink-dim); max-width: 900px; font-size: 13.5px;
+  }
+  .note b { color: var(--ink); }
+  .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; background: var(--accent); margin-right: 6px; }
+</style>
+</head>
+<body>
+  <h1>Glossy — rebuilt Quick picks &amp; mini lyrics on the canvas</h1>
+  <p class="sub">
+    Everything below is the app's own Materialistic skin, mocked in HTML so you can judge it before installing.
+    Left = what you have now, right = what this build changes.
+  </p>
+
+  <h2>1 · Quick picks — rebuilt art-forward</h2>
+  <p class="lede">
+    Screenshot feedback: the picks were four full-width cards stacked on the feed — a box inside a section inside a
+    feed, the only shelf on Home that read that way. The shelf now lets the artwork be the shelf: a large square per
+    pick, two to a row, with the name and the artist captioned underneath and nothing drawn around them.
+  </p>
+
+  <div class="row">
+    <div class="card">
+      <p class="label">Before <span class="tag">what you sent</span></p>
+      <div class="phone"><div class="screen" id="phone-before">
+        <div class="status"><span>4:09</span><span>84%</span></div>
+        <div class="app-head">
+          <div class="logo">|||</div>
+          <div><div class="name">Glossy</div><div class="sub2">Shefall Alvares</div></div>
+        </div>
+        <div class="app-body">
+          <div class="sect"><div class="bar"></div><div class="t">Quick picks</div>
+            <div class="pill">▷ Play all</div></div>
+          <div class="q-old" id="qp-old"></div>
+        </div>
+        <div class="miniplayer">
+          <div class="art g2"></div>
+          <div class="meta"><div class="title">Millionaire</div><div class="artist">Yo To Honey Singh</div></div>
+          <div class="controls"><span>♡</span><span class="play">▷</span><span>⏭</span></div>
+        </div>
+      </div></div>
+      <p class="caption">Four rounded cards, each with its own fill — the shelf reads as four boxes.</p>
+    </div>
+
+    <div class="card">
+      <p class="label">Now <span class="tag new">art-forward</span></p>
+      <div class="phone"><div class="screen" id="phone-after">
+        <div class="status"><span>4:09</span><span>84%</span></div>
+        <div class="app-head">
+          <div class="logo">|||</div>
+          <div><div class="name">Glossy</div><div class="sub2">Shefall Alvares</div></div>
+        </div>
+        <div class="app-body">
+          <div class="sect"><div class="bar"></div><div class="t">Quick picks</div>
+            <div class="pill">▷ Play all</div></div>
+          <div class="qp-a" id="qp-new"></div>
+        </div>
+        <div class="miniplayer">
+          <div class="art g2"></div>
+          <div class="meta"><div class="title">Millionaire</div><div class="artist">Yo To Honey Singh</div></div>
+          <div class="controls"><span>♡</span><span class="play">▷</span><span>⏭</span></div>
+        </div>
+      </div></div>
+      <p class="caption">A large square of artwork per pick, two to a row, the name and artist captioned underneath.
+        <b>Four on screen, four a swipe away</b> — at this artwork size a four-row shelf would be a screen of its own, so
+        the shelf is two rows deep and the grid scrolls horizontally, snapping a page at a time. No card fill, no border,
+        no divider, and no ⋮: at half the screen it would cost the title a third of its width, so the whole tile plays and
+        long-press opens the menu.</p>
+    </div>
+  </div>
+
+  <h2>1b · Quick picks — pick a direction</h2>
+  <p class="lede">
+    The same songs, four ways. <b>A is the one being built</b> — the other three are kept here so the choice is on the
+    record. None of them is a card: the complaint about the box-in-a-box is the one thing all four agree on.
+  </p>
+  <div class="row">
+    <div class="card">
+      <p class="label">A · Art-forward grid <span class="tag new">chosen</span></p>
+      <div class="sheet"><div class="sect"><div class="bar"></div><div class="t">Quick picks</div><div class="pill">▷ Play all</div></div>
+        <div class="qp-a" id="qp-A"></div></div>
+      <p class="caption">Square artwork with the name underneath — the “made for you” shelf. The biggest artwork of the
+        four and the most like the sections around it; 8 picks means about two rows of scrolling.</p>
+    </div>
+    <div class="card">
+      <p class="label">B · Numbered chart <span class="tag">4 rows</span></p>
+      <div class="sheet"><div class="sect"><div class="bar"></div><div class="t">Quick picks</div><div class="pill">▷ Play all</div></div>
+        <div class="qp-b" id="qp-B"></div></div>
+      <p class="caption">A ranked shelf: big index, small artwork, name beside it, hairlines between. Compact and
+        deliberate — reads as “these eight, in this order”, which is what a pick list is.</p>
+    </div>
+    <div class="card">
+      <p class="label">C · Large cards <span class="tag">swipe</span></p>
+      <div class="sheet"><div class="sect"><div class="bar"></div><div class="t">Quick picks</div><div class="pill">▷ Play all</div></div>
+        <div class="qp-c" id="qp-C"></div></div>
+      <p class="caption">One large card and a slice of the next, swiped sideways. The roomiest of the four and the
+        only one whose artwork is the size of a sleeve — at the cost of showing two picks at a time.</p>
+    </div>
+    <div class="card">
+      <p class="label">D · Artwork tiles <span class="tag">2 across</span></p>
+      <div class="sheet"><div class="sect"><div class="bar"></div><div class="t">Quick picks</div><div class="pill">▷ Play all</div></div>
+        <div class="qp-d" id="qp-D"></div></div>
+      <p class="caption">Each pick <i>is</i> its artwork, with the name over a scrim at the bottom. Four on screen,
+        zero chrome — the densest colour of the four.</p>
+    </div>
+  </div>
+
+  <h2>2 · Mini lyrics — the new style: the line glows on the canvas</h2>
+  <p class="lede">
+    Mini lyrics stay exactly as they are by default. The new option paints the line being sung <b>on the artwork
+    itself</b> — over the animated canvas — with a halo in the accent colour, instead of a card under the artwork.
+    Same fetch, same sync, same tap-to-open-full-lyrics; nothing is taken from the layout, so the artwork never moves.
+  </p>
+
+  <div class="row">
+    <div class="card">
+      <p class="label">Old style — classic strip <span class="tag">default</span></p>
+      <div class="phone" style="height:auto"><div class="player" style="height:620px">
+        <div class="canvas" style="animation:none; filter:saturate(.85) brightness(.75)"></div>
+        <div class="scrim-top"></div><div class="scrim-bot"></div>
+        <div class="p-top">
+          <div class="gbtn">⌄</div><div class="spacer"></div>
+          <div class="gbtn">☾</div><div class="gbtn">≡</div>
+        </div>
+        <div class="glowwrap" style="justify-content:flex-start;padding-top:40px">
+          <div class="art-big"></div>
+        </div>
+        <div class="strip">
+          <div class="l1">I'll be there when you call</div>
+          <div class="l2">Even when the lights go out</div>
+          <div class="expand">Lyrics from LRCLIB</div>
+        </div>
+        <div class="p-meta"><div class="t">Mockingbird</div><div class="a">Eminem</div></div>
+        <div class="p-bar"><i></i></div>
+        <div class="p-times"><span>1:12</span><span>3:22</span></div>
+        <div class="p-transport"><span>⤨</span><span>⏮</span><span class="big">▷</span><span>⏭</span><span>↻</span></div>
+      </div></div>
+      <p class="caption">Frosted card under the artwork. It takes height from the design, so the artwork gives it room.</p>
+    </div>
+
+    <div class="card">
+      <p class="label">New style — glow on canvas <span class="tag new">new</span></p>
+      <div class="phone" style="height:auto"><div class="player" style="height:620px">
+        <div class="canvas"></div>
+        <div class="scrim-top"></div><div class="scrim-bot"></div>
+        <div class="p-top">
+          <div class="gbtn">⌄</div><div class="spacer"></div>
+          <div class="gbtn">☾</div><div class="gbtn" style="background:rgba(255,255,255,.28)">≡</div>
+        </div>
+        <div class="glowwrap low">
+          <div class="glow-line" id="live-line">I'll be there when you call</div>
+          <div class="next-line" id="live-next">Even when the lights go out</div>
+        </div>
+        <div class="p-meta"><div class="t">Mockingbird</div><div class="a">Eminem</div></div>
+        <div class="p-bar"><i id="live-bar"></i></div>
+        <div class="p-times"><span id="live-time">1:12</span><span>3:22</span></div>
+        <div class="p-transport"><span>⤨</span><span>⏮</span><span class="big">▷</span><span>⏭</span><span>↻</span></div>
+      </div></div>
+      <p class="caption">The active line sits at the <b>bottom of the canvas</b> — just above the song title, in the
+        empty space the design already leaves — glowing in the accent colour, the next line dimmed under it. The glow
+        breathes (as in the app) and the line advances with playback. Tapping the words opens the full lyrics view —
+        same as tapping the strip.</p>
+    </div>
+  </div>
+
+  <h3 style="margin:34px 0 6px;font-size:15px;color:var(--ink)">2b · a song with no lyrics found — the black dot</h3>
+  <p class="lede" style="margin-bottom:16px">
+    The glow carries its own legibility: a soft dark pocket under the words, so a line stays readable over busy artwork.
+    That pocket is drawn by the words' own block — but it was drawn <i>unconditionally</i>, while the words themselves
+    were not. On a song whose lyrics had not been found the block was therefore nothing but its own padding, a few dp of
+    nothing, and the pocket still painted around that: a black dot on the cover with no words under it (<b>left</b>). The
+    block is now only composed when it actually has a line to paint, so the pocket cannot exist without words (<b>right</b>).
+  </p>
+  <div class="row">
+    <div class="card">
+      <p class="label">Before — a black dot on the cover <span class="tag">bug</span></p>
+      <div class="phone" style="height:auto"><div class="player" style="height:620px">
+        <div class="canvas" style="filter:saturate(.7) brightness(.72)"></div>
+        <div class="scrim-top"></div><div class="scrim-bot"></div>
+        <div class="p-top">
+          <div class="gbtn">⌄</div><div class="spacer"></div>
+          <div class="gbtn">☾</div><div class="gbtn" style="background:rgba(255,255,255,.28)">≡</div>
+        </div>
+        <div class="bugdot"></div>
+        <div class="p-meta"><div class="t">To The Left To The Right</div><div class="a">La Nevula23 Producer</div></div>
+        <div class="p-bar"><i style="width:3%"></i></div>
+        <div class="p-times"><span>0:02</span><span>-1:06</span></div>
+        <div class="p-transport"><span>⤨</span><span>⏮</span><span class="big">▷</span><span>⏭</span><span>↻</span></div>
+      </div></div>
+      <p class="caption">“Lyrics not found”, so there is no line to draw — and the empty block still painted its pocket.
+        Everything else is unchanged: same artwork, same scrim, same controls, same place the words would have gone.</p>
+    </div>
+    <div class="card">
+      <p class="label">After — nothing drawn <span class="tag new">fixed</span></p>
+      <div class="phone" style="height:auto"><div class="player" style="height:620px">
+        <div class="canvas" style="filter:saturate(.7) brightness(.72)"></div>
+        <div class="scrim-top"></div><div class="scrim-bot"></div>
+        <div class="p-top">
+          <div class="gbtn">⌄</div><div class="spacer"></div>
+          <div class="gbtn">☾</div><div class="gbtn" style="background:rgba(255,255,255,.28)">≡</div>
+        </div>
+        <div class="p-meta"><div class="t">To The Left To The Right</div><div class="a">La Nevula23 Producer</div></div>
+        <div class="p-bar"><i style="width:3%"></i></div>
+        <div class="p-times"><span>0:02</span><span>-1:06</span></div>
+        <div class="p-transport"><span>⤨</span><span>⏮</span><span class="big">▷</span><span>⏭</span><span>↻</span></div>
+      </div></div>
+      <p class="caption">The canvas alone is what the listener sees until there is a line to put on it. The glow returns —
+        pocket and all — the moment lyrics arrive, or the moment a timed entry reaches its first line.</p>
+    </div>
+  </div>
+
+  <h3 style="margin:30px 0 6px;font-size:15px;color:var(--ink)">…and it works in every player design</h3>
+  <p class="lede" style="margin-bottom:16px">The same line, the same halo, drawn low on the artwork — not only on Capsule and Cinematic. These five are the other designs the option now covers (Vinyl with its record, Apple Music with its full-bleed cover).
+    <b>Vinyl and Apple Music float the line over the middle of the artwork</b>: both stack the name immediately under the
+    artwork, so anywhere along that lower edge read as part of the title block. Centred on the cover and on the disc
+    instead — the two cards marked <span class="tag new">centred</span>.</p>
+  <div class="row" id="every-player"></div>
+
+  <h2>3 · Where you switch it — Appearance</h2>
+  <p class="lede">
+    A new row in Appearance, in the player group, right after “Player design style”. It opens a two-option dialog, so
+    both styles are named and explained where you choose them.
+  </p>
+
+  <div class="row">
+    <div class="card">
+      <p class="label">The row</p>
+      <div class="settings">
+        <div class="group-title">Player</div>
+        <div class="item">
+          <div class="ico">🎨</div>
+          <div class="txt"><div class="h">Player design style</div><div class="d">Cinematic (Full-Bleed)</div></div>
+        </div>
+        <div class="item hot">
+          <div class="ico">🎤</div>
+          <div class="txt"><div class="h">Mini lyrics style</div>
+            <div class="d">Glow on canvas — current line glows over the artwork</div></div>
+        </div>
+        <div class="item">
+          <div class="ico">🌈</div>
+          <div class="txt"><div class="h">Player background style</div><div class="d">Follow theme</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <p class="label">What it opens</p>
+      <div class="dialog">
+        <h3>Mini lyrics style</h3>
+        <div class="opt">
+          <div class="radio"></div>
+          <div class="txt"><div class="h">Classic strip — lyrics on a card under the artwork</div>
+            <div class="d">The original: the active line large and the next line dimmed, in a frosted card. Costs the design some height.</div></div>
+        </div>
+        <div class="opt">
+          <div class="radio on"></div>
+          <div class="txt"><div class="h">Glow on canvas — current line glows over the artwork</div>
+            <div class="d">The line being sung is drawn on the artwork itself, glowing in the accent colour. No height is taken from the design. Applied by the Capsule and Cinematic designs, whose artwork is the canvas.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2>4 · The list view itself — soft ghost tiles, everywhere</h2>
+  <p class="lede">
+    The card fill sat under <i>every</i> row in the app — playlists, albums, search, library, notifications, the
+    Spotify tabs — so a list of ten songs read as ten buttons, each with its own border and its own rounded box, and
+    the ⋮ lived in a fenced-off column. Rows are now <b>ghost tiles</b>: at rest they paint nothing at all and the list
+    reads as a list. The tonal fill is kept for the rows that earned one — the <b>playing</b> row gets a 10 % wash, rows
+    picked in selection mode get 18 % — and it fades in rather than snapping. Artwork corners tightened to 12 dp (the
+    grid keeps its 20 dp), tile corners to 16 dp, ⋮ flush right with no divider. One component paints every list, so
+    this is every list.
+  </p>
+
+  <div class="row">
+    <div class="card">
+      <p class="label">Before — a filled card under every row <span class="tag">every list</span></p>
+      <div class="listpaper"><div class="q-old" id="rows-old"></div></div>
+      <p class="caption">Same look from the screenshot, everywhere in the app: surface-filled pills, 18–20 dp corners, fenced ⋮.</p>
+    </div>
+    <div class="card">
+      <p class="label">After — ghost tiles <span class="tag new">rebuilt</span></p>
+      <div class="listpaper"><div class="grows" id="rows-new"></div></div>
+      <p class="caption">Idle rows are invisible; the playing row (green wash) and a selection-picked row are the only tiles that paint.</p>
+    </div>
+  </div>
+
+  <h2>5 · Mini player mesh out · Spotify lyrics in</h2>
+  <p class="lede">
+    Two changes to settings. The mini player's background style drops <b>Animated Mesh</b> — the drifting gradient
+    blobs were the least-loved option and the glow style already does soft colour behind the bar (the full player
+    keeps its own mesh choice). And lyrics get a real <b>priority editor</b>: every provider in one list, a switch on
+    each row, and arrows to move a provider up or down — <b>the highest-ranked provider that has lyrics now wins</b>,
+    even when a lower one answers faster. New to the list: <b>Spotify lyrics</b> — it asks the account you already
+    signed in with, and every lyric it fetches is saved into the app for offline playback.
+  </p>
+
+  <div class="row">
+    <div class="card">
+      <p class="label">Mini player background — before <span class="tag">old</span></p>
+      <div class="dialog">
+        <h3>Mini player background style</h3>
+        <div class="opt"><div class="radio"></div><div class="txt"><div class="h">Follow theme</div></div></div>
+        <div class="opt"><div class="radio"></div><div class="txt"><div class="h">Blur / Gradient / Pure black</div></div></div>
+        <div class="opt"><div class="radio on"></div><div class="txt"><div class="h"><span class="strike">Animated Mesh</span></div><div class="d">being removed</div></div></div>
+        <div class="opt"><div class="radio"></div><div class="txt"><div class="h">Glow (animated)</div></div></div>
+      </div>
+      <p class="caption">The full player's background keeps its Animated Mesh option — only the mini player loses it.</p>
+    </div>
+    <div class="card">
+      <p class="label">After <span class="tag new">no mesh</span></p>
+      <div class="dialog">
+        <h3>Mini player background style</h3>
+        <div class="opt"><div class="radio on"></div><div class="txt"><div class="h">Follow theme</div></div></div>
+        <div class="opt"><div class="radio"></div><div class="txt"><div class="h">Transparent</div></div></div>
+        <div class="opt"><div class="radio"></div><div class="txt"><div class="h">Blur / Gradient / Pure black</div></div></div>
+        <div class="opt"><div class="radio"></div><div class="txt"><div class="h">Glow (animated)</div></div></div>
+      </div>
+      <p class="caption">Someone had it chosen — on update the mini player simply falls back to Follow theme.</p>
+    </div>
+  </div>
+
+  <div class="row" style="margin-top:18px">
+    <div class="card">
+      <p class="label">Settings → Content → Lyrics <span class="tag new">new rows</span></p>
+      <div class="settings">
+        <div class="group-title">Lyrics</div>
+        <div class="item"><div class="ico">🎤</div><div class="txt"><div class="h">Provider selection</div><div class="d">Choose which providers are enabled</div></div></div>
+        <div class="item hot"><div class="ico">≋</div><div class="txt"><div class="h">Lyrics provider priority</div><div class="d">Move a provider up to ask it first — the highest-ranked wins</div></div></div>
+        <div class="item hot"><div class="ico">S</div><div class="txt"><div class="h">Spotify lyrics</div><div class="d">Sync synced lyrics from your Spotify account, kept offline</div></div></div>
+      </div>
+      <p class="caption">Spotify also appears in provider selection with its own switch (off until you turn it on).</p>
+    </div>
+    <div class="card">
+      <p class="label">The priority editor <span class="tag new">arrows + switches</span></p>
+      <div class="listpaper" style="padding:10px 10px">
+        <div style="font-size:12.5px;font-weight:800;color:var(--app-ink);margin:0 0 6px">Lyrics provider priority</div>
+        <div style="font-size:9.5px;color:var(--app-dim);margin-bottom:8px">Move a provider up to ask it first — the highest-ranked provider that has lyrics wins. Switch one off to keep it out of the search</div>
+        <div class="pr">
+          <div class="pr-row"><span class="pr-rank">1</span><div class="pr-name"><div class="h">NetEase Music</div></div><div class="pr-arrows"><i class="dead">▲</i><i>▼</i></div><div class="pr-sw"></div></div>
+          <div class="pr-row hot"><span class="pr-rank">2</span><div class="pr-name"><div class="h">Spotify</div><div class="d">Sync synced lyrics from your signed-in account…</div></div><div class="pr-arrows"><i>▲</i><i>▼</i></div><div class="pr-sw"></div></div>
+          <div class="pr-row"><span class="pr-rank">3</span><div class="pr-name"><div class="h">Musixmatch</div></div><div class="pr-arrows"><i>▲</i><i>▼</i></div><div class="pr-sw"></div></div>
+          <div class="pr-row"><span class="pr-rank">4</span><div class="pr-name"><div class="h">YouTube Subtitles</div><div class="d" style="opacity:.6">always on — no switch</div></div><div class="pr-arrows"><i>▲</i><i>▼</i></div></div>
+          <div class="pr-row"><span class="pr-rank">5</span><div class="pr-name"><div class="h">LrcLib</div></div><div class="pr-arrows"><i>▲</i><i>▼</i></div><div class="pr-sw"></div></div>
+          <div class="pr-row off"><span class="pr-rank">6</span><div class="pr-name"><div class="h">KuGou</div></div><div class="pr-arrows"><i>▲</i><i>▼</i></div><div class="pr-sw off"></div></div>
+        </div>
+      </div>
+      <p class="caption">Switching one off keeps its place (dimmed) instead of shuffling the list; every arrow tap saves instantly. Drag-to-reorder is gone — arrows are the reorder.</p>
+    </div>
+  </div>
+
+  <div class="note">
+    <p><b>Also in this build — the canvas that stayed dark.</b> Leaving the app in the background and coming back used
+    to leave the animated canvas dead for the rest of the track: stopping the app releases the window the video was
+    drawing into, so the decoder errored, the three retries were spent on a screen nobody could see, and the player
+    came back holding a track that had already given up. The canvas now follows the app — it pauses while the app is
+    stopped, spends no retries there, and on the way back it is given a fresh video surface, a fresh retry budget and
+    a re-prepare, so it fades back in.</p>
+    <p><b>Mini lyrics themselves are unchanged by default.</b> The new style is opt-in and works in <i>every</i>
+    player design — Capsule, Cinematic, Vinyl, Apple Music, Classic, Modern, Wavy and Vivi — each drawing the line low
+    on its own artwork. Whichever style is chosen is the only one drawn, so the strip and the glow never appear
+    together.</p>
+    <p><b>And the line lands on the word now.</b> A player publishes its position once per audio buffer, so between
+    publications the number the mini lyrics were reading simply did not move — every line changed a beat after it was
+    sung. The clock is now re-extrapolated from the last published position with wall time, exactly as the full
+    lyrics view has always done, so the two agree instead of drifting apart by up to a buffer.</p>
+    <p><b>Spotify lyrics, and how priority now bites.</b> The Spotify provider resolves the playing song with the
+    <i>same</i> track search the animated canvas uses — so lyrics and canvas can never disagree about which Spotify
+    track this is — then pulls synced lines from Spotify's own lyrics endpoint and writes an <b>LRC copy into app
+    storage</b>, served from there on every later play, offline. And inside the race the winner is picked by rank:
+    the top provider answering with timed lyrics settles it immediately; a lower-ranked answer is only locked in
+    after a short window during which nobody above it produced timed lyrics. Moving a provider up actually means
+    something now.</p>
+    <p><b>And the list rebuild.</b> The base row every list in the app is built from (songs, albums, playlists,
+    artists, YouTube results, notifications — ~90 call sites) no longer paints a card behind each row. The playing
+    and selected rows keep a tonal wash so they still stand out; the recognition-history row, the last list that drew
+    its own cards, was converted too.</p>
+  </div>
+
+<script>
+  /* ---- quick picks rows, built from one list so both phones show the same songs ---- */
+  const picks = [
+    { title: "Dai Dai", artist: "Shakira and Burna Boy", art: "g1" },
+    { title: "Mockingbird", artist: "Eminem", art: "g2", e: true },
+    { title: "LUZ ROJA (Slowed)", artist: "bxkq", art: "g4" },
+    { title: "(t Punk)", artist: "Starboÿ", art: "g3", e: true },
+    { title: "Millionaire", artist: "Yo Yo Honey Singh", art: "g2" },
+    { title: "Sapphire", artist: "Ed Sheeran", art: "g3" },
+    { title: "Ordinary", artist: "Alex Warren", art: "g1" },
+    { title: "Golden", artist: "HUNTR/X", art: "g4", e: true }
+  ];
+  /* four picks either way: the old shelf drew four cards, the new one shows
+     four in two rows and keeps the rest a swipe away */
+  const beforePicks = picks.slice(0, 4);
+  const afterPicks = picks.slice(0, 4);
+
+  const old = document.getElementById("qp-old");
+  const nw = document.getElementById("qp-new");
+  beforePicks.forEach((p, i) => {
+    old.insertAdjacentHTML("beforeend", `
+      <div class="tile">
+        <div class="art ${p.art}"></div>
+        <div class="meta">
+          <div class="title ${i === 1 ? "active" : ""}">${p.title}</div>
+          <div class="artist">${p.e ? '<span class="badge-e">E</span>' : ""}${p.artist}</div>
+        </div>
+        <div class="dots">⋮</div>
+      </div>`);
+  });
+  afterPicks.forEach((p, i) => {
+    nw.insertAdjacentHTML("beforeend", `
+      <div class="tile2">
+        <div class="art ${p.art}"></div>
+        <div class="meta">
+          <div class="title ${i === 1 ? "active" : ""}">${p.title}</div>
+          <div class="artist">${p.e ? '<span class="badge-e">E</span>' : ""}${p.artist}</div>
+        </div>
+      </div>`);
+  });
+
+  /* ---- section 4: old filled card vs the new ghost tile ---- */
+  const durs = ["3:12", "3:41", "2:46", "4:04"];
+  document.getElementById("rows-old").innerHTML = picks.slice(0, 4).map((p, i) => `
+    <div class="tile">
+      <div class="art ${p.art}"></div>
+      <div class="meta">
+        <div class="title ${i === 1 ? "active" : ""}">${p.title}</div>
+        <div class="artist">${p.e ? '<span class="badge-e">E</span>' : ""}${p.artist} • ${durs[i]}</div>
+      </div>
+      <div class="dots">⋮</div>
+    </div>`).join("");
+  document.getElementById("rows-new").innerHTML = picks.slice(0, 4).map((p, i) => `
+    <div class="grow ${i === 1 ? "active" : ""}${i === 2 ? " picked" : ""}">
+      <div class="art ${p.art}"></div>
+      <div class="meta">
+        <div class="title ${i === 1 ? "active" : ""}">${p.title}</div>
+        <div class="artist">${p.e ? '<span class="badge-e">E</span>' : ""}${p.artist} • ${durs[i]}</div>
+      </div>
+      <div class="menu">⋮</div>
+    </div>`).join("");
+
+  /* ---- the four candidate Quick picks directions ---- */
+  const shelf = (id, html) => { document.getElementById(id).innerHTML = html; };
+  const named = (p, i) =>
+    `<div class="title ${i === 1 ? "active" : ""}">${p.title}</div>` +
+    `<div class="artist">${p.e ? '<span class="badge-e">E</span>' : ""}${p.artist}</div>`;
+  shelf("qp-A", picks.slice(0, 4).map((p, i) =>
+    `<div class="pick"><div class="art ${p.art}"></div>${named(p, i)}</div>`).join(""));
+  shelf("qp-B", picks.slice(0, 4).map((p, i) =>
+    `<div class="pick${i === 1 ? " active" : ""}"><span class="num">0${i + 1}</span>` +
+    `<div class="art ${p.art}"></div><div class="meta">${named(p, i)}</div></div>`).join(""));
+  shelf("qp-C", picks.slice(0, 3).map((p, i) =>
+    `<div class="pick"><div class="art ${p.art}"></div>${named(p, i)}</div>`).join(""));
+  shelf("qp-D", picks.slice(0, 4).map((p, i) =>
+    `<div class="pick"><div class="art ${p.art}"></div><div class="shade"></div>` +
+    `<div class="txt">${named(p, i)}</div></div>`).join(""));
+
+  /* ---- one compact card per player design, all drawing the same glow ---- */
+  const players = [
+    { name: "Classic", sub: "album artwork" },
+    { name: "Modern", sub: "artwork + canvas" },
+    { name: "Wavy", sub: "artwork + canvas" },
+    { name: "Vinyl", sub: "spinning record", disc: true, mid: true },
+    { name: "Apple Music", sub: "full-bleed cover", mid: true }
+  ];
+  document.getElementById("every-player").innerHTML = players.map((p, i) => `
+    <div class="card">
+      <p class="label">${p.name} <span class="tag">${p.sub}</span>${p.mid ? ' <span class="tag new">centred</span>' : ''}</p>
+      <div class="pmini">
+        ${p.disc ? '<div class="disc"></div>' : '<div class="canvas" style="position:absolute;inset:0"></div>'}
+        <div class="glowwrap ${p.mid ? "mid" : "low"}">
+          <div class="glow-line">I'll be there when you call</div>
+          <div class="next-line">Even when the lights go out</div>
+        </div>
+        <div class="cap"><b>Mockingbird</b><span>Eminem</span></div>
+      </div>
+    </div>`).join("");
+
+  /* ---- the live line advancing, so the glow can be seen changing lines ---- */
+  const lines = [
+    ["I'll be there when you call", "Even when the lights go out"],
+    ["And I know you're scared tonight", "But you don't have to be"],
+    ["So hold on to me", "I'll be there when you call"]
+  ];
+  let li = 0;
+  const live = document.getElementById("live-line");
+  const next = document.getElementById("live-next");
+  const bar = document.getElementById("live-bar");
+  const clock = document.getElementById("live-time");
+  /* One clock for the whole mock player: the elapsed time, the progress bar and
+     the lyric line are all read off it, so nothing can disagree about where in
+     the song we are the way a static time next to a moving lyric does. */
+  const totalSeconds = 3 * 60 + 22;
+  let elapsedSeconds = 72;
+  const mmss = (s) => Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0");
+  const paintClock = () => {
+    clock.textContent = mmss(elapsedSeconds);
+    bar.style.width = Math.min(100, (elapsedSeconds / totalSeconds) * 100).toFixed(1) + "%";
+  };
+  paintClock();
+  setInterval(() => { elapsedSeconds = (elapsedSeconds + 1) % totalSeconds; paintClock(); }, 1000);
+  setInterval(() => {
+    li = (li + 1) % lines.length;
+    live.style.opacity = "0"; live.style.transform = "translateY(6px) scale(.96)";
+    setTimeout(() => {
+      live.textContent = lines[li][0];
+      next.textContent = lines[li][1];
+      live.style.opacity = "1"; live.style.transform = "none";
+    }, 380);
+  }, 3600);
+</script>
+</body>
+</html>

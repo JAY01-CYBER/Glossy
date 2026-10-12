@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glossy · Three fixes — canvas · mini-player anim · vinyl spacing</title>
+<style>
+  :root {
+    --bg: #0b0b0e; --card: #141418; --card2: #1c1c22; --line: #27272f;
+    --text: #eceaf2; --dim: #9895a6; --dimmer: #5e5b6a;
+    --accent: #b89dff; --good: #64dfa0; --bad: #ff6b7a; --warn: #ffc966; --vinyl: #e8a33d;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 14.5px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased; padding: 0 0 80px;
+  }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 32px 22px 0; }
+  .pill {
+    display: inline-block; padding: 3px 11px; border-radius: 99px;
+    font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+    background: #1f1833; color: var(--accent); border: 1px solid #362c52; margin-bottom: 14px;
+  }
+  h1 { font-size: 24px; font-weight: 700; letter-spacing: -.02em; margin-bottom: 8px; }
+  .sub { color: var(--dim); font-size: 13.5px; max-width: 820px; margin-bottom: 36px; }
+  .sec { margin-bottom: 52px; }
+  .sec-title { font-size: 17.5px; font-weight: 660; letter-spacing: -.01em; display: flex; align-items: center; margin-bottom: 5px; }
+  .sec-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 9px;
+    background: #231d36; color: var(--accent); font-size: 12.5px; font-weight: 700;
+    margin-right: 10px; flex: none;
+  }
+  .symptom { color: var(--warn); font-size: 13px; margin-left: 36px; margin-bottom: 6px; }
+  .why { color: var(--dim); font-size: 13.5px; margin-left: 36px; max-width: 900px; }
+  .why b { color: var(--text); }
+  .why code { font: 12px ui-monospace, Menlo, Consolas, monospace; background: #1e1e28; border: 1px solid #2c2c38; border-radius: 5px; padding: 1px 5px; color: #d4c7ff; }
+  .cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
+  @media (max-width: 860px) { .cols2 { grid-template-columns: 1fr; } }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px 18px 20px; }
+  .panel-head { font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--dim); margin-bottom: 14px; }
+  .tag { display: inline-block; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 6px; letter-spacing: .04em; }
+  .tag.before { background: #3a1d24; color: #ff9aa9; }
+  .tag.after  { background: #163428; color: var(--good); }
+  pre {
+    font: 12px/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    white-space: pre-wrap; background: #0e0e14; border: 1px solid var(--line);
+    border-radius: 12px; padding: 13px 15px; margin-top: 10px;
+  }
+  .del { color: #ff9aa9; background: rgba(255,107,122,.08); display: block; }
+  .ins { color: #8ff0c0; background: rgba(100,223,160,.07); display: block; }
+  .ctx { color: var(--dimmer); display: block; }
+  button {
+    font: inherit; font-size: 13px; font-weight: 580; padding: 8px 16px;
+    border-radius: 10px; cursor: pointer; background: #20202c;
+    color: var(--text); border: 1px solid #303040; transition: .12s;
+  }
+  button:hover { background: #282836; }
+  .file-tag {
+    display: inline-block; font: 11.5px ui-monospace, Menlo, Consolas, monospace;
+    background: #1e1e28; border: 1px solid #2c2c38; color: var(--dim);
+    border-radius: 8px; padding: 3px 10px; margin: 2px 2px 0 0;
+  }
+  .file-tag b { color: var(--text); font-weight: 700; }
+  .files { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 5px; }
+
+  /* SPOTLIGHT */
+  .spotlight-demo { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin: 14px 0 14px 36px; }
+  .spot-card {
+    border-radius: 16px; overflow: hidden; position: relative; aspect-ratio: 16/10;
+    border: 1px solid #26262f; cursor: pointer; transition: transform .2s;
+  }
+  .spot-card:hover { transform: scale(1.025); }
+  .spot-card.active-card { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(184,157,255,.3); }
+  .spot-thumb {
+    position: absolute; inset: 0;
+    background: radial-gradient(circle at 30% 30%,#4b2fd0 0%,transparent 60%),
+                radial-gradient(circle at 75% 70%,#c02fd0 0%,transparent 55%),
+                linear-gradient(160deg,#241a3a,#3a1f42);
+  }
+  .spot-card:nth-child(2) .spot-thumb {
+    background: radial-gradient(circle at 40% 40%,#2fd09a 0%,transparent 55%),
+                linear-gradient(160deg,#0f2a1f,#1a2f3a);
+  }
+  .spot-card:nth-child(3) .spot-thumb {
+    background: radial-gradient(circle at 60% 35%,#d0882f 0%,transparent 55%),
+                linear-gradient(160deg,#2a1a0f,#3a1a1f);
+  }
+  .spot-canvas {
+    position: absolute; inset: 0; opacity: 0; transition: opacity .5s;
+    background: conic-gradient(from 0deg at 50% 50%,#4b2bd0,#c02bd0,#ff7a59,#ffd166,#4b2bd0);
+    animation: spinc 6s linear infinite, wob 3s ease-in-out infinite alternate;
+  }
+  .spot-card:nth-child(2) .spot-canvas { background: conic-gradient(from 180deg at 50% 50%,#2fd09a,#2f88d0,#4b2fd0,#2fd09a); }
+  .spot-card:nth-child(3) .spot-canvas { background: conic-gradient(from 90deg at 50% 50%,#d0882f,#d02f4b,#ff7a59,#d0882f); }
+  .spot-canvas.live { opacity: 1; }
+  @keyframes spinc { to { transform: rotate(1turn); } }
+  @keyframes wob { from { filter: saturate(1.1); } to { filter: saturate(1.6) hue-rotate(35deg); } }
+  .spot-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(to top,rgba(0,0,0,.75) 0%,transparent 55%);
+  }
+  .spot-info { position: absolute; bottom: 10px; left: 12px; font-size: 12px; font-weight: 600; color: #fff; }
+  .spot-info small { display: block; font-size: 10.5px; font-weight: 400; opacity: .8; }
+  .spot-badge {
+    position: absolute; top: 8px; right: 8px;
+    font-size: 9.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+    padding: 2.5px 7px; border-radius: 6px; background: rgba(0,0,0,.7);
+  }
+  .spot-badge.live { color: var(--good); }
+  .spot-badge.still { color: var(--warn); }
+  .spot-badge.loading { color: var(--accent); }
+  .spot-status { font-size: 12.5px; padding: 8px 14px; border-radius: 10px; background: var(--card2); border: 1px solid var(--line); color: var(--dim); margin-left: 36px; }
+  .spot-status b { color: var(--text); }
+
+  /* MINI PLAYER */
+  .miniplayer-demo { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 14px; }
+  @media (max-width: 700px) { .miniplayer-demo { grid-template-columns: 1fr; } }
+  .phone-label { font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--dim); margin-bottom: 6px; }
+  .mini-bar {
+    height: 68px; border-radius: 28px; background: #1c1c24; border: 1px solid #2a2a35;
+    overflow: hidden; display: flex; align-items: center; padding: 0 12px; gap: 12px; position: relative;
+  }
+  .mini-thumb { width: 44px; height: 44px; border-radius: 12px; flex: none; overflow: hidden; }
+  .mini-thumb-art { width: 100%; height: 100%; background: linear-gradient(135deg,#4b2fd0,#c02fd0); transition: background .4s; }
+  .mini-info { flex: 1; min-width: 0; transition: transform .28s cubic-bezier(.4,0,.2,1), opacity .22s; }
+  .mini-info.slide-out { transform: translateX(-80px); opacity: 0; }
+  .mini-info.slide-in  { transform: translateX(80px); opacity: 0; }
+  .mini-info.visible   { transform: translateX(0); opacity: 1; }
+  .mini-title { font-size: 13px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mini-artist { font-size: 11px; color: rgba(255,255,255,.6); }
+  .mini-play {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2);
+    display: flex; align-items: center; justify-content: center; flex: none; font-size: 16px;
+  }
+  .mini-skip { font-size: 18px; flex: none; cursor: pointer; opacity: .8; }
+  .seek-flash {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 13.5px; font-weight: 700; color: #fff; border-radius: 28px;
+    background: rgba(0,0,0,.45); opacity: 0; pointer-events: none; transition: opacity .18s;
+  }
+  .seek-flash.show { opacity: 1; }
+  .mp-controls { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .mp-log {
+    margin-top: 10px; font: 11.5px/1.5 ui-monospace, Menlo, Consolas, monospace;
+    background: #0d0d12; border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px 12px; height: 96px; overflow: auto; color: var(--dim);
+  }
+  .mp-log .hit { color: var(--good); }
+  .mp-log .miss { color: var(--bad); }
+
+  /* VINYL */
+  .vinyl-demo { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 14px; }
+  @media (max-width: 700px) { .vinyl-demo { grid-template-columns: 1fr; } }
+  .vinyl-phone {
+    background: #1b1712; border: 1.5px solid #2a2318; border-radius: 28px;
+    padding: 0 0 18px; height: 420px; display: flex; flex-direction: column;
+    position: relative; overflow: hidden;
+  }
+  .vinyl-topbar {
+    display: flex; align-items: center; padding: 0 16px; height: 50px; flex: none;
+  }
+  .vinyl-chev { font-size: 22px; color: #e8a33d; flex: none; }
+  .vinyl-tb-text { flex: 1; text-align: center; }
+  .vinyl-tb-title { font-size: 13.5px; font-weight: 700; color: #f2e6d0; }
+  .vinyl-tb-sub { font-size: 10.5px; color: #c9bda2; }
+  .vinyl-zone { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .vinyl-zone.before { justify-content: center; align-items: center; }
+  .vinyl-zone.after  { justify-content: flex-start; align-items: center; padding-top: 8px; }
+  .vinyl-disc {
+    width: 185px; height: 185px; border-radius: 50%; position: relative; flex: none;
+    background: radial-gradient(circle at 50% 50%,#3a2a0a 0%,#0a0a0a 48%,#1a1510 60%,#0a0a0a 100%);
+    box-shadow: 0 8px 32px rgba(0,0,0,.7), 0 0 0 1px rgba(232,163,61,.3);
+    animation: vinylSpin 7s linear infinite;
+  }
+  @keyframes vinylSpin { to { transform: rotate(1turn); } }
+  .vinyl-art {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    width: 78px; height: 78px; border-radius: 50%;
+    background: linear-gradient(135deg,#7c4bd0,#d04b9a);
+    box-shadow: 0 0 0 2px rgba(232,163,61,.3);
+  }
+  .vinyl-art::after {
+    content: ""; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    width: 10px; height: 10px; border-radius: 50%; background: #1a1712;
+  }
+  .vinyl-grooves {
+    position: absolute; inset: 0; border-radius: 50%;
+    background: repeating-radial-gradient(circle at 50% 50%,transparent 38px,rgba(255,255,255,.12) 38.5px,transparent 39px,transparent 42px);
+  }
+  .vinyl-bottom { padding: 0 16px; }
+  .vinyl-title { font-size: 15px; font-weight: 600; color: #f2e6d0; margin: 6px 0 2px; }
+  .vinyl-artist { font-size: 12px; color: #c9bda2; margin-bottom: 10px; }
+  .vinyl-seekbar { height: 3px; border-radius: 2px; background: #362c1a; overflow: hidden; }
+  .vinyl-seekbar-fill { height: 100%; width: 38%; background: var(--vinyl); border-radius: 2px; }
+
+  .gap-indicator {
+    position: absolute; left: 9px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  }
+  .gap-line {
+    width: 1.5px; background: repeating-linear-gradient(to bottom, var(--bad) 0px, var(--bad) 4px, transparent 4px, transparent 8px);
+  }
+  .gap-line.good { background: repeating-linear-gradient(to bottom, var(--good) 0px, var(--good) 4px, transparent 4px, transparent 8px); }
+  .gap-label { font-size: 9px; font-weight: 700; color: var(--bad); white-space: nowrap; }
+  .gap-label.good { color: var(--good); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="pill">Before build · three fixes · no APK</div>
+  <h1>Three fixes — Spotlight canvas · mini-player animation · vinyl spacing</h1>
+  <p class="sub">All changes are on disk and compile cleanly. This page is the preview. Each section shows the symptom, the root cause, the diff, and a live simulation.</p>
+
+  <!-- ===== 1 — SPOTLIGHT CANVAS ===== -->
+  <section class="sec">
+    <div class="sec-title"><span class="sec-num">1</span>Spotlight canvas not loading</div>
+    <p class="symptom">Featured / Spotlight cards stayed still even with Canvas Background on.</p>
+    <p class="why">The Spotlight canvas shares the same pipeline as the player canvas — <code>CanvasResolver</code>, <code>CanvasVerifier</code>, <code>CanvasPrefetcher</code> — and that pipeline had <b>five bugs</b> (Spotify 429 / missing Client-Token, HEAD probe writing UNPLAYABLE for 30 min on good clips, providers swallowing exceptions into permanent session misses, prefetch using a different artist string than the screen, and the prefetcher silently dropping clips). All five are fixed, so Spotlight now resolves, probes, and plays exactly like the player canvas.</p>
+    <p style="font-size:12.5px;color:var(--dim);margin:12px 0 4px 36px">Click a card to settle it — only that card decodes, the next is prefetched.</p>
+    <div class="spotlight-demo">
+      <div class="spot-card" data-i="0">
+        <div class="spot-thumb"></div><div class="spot-canvas"></div><div class="spot-overlay"></div>
+        <div class="spot-info">Flowers<small>Miley Cyrus</small></div>
+        <div class="spot-badge still" id="sb0">still</div>
+      </div>
+      <div class="spot-card active-card" data-i="1">
+        <div class="spot-thumb"></div><div class="spot-canvas"></div><div class="spot-overlay"></div>
+        <div class="spot-info">Anti-Hero<small>Taylor Swift</small></div>
+        <div class="spot-badge loading" id="sb1">loading…</div>
+      </div>
+      <div class="spot-card" data-i="2">
+        <div class="spot-thumb"></div><div class="spot-canvas"></div><div class="spot-overlay"></div>
+        <div class="spot-info">Blinding Lights<small>The Weeknd</small></div>
+        <div class="spot-badge still" id="sb2">still</div>
+      </div>
+    </div>
+    <div class="spot-status" id="spotStatus"><b>Settled:</b> card 2 — canvas loading · card 3 prefetched</div>
+
+    <div class="cols2">
+      <div class="panel">
+        <div class="panel-head"><span class="tag before">Before</span> — five pipeline bugs</div>
+        <pre><span class="del">Spotify: library/TOTP token → 429 → null → "no canvas"</span>
+<span class="del">CanvasVerifier: 429/5xx → UNPLAYABLE trusted 30 min</span>
+<span class="del">Providers: catch → null → definitive session miss</span>
+<span class="del">Prefetch: first-artist only; screen: full credit → cache miss</span>
+<span class="del">Prefetcher drop: silent — Canvas check said "✓" anyway</span></pre>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><span class="tag after">After</span> — five bugs fixed</div>
+        <pre><span class="ins">Spotify: canvasCredentials() = web token + clientToken() ✓</span>
+<span class="ins">CanvasVerifier: 429/5xx → UNKNOWN; UNPLAYABLE expires in 5 min</span>
+<span class="ins">Providers: throw CanvasLookupUnavailable → never a definitive miss</span>
+<span class="ins">Prefetch + screen use same full-credit artist string ✓</span>
+<span class="ins">Prefetcher drop: CanvasDiagnostics.noteUrlRefused() ✓</span></pre>
+        <div class="files">
+          <span class="file-tag"><b>CanvasResolver.kt</b></span>
+          <span class="file-tag"><b>CanvasVerifier.kt</b></span>
+          <span class="file-tag"><b>CanvasPrefetcher.kt</b></span>
+          <span class="file-tag"><b>SpotifyCanvasProvider.kt</b></span>
+          <span class="file-tag"><b>MusicService.kt</b></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 2 — MINI PLAYER ANIMATION ===== -->
+  <section class="sec">
+    <div class="sec-title"><span class="sec-num">2</span>Mini-player animation fires on every seek, not just on track change</div>
+    <p class="symptom">Skipping forward/back 10 seconds caused the song-title row in the Special Edition mini-player to slide out and back in even though the track had not changed.</p>
+    <p class="why">
+      <code>AnimatedContent(targetState = mediaMetadata)</code> used the <b>full object reference</b>.
+      A seek causes the playback state flow to re-emit the metadata for the <em>same</em> song as a new object,
+      which is not <code>===</code> to the previous one — so Compose saw a state change and fired the
+      slide-in/slide-out transition. The fix keys the transition on <code>mediaMetadata?.id</code>, a
+      <code>String?</code> that is structurally equal across re-emissions of the same track.
+    </p>
+    <div class="miniplayer-demo">
+      <div>
+        <div class="phone-label"><span class="tag before">Before</span> — slides on every seek</div>
+        <div class="mini-bar">
+          <div class="mini-thumb"><div class="mini-thumb-art" id="thumbB"></div></div>
+          <div class="mini-info visible" id="infoB">
+            <div class="mini-title" id="titleB">Anti-Hero</div>
+            <div class="mini-artist" id="artistB">Taylor Swift</div>
+          </div>
+          <div class="mini-play">▶</div>
+          <div class="seek-flash" id="sfB"></div>
+        </div>
+        <div class="mp-controls">
+          <button onclick="seekOld()">⏩ +10 s (same track)</button>
+          <button onclick="skipOld()">⏭ Next track</button>
+        </div>
+        <div class="mp-log" id="logB"></div>
+      </div>
+      <div>
+        <div class="phone-label"><span class="tag after">After</span> — slides only on track change</div>
+        <div class="mini-bar">
+          <div class="mini-thumb"><div class="mini-thumb-art" id="thumbA"></div></div>
+          <div class="mini-info visible" id="infoA">
+            <div class="mini-title" id="titleA">Anti-Hero</div>
+            <div class="mini-artist" id="artistA">Taylor Swift</div>
+          </div>
+          <div class="mini-play">▶</div>
+          <div class="seek-flash" id="sfA"></div>
+        </div>
+        <div class="mp-controls">
+          <button onclick="seekNew()">⏩ +10 s (same track)</button>
+          <button onclick="skipNew()">⏭ Next track</button>
+        </div>
+        <div class="mp-log" id="logA"></div>
+      </div>
+    </div>
+
+    <div class="cols2">
+      <div class="panel">
+        <div class="panel-head"><span class="tag before">Before — MiniPlayer.kt</span></div>
+        <pre><span class="del">AnimatedContent(</span>
+<span class="del">    targetState = mediaMetadata,  // full object ref</span>
+<span class="del">    transitionSpec = {</span>
+<span class="del">        slideInHorizontally + fadeIn</span>
+<span class="del">        slideOutHorizontally + fadeOut</span>
+<span class="del">    }</span>
+<span class="del">) { metadata -> … }</span></pre>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><span class="tag after">After — MiniPlayer.kt</span></div>
+        <pre><span class="ins">AnimatedContent(</span>
+<span class="ins">    targetState = mediaMetadata?.id, // stable String?</span>
+<span class="ins">    contentKey = { it },</span>
+<span class="ins">    transitionSpec = {</span>
+<span class="ins">        slideInHorizontally + fadeIn</span>
+<span class="ins">        slideOutHorizontally + fadeOut</span>
+<span class="ins">    }</span>
+<span class="ins">) { _ -></span>
+<span class="ins">    val metadata = mediaMetadata // same song, no slide</span>
+<span class="ins">}</span></pre>
+        <div class="files"><span class="file-tag"><b>MiniPlayer.kt</b> — GlossySpecialEditionMiniPlayer</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 3 — VINYL SPACING ===== -->
+  <section class="sec">
+    <div class="sec-title"><span class="sec-num">3</span>Vinyl player — excessive space above the disc</div>
+    <p class="symptom">The spinning vinyl record sat dead-centre in its slot, leaving a large blank band above it between the top bar and the disc.</p>
+    <p class="why">
+      The artwork zone used <code>weight(1f)</code> with <code>contentAlignment = Alignment.Center</code>,
+      which split leftover height evenly above and below the disc. On a tall phone the gap above was wider
+      than the disc itself. The fix switches to <code>Alignment.TopCenter</code> with
+      <code>padding(top = 8.dp)</code> so the disc sits just below the top bar with a small breathing gap,
+      and all the spare height falls below it (where the transport controls live). The
+      <code>BoxWithConstraints</code> inside uses <code>fillMaxWidth</code>; because its height is now
+      unconstrained, <code>maxHeight</code> is infinite and the existing
+      <code>fittedSide = maxWidth</code> guard sizes the disc correctly by screen width.
+    </p>
+    <div class="vinyl-demo">
+      <div>
+        <div class="phone-label"><span class="tag before">Before</span> — centred, large gap above</div>
+        <div class="vinyl-phone">
+          <!-- red gap ruler: from topbar bottom to disc top (~30% of zone) -->
+          <div class="gap-indicator" style="top:52px; height:calc(50% - 95px);">
+            <div class="gap-line" style="flex:1;"></div>
+            <div class="gap-label">big gap</div>
+          </div>
+          <div class="vinyl-topbar">
+            <div class="vinyl-chev">‹</div>
+            <div class="vinyl-tb-text">
+              <div class="vinyl-tb-title">Anti-Hero</div>
+              <div class="vinyl-tb-sub">Taylor Swift</div>
+            </div>
+            <div style="width:22px"></div>
+          </div>
+          <div class="vinyl-zone before">
+            <div class="vinyl-disc"><div class="vinyl-grooves"></div><div class="vinyl-art"></div></div>
+          </div>
+          <div class="vinyl-bottom">
+            <div class="vinyl-title">Anti-Hero</div>
+            <div class="vinyl-artist">Taylor Swift</div>
+            <div class="vinyl-seekbar"><div class="vinyl-seekbar-fill"></div></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="phone-label"><span class="tag after">After</span> — top-aligned, 8dp breathing gap</div>
+        <div class="vinyl-phone">
+          <!-- green gap ruler: 8dp = small -->
+          <div class="gap-indicator" style="top:52px; height:18px;">
+            <div class="gap-line good" style="flex:1;"></div>
+            <div class="gap-label good">8dp</div>
+          </div>
+          <div class="vinyl-topbar">
+            <div class="vinyl-chev">‹</div>
+            <div class="vinyl-tb-text">
+              <div class="vinyl-tb-title">Anti-Hero</div>
+              <div class="vinyl-tb-sub">Taylor Swift</div>
+            </div>
+            <div style="width:22px"></div>
+          </div>
+          <div class="vinyl-zone after">
+            <div class="vinyl-disc"><div class="vinyl-grooves"></div><div class="vinyl-art"></div></div>
+          </div>
+          <div class="vinyl-bottom">
+            <div class="vinyl-title">Anti-Hero</div>
+            <div class="vinyl-artist">Taylor Swift</div>
+            <div class="vinyl-seekbar"><div class="vinyl-seekbar-fill"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cols2">
+      <div class="panel">
+        <div class="panel-head"><span class="tag before">Before — GlossyPlayerStyles.kt</span></div>
+        <pre><span class="del">Spacer(Modifier.height(6.dp))</span>
+<span class="del">Box(</span>
+<span class="del">    modifier = Modifier.fillMaxWidth().weight(1f),</span>
+<span class="del">    contentAlignment = Alignment.Center,  // half gap pools above</span>
+<span class="del">) {</span>
+<span class="del">    BoxWithConstraints(modifier = Modifier.fillMaxSize(),</span>
+<span class="del">        contentAlignment = Alignment.Center) {</span></pre>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><span class="tag after">After — GlossyPlayerStyles.kt</span></div>
+        <pre><span class="ins">Spacer(Modifier.height(4.dp))</span>
+<span class="ins">Box(</span>
+<span class="ins">    modifier = Modifier</span>
+<span class="ins">        .fillMaxWidth().weight(1f)</span>
+<span class="ins">        .padding(top = 8.dp),  // small breathing gap only</span>
+<span class="ins">    contentAlignment = Alignment.TopCenter,</span>
+<span class="ins">) {</span>
+<span class="ins">    BoxWithConstraints(modifier = Modifier.fillMaxWidth(),</span>
+<span class="ins">        contentAlignment = Alignment.TopCenter) {</span>
+<span class="ins">    // maxHeight = ∞ → fittedSide = maxWidth (correct)</span></pre>
+        <div class="files"><span class="file-tag"><b>GlossyPlayerStyles.kt</b> — VinylNowPlaying</span></div>
+      </div>
+    </div>
+  </section>
+
+</div>
+<script>
+// Spotlight
+(function(){
+  var cards=document.querySelectorAll('.spot-card');
+  var canvases=document.querySelectorAll('.spot-canvas');
+  var badges=[document.getElementById('sb0'),document.getElementById('sb1'),document.getElementById('sb2')];
+  var statusEl=document.getElementById('spotStatus');
+  var names=['card 1','card 2','card 3'];
+  function settle(i){
+    cards.forEach(function(c){c.classList.remove('active-card');});
+    cards[i].classList.add('active-card');
+    canvases.forEach(function(c){c.classList.remove('live');});
+    badges.forEach(function(b,j){b.textContent='still';b.className='spot-badge still';});
+    badges[i].textContent='loading…';badges[i].className='spot-badge loading';
+    var nxt=(i+1)%3;
+    setTimeout(function(){
+      canvases[i].classList.add('live');
+      badges[i].textContent='canvas live';badges[i].className='spot-badge live';
+      badges[nxt].textContent='prefetched';badges[nxt].className='spot-badge loading';
+      statusEl.innerHTML='<b>Settled:</b> '+names[i]+' — canvas live · '+names[nxt]+' prefetched';
+    },900);
+  }
+  cards.forEach(function(c){c.addEventListener('click',function(){settle(parseInt(c.getAttribute('data-i')));});});
+  settle(1);
+})();
+
+// Mini player
+(function(){
+  var tracks=[
+    {title:'Anti-Hero',artist:'Taylor Swift',hue:'270'},
+    {title:'Flowers',artist:'Miley Cyrus',hue:'160'},
+    {title:'Blinding Lights',artist:'The Weeknd',hue:'330'}
+  ];
+  var idxB=0,idxA=0;
+  function log(id,msg,cls){var b=document.getElementById(id);var d=document.createElement('div');if(cls)d.className=cls;d.textContent=msg;b.appendChild(d);b.scrollTop=b.scrollHeight;}
+  function flash(id,txt){var e=document.getElementById(id);e.textContent=txt;e.classList.add('show');setTimeout(function(){e.classList.remove('show');},700);}
+  function slide(pfx,t,cb){
+    var info=document.getElementById('info'+pfx);
+    info.classList.remove('visible');info.classList.add('slide-out');
+    setTimeout(function(){
+      document.getElementById('title'+pfx).textContent=t.title;
+      document.getElementById('artist'+pfx).textContent=t.artist;
+      document.getElementById('thumb'+pfx).style.background='linear-gradient(135deg,hsl('+t.hue+',60%,38%),hsl('+t.hue+',70%,58%))';
+      info.classList.remove('slide-out');info.classList.add('slide-in');
+      setTimeout(function(){info.classList.remove('slide-in');info.classList.add('visible');if(cb)cb();},50);
+    },240);
+  }
+  window.seekOld=function(){
+    log('logB','⏩ +10s seek — metadata re-emitted (same song)','miss');
+    flash('sfB','+10s ⏩');
+    slide('B',tracks[idxB],function(){log('logB','  → AnimatedContent saw new object ref → spurious slide fired','miss');});
+  };
+  window.skipOld=function(){
+    idxB=(idxB+1)%tracks.length;
+    log('logB','⏭ Next track → "'+tracks[idxB].title+'" (slide is correct here)','hit');
+    slide('B',tracks[idxB]);
+  };
+  window.seekNew=function(){
+    log('logA','⏩ +10s seek — id unchanged ("'+tracks[idxA].title+'")','hit');
+    flash('sfA','+10s ⏩');
+    log('logA','  → AnimatedContent key=id, no change → no slide ✓','hit');
+  };
+  window.skipNew=function(){
+    idxA=(idxA+1)%tracks.length;
+    log('logA','⏭ Next track → "'+tracks[idxA].title+'" → id changed → slide fires ✓','hit');
+    slide('A',tracks[idxA]);
+  };
+  log('logB','Bug demo — press "seek" to see spurious slide');
+  log('logA','Fixed demo — press "seek" then "next" to compare');
+})();
+</script>
+</body>
+</html>

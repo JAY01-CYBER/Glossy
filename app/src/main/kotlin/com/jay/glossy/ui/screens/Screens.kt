@@ -25,7 +25,6 @@ sealed class Screens(
         route = "home"
     )
 
-    
     object Mix : Screens(
         titleId = R.string.mix,
         iconIdInactive = R.drawable.radio, 
@@ -55,6 +54,16 @@ sealed class Screens(
     )
 
     companion object {
-        val MainScreens = listOf(Home, Mix, Search, ListenTogether, Library)
+        /**
+         * The bottom bar of the new design: Home · Mix · Library. Search rides
+         * the floating bar as its own pill, and Listen
+         * Together stays in the top bar; all three are still reachable through
+         * their routes.
+         *
+         * Explore is deliberately not here any more: its charts, moods and new
+         * releases all live on Home, so the tab only ever opened a second way to
+         * the same browse endpoints.
+         */
+        val MainScreens = listOf(Home, Mix, Library)
     }
 }

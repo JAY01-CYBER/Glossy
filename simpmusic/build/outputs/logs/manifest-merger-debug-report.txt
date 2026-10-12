@@ -1,0 +1,16 @@
+-- Merging decision tree log ---
+manifest
+ADDED from C:\Users\Chikku\Downloads\Glossy-test-master\simpmusic\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest17510179301873606803.xml:2:13-83
+INJECTED from C:\Users\Chikku\Downloads\Glossy-test-master\simpmusic\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest17510179301873606803.xml:2:13-83
+	package
+		INJECTED from C:\Users\Chikku\Downloads\Glossy-test-master\simpmusic\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest17510179301873606803.xml
+	xmlns:android
+		ADDED from C:\Users\Chikku\Downloads\Glossy-test-master\simpmusic\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest17510179301873606803.xml:2:23-81
+uses-sdk
+INJECTED from C:\Users\Chikku\Downloads\Glossy-test-master\simpmusic\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest17510179301873606803.xml reason: use-sdk injection requested
+INJECTED from C:\Users\Chikku\Downloads\Glossy-test-master\simpmusic\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest17510179301873606803.xml
+INJECTED from C:\Users\Chikku\Downloads\Glossy-test-master\simpmusic\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest17510179301873606803.xml
+	android:targetSdkVersion
+		INJECTED from C:\Users\Chikku\Downloads\Glossy-test-master\simpmusic\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest17510179301873606803.xml
+	android:minSdkVersion
+		INJECTED from C:\Users\Chikku\Downloads\Glossy-test-master\simpmusic\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest17510179301873606803.xml
