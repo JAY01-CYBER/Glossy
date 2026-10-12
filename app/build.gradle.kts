@@ -398,7 +398,6 @@ dependencies {
     implementation(project(":betterlyrics"))
     implementation(project(":shazamkit"))
     implementation(project(":paxsenix"))
-    implementation(project(":musixmatch"))
     implementation(project(":youlyplus"))
     implementation(project(":unison"))
     implementation(project(":simpmusic"))
