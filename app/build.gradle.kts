@@ -109,10 +109,6 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
 
-        ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
-        }
-
         // LastFM API keys from GitHub Secrets
         val lastFmKey = localProperties.getProperty("LASTFM_API_KEY") ?: System.getenv("LASTFM_API_KEY") ?: ""
         val lastFmSecret = localProperties.getProperty("LASTFM_SECRET") ?: System.getenv("LASTFM_SECRET") ?: ""
@@ -187,7 +183,19 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            ndk {
+                abiFilters.clear()
+                abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+            }
         }
+        
+        maybeCreate("nonMinifiedRelease").apply {
+            ndk {
+                abiFilters.clear()
+                abiFilters += listOf("x86", "x86_64", "armeabi-v7a", "arm64-v8a")
+            }
+        }
+
         debug {
             if (applicationIdOverride == null) {
                 applicationIdSuffix = ".debug"
@@ -443,6 +451,4 @@ dependencies {
     implementation("dev.chrisbanes.haze:haze-materials:1.1.1")
 }
 
-
 // Cache bust for spotifycore module update
-
