@@ -35,6 +35,7 @@ plugins {
     alias(libs.plugins.kotlin.ksp)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.androidx.baselineprofile)
 }
 
 abstract class GenerateProtoTask : DefaultTask() {
@@ -328,7 +329,16 @@ configurations.configureEach {
     exclude(group = "org.json", module = "json")
 }
 
+baselineProfile {
+    // Commit generated, variant-specific profiles under src/<variant>/generated/baselineProfiles.
+    saveInSrc = true
+}
+
 dependencies {
+    // Installs/validates packaged Baseline Profiles on supported Android versions.
+    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
+    baselineProfile(project(":baselineprofile"))
+
     implementation(libs.guava)
     implementation(libs.coroutines.guava)
     implementation(libs.concurrent.futures)
