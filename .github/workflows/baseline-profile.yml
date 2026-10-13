@@ -17,7 +17,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: [gms, foss, izzy]
+        include:
+          - variant: gms
+            variantName: Gms
+          - variant: foss
+            variantName: Foss
+          - variant: izzy
+            variantName: Izzy
 
     steps:
       - name: Checkout source
@@ -37,7 +43,7 @@ jobs:
           packages: platform-tools
 
       - name: Install SDK packages required by Glossy
-        run: sdkmanager --install "build-tools;35.0.0"
+        run: sdkmanager --install "platforms;android-37" "build-tools;35.0.0"
 
       - name: Grant execute permission for Gradle
         run: chmod +x gradlew
@@ -74,11 +80,11 @@ jobs:
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
           script: |
             adb devices
-            ./gradlew :baselineprofile:connected${{ matrix.variant == 'gms' && 'Gms' || matrix.variant == 'foss' && 'Foss' || 'Izzy' }}NonMinifiedReleaseAndroidTest --stacktrace
+            ./gradlew :app:generate${{ matrix.variantName }}ReleaseBaselineProfile --stacktrace
 
       - name: Build release variant
         run: |
-          ./gradlew :app:assemble${{ matrix.variant == 'gms' && 'Gms' || 'Foss' }}Release --stacktrace
+          ./gradlew :app:assemble${{ matrix.variantName }}Release --stacktrace
         env:
           GLOSSY_APPLICATION_ID: com.jay.glossy
           GLOSSY_APP_NAME: Glossy Nightly
@@ -86,6 +92,24 @@ jobs:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
           LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+
+      - name: Verify Baseline Profile is packaged
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t APKS < <(find "app/build/outputs/apk/${{ matrix.variant }}/release" -type f -name "*.apk" ! -name "*-signed.apk")
+          VERIFIED=false
+          for APK in "${APKS[@]}"; do
+            if unzip -l "$APK" | grep -q 'assets/dexopt/baseline.prof'; then
+              echo "Verified assets/dexopt/baseline.prof in $APK"
+              VERIFIED=true
+              break
+            fi
+          done
+          if [[ "$VERIFIED" != "true" ]]; then
+            echo "No APK in app/build/outputs/apk/${{ matrix.variant }}/release contains assets/dexopt/baseline.prof" >&2
+            exit 1
+          fi
 
       - name: Sign Release APK
         uses: ilharp/sign-android-release@v2.0.0
