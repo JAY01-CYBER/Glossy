@@ -74,11 +74,13 @@ jobs:
         with:
           # Keep Android SDK platform-tools and emulator on the x86_64
           # GitHub-hosted runner architecture.
-          api-level: 35
+          api-level: 34
           target: google_apis
           arch: x86_64
           profile: pixel_2
-          disable-animations: true
+          # Avoid the emulator-runner animation/unlock setup that fails with
+          # "Can't find service: input" on the API 35 image.
+          disable-animations: false
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
           script: |
             adb devices
