@@ -72,19 +72,20 @@ jobs:
       - name: Generate Baseline Profile on Android Emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          # Keep Android SDK platform-tools and emulator on the x86_64
-          # GitHub-hosted runner architecture.
-          api-level: 34
-          target: google_apis
+          # Match the known-good x86_64 emulator setup used by the reference
+          # workflow. The app APK is ARM-only, so the test task must install/run
+          # against an emulator image that supports ARM translation where available.
+          api-level: 33
+          target: aosp_atd
           arch: x86_64
           profile: pixel_2
-          # Avoid the emulator-runner animation/unlock setup that fails with
-          # "Can't find service: input" on the API 35 image.
+          # Avoid the action's animation-disable command; some images report
+          # "Can't find service: input" for adb shell input.
           disable-animations: false
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
           script: |
             adb devices
-            ./gradlew :app:generate${{ matrix.variantName }}ReleaseBaselineProfile --stacktrace
+            ./gradlew :baselineprofile:connected${{ matrix.variantName }}NonMinifiedReleaseAndroidTest --stacktrace
 
       - name: Build release variant
         run: |
