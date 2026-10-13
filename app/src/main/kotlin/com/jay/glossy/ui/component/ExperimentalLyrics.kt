@@ -87,6 +87,7 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jay.glossy.LocalDatabase
+import com.jay.glossy.db.entities.lyricsClockOffset
 import com.jay.glossy.LocalListenTogetherManager
 import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.constants.AiProviderKey
@@ -379,7 +380,7 @@ fun ExperimentalLyrics(
             currentPositionState = position
             smoothPositionForSync = position
             
-            val lyricsOffset = currentSong?.song?.lyricsOffset ?: 0
+            val lyricsOffset = currentSong?.song?.lyricsClockOffset ?: 0
             val effectivePosition = position + lyricsOffset
             
             val initialActiveIndices = findActiveLineIndices(lines, effectivePosition)
@@ -660,7 +661,7 @@ fun ExperimentalLyrics(
                     target =
                         findActiveLineIndices(
                             lines,
-                            currentPositionState + (currentSong?.song?.lyricsOffset ?: 0),
+                            currentPositionState + (currentSong?.song?.lyricsClockOffset ?: 0),
                         ).maxOrNull() ?: -1
                 }
                 if (target != -1) {
@@ -746,7 +747,7 @@ fun ExperimentalLyrics(
                         }
                     }
             ) {
-                val lyricsOffsetVal = (currentSong?.song?.lyricsOffset ?: 0).toLong()
+                val lyricsOffsetVal = (currentSong?.song?.lyricsClockOffset ?: 0).toLong()
                 val currentEffectivePosition = currentPositionState + lyricsOffsetVal
                 
                 if (isLyricsProviderShown) {
@@ -816,7 +817,7 @@ fun ExperimentalLyrics(
                                         isActiveLine = isActiveLine,
                                         bgVisible = bgVisible, isSelected = selectedIndices.contains(index),
                                         isSelectionModeActive = isSelectionModeActive, currentPositionState = currentPositionState,
-                                        lyricsOffset = (currentSong?.song?.lyricsOffset ?: 0).toLong(),
+                                        lyricsOffset = (currentSong?.song?.lyricsClockOffset ?: 0).toLong(),
                                         playerConnection = playerConnection, lyricsTextSize = lyricsTextSize, lyricsLineSpacing = lyricsLineSpacing,
                                         expressiveAccent = expressiveAccent, lyricsTextPosition = lyricsTextPosition,
                                         respectAgentPositioning = respectAgentPositioning, isAutoScrollEnabled = isAutoScrollEnabled,
@@ -832,7 +833,7 @@ fun ExperimentalLyrics(
                                                 else showMaxSelectionToast = true
                                             } else if (changeLyrics && !isGuest) {
                                                 if (item.time < playerConnection.player.duration + 30000L) {
-                                                    playerConnection.seekTo((item.time - (currentSong?.song?.lyricsOffset ?: 0)).coerceAtLeast(0))
+                                                    playerConnection.seekTo((item.time - (currentSong?.song?.lyricsClockOffset ?: 0)).coerceAtLeast(0))
                                                 } else {
                                                     scrollTargetIndex = index
                                                     deferredCurrentLineIndex = index

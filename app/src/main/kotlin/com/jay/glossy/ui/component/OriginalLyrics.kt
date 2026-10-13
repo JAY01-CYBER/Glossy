@@ -117,6 +117,7 @@ import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import coil3.toBitmap
 import com.jay.glossy.LocalDatabase
+import com.jay.glossy.db.entities.lyricsClockOffset
 import com.jay.glossy.LocalListenTogetherManager
 import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.constants.AiProviderKey
@@ -589,7 +590,7 @@ fun OriginalLyrics(
             isSeeking = sliderPosition != null
             val position = sliderPosition ?: playerConnection.player.currentPosition
             currentPlaybackPosition = position
-            val lyricsOffset = currentSong?.song?.lyricsOffset ?: 0
+            val lyricsOffset = currentSong?.song?.lyricsClockOffset ?: 0
             currentLineIndex = findCurrentLineIndex(lines, position + lyricsOffset)
         }
     }
@@ -923,7 +924,7 @@ fun OriginalLyrics(
                         }
                     }
                 } else {
-                    val lyricsOffset = currentSong?.song?.lyricsOffset?.toLong() ?: 0L
+                    val lyricsOffset = currentSong?.song?.lyricsClockOffset?.toLong() ?: 0L
                     val effectivePlaybackPosition = currentPlaybackPosition + lyricsOffset
 
                     itemsIndexed(
@@ -955,7 +956,7 @@ fun OriginalLyrics(
                                             }
                                         } else if (isSynced && changeLyrics && !isGuest) {
                                             // Professional seek action with smooth animation
-                                            val lyricsOffset = currentSong?.song?.lyricsOffset ?: 0
+                                            val lyricsOffset = currentSong?.song?.lyricsClockOffset ?: 0
                                             playerConnection.seekTo((item.time - lyricsOffset).coerceAtLeast(0))
                                             // Smooth slow scroll when clicking on lyrics (3 seconds)
                                             scope.launch {
