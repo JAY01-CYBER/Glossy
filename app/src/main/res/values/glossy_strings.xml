@@ -18,5 +18,5 @@
     <string name="audio_quality_opus">Opus (highest WebM)</string>
     <!-- Player menu — forces a fresh animated-canvas lookup for the current song -->
     <string name="refresh_canvas">Refresh canvas</string>
-    <string name="refresh_canvas_desc">Look for this song's animated artwork again, ignoring every cached answer</string>
+    <string name="refresh_canvas_desc">Look for this song\'s animated artwork again, ignoring every cached answer</string>
 </resources>
