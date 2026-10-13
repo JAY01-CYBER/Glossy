@@ -264,3 +264,9 @@ All trademarks, service marks, and intellectual property rights referenced in th
 **Developed with ❤️ by Jay Chaudhary**
 
 </div>
+
+
+## Developer performance and APK analysis
+
+- [Baseline Profile generation and verification](docs/performance/baseline-profile.md)
+- [Local APK analysis with REA](tools/reverse-engineering/README.md)
