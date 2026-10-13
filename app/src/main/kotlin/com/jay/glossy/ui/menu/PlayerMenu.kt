@@ -707,6 +707,19 @@ fun PlayerMenu(
                                 onDismiss()
                             },
                         ),
+                        Material3MenuItemData(
+                            icon = { PlayerMenuTonalTile(iconRes = R.drawable.refresh) },
+                            title = { Text(text = stringResource(R.string.refresh_canvas)) },
+                            description = { Text(text = stringResource(R.string.refresh_canvas_desc)) },
+                            cardColors = menuRowColors(),
+                            onClick = {
+                                // Drops every cached canvas answer and re-keys the
+                                // on-screen surfaces, so a wrong or missing
+                                // animation is asked for again immediately.
+                                com.jay.glossy.ui.player.CanvasResolver.requestRefresh()
+                                onDismiss()
+                            },
+                        ),
                     ),
             )
         }

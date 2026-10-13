@@ -314,16 +314,12 @@ enum class MiniLyricsAnimationStyle {
 val CanvasStyleKey = stringPreferencesKey("canvasStyle")
 enum class CanvasStyle {
     /**
-     * Race every provider (Spotify + ArchiveTune + Tidal + Apple + YouTube =
-     * the Glossy engine) concurrently and show the first canvas that comes back.
+     * Race every provider (Spotify + Tidal + Apple + YouTube) concurrently and
+     * show the first canvas that comes back.
      */
     ALL,
     /** Glossy engine: Tidal + Apple Music (original behavior). */
     GLOSSY,
-    /** ArchiveTune engine: BetterLyrics community artwork service. */
-    ARCHIVE_TUNE,
-    /** Try BetterLyrics first, then fall back to Tidal + Apple Music. */
-    BOTH,
     /** Spotify web-player Canvas artwork. */
     SPOTIFY,
     /** YouTube/InnerTube visualizer clips and #shorts. */
@@ -387,6 +383,20 @@ enum class AudioQuality {
     AUTO,
     LOW,
     HIGH,
+
+    /**
+     * The best stream the track can offer, whatever label YouTube puts on it:
+     * the highest bitrate available rather than the highest *reported* tier.
+     */
+    VERY_HIGH,
+
+    /**
+     * Opus (WebM) audio at the highest bitrate the track carries. Opus is what
+     * YouTube Music itself serves for most tracks, so this is the codec as the
+     * service intends it — and it is a smaller download than the AAC stream of
+     * the same quality.
+     */
+    OPUS,
 }
 
 val AudioOffload = booleanPreferencesKey("enableOffload")

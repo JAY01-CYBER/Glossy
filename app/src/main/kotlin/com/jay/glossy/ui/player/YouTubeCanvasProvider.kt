@@ -57,6 +57,27 @@ object YouTubeCanvasProvider {
     private const val MAX_VIDEO_DURATION_SECONDS = 90
 
     /**
+     * A label's own visualizer can run the whole song while it loops the
+     * animated artwork, so it is allowed to be longer than a canvas clip — but
+     * still bounded, because ten minutes is the most a loop can justify and an
+     * hour of it is not one.
+     */
+    private const val MAX_OFFICIAL_VISUALIZER_SECONDS = 600
+
+    /**
+     * How long a "no canvas" answer is remembered.
+     *
+     * A song YouTube has no animation for otherwise re-runs the whole search
+     * chain — six searches, then a player request per surviving candidate —
+     * every single time it is played. The empty answer is a fact about the
+     * song, so it is cached, briefly.
+     */
+    private const val NEGATIVE_CACHE_TTL_MS = 1000L * 60L * 30L
+
+    /** Most candidates given the per-video stream-URL lookup, which is slow. */
+    private const val MAX_PROBED_CANDIDATES = 5
+
+    /**
      * The clients a stream URL is asked for, in order of how well they answer
      * while signed out. Every one of them is login-free: a canvas must not
      * depend on the account that happens to be connected.
@@ -99,7 +120,15 @@ object YouTubeCanvasProvider {
             }
         }
 
+        // Remember the empty answer briefly so a song with no canvas is not
+        // re-searched on every play.
+        cache[key] = CacheEntry(null, System.currentTimeMillis() + NEGATIVE_CACHE_TTL_MS)
         return null
+    }
+
+    /** Drops every remembered answer, positive and negative. */
+    fun clearCache() {
+        cache.clear()
     }
 
     /**
@@ -213,6 +242,8 @@ object YouTubeCanvasProvider {
             "$normalizedArtist $normalizedSong official visualizer",
             "$normalizedArtist $normalizedSong visualizer",
             "$normalizedArtist $normalizedSong canvas",
+            "$normalizedArtist $normalizedSong animated artwork",
+            "$normalizedArtist $normalizedSong official artwork",
             "$normalizedArtist $normalizedSong #shorts",
             "$normalizedSong visualizer",
             "$normalizedSong #shorts",
@@ -402,7 +433,25 @@ object YouTubeCanvasProvider {
                 // An unknown length is left to the checks above rather than
                 // refused on a number the search did not give.
                 val durationSeconds = item.duration ?: 0
-                if (durationSeconds > MAX_VIDEO_DURATION_SECONDS) return@mapNotNull null
+                if (durationSeconds > MAX_VIDEO_DURATION_SECONDS) {
+                    // The one exception to the canvas window: a label's own
+                    // visualizer, which loops the animated artwork for the
+                    // whole song. It must say so in its title *and* come from
+                    // the song's own channel, and an "(Official Video)" never
+                    // qualifies — that is footage, not an animated cover —
+                    // because ownVideoClaim is consulted first.
+                    val claimsOfficialVisualizer =
+                        !ownVideoClaim.containsMatchIn(resultTitle) &&
+                            (
+                                resultTitle.contains("visualizer", true) ||
+                                    resultTitle.contains("canvas", true) ||
+                                    resultTitle.contains("animated artwork", true)
+                            ) &&
+                            isOfficialUpload(uploader, artistValidation)
+                    if (!claimsOfficialVisualizer || durationSeconds > MAX_OFFICIAL_VISUALIZER_SECONDS) {
+                        return@mapNotNull null
+                    }
+                }
 
                 // A channel that is not the song's own — no artist name, no
                 // VEVO, no OMV type — may only stand in when the title
@@ -430,7 +479,10 @@ object YouTubeCanvasProvider {
                 }.thenByDescending { it.claimsOwnAnimation },
             )
 
-        for (candidate in ordered) {
+        // Each candidate costs a player request per client, so only the best
+        // few are probed; the ordering above already put the song's own
+        // uploads at the front.
+        for (candidate in ordered.take(MAX_PROBED_CANDIDATES)) {
             val videoUrl = getVideoStreamUrl(candidate.item.id)
             if (videoUrl.isNullOrBlank()) continue
             return CanvasArtwork(

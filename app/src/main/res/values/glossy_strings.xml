@@ -13,4 +13,10 @@
     <string name="listen_together_waiting_for_host_desc">The host has your request and taps Let in. This stays here until they decide — nothing is wrong while it waits.</string>
     <!-- Listen Together — Cloudflare Worker deployment, the app's own first server preset -->
     <string name="listen_together_glossy_cloudflare">Glossy on Cloudflare</string>
+    <!-- Audio quality tiers added beyond Auto / Low / High -->
+    <string name="audio_quality_very_high">Very high (best bitrate)</string>
+    <string name="audio_quality_opus">Opus (highest WebM)</string>
+    <!-- Player menu — forces a fresh animated-canvas lookup for the current song -->
+    <string name="refresh_canvas">Refresh canvas</string>
+    <string name="refresh_canvas_desc">Look for this song's animated artwork again, ignoring every cached answer</string>
 </resources>

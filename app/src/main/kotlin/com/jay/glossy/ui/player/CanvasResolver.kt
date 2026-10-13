@@ -3,11 +3,9 @@
  * Licensed under GPL-3.0 | See git history for contributors
  *
  * Canvas resolver — picks providers according to the user's Canvas style:
- *  - ALL:          Race Spotify + ArchiveTune + Glossy (Tidal + Apple) + YouTube
- *                  in parallel and show the first animated canvas that lands.
+ *  - ALL:          Race Spotify + Glossy (Tidal + Apple) + YouTube in
+ *                  parallel and show the best verified animated canvas.
  *  - GLOSSY:       Tidal + Apple Music (original Glossy engine)
- *  - ARCHIVE_TUNE: BetterLyrics community service (ported from ArchiveTune)
- *  - BOTH:         BetterLyrics first, then Tidal + Apple Music as fallback
  *  - SPOTIFY:      Spotify web-player Canvas, Glossy fallback
  *  - YOUTUBE:      YouTube/InnerTube visualizer clips and #shorts
  *
@@ -28,7 +26,6 @@ package com.jay.glossy.ui.player
 
 import android.content.Context
 import com.jay.glossy.applecanvas.AppleMusicCanvasProvider
-import com.jay.glossy.canvas.BetterLyricsCanvasProvider
 import com.jay.glossy.canvas.CanvasArtwork
 import com.jay.glossy.canvas.CanvasLookupUnavailable
 import com.jay.glossy.canvas.TidalCanvasProvider
@@ -42,6 +39,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -61,7 +61,6 @@ object CanvasResolver {
     private const val CacheProvider = "Cache"
 
     private const val SpotifyProvider = "Spotify"
-    private const val ArchiveTuneProvider = "ArchiveTune"
     private const val TidalProvider = "Tidal"
     private const val AppleProvider = "Apple Music"
     private const val YouTubeProvider = "YouTube"
@@ -149,6 +148,33 @@ object CanvasResolver {
     @Volatile
     private var cachedStyle: CanvasStyle? = null
 
+    /**
+     * Bumped when the user asks for a fresh canvas.
+     *
+     * A surface that has already drawn still artwork has no reason to look
+     * again — the lookup is keyed on the song, and the song has not changed. So
+     * a manual refresh needs a signal that is not the song, which is this: the
+     * surfaces key their lookup on it, every cache is emptied, and the whole
+     * provider chain is asked afresh for the track on screen.
+     */
+    private val _refreshSignal = MutableStateFlow(0)
+    val refreshSignal: StateFlow<Int> = _refreshSignal.asStateFlow()
+
+    /**
+     * Throw away every remembered answer and ask the surfaces to look again.
+     *
+     * Backs the "Refresh canvas" action in the player menu: the caches hold
+     * long-lived answers (a day for the YouTube provider, and a per-song
+     * playback cache), so without clearing them a refresh would return the very
+     * answer the user is trying to replace.
+     */
+    fun requestRefresh() {
+        invalidateStyle()
+        CanvasArtworkPlaybackCache.clear()
+        CanvasPrefetcher.reset()
+        _refreshSignal.value += 1
+    }
+
     suspend fun currentStyle(context: Context): CanvasStyle {
         cachedStyle?.let { return it }
         return styleMutex.withLock {
@@ -175,6 +201,9 @@ object CanvasResolver {
     fun invalidateStyle() {
         cachedStyle = null
         synchronized(definitiveMisses) { definitiveMisses.clear() }
+        // The YouTube provider remembers its own "no canvas" answers; a style
+        // change is exactly when they should be asked again.
+        YouTubeCanvasProvider.clearCache()
     }
 
     /**
@@ -199,6 +228,7 @@ object CanvasResolver {
      */
     fun invalidateCredentials() {
         synchronized(definitiveMisses) { definitiveMisses.clear() }
+        YouTubeCanvasProvider.clearCache()
         CanvasPrefetcher.reset()
     }
 
@@ -254,14 +284,7 @@ object CanvasResolver {
 
         val fetched: CanvasArtwork? =
             when (style) {
-                CanvasStyle.ARCHIVE_TUNE -> fetchArchiveTune(query, answers)
-
                 CanvasStyle.GLOSSY -> fetchGlossy(query, answers)
-
-                CanvasStyle.BOTH ->
-                    fetchArchiveTune(query, answers)
-                        ?: fetchGlossy(query, answers)
-                        ?: fetchYouTube(query, answers)
 
                 CanvasStyle.SPOTIFY -> {
                     val credentials = spotifyCredentials(context)
@@ -439,22 +462,9 @@ object CanvasResolver {
         }
     }
 
-    private suspend fun fetchArchiveTune(
-        query: CanvasQuery,
-        answers: MutableList<CanvasDiagnostics.Answer>,
-    ): CanvasArtwork? =
-        verify(
-            query,
-            ArchiveTuneProvider,
-            askProvider(ArchiveTuneProvider, answers) {
-                BetterLyricsCanvasProvider.getBySongArtist(query.title, query.artist, query.storefront)
-            },
-            answers,
-        )
-
     /**
-     * ALL style: fire every provider at once (Spotify, ArchiveTune/BetterLyrics,
-     * Tidal, Apple Music, YouTube) and return the best *verified* canvas, judged
+     * ALL style: fire every provider at once (Spotify, Tidal, Apple Music,
+     * YouTube) and return the best *verified* canvas, judged
      * by provider priority rather than by who merely replied first.
      *
      * The verification is what makes racing safe: an answer for another song is
@@ -502,9 +512,9 @@ object CanvasResolver {
         // The services that answer with the song's *own* animation — the
         // artist's canvas, the label's motion artwork — come first, and the
         // YouTube search comes last. That order is the whole reason this race
-        // exists: the other four answer about a track, while YouTube answers a
+        // exists: the other services answer about a track, while YouTube answers a
         // *query*, so its answer is a guess that somebody's re-upload can win,
-        // and it used to outrank Tidal, Apple Music and the artwork service.
+        // and it used to outrank Tidal and Apple Music.
         // That is how a person's clip ended up painted under the song's own
         // title while the label's animated cover sat unused in the same race.
         // A guess may only stand when nothing that owns the song has an
@@ -540,7 +550,6 @@ object CanvasResolver {
                         )
                     }
                 },
-                launch { ask(ArchiveTuneProvider) { BetterLyricsCanvasProvider.getBySongArtist(query.title, query.artist, query.storefront) } },
                 launch { ask(TidalProvider) { TidalCanvasProvider.getBySongArtist(query.title, query.artist, query.album) } },
                 launch {
                     ask(AppleProvider, alternativeTitle = query.album.takeIf { it.isNotBlank() }) {
@@ -564,7 +573,7 @@ object CanvasResolver {
         // Providers that have not reported yet. The loop watches this so it can
         // tell whether a higher-priority answer might still be on its way.
         val pendingProviders =
-            mutableSetOf(SpotifyProvider, ArchiveTuneProvider, TidalProvider, AppleProvider, YouTubeProvider)
+            mutableSetOf(SpotifyProvider, TidalProvider, AppleProvider, YouTubeProvider)
         while (pendingProviders.isNotEmpty()) {
             // Stop as soon as the best verified answer so far outranks everything
             // still running. A faster, lower-priority provider that replied first

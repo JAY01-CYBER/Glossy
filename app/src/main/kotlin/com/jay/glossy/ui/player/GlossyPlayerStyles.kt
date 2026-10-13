@@ -2172,6 +2172,10 @@ fun CapsuleNowPlaying(
                     maxLines = 1,
                     modifier = Modifier.weight(1f),
                 )
+                CastButton(
+                    modifier = Modifier.size(40.dp),
+                    tintColor = Color(0xFFFFF7EF),
+                )
                 StyleMenuButton(bottomSheetState = bottomSheetState, tint = Color(0xFFFFF7EF))
             }
 
@@ -2560,6 +2564,11 @@ fun CinematicNowPlaying(
                     contentDescription = "Collapse",
                 )
                 Spacer(Modifier.weight(1f))
+                CastButton(
+                    modifier = Modifier.size(40.dp),
+                    tintColor = Color(0xFFFFFAF5),
+                )
+                Spacer(Modifier.width(6.dp))
                 StyleIconButton(
                     icon = R.drawable.bedtime,
                     onClick = { showSleepTimer = true },
