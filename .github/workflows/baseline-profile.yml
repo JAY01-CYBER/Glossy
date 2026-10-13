@@ -72,9 +72,11 @@ jobs:
       - name: Generate Baseline Profile on Android Emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 33
-          target: aosp_atd
-          arch: arm64-v8a
+          # Use an x86_64 host-compatible emulator. API 35 supports ARM
+          # ABI translation for ARM-only app APKs on x86_64 emulator images.
+          api-level: 35
+          target: google_apis
+          arch: x86_64
           profile: pixel_2
           disable-animations: true
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
