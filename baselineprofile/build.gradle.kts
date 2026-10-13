@@ -12,6 +12,21 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // Mirror the app's product-flavor dimension so each profile test variant
+    // resolves to exactly one app variant (foss, gms, or izzy).
+    flavorDimensions += "variant"
+    productFlavors {
+        create("foss") {
+            dimension = "variant"
+        }
+        create("gms") {
+            dimension = "variant"
+        }
+        create("izzy") {
+            dimension = "variant"
+        }
+    }
+
     targetProjectPath = ":app"
 }
 
