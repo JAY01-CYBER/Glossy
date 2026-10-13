@@ -146,6 +146,13 @@ fun LibraryScreen() {
                             },
                         )
                         DropdownMenuItem(
+                            text = { Text(stringResource(R.string.glossy_explore_charts)) },
+                            onClick = {
+                                showOverflowMenu = false
+                                navController.navigate("charts_screen")
+                            },
+                        )
+                        DropdownMenuItem(
                             text = { Text(stringResource(R.string.stats)) },
                             onClick = {
                                 showOverflowMenu = false
