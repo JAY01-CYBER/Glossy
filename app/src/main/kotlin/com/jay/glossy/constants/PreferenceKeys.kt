@@ -125,7 +125,13 @@ enum class MiniPlayerStyle {
     GLOSSY_SPECIAL,
 
     /** The teal design system's compact bar with a teal progress hairline. */
-    STUDIO
+    STUDIO,
+
+    /**
+     * The experimental sea-glass bar: a sand-frosted surface that refracts the
+     * current artwork instead of painting a themed fill.
+     */
+    SEAGLASS
 }
 
 /**
@@ -391,10 +397,13 @@ enum class AudioQuality {
     VERY_HIGH,
 
     /**
-     * Opus (WebM) audio at the highest bitrate the track carries. Opus is what
-     * YouTube Music itself serves for most tracks, so this is the codec as the
-     * service intends it — and it is a smaller download than the AAC stream of
-     * the same quality.
+     * Opus (WebM) audio, capped at ~130 kbps rather than climbing to the
+     * track's largest stream. Opus is what YouTube Music itself serves for most
+     * tracks, so this is the codec as the service intends it — and it is a
+     * smaller download than the AAC stream of the same quality. The cap is what
+     * makes the tier worth choosing: above it the extra bits buy nothing a
+     * phone can hear. Tracks whose only Opus streams sit higher still play, at
+     * the smallest one they carry.
      */
     OPUS,
 }

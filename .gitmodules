@@ -1,3 +1,6 @@
 [submodule "metroproto"]
 	path = metroproto
 	url = https://github.com/MetrolistGroup/metroproto
+[submodule "third_party/SeaGlass"]
+	path = third_party/SeaGlass
+	url = https://github.com/mweinbach/SeaGlass.git

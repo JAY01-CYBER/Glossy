@@ -238,6 +238,13 @@ fun MiniPlayer(
                 onClick = onClick,
             )
         }
+        MiniPlayerStyle.SEAGLASS -> {
+            SeaGlassMiniPlayer(
+                progressState = progressState,
+                modifier = modifier,
+                onClick = onClick,
+            )
+        }
         MiniPlayerStyle.LEGACY -> {
             Box(modifier = modifier.fillMaxWidth()) {
                 LegacyMiniPlayer(

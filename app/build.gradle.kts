@@ -429,6 +429,10 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended:1.7.8")
 
     implementation("io.github.kyant0:backdrop:2.0.1")
+
+    // SeaGlass publishes no artifacts, so it is built from the vendored
+    // submodule as a subproject (see settings.gradle.kts).
+    implementation(project(":seaglass-compose"))
     implementation("dev.chrisbanes.haze:haze:1.1.1")
     implementation("dev.chrisbanes.haze:haze-materials:1.1.1")
 }

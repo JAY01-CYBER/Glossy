@@ -49,6 +49,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -78,12 +79,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -95,6 +99,10 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jay.glossy.R
+import dev.seaglass.compose.SeaGlassContentRole
+import dev.seaglass.compose.SeaGlassStageHost
+import dev.seaglass.compose.seaGlass
+import dev.seaglass.core.SeaGlassMaterial
 import kotlin.math.roundToInt
 
 // ============================================================================
@@ -116,11 +124,63 @@ private val PillText = Color(0xFFF3EDFF)
 
 /** White action card. */
 private val CardWhite = Color(0xFFFFFFFF)
-private val GoogleButton = Color(0xFF7C3AED)
-private val OnGoogleButton = Color(0xFFFFFFFF)
-private val GuestButton = Color(0xFFE8E8ED)
-private val OnGuestButton = Color(0xFF1A1226)
+
+/**
+ * The two action pills are pastel sea glass, so these are the tints the glass
+ * body is mixed from rather than the colour the button is painted — they are
+ * only ever seen flat in the tooling preview, where the glass cannot draw.
+ * Dark ink on a pale body is what keeps them readable: sea glass is a surface,
+ * not a fill.
+ */
+private val GoogleButton = Color(0xFFE3D5FF)
+private val OnGoogleButton = Color(0xFF3A1C7A)
+private val GuestButton = Color(0xFFD2E6FF)
+private val OnGuestButton = Color(0xFF10315B)
 private val CookieLink = Color(0xFF4A4358)
+
+/**
+ * Shadow under a floating pill. The card is white, so a neutral grey shadow
+ * reads as dirt; tinting it with the pill's own ink keeps it looking like the
+ * surface lifting off the card rather than a stain beneath it.
+ */
+private val GoogleShadow = Color(0xFF5B2FBF)
+private val GuestShadow = Color(0xFF2F5B9E)
+
+/**
+ * The two action pills as pastel sea glass rather than flat paint: the tint is
+ * carried as Beer-Lambert body absorption, so the colour sits inside the glass
+ * and the chalky rim picks up the card's light instead of drawing a colour on
+ * top of it.
+ *
+ * The body is kept pale and see-through ([transparency] well above a half,
+ * [tintDensity] low) because the ink on these pills is dark: that is the
+ * Material 4 sea-glass reading — a frosted pastel pebble with dark lettering —
+ * and it is also what keeps the pills quiet next to the white card.
+ */
+private val GoogleSeaGlass = SeaGlassMaterial(
+    tintColorArgb = GoogleButton.toArgb(),
+    tintDensity = 0.44f,
+    coarseness = 0.30f,
+    frostRadiusDp = 28f,
+    thicknessDp = 15f,
+    rimChalkiness = 0.58f,
+    transparency = 0.70f,
+    // Half the 52dp pill: fully round, matching the percent-50 outline it had.
+    cornerRadiusDp = 26f,
+)
+
+private val GuestSeaGlass = SeaGlassMaterial(
+    tintColorArgb = GuestButton.toArgb(),
+    // A shade more frost than the Google pill: it is the quieter of the two, so
+    // it should read as more stone-like, not as a second highlight.
+    tintDensity = 0.38f,
+    coarseness = 0.34f,
+    frostRadiusDp = 30f,
+    thicknessDp = 16f,
+    rimChalkiness = 0.62f,
+    transparency = 0.66f,
+    cornerRadiusDp = 26f,
+)
 
 /** Footnote and credits, small type sitting on the gradient below the card. */
 private val FootnoteWhite = Color(0xF0FFFFFF)
@@ -170,27 +230,35 @@ fun GlossyLoginScreen(
         label = "backdropBreath",
     )
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .drawBehind {
-                val breath = backdropBreath - 0.5f
-                drawRect(
-                    brush = Brush.radialGradient(
-                        colors = listOf(BackdropFocus, BackdropMid, BackdropEdge),
-                        center = Offset(
-                            size.width * (0.5f + breath * 0.06f),
-                            size.height * (0.42f + breath * 0.05f),
+    // The gradient and the key art are the backdrop the sea-glass action pills
+    // refract. Handing them to the stage as a layer of their own is what makes
+    // the glass read the finished backdrop instead of whatever happened to be
+    // drawn underneath it at the time.
+    val backdrop: @Composable BoxScope.() -> Unit = {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .drawBehind {
+                    val breath = backdropBreath - 0.5f
+                    drawRect(
+                        brush = Brush.radialGradient(
+                            colors = listOf(BackdropFocus, BackdropMid, BackdropEdge),
+                            center = Offset(
+                                size.width * (0.5f + breath * 0.06f),
+                                size.height * (0.42f + breath * 0.05f),
+                            ),
+                            radius = size.maxDimension * (0.92f + breath * 0.08f),
                         ),
-                        radius = size.maxDimension * (0.92f + breath * 0.08f),
-                    ),
-                )
-            },
-    ) {
-        // Key art first, so it sits under everything the column draws — the
-        // brand block over it, the card over its feet.
-        HoloPropsBackdrop(modifier = Modifier.fillMaxSize())
+                    )
+                },
+        ) {
+            // Key art first, so it sits under everything the column draws — the
+            // brand block over it, the card over its feet.
+            HoloPropsBackdrop(modifier = Modifier.fillMaxSize())
+        }
+    }
 
+    val content: @Composable () -> Unit = {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -288,6 +356,19 @@ fun GlossyLoginScreen(
             }
 
             Spacer(Modifier.height(14.dp))
+        }
+    }
+
+    // A preview has no GPU pass to sample, and a shader asked to open one there
+    // only fails: it gets the plain tree, where the pills keep their flat fills.
+    if (LocalInspectionMode.current) {
+        Box(modifier = modifier.fillMaxSize()) {
+            backdrop()
+            content()
+        }
+    } else {
+        SeaGlassStageHost(modifier = modifier, background = backdrop) {
+            content()
         }
     }
 }
@@ -600,6 +681,8 @@ private fun LoginCard(
             // either is read.
             LoginActionButton(
                 fill = GoogleButton,
+                material = GoogleSeaGlass,
+                shadowTint = GoogleShadow,
                 sheen = true,
                 onClick = onGoogleClick,
             ) {
@@ -622,6 +705,8 @@ private fun LoginCard(
 
             LoginActionButton(
                 fill = GuestButton,
+                material = GuestSeaGlass,
+                shadowTint = GuestShadow,
                 onClick = onGuestClick,
             ) {
                 Text(
@@ -653,8 +738,18 @@ private fun LoginCard(
 }
 
 /**
- * One pill inside the action card: [fill] behind centred [content], with press
- * feedback of its own and, when [sheen] is set, a slow highlight crossing it.
+ * One pill inside the action card: a sea-glass body tinted with [material]
+ * behind centred [content], lifted off the card by a shadow of its own, with
+ * press feedback and, when [sheen] is set, a slow highlight crossing it.
+ *
+ * [fill] is only the fallback — it is painted when the glass cannot be drawn,
+ * which is the tooling preview. Everywhere else the pill is a real surface: it
+ * refracts the backdrop, frosts its body and catches a chalky rim instead of
+ * showing a flat colour.
+ *
+ * The shadow is what makes the pill read as an object on the card rather than a
+ * pastel patch of it, and [shadowTint] is the pill's own ink at a low alpha so
+ * the lift looks like the same material rather than a grey smudge.
  *
  * The press answers on the spring's scale rather than on a ripple, because the
  * pill is small and its own colour is the whole point: shrinking it 3% says
@@ -663,6 +758,8 @@ private fun LoginCard(
 @Composable
 private fun LoginActionButton(
     fill: Color,
+    material: SeaGlassMaterial,
+    shadowTint: Color,
     onClick: () -> Unit,
     sheen: Boolean = false,
     content: @Composable RowScope.() -> Unit,
@@ -690,6 +787,19 @@ private fun LoginActionButton(
         label = "sheenSweep",
     )
 
+    // The sea-glass body replaces the flat fill outright: it paints its own
+    // tinted, frosted, rim-lit contour, so a fill underneath would only
+    // flatten it back out.
+    val surface =
+        if (LocalInspectionMode.current) {
+            Modifier.background(fill)
+        } else {
+            Modifier.seaGlass(
+                material = material,
+                contentRole = SeaGlassContentRole.TEXT_AND_ICONS,
+            )
+        }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -698,8 +808,20 @@ private fun LoginActionButton(
                 scaleX = pressScale
                 scaleY = pressScale
             }
+            // Drawn before the glass so the lift sits behind the pill. Only the
+            // API 28+ shadow renderer takes these colours; below that the
+            // platform ignores them and casts its own neutral one.
+            .shadow(
+                elevation = 10.dp,
+                shape = RoundedCornerShape(percent = 50),
+                clip = false,
+                ambientColor = shadowTint.copy(alpha = 0.30f),
+                spotColor = shadowTint.copy(alpha = 0.42f),
+            )
+            // Keeps the touch bounds on the pill's outline; the glass contour
+            // is the same circle, so nothing the shader draws is cut off.
             .clip(RoundedCornerShape(percent = 50))
-            .background(fill)
+            .then(surface)
             .clickable(
                 interactionSource = interactionSource,
                 // No ripple: the pill is the feedback.
