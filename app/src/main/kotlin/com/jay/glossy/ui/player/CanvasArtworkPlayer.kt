@@ -39,13 +39,30 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import com.jay.glossy.constants.CanvasCacheMode
 import com.jay.glossy.constants.CanvasCacheModeKey
 import com.jay.glossy.utils.rememberEnumPreference
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import java.io.File
 import java.util.Locale
 
 /** How many times a canvas that errors mid-track is prepared again. */
 private const val MaxCanvasRetries = 3
+
+/**
+ * How many times a clip that has *already drawn a frame* is prepared again.
+ *
+ * A canvas is a loop, so it is read over and over, and the loop is the part
+ * most exposed to a hiccup: a decoder that trips once, a network gap in the
+ * middle of a streamed clip, a surface handed over at exactly the wrong moment.
+ * None of that is evidence about the clip — it drew a frame, so it serves video
+ * — and the old budget of three treated all of it as one, then faded the canvas
+ * out for the rest of the track and wrote the URL off for five minutes. A
+ * loop that stalls is recovered by preparing it again instead.
+ */
+private const val MaxLoopRecoveries = 6
 
 /** Pause before a retry, so a flapping network is not hammered. */
 private const val CanvasRetryDelayMillis = 1200L
@@ -89,24 +106,61 @@ private const val SurfaceSettleMillis = 1_500L
 private enum class CanvasForegroundState { FOREGROUND, BACKGROUND }
 
 object CanvasCacheManager {
+    /**
+     * Where canvas clips are cached.
+     *
+     * The name moved with the preloader's switch to whole-clip warming. The
+     * directory it replaces holds entries written as a bounded three-megabyte
+     * range, and an entry like that lies to the player about how long the clip
+     * is: playback reaches the end of the stored region, cannot continue, and
+     * returns to the same couple of seconds — the canvas that "plays, closes
+     * and plays again". Those entries outlive the code that wrote them, so the
+     * namespace moves with the fix instead of trusting every installed copy to
+     * be cleared by hand.
+     */
+    private const val CacheDirName = "canvas_video_cache_v2"
+
+    /** Cache directories this build no longer reads from, dropped on first use. */
+    private val SupersededCacheDirs = listOf("canvas_video_cache")
+
+    private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     private var videoCache: SimpleCache? = null
     private var okHttpClient: OkHttpClient? = null
 
     @Synchronized
     fun getVideoCache(context: Context): SimpleCache {
         if (videoCache == null) {
-            val cacheDir = File(context.filesDir, "canvas_video_cache")
+            val appContext = context.applicationContext
+            val cacheDir = File(appContext.filesDir, CacheDirName)
             val evictor = LeastRecentlyUsedCacheEvictor(256 * 1024 * 1024L)
-            val databaseProvider = StandaloneDatabaseProvider(context)
+            val databaseProvider = StandaloneDatabaseProvider(appContext)
             videoCache = SimpleCache(cacheDir, evictor, databaseProvider)
+            dropSupersededCacheDirs(appContext)
         }
         return videoCache!!
+    }
+
+    /**
+     * Deletes what older builds cached, off the calling thread: the retired
+     * directory can hold hundreds of megabytes, and the caller here is a
+     * composition that must not block on I/O.
+     */
+    private fun dropSupersededCacheDirs(context: Context) {
+        cleanupScope.launch {
+            SupersededCacheDirs.forEach { name ->
+                runCatching { File(context.filesDir, name).deleteRecursively() }
+            }
+        }
     }
 
     fun clearVideoCache(context: Context) {
         videoCache?.release()
         videoCache = null
-        File(context.filesDir, "canvas_video_cache").deleteRecursively()
+        File(context.filesDir, CacheDirName).deleteRecursively()
+        SupersededCacheDirs.forEach { name ->
+            runCatching { File(context.filesDir, name).deleteRecursively() }
+        }
     }
 
     /**
@@ -160,6 +214,13 @@ fun CanvasArtworkPlayer(
     // artwork comes back.
     var reloadTick by remember(initial) { mutableIntStateOf(0) }
     var retriesUsed by remember(initial) { mutableIntStateOf(0) }
+    // Recoveries spent on a clip that did draw a frame, tracked apart from
+    // [retriesUsed]: the two answer different questions.
+    var loopRecoveriesUsed by remember(initial) { mutableIntStateOf(0) }
+    // Which URL has actually put a frame on screen. Held per URL rather than as
+    // a flag, so falling back to a second address starts the judgement over for
+    // the address that has not drawn anything yet.
+    var renderedUrl by remember(initial) { mutableStateOf<String?>(null) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     // Which "generation" of the video view is alive. Bumped when the app comes
@@ -267,6 +328,7 @@ fun CanvasArtworkPlayer(
                             // whatever failed, failed on a window that no
                             // longer exists.
                             retriesUsed = 0
+                            loopRecoveriesUsed = 0
                             surfaceSettleUntil = System.currentTimeMillis() + SurfaceSettleMillis
                         }
                     }
@@ -295,11 +357,27 @@ fun CanvasArtworkPlayer(
                     return
                 }
 
-                val next = if (currentUrl == primary) fallback else null
+                // Only a *different* address is a fallback. When a provider puts
+                // the same URL in both slots — which happens whenever it has one
+                // address to offer — switching to it changed nothing, so nothing
+                // was retried either and a single error killed the canvas until
+                // the song changed. An identical fallback is not a fallback.
+                val next = if (currentUrl == primary) fallback?.takeIf { it != currentUrl } else null
+                val alreadyDrewAFrame = renderedUrl == currentUrl
                 if (!next.isNullOrBlank()) {
                     currentUrl = next
                     isVideoReady = false
                     onVideoReady(false)
+                } else if (alreadyDrewAFrame) {
+                    // It drew a frame, so it serves video. Whatever failed is the
+                    // loop, not the clip: recover by preparing the same source
+                    // again, and never write a verdict about the URL.
+                    isVideoReady = false
+                    onVideoReady(false)
+                    if (loopRecoveriesUsed < MaxLoopRecoveries) {
+                        loopRecoveriesUsed++
+                        reloadTick++
+                    }
                 } else if (retriesUsed < MaxCanvasRetries) {
                     retriesUsed++
                     isVideoReady = false
@@ -325,6 +403,9 @@ fun CanvasArtworkPlayer(
                 // is the answer the whole check is after. Cheap to record and it
                 // saves the background probe a request later.
                 CanvasVerifier.rememberHealth(currentUrl, CanvasUrlHealth.PLAYABLE)
+                // ...and it decides how the *next* error is read: a clip that has
+                // drawn a frame is recovered, never written off.
+                renderedUrl = currentUrl
                 // A frame decoded into a window that is not on screen proves the
                 // clip is fine but says nothing about what can be seen. Fading
                 // the canvas in here would show an empty surface, so the claim

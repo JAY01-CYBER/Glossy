@@ -211,6 +211,14 @@ object YTPlayerUtils {
 
         val hasHighQuality = mainPlayerResponse?.streamingData?.adaptiveFormats?.any { it.audioQuality == "AUDIO_QUALITY_HIGH" } == true
 
+        // The three "give me the best" tiers all defer to a client that turned
+        // out to serve the high-quality master, so the best stream found by any
+        // of them is remembered and used rather than the first client's answer.
+        val preferHighestQuality =
+            audioQuality == AudioQuality.HIGH ||
+                audioQuality == AudioQuality.VERY_HIGH ||
+                audioQuality == AudioQuality.OPUS
+
         for ((clientIndex, client) in streamClients.withIndex()) {
             // reset for each client
             format = null
@@ -381,7 +389,7 @@ object YTPlayerUtils {
                     else -> 0
                 }
 
-                if (audioQuality == AudioQuality.HIGH && format.audioQuality != "AUDIO_QUALITY_HIGH" && hasHighQuality) {
+                if (preferHighestQuality && format.audioQuality != "AUDIO_QUALITY_HIGH" && hasHighQuality) {
                     val isBetter = bestFallbackFormat == null ||
                         compareValuesBy(
                             format, bestFallbackFormat,
@@ -455,7 +463,7 @@ object YTPlayerUtils {
             }
         }
 
-        if (audioQuality == AudioQuality.HIGH && format?.audioQuality != "AUDIO_QUALITY_HIGH" && bestFallbackFormat != null) {
+        if (preferHighestQuality && format?.audioQuality != "AUDIO_QUALITY_HIGH" && bestFallbackFormat != null) {
             Timber.tag(logTag).d("Using best fallback format: ${bestFallbackFormat.mimeType}, bitrate: ${bestFallbackFormat.bitrate}")
             format = bestFallbackFormat
             streamUrl = bestFallbackUrl
@@ -575,6 +583,29 @@ object YTPlayerUtils {
                         .thenBy { scoreCodec(it.mimeType) }
                         .thenBy { it.bitrate }
                 )
+            }
+
+            AudioQuality.VERY_HIGH -> {
+                // The best master the track offers, decided by bitrate rather
+                // than by YouTube's own quality label, which is not reliable
+                // enough to be the final word on which stream sounds best.
+                // Original (non auto-dubbed) audio is preferred when it is
+                // available, so a translated track is never chosen for its
+                // slightly higher number.
+                audioCapableFormats.filter { it.isOriginal }.maxByOrNull { it.bitrate }
+                    ?: audioCapableFormats.maxByOrNull { it.bitrate }
+            }
+
+            AudioQuality.OPUS -> {
+                // Opus is the codec YouTube Music itself serves, so this asks
+                // for the highest-bitrate WebM audio stream — falling back to
+                // the best overall master only when the track carries no Opus
+                // at all, so playback never fails for want of a codec.
+                val opusFormats = audioCapableFormats.filter { it.mimeType.contains("opus", ignoreCase = true) }
+                opusFormats.filter { it.isOriginal }.maxByOrNull { it.bitrate }
+                    ?: opusFormats.maxByOrNull { it.bitrate }
+                    ?: audioCapableFormats.filter { it.isOriginal }.maxByOrNull { it.bitrate }
+                    ?: audioCapableFormats.maxByOrNull { it.bitrate }
             }
 
             AudioQuality.LOW -> {

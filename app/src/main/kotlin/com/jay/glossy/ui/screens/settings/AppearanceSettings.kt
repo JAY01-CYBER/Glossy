@@ -523,8 +523,6 @@ fun AppearanceSettings(
                 when (it) {
                     CanvasStyle.ALL -> "All Providers (fastest — races all sources)"
                     CanvasStyle.GLOSSY -> "Glossy (Tidal + Apple Music)"
-                    CanvasStyle.ARCHIVE_TUNE -> "ArchiveTune (BetterLyrics)"
-                    CanvasStyle.BOTH -> "Both (ArchiveTune first, Glossy fallback)"
                     CanvasStyle.SPOTIFY -> "Spotify Canvas"
                     CanvasStyle.YOUTUBE -> "YouTube (InnerTube visualizer)"
                 }
@@ -1848,8 +1846,6 @@ fun AppearanceSettings(
                                         when (canvasStyle) {
                                             CanvasStyle.ALL -> "All Providers (fastest — races all sources)"
                                             CanvasStyle.GLOSSY -> "Glossy (Tidal + Apple Music)"
-                                            CanvasStyle.ARCHIVE_TUNE -> "ArchiveTune (BetterLyrics)"
-                                            CanvasStyle.BOTH -> "Both (ArchiveTune first, Glossy fallback)"
                                             CanvasStyle.SPOTIFY -> "Spotify Canvas"
                                             CanvasStyle.YOUTUBE -> "YouTube (InnerTube visualizer)"
                                         }

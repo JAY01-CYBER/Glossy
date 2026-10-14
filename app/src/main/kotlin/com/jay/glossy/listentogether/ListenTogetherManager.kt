@@ -39,7 +39,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -80,6 +79,21 @@ class ListenTogetherManager
             private const val HARD_SYNC_THRESHOLD_MS = 750L
             private const val DRIFT_CORRECTION_SPEED = 0.02f
             private const val DRIFT_CHECK_INTERVAL_MS = 250L
+
+            /**
+             * How long a guest waits for the room's buffer-complete before it
+             * plays the state it already holds. That signal is a courtesy from
+             * the servers — the reference server only sends it while the host's
+             * socket is answering — so it must never be the guest's gate; a
+             * guest whose signal went missing used to stay paused for good.
+             */
+            private const val BUFFER_SYNC_TIMEOUT_MS = 3_000L
+
+            /** How often [awaitSyncWindow] re-checks the room-update window. */
+            private const val SYNC_CHECK_INTERVAL_MS = 50L
+
+            /** Upper bound on that wait, so a stuck update cannot mute the host. */
+            private const val SYNC_WINDOW_MAX_WAIT_MS = 2_000L
         }
 
         private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -133,6 +147,9 @@ class ListenTogetherManager
 
         // Pending sync to apply after buffering completes for guest
         private var pendingSyncState: SyncStatePayload? = null
+
+        // Deadline for the buffer-complete handshake that unblocks the sync above
+        private var pendingSyncTimeoutJob: Job? = null
 
         // Track if a buffer-complete arrived before the pending sync was ready
         private var bufferCompleteReceivedForTrack: String? = null
@@ -494,14 +511,18 @@ class ListenTogetherManager
                     // Save current mute state before joining as guest so we can restore it on leave
                     saveMuteStateOnJoin()
                     lastAppliedRevision = event.state.revision
-                    // Apply the full initial state including queue
+                    // Apply the full initial state including queue. The room's
+                    // snapshot is the whole truth for a guest that has just
+                    // arrived, so it is applied immediately: waiting for a
+                    // buffer-complete handshake made the guest's very first
+                    // playback depend on the host's socket answering.
                     applyPlaybackState(
                         currentTrack = event.state.currentTrack,
                         isPlaying = event.state.isPlaying,
                         position = event.state.position,
                         queue = event.state.queue,
                         effectiveAtServerTime = event.state.lastUpdate,
-                        // bypassBuffer=false (default) for initial join buffer sync
+                        bypassBuffer = true,
                     )
                     applyHostVolumeIfNeeded(event.state.volume)
                     updateGuestMuteState()
@@ -728,6 +749,8 @@ class ListenTogetherManager
             stopHeartbeat()
             stopVolumeSyncObservation()
             cancelDriftCorrection()
+            pendingSyncTimeoutJob?.cancel()
+            pendingSyncTimeoutJob = null
             // Note: Don't clear shouldBlockPlaybackChanges callback - it checks isInRoom dynamically
             lastSyncedIsPlaying = null
             lastSyncedTrackId = null
@@ -939,12 +962,33 @@ class ListenTogetherManager
                 }
         }
 
-        private fun applyPendingSyncIfReady() {
+        /**
+         * Arms the deadline that ends the wait for a buffer-complete that never
+         * comes. Only one deadline exists per buffering episode, so a stream of
+         * updates cannot keep pushing it back.
+         */
+        private fun armPendingSyncTimeout() {
+            if (pendingSyncTimeoutJob?.isActive == true) return
+            pendingSyncTimeoutJob =
+                scope.launch {
+                    delay(BUFFER_SYNC_TIMEOUT_MS)
+                    if (pendingSyncState == null) return@launch
+                    Timber.tag(TAG).w("No buffer-complete from the room; applying the pending sync anyway")
+                    applyPendingSyncIfReady(force = true)
+                }
+        }
+
+        private fun applyPendingSyncIfReady(force: Boolean = false) {
             val pending = pendingSyncState ?: return
             val pendingTrackId = pending.currentTrack?.id ?: bufferingTrackId ?: return
-            val completeForTrack = bufferCompleteReceivedForTrack
 
-            if (completeForTrack != pendingTrackId) return
+            if (!force && bufferCompleteReceivedForTrack != pendingTrackId) {
+                armPendingSyncTimeout()
+                return
+            }
+
+            pendingSyncTimeoutJob?.cancel()
+            pendingSyncTimeoutJob = null
 
             val connection = playerConnection ?: return
             val player = connection.player
@@ -1270,7 +1314,7 @@ class ListenTogetherManager
                     PlaybackActions.QUEUE_ADD -> {
                         val track = action.trackInfo
                         // The host is the queue's authority: a guest's add is
-                        // appended to the local queue (the server's copy may lag
+                        // applied to the local queue (the server's copy may lag
                         // this player's queue by the observer's debounce) and
                         // the queue observer then fans the result out with
                         // SYNC_QUEUE. Non-hosts keep applying the canonical list.
@@ -1278,40 +1322,33 @@ class ListenTogetherManager
                             applyCanonicalUpcomingQueue(connection, action.queue.orEmpty(), action.queueTitle)
                         } else if (track == null) {
                             Timber.tag(TAG).w("QUEUE_ADD missing trackInfo")
-                        } else {
-                            Timber.tag(TAG).d("Guest: QUEUE_ADD ${track.title}, insertNext=${action.insertNext == true}")
-                            val actionQueueGeneration = queueSyncGeneration
-                            enqueueQueueMutation(actionQueueGeneration) {
-                                val result = withContext(Dispatchers.IO) { YouTube.queue(listOf(track.id)) }
-                                if (queueSyncGeneration != actionQueueGeneration || playerConnection !== connection) {
-                                    return@enqueueQueueMutation
-                                }
-                                result.onSuccess { list ->
-                                    val mediaItem =
-                                        list
-                                            .firstOrNull()
-                                            ?.toMediaMetadata()
-                                            ?.copy(
-                                                suggestedBy = track.suggestedBy,
-                                            )?.toMediaItem()
-                                    if (mediaItem != null) {
-                                        connection.allowInternalSync = true
-                                        try {
-                                            if (action.insertNext == true) {
-                                                connection.playNext(mediaItem)
-                                            } else {
-                                                connection.addToQueue(mediaItem)
-                                            }
-                                        } finally {
-                                            connection.allowInternalSync = false
-                                        }
-                                    } else {
-                                        Timber.tag(TAG).w("QUEUE_ADD failed to resolve media item for ${track.id}")
-                                    }
-                                }.onFailure {
-                                    Timber.tag(TAG).e(it, "QUEUE_ADD metadata fetch failed")
-                                }
+                        } else if (!isHost) {
+                            // Unreachable against the current servers, which
+                            // always stamp a revision: a guest cannot move the
+                            // room's queue on its own, so it waits for the next
+                            // sync instead of guessing.
+                            Timber.tag(TAG).w("QUEUE_ADD without a room revision; waiting for the next sync")
+                        } else if (action.insertNext == true) {
+                            // insert_next on a relayed add is a guest's tap: a
+                            // guest's own "add to queue" never sets it, and the
+                            // host never receives its own actions back. The host
+                            // is the only device that may move the room's
+                            // current track, so it jumps to the guest's pick and
+                            // its own player listener announces the switch, just
+                            // like a host-initiated skip. It waits for the window
+                            // this update is being applied in to close first:
+                            // the listener stands down during it, and it is the
+                            // listener that tells every other device.
+                            Timber.tag(TAG).d("Host: guest requested ${track.title}; playing it now")
+                            val requestGeneration = queueSyncGeneration
+                            scope.launch {
+                                awaitSyncWindow()
+                                if (queueSyncGeneration != requestGeneration) return@launch
+                                playTrackNow(connection, track)
                             }
+                        } else {
+                            Timber.tag(TAG).d("Host: guest queued ${track.title}")
+                            insertInLocalQueue(connection, track, append = true)
                         }
                     }
 
@@ -1596,26 +1633,31 @@ class ListenTogetherManager
                         // Manual sync/reconnect: apply play/pause immediately, no buffer protocol
                         Timber.tag(TAG).d("Bypass buffer: immediately applying play=$isPlaying at pos=$position")
 
-                        // Wait for player to be ready before seek/play
+                        // Give the player a moment to reach READY so the seek
+                        // lands accurately, but never gate on it: a seek and a
+                        // play intent are both valid before READY, and media3
+                        // applies them as soon as the stream is up. Gating on it
+                        // left a guest whose track took longer than the wait
+                        // silent for the rest of the song.
                         var attempts = 0
                         while (player.playbackState != Player.STATE_READY && attempts < 100) {
                             delay(50)
                             attempts++
                         }
-                        if (player.playbackState == Player.STATE_READY) {
-                            val readyPosition = client.positionAtServerTime(position, effectiveAtServerTime, isPlaying)
-                            Timber.tag(TAG).d("Player ready after ${attempts * 50}ms, seeking to $readyPosition")
-                            player.seekTo(readyPosition)
-                            if (isPlaying) {
-                                connection.play()
-                                startDriftCorrection(connection, currentTrack.id, position, effectiveAtServerTime)
-                                Timber.tag(TAG).d("Bypass: PLAY issued")
-                            } else {
-                                connection.pause()
-                                Timber.tag(TAG).d("Bypass: PAUSE issued")
-                            }
+                        val readyPosition = client.positionAtServerTime(position, effectiveAtServerTime, isPlaying)
+                        Timber
+                            .tag(TAG)
+                            .d(
+                                "Bypass: state=${player.playbackState} after ${attempts * 50}ms, seeking to $readyPosition",
+                            )
+                        player.seekTo(readyPosition)
+                        if (isPlaying) {
+                            connection.play()
+                            startDriftCorrection(connection, currentTrack.id, position, effectiveAtServerTime)
+                            Timber.tag(TAG).d("Bypass: PLAY issued")
                         } else {
-                            Timber.tag(TAG).w("Player not ready after 5s timeout during bypass sync")
+                            connection.pause()
+                            Timber.tag(TAG).d("Bypass: PAUSE issued")
                         }
 
                         // Clear sync state
@@ -2006,53 +2048,95 @@ class ListenTogetherManager
         }
 
         /**
-         * Play an approved suggestion on the host right away. The track is
-         * inserted after the current one and jumped to; because no internal
-         * sync flag is set, the host's own player listener broadcasts the
-         * track change and PLAY to every guest exactly like a host-initiated
-         * skip, and the queue observer then syncs the queue itself.
+         * Play an approved suggestion on the host right away, the same way a
+         * guest's request is played: inserted after the current track, jumped
+         * to, and broadcast by the host's own player listener.
          */
         private fun enqueueApprovedSuggestion(track: TrackInfo) {
             Timber.tag(TAG).d("Host: playing approved suggestion ${track.title}")
             val connection = playerConnection ?: return
+            playTrackNow(connection, track)
+        }
+
+        /**
+         * Waits out the brief window in which a room update is being applied to
+         * the player. Everything the host must announce to the room happens
+         * after it, because the host's own player listener ignores changes
+         * inside it.
+         */
+        private suspend fun awaitSyncWindow() {
+            var waited = 0L
+            while (isSyncing && waited < SYNC_WINDOW_MAX_WAIT_MS) {
+                delay(SYNC_CHECK_INTERVAL_MS)
+                waited += SYNC_CHECK_INTERVAL_MS
+            }
+        }
+
+        /**
+         * Puts [track] into the host's player queue right now: inserted after
+         * whatever is playing, jumped to, and left to the host's own player
+         * listener to broadcast as a track change plus PLAY — exactly like a
+         * host-initiated skip, so every guest follows.
+         *
+         * The item is built from the metadata that arrived on the wire. It used
+         * to be re-fetched with `YouTube.queue`, which made a guest's request
+         * depend on a second network round-trip that could fail silently: the
+         * track never reached the host's queue at all, and the guest saw their
+         * own optimistic insert while the host saw nothing.
+         */
+        private fun playTrackNow(
+            connection: PlayerConnection,
+            track: TrackInfo,
+        ) {
             val actionQueueGeneration = queueSyncGeneration
             enqueueQueueMutation(actionQueueGeneration) {
-                val result = withContext(Dispatchers.IO) { YouTube.queue(listOf(track.id)) }
                 if (queueSyncGeneration != actionQueueGeneration || playerConnection !== connection) {
                     return@enqueueQueueMutation
                 }
-                result.onSuccess { list ->
-                    val mediaItem =
-                        list
-                            .firstOrNull()
-                            ?.toMediaMetadata()
-                            ?.copy(
-                                suggestedBy = track.suggestedBy,
-                            )?.toMediaItem()
-                    if (mediaItem == null) {
-                        Timber.tag(TAG).w("Approved suggestion failed to resolve media item for ${track.id}")
-                        return@onSuccess
-                    }
-                    val player = connection.player
-                    if (player.currentMediaItem?.mediaId == mediaItem.mediaId) {
-                        // Already the current song - just make sure it plays.
-                        connection.play()
-                        return@onSuccess
-                    }
-                    // playNext inserts after the current item; seek straight to
-                    // it so the suggestion plays now instead of lining up behind
-                    // whatever is already playing. No internal-sync flag here:
-                    // the host's own listener must broadcast the track change.
-                    connection.playNext(mediaItem)
-                    val insertIndex =
-                        (0 until player.mediaItemCount)
-                            .firstOrNull { player.getMediaItemAt(it).mediaId == mediaItem.mediaId }
-                    if (insertIndex != null && insertIndex != player.currentMediaItemIndex) {
-                        player.seekTo(insertIndex, 0L)
-                    }
+                val mediaItem = track.toMediaMetadata().toMediaItem()
+                val player = connection.player
+                if (player.currentMediaItem?.mediaId == mediaItem.mediaId) {
+                    // Already the current song - just make sure it plays.
                     connection.play()
-                }.onFailure {
-                    Timber.tag(TAG).e(it, "Approved suggestion metadata fetch failed")
+                    return@enqueueQueueMutation
+                }
+                connection.playNext(mediaItem)
+                val insertIndex =
+                    (0 until player.mediaItemCount)
+                        .firstOrNull { player.getMediaItemAt(it).mediaId == mediaItem.mediaId }
+                if (insertIndex != null && insertIndex != player.currentMediaItemIndex) {
+                    player.seekTo(insertIndex, 0L)
+                }
+                connection.play()
+            }
+        }
+
+        /**
+         * Adds a track that came off the wire to the local player queue. The
+         * internal-sync flag is set because this is a mirror of the room's
+         * queue, not a user edit: the queue observer publishes the result with
+         * SYNC_QUEUE once the change has settled.
+         */
+        private fun insertInLocalQueue(
+            connection: PlayerConnection,
+            track: TrackInfo,
+            append: Boolean,
+        ) {
+            val actionQueueGeneration = queueSyncGeneration
+            enqueueQueueMutation(actionQueueGeneration) {
+                if (queueSyncGeneration != actionQueueGeneration || playerConnection !== connection) {
+                    return@enqueueQueueMutation
+                }
+                val mediaItem = track.toMediaMetadata().toMediaItem()
+                connection.allowInternalSync = true
+                try {
+                    if (append) {
+                        connection.addToQueue(mediaItem)
+                    } else {
+                        connection.playNext(mediaItem)
+                    }
+                } finally {
+                    connection.allowInternalSync = false
                 }
             }
         }

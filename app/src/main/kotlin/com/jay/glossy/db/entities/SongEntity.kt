@@ -104,3 +104,17 @@ data class SongEntity(
             isUploaded = !isUploaded,
         )
 }
+
+/**
+ * The per-song lyrics offset as the lyrics views must apply it.
+ *
+ * The stored number is what the offset dialog edits, and its sign belongs to
+ * the user: "+50" means the lyrics should arrive 50 ms *later*. The views find
+ * the line being sung by comparing the playback clock against each line's own
+ * timestamp, so a positive offset has to move that clock *back* — which is why
+ * the sign is negated here, once, instead of at every call site. Each read site
+ * keeps adding a single signed value, and the tap-a-line seek, which inverts
+ * the same expression, stays correct without a second edit.
+ */
+val SongEntity.lyricsClockOffset: Int
+    get() = -lyricsOffset

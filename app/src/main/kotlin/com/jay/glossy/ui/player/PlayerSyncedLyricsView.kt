@@ -74,6 +74,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jay.glossy.R
 import com.jay.glossy.LocalDatabase
+import com.jay.glossy.db.entities.lyricsClockOffset
 import com.jay.glossy.ui.player.applemusic.toHighRes
 import com.jay.glossy.ui.component.GlassBackdrop
 import com.jay.glossy.LocalPlayerConnection
@@ -444,7 +445,7 @@ internal fun rememberPlayerLyricsPreview(
         }
     }
 
-    val lyricsOffset = (currentSong?.song?.lyricsOffset ?: 0).toLong()
+    val lyricsOffset = (currentSong?.song?.lyricsClockOffset ?: 0).toLong()
     // Kept in a state holder so the ticking effect below is never restarted by
     // a recomposition that recreates the lambda.
     val currentPositionProvider by rememberUpdatedState(positionProvider)

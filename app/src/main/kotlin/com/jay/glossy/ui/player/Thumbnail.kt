@@ -884,6 +884,10 @@ private fun rememberCanvasArtwork(
     // resolve recovers by itself instead of sitting on still artwork until the
     // next logout/login cycle — which is what it used to take.
     var lookupWindow by remember(mediaId) { mutableIntStateOf(0) }
+    // A manual refresh from the player menu bumps this signal; the lookup below
+    // is re-keyed on it, so the whole provider chain is asked again without
+    // leaving the track.
+    val refreshSignal by CanvasResolver.refreshSignal.collectAsStateWithLifecycle()
 
     DisposableEffect(lifecycleOwner, mediaId) {
         val observer =
@@ -894,7 +898,7 @@ private fun rememberCanvasArtwork(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    LaunchedEffect(mediaId, lookupWindow) {
+    LaunchedEffect(mediaId, lookupWindow, refreshSignal) {
         onVideoReady(false)
         canvasArtwork = null
         // One lookup used to be the whole story: a provider that timed out, a
@@ -908,7 +912,7 @@ private fun rememberCanvasArtwork(
         var retryDelayMillis = CanvasLookupRetryDelayMillis
         repeat(MaxCanvasLookupAttempts) { attempt ->
             // Playback cache is checked inside CanvasResolver; style-aware
-            // providers (Glossy / ArchiveTune / Both) come from the preference.
+            // providers (Glossy / Spotify / YouTube) come from the preference.
             val resolved =
                 CanvasResolver.resolve(
                     context = context,

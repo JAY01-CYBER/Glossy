@@ -248,6 +248,11 @@ fun ExploreScreen(
                                 "Trending" -> stringResource(R.string.trending)
                                 else -> section.title.ifEmpty { stringResource(R.string.charts) }
                             },
+                        // The chart strips are a preview; the heading is the way
+                        // into the full list. It was the one heading on this
+                        // screen without a click, so the chart list route had no
+                        // way in at all.
+                        onClick = { navController.navigate("charts_screen") },
                     )
                     BoxWithConstraints(
                         modifier = Modifier.fillMaxWidth(),
