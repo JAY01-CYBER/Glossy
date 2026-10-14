@@ -97,6 +97,7 @@ import com.jay.glossy.constants.LyricsGlowEffectKey
 import com.jay.glossy.constants.LyricsLineSpacingKey
 import com.jay.glossy.constants.LyricsScrollKey
 import com.jay.glossy.constants.LyricsTextPositionKey
+import com.jay.glossy.constants.LyricsTextSizeDefault
 import com.jay.glossy.constants.LyricsTextSizeKey
 import com.jay.glossy.constants.MiniPlayerBackgroundStyle
 import com.jay.glossy.constants.MiniPlayerBackgroundStyleKey
@@ -356,7 +357,7 @@ fun AppearanceSettings(
             LyricsAnimationStyleKey,
             defaultValue = LyricsAnimationStyle.FADE,
         )
-    val (lyricsTextSize, onLyricsTextSizeChange) = rememberPreference(LyricsTextSizeKey, defaultValue = 24f)
+    val (lyricsTextSize, onLyricsTextSizeChange) = rememberPreference(LyricsTextSizeKey, defaultValue = LyricsTextSizeDefault)
     val (lyricsLineSpacing, onLyricsLineSpacingChange) = rememberPreference(LyricsLineSpacingKey, defaultValue = 1.2f)
 
     val (showFeaturedCarousel, onShowFeaturedCarouselChange) = rememberPreference(ShowFeaturedCarouselKey, defaultValue = true)
@@ -763,7 +764,7 @@ fun AppearanceSettings(
             },
             buttons = {
                 TextButton(
-                    onClick = { tempTextSize = 24f },
+                    onClick = { tempTextSize = LyricsTextSizeDefault },
                 ) {
                     Text(stringResource(R.string.reset))
                 }

@@ -100,6 +100,7 @@ import com.jay.glossy.constants.LyricsRomanizeAsMainKey
 import com.jay.glossy.constants.LyricsRomanizeCyrillicByLineKey
 import com.jay.glossy.constants.LyricsRomanizeList
 import com.jay.glossy.constants.LyricsTextPositionKey
+import com.jay.glossy.constants.LyricsTextSizeDefault
 import com.jay.glossy.constants.LyricsTextSizeKey
 import com.jay.glossy.constants.OpenRouterApiKey
 import com.jay.glossy.constants.OpenRouterBaseUrlKey
@@ -172,9 +173,11 @@ fun ExperimentalLyrics(
     val respectAgentPositioning by rememberPreference(RespectAgentPositioningKey, true)
     val showIntervalIndicator by rememberPreference(ShowIntervalIndicatorKey, true)
     // Honoured instead of a hardcoded size so the Appearance → Lyrics text-size
-    // and line-spacing settings actually apply to this view too (it used to
-    // render everything at a fixed 36sp regardless of the preference).
-    val lyricsTextSize by rememberPreference(LyricsTextSizeKey, 24f)
+    // and line-spacing settings actually apply to this view too. The default is
+    // the 36sp this view drew at before it became adjustable, so a listener who
+    // never opened the slider gets the size that was always there, and the
+    // slider still moves away from it.
+    val lyricsTextSize by rememberPreference(LyricsTextSizeKey, LyricsTextSizeDefault)
     val lyricsLineSpacing by rememberPreference(LyricsLineSpacingKey, 1.3f)
     
     // AI Translation Preferences

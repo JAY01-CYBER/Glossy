@@ -142,6 +142,7 @@ import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.constants.ListItemHeight
 import com.jay.glossy.constants.PlayerBackgroundStyle
 import com.jay.glossy.constants.QueueEditLockKey
+import com.jay.glossy.constants.ShowAudioFormatKey
 import com.jay.glossy.constants.UseNewPlayerDesignKey
 import com.jay.glossy.extensions.metadata
 import com.jay.glossy.extensions.move
@@ -149,6 +150,7 @@ import com.jay.glossy.extensions.toggleRepeatMode
 import com.jay.glossy.listentogether.RoomRole
 import com.metrolist.models.MediaMetadata
 import com.jay.glossy.ui.component.ActionPromptDialog
+import com.jay.glossy.ui.component.AudioFormatBadge
 import com.jay.glossy.ui.component.BottomSheet
 import com.jay.glossy.ui.component.BottomSheetState
 import com.jay.glossy.ui.component.LocalBottomSheetPageState
@@ -287,6 +289,10 @@ fun Queue(
     // and the search box narrows the list in place rather than opening
     // anything, so a typed track is found without leaving the queue.
     val (autoplay, onAutoplayChange) = rememberPreference(AutoplayKey, defaultValue = true)
+    // Whether the header names the stream that is actually being fetched. Off
+    // unless asked for: it is an answer about the file, and it changes as the
+    // queue moves on, so it stays quiet until a listener wants to check it.
+    val (showAudioFormat) = rememberPreference(ShowAudioFormatKey, defaultValue = false)
     var showQueueSearch by rememberSaveable { mutableStateOf(false) }
     var queueSearchQuery by rememberSaveable { mutableStateOf("") }
     val selection =
@@ -1296,6 +1302,15 @@ fun Queue(
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.weight(1f),
                         )
+                        // Sits with the title because it describes the song that
+                        // is playing, not the queue: WebM or M4A, Opus or AAC,
+                        // and how many bits per second arrived.
+                        if (showAudioFormat) {
+                            AudioFormatBadge(
+                                format = currentFormat,
+                                modifier = Modifier.padding(start = 8.dp),
+                            )
+                        }
                         Text(
                             text = makeTimeString(queueLength * 1000L),
                             style = MaterialTheme.typography.labelMedium,

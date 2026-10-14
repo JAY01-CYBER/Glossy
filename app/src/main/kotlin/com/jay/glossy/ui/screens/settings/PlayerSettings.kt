@@ -92,6 +92,7 @@ import com.jay.glossy.constants.SleepTimerStartTimeKey
 import com.jay.glossy.constants.SleepTimerDayTimesKey
 import com.jay.glossy.ui.component.decodeDayTimes
 import com.jay.glossy.ui.component.encodeDayTimes
+import com.jay.glossy.constants.ShowAudioFormatKey
 import com.jay.glossy.constants.SleepTimerFadeOutKey
 import com.jay.glossy.constants.SleepTimerStopAfterCurrentSongKey
 import com.jay.glossy.ui.utils.getLoudnessLevelLabel
@@ -104,6 +105,10 @@ fun PlayerSettings(
     val (audioQuality, onAudioQualityChange) = rememberEnumPreference(
         AudioQualityKey,
         defaultValue = AudioQuality.AUTO
+    )
+    val (showAudioFormat, onShowAudioFormatChange) = rememberPreference(
+        ShowAudioFormatKey,
+        defaultValue = false,
     )
     val (crossfadeEnabled, onCrossfadeEnabledChange) = rememberPreference(
         CrossfadeEnabledKey,
@@ -336,6 +341,17 @@ fun PlayerSettings(
                         )
                     },
                     onClick = { showAudioQualityDialog = true }
+                ))
+                add(Material3SettingsItem(
+                    icon = painterResource(R.drawable.info),
+                    title = { Text(stringResource(R.string.show_audio_format)) },
+                    description = { Text(stringResource(R.string.show_audio_format_desc)) },
+                    trailingContent = {
+                        Switch(
+                            checked = showAudioFormat,
+                            onCheckedChange = onShowAudioFormatChange,
+                        )
+                    },
                 ))
                 add(Material3SettingsItem(
                     icon = painterResource(R.drawable.linear_scale),

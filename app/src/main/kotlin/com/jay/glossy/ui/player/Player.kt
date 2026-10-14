@@ -204,6 +204,7 @@ import com.jay.glossy.ui.component.PlayerSliderTrack
 import com.jay.glossy.ui.component.ResizableIconButton
 import com.jay.glossy.ui.component.SquigglySlider
 import com.jay.glossy.ui.component.WavySlider
+import com.jay.glossy.ui.component.rememberAmbientMotionEnabled
 import com.jay.glossy.ui.menu.PlayerMenu
 import com.jay.glossy.ui.player.applemusic.toHighRes
 import com.jay.glossy.ui.screens.settings.DarkMode
@@ -609,6 +610,16 @@ fun BottomSheetPlayer(
     BottomSheet(
         state = state,
         modifier = modifier,
+        // The bar growing into the player: a bloom of the artwork's own colour
+        // that leaves the mini player's thumbnail and washes over the sheet as
+        // it opens. Gated on the app's one motion switch, so "Reduce animation"
+        // (or the system's own Remove animations) turns it off with everything
+        // else rather than leaving one flourish still moving.
+        openOverlay = {
+            if (rememberAmbientMotionEnabled()) {
+                PlayerOpenBloom(progress = state.progress, accent = TextBackgroundColor)
+            }
+        },
         background = {
             if (playerStyle.name != "APPLE_MUSIC") {
                 Box(modifier = Modifier.fillMaxSize().background(bottomSheetBackgroundColor)) {

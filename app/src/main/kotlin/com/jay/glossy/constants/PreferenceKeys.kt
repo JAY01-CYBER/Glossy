@@ -408,6 +408,18 @@ enum class AudioQuality {
     OPUS,
 }
 
+/**
+ * Whether the player and the queue header name the stream that is actually
+ * playing — its container, codec and bitrate, e.g. `WebM · Opus · 130 kbps`.
+ *
+ * Off by default because the answer is about the file being fetched rather than
+ * about the song, and it changes as tracks do. It is the counterpart to
+ * [AudioQualityKey]: that one says what was asked for, this one shows what
+ * arrived, so a listener can check that the Opus tier really did land on WebM
+ * instead of quietly falling back to AAC.
+ */
+val ShowAudioFormatKey = booleanPreferencesKey("showAudioFormat")
+
 val AudioOffload = booleanPreferencesKey("enableOffload")
 val AudioTrackPlaybackParamsKey = booleanPreferencesKey("audioTrackPlaybackParams")
 
@@ -828,6 +840,15 @@ enum class LyricsAnimationStyle {
 }
 
 val LyricsTextSizeKey = floatPreferencesKey("lyricsTextSize")
+
+/**
+ * The size the lyrics were drawn at before [LyricsTextSizeKey] existed: the
+ * word-by-word view painted everything at a fixed 36sp, so this is the size a
+ * listener who never touched the slider has always been reading. It is the
+ * default for the setting rather than a hardcoded size, so the look is restored
+ * without taking the slider away from anyone who wants a different one.
+ */
+const val LyricsTextSizeDefault = 36f
 val LyricsLineSpacingKey = floatPreferencesKey("lyricsLineSpacing")
 val RespectAgentPositioningKey = booleanPreferencesKey("respectAgentPositioning")
 val ShowIntervalIndicatorKey = booleanPreferencesKey("showIntervalIndicator")
