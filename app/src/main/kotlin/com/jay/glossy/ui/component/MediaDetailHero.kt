@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
@@ -28,6 +29,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import dev.seaglass.core.SeaGlassMaterial
 import coil3.compose.AsyncImage
 import com.jay.glossy.R
 import com.jay.glossy.constants.AppBarHeight
@@ -228,19 +230,39 @@ fun MediaDetailPrimaryActions(
             }
             Spacer(Modifier.width(12.dp))
             onPlay?.let { play ->
-                Button(
+                // The same sea-glass pill the login card uses. Below API 33 it
+                // paints contentColor flat, which is exactly what this button
+                // was before, so the fallback is invisible rather than a change.
+                val playGlass = remember(contentColor) {
+                    SeaGlassMaterial(
+                        tintColorArgb = contentColor.toArgb(),
+                        tintDensity = 0.44f,
+                        coarseness = 0.30f,
+                        frostRadiusDp = 28f,
+                        thicknessDp = 15f,
+                        rimChalkiness = 0.58f,
+                        transparency = 0.70f,
+                        // Half of the 52dp pill: fully round, matching the
+                        // percent-50 outline it replaces.
+                        cornerRadiusDp = 26f,
+                    )
+                }
+                SeaGlassPill(
+                    fill = contentColor,
+                    ink = contrastingColor,
+                    material = playGlass,
+                    shadowTint = contentColor,
                     onClick = play,
-                    shape = RoundedCornerShape(percent = 50),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = contentColor,
-                        contentColor = contrastingColor,
-                    ),
-                    modifier = Modifier.heightIn(min = 52.dp),
                 ) {
-                    Icon(painter = painterResource(R.drawable.play), contentDescription = null)
+                    Icon(
+                        painter = painterResource(R.drawable.play),
+                        contentDescription = null,
+                        tint = contrastingColor,
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = stringResource(R.string.play),
+                        color = contrastingColor,
                         fontWeight = FontWeight.Bold,
                     )
                 }
