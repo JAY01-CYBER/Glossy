@@ -85,11 +85,13 @@ jobs:
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
           script: |
             adb devices
-            ./gradlew :baselineprofile:connected${{ matrix.variantName }}NonMinifiedReleaseAndroidTest --stacktrace
+            # Use the app module's Baseline Profile task so the AndroidX plugin
+            # collects the profile and, with saveInSrc=true, writes it into app/src.
+            ./gradlew :app:generate${{ matrix.variantName }}ReleaseBaselineProfile --stacktrace
 
-      # With baselineProfile.saveInSrc = true, AGP writes profiles under
-      # app/src/<variant>/baselineProfiles (not generated/baselineProfiles).
-      # Resolve the actual variant output, validate it, and commit only this variant.
+      # The app-module generate*ReleaseBaselineProfile task should persist profiles
+      # via baselineProfile.saveInSrc=true. Locate both documented/source layouts
+      # and commit only the current flavor's profile.
       - name: Commit generated Baseline Profile to source
         shell: bash
         env:
@@ -99,25 +101,36 @@ jobs:
           SOURCE_DIR="app/src/${VARIANT}/baselineProfiles"
           GENERATED_DIR="app/src/${VARIANT}/generated/baselineProfiles"
           PROFILE=""
+
           for DIR in "$SOURCE_DIR" "$GENERATED_DIR"; do
             if [[ -d "$DIR" ]]; then
-              PROFILE="$(find "$DIR" -maxdepth 1 -type f -name '*.txt' -print -quit)"
+              PROFILE="$(find "$DIR" -maxdepth 1 -type f -name '*.txt' -size +0c -print -quit)"
               [[ -n "$PROFILE" ]] && break
             fi
           done
 
+          # If AGP emitted the profile under its build output instead of the source
+          # directory, find a non-empty profile text file and normalize it into source.
           if [[ -z "$PROFILE" ]]; then
-            echo "No source Baseline Profile found for variant ${VARIANT}." >&2
-            echo "Searching all generated profile text files for diagnosis:"
-            find app/src baselineprofile/build -type f -name '*.txt' 2>/dev/null | grep -i 'baseline\|prof' || true
+            PROFILE="$(find baselineprofile/build app/build -type f -name '*.txt' -size +0c \
+              \( -iname '*baseline*' -o -iname '*prof*' \) -print 2>/dev/null | head -n 1 || true)"
+          fi
+
+          if [[ -z "$PROFILE" ]]; then
+            echo "No non-empty Baseline Profile text file found for ${VARIANT}." >&2
+            echo "Diagnostic profile-related files:"
+            find app/src app/build baselineprofile/build -type f \
+              \( -iname '*baseline*' -o -iname '*prof*' \) -print 2>/dev/null || true
             exit 1
           fi
 
-          # Normalize into the standard AGP source location, keeping the profile in source control.
           mkdir -p "$SOURCE_DIR"
           if [[ "$PROFILE" != "$SOURCE_DIR/baseline-prof.txt" ]]; then
             cp "$PROFILE" "$SOURCE_DIR/baseline-prof.txt"
           fi
+          test -s "$SOURCE_DIR/baseline-prof.txt"
+          echo "Persisting profile from $PROFILE to $SOURCE_DIR/baseline-prof.txt"
+          head -n 3 "$SOURCE_DIR/baseline-prof.txt"
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
