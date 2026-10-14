@@ -17,7 +17,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: [gms, foss, izzy]
+        include:
+          - variant: gms
+            variantName: Gms
+          - variant: foss
+            variantName: Foss
+          - variant: izzy
+            variantName: Izzy
 
     steps:
       - name: Checkout source
@@ -66,19 +72,77 @@ jobs:
       - name: Generate Baseline Profile on Android Emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
+          # Match the known-good x86_64 emulator setup used by the reference
+          # workflow. The app APK is ARM-only, so the test task must install/run
+          # against an emulator image that supports ARM translation where available.
           api-level: 33
           target: aosp_atd
           arch: x86_64
           profile: pixel_2
-          disable-animations: true
+          # Avoid the action's animation-disable command; some images report
+          # "Can't find service: input" for adb shell input.
+          disable-animations: false
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
           script: |
             adb devices
-            ./gradlew :baselineprofile:connected${{ matrix.variant == 'gms' && 'Gms' || matrix.variant == 'foss' && 'Foss' || 'Izzy' }}NonMinifiedReleaseAndroidTest --stacktrace
+            ./gradlew :baselineprofile:connected${{ matrix.variantName }}NonMinifiedReleaseAndroidTest --stacktrace
+
+      # With baselineProfile.saveInSrc = true, AGP writes profiles under
+      # app/src/<variant>/baselineProfiles (not generated/baselineProfiles).
+      # Resolve the actual variant output, validate it, and commit only this variant.
+      - name: Commit generated Baseline Profile to source
+        shell: bash
+        env:
+          VARIANT: ${{ matrix.variant }}
+        run: |
+          set -euo pipefail
+          SOURCE_DIR="app/src/${VARIANT}/baselineProfiles"
+          GENERATED_DIR="app/src/${VARIANT}/generated/baselineProfiles"
+          PROFILE=""
+          for DIR in "$SOURCE_DIR" "$GENERATED_DIR"; do
+            if [[ -d "$DIR" ]]; then
+              PROFILE="$(find "$DIR" -maxdepth 1 -type f -name '*.txt' -print -quit)"
+              [[ -n "$PROFILE" ]] && break
+            fi
+          done
+
+          if [[ -z "$PROFILE" ]]; then
+            echo "No source Baseline Profile found for variant ${VARIANT}." >&2
+            echo "Searching all generated profile text files for diagnosis:"
+            find app/src baselineprofile/build -type f -name '*.txt' 2>/dev/null | grep -i 'baseline\|prof' || true
+            exit 1
+          fi
+
+          # Normalize into the standard AGP source location, keeping the profile in source control.
+          mkdir -p "$SOURCE_DIR"
+          if [[ "$PROFILE" != "$SOURCE_DIR/baseline-prof.txt" ]]; then
+            cp "$PROFILE" "$SOURCE_DIR/baseline-prof.txt"
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$SOURCE_DIR"/*.txt
+          if git diff --cached --quiet; then
+            echo "Generated profile is unchanged; no source commit needed."
+            exit 0
+          fi
+          git commit -m "Update ${VARIANT} Baseline Profile"
+          for attempt in 1 2 3 4 5; do
+            if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              echo "Generated profile committed to ${GITHUB_REF_NAME}."
+              exit 0
+            fi
+            echo "Push attempt ${attempt} failed; rebasing on latest branch before retry."
+            git fetch origin "${GITHUB_REF_NAME}"
+            git rebase "origin/${GITHUB_REF_NAME}"
+            sleep 2
+          done
+          echo "Could not push profile after retries." >&2
+          exit 1
 
       - name: Build release variant
         run: |
-          ./gradlew :app:assemble${{ matrix.variant == 'gms' && 'Gms' || 'Foss' }}Release --stacktrace
+          ./gradlew :app:assemble${{ matrix.variantName }}Release --stacktrace
         env:
           GLOSSY_APPLICATION_ID: com.jay.glossy
           GLOSSY_APP_NAME: Glossy Nightly
@@ -86,6 +150,24 @@ jobs:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
           LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+
+      - name: Verify Baseline Profile is packaged
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t APKS < <(find "app/build/outputs/apk/${{ matrix.variant }}/release" -type f -name "*.apk" ! -name "*-signed.apk")
+          VERIFIED=false
+          for APK in "${APKS[@]}"; do
+            if unzip -l "$APK" | grep -q 'assets/dexopt/baseline.prof'; then
+              echo "Verified assets/dexopt/baseline.prof in $APK"
+              VERIFIED=true
+              break
+            fi
+          done
+          if [[ "$VERIFIED" != "true" ]]; then
+            echo "No APK in app/build/outputs/apk/${{ matrix.variant }}/release contains assets/dexopt/baseline.prof" >&2
+            exit 1
+          fi
 
       - name: Sign Release APK
         uses: ilharp/sign-android-release@v2.0.0
