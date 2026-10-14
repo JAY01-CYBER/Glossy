@@ -12,7 +12,7 @@ plugins {
 
 android {
     namespace = "dev.seaglass.compose"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         minSdk = 26
