@@ -87,25 +87,41 @@ jobs:
             adb devices
             ./gradlew :baselineprofile:connected${{ matrix.variantName }}NonMinifiedReleaseAndroidTest --stacktrace
 
-      # saveInSrc=true writes the collected rules to app/src/<variant>/generated/baselineProfiles.
-      # Commit only this matrix variant's generated source profile; retry pushes because
-      # the three variants run in parallel and may update the same branch concurrently.
+      # With baselineProfile.saveInSrc = true, AGP writes profiles under
+      # app/src/<variant>/baselineProfiles (not generated/baselineProfiles).
+      # Resolve the actual variant output, validate it, and commit only this variant.
       - name: Commit generated Baseline Profile to source
         shell: bash
         env:
           VARIANT: ${{ matrix.variant }}
         run: |
           set -euo pipefail
-          PROFILE_DIR="app/src/${VARIANT}/generated/baselineProfiles"
-          echo "Checking generated source profiles in ${PROFILE_DIR}"
-          if [[ ! -d "$PROFILE_DIR" ]] || ! find "$PROFILE_DIR" -maxdepth 1 -type f -name '*.txt' -print -quit | grep -q .; then
-            echo "No generated source profile found in ${PROFILE_DIR}; refusing to silently skip profile persistence." >&2
-            find app/src -type f -path '*baselineProfiles/*.txt' -print || true
+          SOURCE_DIR="app/src/${VARIANT}/baselineProfiles"
+          GENERATED_DIR="app/src/${VARIANT}/generated/baselineProfiles"
+          PROFILE=""
+          for DIR in "$SOURCE_DIR" "$GENERATED_DIR"; do
+            if [[ -d "$DIR" ]]; then
+              PROFILE="$(find "$DIR" -maxdepth 1 -type f -name '*.txt' -print -quit)"
+              [[ -n "$PROFILE" ]] && break
+            fi
+          done
+
+          if [[ -z "$PROFILE" ]]; then
+            echo "No source Baseline Profile found for variant ${VARIANT}." >&2
+            echo "Searching all generated profile text files for diagnosis:"
+            find app/src baselineprofile/build -type f -name '*.txt' 2>/dev/null | grep -i 'baseline\|prof' || true
             exit 1
           fi
+
+          # Normalize into the standard AGP source location, keeping the profile in source control.
+          mkdir -p "$SOURCE_DIR"
+          if [[ "$PROFILE" != "$SOURCE_DIR/baseline-prof.txt" ]]; then
+            cp "$PROFILE" "$SOURCE_DIR/baseline-prof.txt"
+          fi
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "$PROFILE_DIR"/*.txt
+          git add "$SOURCE_DIR"/*.txt
           if git diff --cached --quiet; then
             echo "Generated profile is unchanged; no source commit needed."
             exit 0
@@ -121,7 +137,7 @@ jobs:
             git rebase "origin/${GITHUB_REF_NAME}"
             sleep 2
           done
-          echo "Could not push generated profile after retries." >&2
+          echo "Could not push profile after retries." >&2
           exit 1
 
       - name: Build release variant
