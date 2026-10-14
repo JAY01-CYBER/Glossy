@@ -170,6 +170,7 @@ import com.jay.glossy.ui.theme.PlayerColorExtractor
 import com.jay.glossy.ui.component.BlurredArtworkBackdrop
 import com.jay.glossy.ui.component.GlossyIconAction
 import com.jay.glossy.ui.component.GlossyThumb
+import com.jay.glossy.ui.component.seaGlassSurfacesAvailable
 import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.component.ArtworkNotesOverlay
 import com.jay.glossy.ui.component.NowPlayingAnimationIndicator
@@ -205,6 +206,12 @@ fun MiniPlayer(
     // always wins. While the new design was selectable it forced Studio.
     val miniPlayerStyle = if (ActiveDesignStyle == DesignStyle.TEAL) {
         MiniPlayerStyle.STUDIO
+    } else if (miniPlayerStylePreference == MiniPlayerStyle.SEAGLASS && !seaGlassSurfacesAvailable) {
+        // The sea-glass bar refracts a GPU-recorded backdrop through a
+        // RuntimeShader pass, which no device below API 33 has. The stored
+        // choice still stands: it draws as the modern bar there rather than
+        // hitting the crash the pick used to cause.
+        MiniPlayerStyle.MODERN
     } else {
         miniPlayerStylePreference
     }

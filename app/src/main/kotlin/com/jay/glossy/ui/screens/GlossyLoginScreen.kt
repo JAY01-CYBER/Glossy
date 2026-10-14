@@ -99,6 +99,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jay.glossy.R
+import com.jay.glossy.ui.component.seaGlassSurfacesAvailable
 import dev.seaglass.compose.SeaGlassContentRole
 import dev.seaglass.compose.SeaGlassStageHost
 import dev.seaglass.compose.seaGlass
@@ -359,9 +360,10 @@ fun GlossyLoginScreen(
         }
     }
 
-    // A preview has no GPU pass to sample, and a shader asked to open one there
-    // only fails: it gets the plain tree, where the pills keep their flat fills.
-    if (LocalInspectionMode.current) {
+    // A preview has no GPU pass to sample, and a device below API 33 has no
+    // RuntimeShader for the pass to run on — asking for glass there only fails.
+    // Both get the plain tree, where the pills keep their flat fills.
+    if (LocalInspectionMode.current || !seaGlassSurfacesAvailable) {
         Box(modifier = modifier.fillMaxSize()) {
             backdrop()
             content()
@@ -791,7 +793,7 @@ private fun LoginActionButton(
     // tinted, frosted, rim-lit contour, so a fill underneath would only
     // flatten it back out.
     val surface =
-        if (LocalInspectionMode.current) {
+        if (LocalInspectionMode.current || !seaGlassSurfacesAvailable) {
             Modifier.background(fill)
         } else {
             Modifier.seaGlass(
