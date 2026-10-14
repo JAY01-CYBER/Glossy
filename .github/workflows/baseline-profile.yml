@@ -87,6 +87,43 @@ jobs:
             adb devices
             ./gradlew :baselineprofile:connected${{ matrix.variantName }}NonMinifiedReleaseAndroidTest --stacktrace
 
+      # saveInSrc=true writes the collected rules to app/src/<variant>/generated/baselineProfiles.
+      # Commit only this matrix variant's generated source profile; retry pushes because
+      # the three variants run in parallel and may update the same branch concurrently.
+      - name: Commit generated Baseline Profile to source
+        shell: bash
+        env:
+          VARIANT: ${{ matrix.variant }}
+        run: |
+          set -euo pipefail
+          PROFILE_DIR="app/src/${VARIANT}/generated/baselineProfiles"
+          echo "Checking generated source profiles in ${PROFILE_DIR}"
+          if [[ ! -d "$PROFILE_DIR" ]] || ! find "$PROFILE_DIR" -maxdepth 1 -type f -name '*.txt' -print -quit | grep -q .; then
+            echo "No generated source profile found in ${PROFILE_DIR}; refusing to silently skip profile persistence." >&2
+            find app/src -type f -path '*baselineProfiles/*.txt' -print || true
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$PROFILE_DIR"/*.txt
+          if git diff --cached --quiet; then
+            echo "Generated profile is unchanged; no source commit needed."
+            exit 0
+          fi
+          git commit -m "Update ${VARIANT} Baseline Profile"
+          for attempt in 1 2 3 4 5; do
+            if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              echo "Generated profile committed to ${GITHUB_REF_NAME}."
+              exit 0
+            fi
+            echo "Push attempt ${attempt} failed; rebasing on latest branch before retry."
+            git fetch origin "${GITHUB_REF_NAME}"
+            git rebase "origin/${GITHUB_REF_NAME}"
+            sleep 2
+          done
+          echo "Could not push generated profile after retries." >&2
+          exit 1
+
       - name: Build release variant
         run: |
           ./gradlew :app:assemble${{ matrix.variantName }}Release --stacktrace
