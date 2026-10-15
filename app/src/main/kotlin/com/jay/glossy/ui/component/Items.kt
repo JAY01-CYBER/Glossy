@@ -340,6 +340,18 @@ fun TiledListRows(content: @Composable () -> Unit) {
     CompositionLocalProvider(LocalListRowsTiled provides true) { content() }
 }
 
+/**
+ * The colour list rows write their text in, or null to follow the theme.
+ *
+ * Every ordinary list is drawn on a surface the theme chose, so the scheme's own
+ * colours are already right and the null default keeps them exactly as they
+ * were. The player's queue is the exception: its rows sit on the blurred album
+ * artwork, where a scheme colour can land at an unreadable contrast against a
+ * saturated cover — the queue provides white for that backdrop, the same answer
+ * the player's own controls already give.
+ */
+val LocalListRowContentColor = staticCompositionLocalOf<Color?> { null }
+
 // ------------------------------------------------------------------------
 // PREMIUM LIST ITEM DESIGN (Online Playlist Style)
 // ------------------------------------------------------------------------
@@ -358,7 +370,7 @@ inline fun ListItem(
     isAvailable: Boolean = true,
     showDivider: Boolean = false,
 ) {
-    val contentColor = MaterialTheme.colorScheme.onSurface
+    val contentColor = LocalListRowContentColor.current ?: MaterialTheme.colorScheme.onSurface
     // Soft ghost tile: an ordinary row draws nothing at all and the list reads
     // as a list. A list that asked for tiles ([LocalListRowsTiled], Search)
     // paints the resting fill instead, while the tonal highlight stays reserved
@@ -1350,8 +1362,14 @@ fun MediaMetadataListItem(
     isSelected: Boolean = false,
     isActive: Boolean = false,
     isPlaying: Boolean = false,
+    /**
+     * Overrides the row's text colour for a list drawn on something the theme did
+     * not choose. Null — the default — keeps the scheme's own colours.
+     */
+    contentColor: Color? = null,
     trailingContent: @Composable RowScope.() -> Unit = {},
 ) {
+    CompositionLocalProvider(LocalListRowContentColor provides contentColor) {
     ListItem(
         title = mediaMetadata.title,
         subtitle = {
@@ -1371,7 +1389,9 @@ fun MediaMetadataListItem(
                     }
                 },
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                color =
+                    LocalListRowContentColor.current?.copy(alpha = 0.8f)
+                        ?: MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                 maxLines = 1,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1398,6 +1418,7 @@ fun MediaMetadataListItem(
         modifier = modifier,
         isActive = isActive
     )
+    }
 }
 
 // ------------------------------------------------------------------------

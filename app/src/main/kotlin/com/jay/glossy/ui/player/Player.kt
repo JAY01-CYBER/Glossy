@@ -215,6 +215,7 @@ import com.jay.glossy.ui.utils.ShowOffsetDialog
 import com.jay.glossy.utils.dataStore
 import com.jay.glossy.utils.makeTimeString
 import com.jay.glossy.utils.rememberEnumPreference
+import com.jay.glossy.constants.AutoplayKey
 import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.utils.safeDataStoreEdit
 import com.jay.glossy.utils.joinToArtistString
@@ -386,7 +387,14 @@ fun BottomSheetPlayer(
     var gradientColors by remember { mutableStateOf<List<Color>>(emptyList()) }
     val gradientColorsCache = remember { mutableMapOf<String, List<Color>>() }
 
-    if (!canSkipNext && automix.isNotEmpty()) {
+    // Autoplay is the switch that decides whether playback may continue on its
+    // own once the queue runs out. Extending the queue with a related track is
+    // exactly that decision, so it waits for autoplay to be on: with autoplay
+    // off the last track ends and the player stops, which is what the switch in
+    // the queue header promises. The related tracks still appear in the queue
+    // for anyone who wants to add one by hand.
+    val (autoplayEnabled) = rememberPreference(AutoplayKey, defaultValue = true)
+    if (autoplayEnabled && !canSkipNext && automix.isNotEmpty()) {
         playerConnection.service.addToQueueAutomix(automix[0], 0)
     }
 

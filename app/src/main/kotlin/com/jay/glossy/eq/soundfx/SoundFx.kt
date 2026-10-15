@@ -80,28 +80,11 @@ data class SoundFxSettings(
         const val MAX_EFFECT_STRENGTH = 1000
 
         /**
-         * The stored settings with the one-tap [AudioBoostLevel] layered on top.
-         *
-         * The boost lives in its own preference and never rewrites the band,
-         * profile or gain settings, so switching it off restores exactly what
-         * the equalizer screen was showing. It raises the output gain rather
-         * than replacing it — a gain the user set higher than the level asks
-         * for is left alone — and it turns the effects on, because a boost that
-         * silently does nothing while the equalizer is disabled would be a bug.
+         * The sound fx settings exactly as they are stored — what the equalizer
+         * screen shows is what reaches the audio session, with nothing layered
+         * over the top of it.
          */
-        fun fromPreferences(prefs: Preferences): SoundFxSettings {
-            val stored =
-                storedFromPreferences(prefs)
-            val boost = AudioBoostLevel.fromPreferences(prefs)
-            if (!boost.isOn) return stored
-            return stored.copy(
-                enabled = true,
-                outputGainEnabled = true,
-                outputGainMb = maxOf(stored.outputGainMb, boost.outputGainMb),
-            )
-        }
-
-        private fun storedFromPreferences(prefs: Preferences): SoundFxSettings =
+        fun fromPreferences(prefs: Preferences): SoundFxSettings =
             SoundFxSettings(
                 enabled = prefs[SoundFxEnabledKey] ?: false,
                 bandLevelsMb = decodeBandLevels(prefs[SoundFxBandLevelsMbKey]),
@@ -152,8 +135,6 @@ data class SoundFxConfiguration(
     val settings: SoundFxSettings,
     val capabilities: SoundFxCapabilities?,
     val profiles: List<SoundFxProfile>,
-    /** The one-tap loudness boost layered over [settings]. */
-    val audioBoost: AudioBoostLevel = AudioBoostLevel.OFF,
 )
 
 /**

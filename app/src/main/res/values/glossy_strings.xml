@@ -21,11 +21,11 @@
     <string name="queue_playing_next">Playing next</string>
     <string name="queue_collapse">Collapse the queue</string>
     <string name="queue_remove_item">Remove from queue</string>
-    <!-- Appearance — the experimental mini player style whose surface refracts the artwork (SeaGlass) -->
-    <string name="mini_player_style_seaglass">Sea Glass (experimental)</string>
     <!-- Player settings — a badge naming the stream that is actually playing -->
     <string name="show_audio_format">Show audio format</string>
     <string name="show_audio_format_desc">Names the live stream\u2019s container, codec and bitrate \u2014 for example WebM \u00b7 Opus \u00b7 130 kbps \u2014 in the player and the queue header</string>
+    <!-- Player settings — how far Spatial audio pushes the stereo image, shown as a multiple of the untouched mix -->
+    <string name="spatial_audio_width_value">Stereo width \u00b7 %1$.1f\u00d7</string>
     <!-- Player menu — forces a fresh animated-canvas lookup for the current song -->
     <string name="refresh_canvas">Refresh canvas</string>
     <string name="refresh_canvas_desc">Look for this song\'s animated artwork again, ignoring every cached answer</string>

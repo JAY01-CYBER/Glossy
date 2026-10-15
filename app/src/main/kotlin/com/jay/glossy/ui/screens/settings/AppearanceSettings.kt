@@ -596,7 +596,6 @@ fun AppearanceSettings(
                     MiniPlayerStyle.MODERN -> "Modern (Default)"
                     MiniPlayerStyle.GLOSSY_SPECIAL -> "Glossy Special Edition"
                     MiniPlayerStyle.STUDIO -> "Studio"
-                    MiniPlayerStyle.SEAGLASS -> stringResource(R.string.mini_player_style_seaglass)
                 }
             },
         )
@@ -1540,7 +1539,6 @@ fun AppearanceSettings(
                                     MiniPlayerStyle.MODERN -> "Modern (Default)"
                                     MiniPlayerStyle.GLOSSY_SPECIAL -> "Glossy Special Edition"
                                     MiniPlayerStyle.STUDIO -> "Studio"
-                                    MiniPlayerStyle.SEAGLASS -> stringResource(R.string.mini_player_style_seaglass)
                                 }
                             )
                         },

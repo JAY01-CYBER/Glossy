@@ -293,6 +293,18 @@ fun Queue(
     // unless asked for: it is an answer about the file, and it changes as the
     // queue moves on, so it stays quiet until a listener wants to check it.
     val (showAudioFormat) = rememberPreference(ShowAudioFormatKey, defaultValue = false)
+    // The queue is drawn over the player's own backdrop, not over a surface the
+    // theme picked, so its text does not read the colour scheme here: on a
+    // saturated cover the scheme's onSurface can sit at a contrast that is
+    // barely legible. Over the artwork the queue writes white, exactly as the
+    // player's transport controls beside it already do, and keeps the scheme's
+    // own colour when the background is a plain themed surface.
+    val queueTextColor =
+        if (playerBackground == PlayerBackgroundStyle.DEFAULT) {
+            null
+        } else {
+            Color.White
+        }
     var showQueueSearch by rememberSaveable { mutableStateOf(false) }
     var queueSearchQuery by rememberSaveable { mutableStateOf("") }
     val selection =
@@ -1299,7 +1311,7 @@ fun Queue(
                             text = stringResource(R.string.playback_queue),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
+                            color = queueTextColor ?: MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.weight(1f),
                         )
                         // Sits with the title because it describes the song that
@@ -1314,7 +1326,7 @@ fun Queue(
                         Text(
                             text = makeTimeString(queueLength * 1000L),
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = queueTextColor ?: MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         IconButton(onClick = { playerBottomSheetState.collapseSoft() }) {
                             Icon(
@@ -1330,7 +1342,7 @@ fun Queue(
                             text = pluralStringResource(R.plurals.n_song, queueWindows.size, queueWindows.size) +
                                 " • " + stringResource(R.string.queue_playing_next),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = queueTextColor?.copy(alpha = 0.85f) ?: MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f),
@@ -1338,7 +1350,7 @@ fun Queue(
                         Text(
                             text = stringResource(R.string.autoplay),
                             style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = queueTextColor?.copy(alpha = 0.85f) ?: MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Switch(
                             checked = autoplay,
@@ -1520,6 +1532,7 @@ fun Queue(
                                         isSelected = false,
                                         isActive = isActive,
                                         isPlaying = isPlaying && isActive,
+                                        contentColor = queueTextColor,
                                         trailingContent = {
                                             if (inSelectMode) {
                                                 Checkbox(

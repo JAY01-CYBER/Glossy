@@ -5,20 +5,16 @@
 
 package com.jay.glossy.ui.component
 
-import android.os.Build
-
 /**
  * Whether this device can run a SeaGlass surface at all.
  *
- * SeaGlass's surface pass resolves `android.graphics.RuntimeShader`, which only
- * exists from Android 13 (API 33). Below that the resolution fails the moment
- * the pass runs — inside `Modifier.seaGlass`, before any of SeaGlass's own tier
- * checks can fall back to a software path — and the app dies with
- * `NoClassDefFoundError` instead of degrading. The guard therefore has to sit
- * outside SeaGlass: below API 33 every Glossy call site paints its own flat
- * surface rather than asking for glass.
+ * Pinned off: the frosted-glass surfaces never shipped as the look people
+ * asked for — the flat button and pill drawn below API 33 was the one testers
+ * kept picking — so every call site now takes its flat branch on every device,
+ * and all of them already had that branch for API < 33.
  *
- * Read once, because `SDK_INT` cannot change while the process lives.
+ * The constant stays a named read-only value rather than a hardcoded `false` at
+ * each call site so a future reintroduction is one edit, and so the tier checks
+ * inside SeaGlass stay unreachable without deleting the dependency.
  */
-val seaGlassSurfacesAvailable: Boolean =
-    Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+val seaGlassSurfacesAvailable: Boolean = false

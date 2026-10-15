@@ -125,13 +125,7 @@ enum class MiniPlayerStyle {
     GLOSSY_SPECIAL,
 
     /** The teal design system's compact bar with a teal progress hairline. */
-    STUDIO,
-
-    /**
-     * The experimental sea-glass bar: a sand-frosted surface that refracts the
-     * current artwork instead of painting a themed fill.
-     */
-    SEAGLASS
+    STUDIO
 }
 
 /**
@@ -436,6 +430,23 @@ val AudioNormalizationKey = booleanPreferencesKey("audioNormalization")
 /** Mid/side stereo widening ("Spatial Audio") applied in the audio sink. */
 val SpatialAudioKey = booleanPreferencesKey("spatialAudio")
 
+/**
+ * How wide [SpatialAudioKey] pushes the stereo image, as the `width` handed to
+ * the mid/side widener (1.0 is the untouched mix). The widener runs with this
+ * value only while spatial audio is on.
+ */
+val SpatialAudioWidthKey = floatPreferencesKey("spatialAudioWidth")
+
+/** Width the widener uses when the setting has never been moved. */
+const val DefaultSpatialAudioWidth = 1.7f
+
+/**
+ * The widest the slider is allowed to go. Past roughly here the phantom centre
+ * starts to hollow out — voices lead the mix instead of sitting in it — so the
+ * ceiling is a listening decision rather than a numeric one.
+ */
+const val MaxSpatialAudioWidth = 2.5f
+
 val LoudnessLevelKey = stringPreferencesKey("loudnessLevel")
 
 enum class LoudnessLevel(
@@ -460,16 +471,6 @@ val SoundFxVirtualizerEnabledKey = booleanPreferencesKey("soundFxVirtualizerEnab
 val SoundFxVirtualizerStrengthKey = intPreferencesKey("soundFxVirtualizerStrength")
 val SoundFxAutoHeadroomKey = booleanPreferencesKey("soundFxAutoHeadroom")
 val SoundFxProfilesJsonKey = stringPreferencesKey("soundFxProfilesJson")
-
-/**
- * The one-tap loudness boost, stored as the name of a
- * [com.jay.glossy.eq.soundfx.AudioBoostLevel]. It is not a separate audio
- * effect: the level is folded into the sound fx settings as they are applied to
- * the live session, so it drives the very same LoudnessEnhancer the equalizer
- * screen writes to, and it rides along with the existing "settings changed"
- * observer in MusicService.
- */
-val AudioBoostLevelKey = stringPreferencesKey("audioBoostLevel")
 
 val AutoLoadMoreKey = booleanPreferencesKey("autoLoadMore")
 val AutoRadioQueueKey = booleanPreferencesKey("autoRadioQueue")

@@ -158,6 +158,10 @@ internal fun AppleMusicQueueView(
                                     mediaMetadata = trackMeta,
                                     isActive = isActive,
                                     isPlaying = isActive && playerConnection.player.isPlaying,
+                                    // The whole view sits on the album artwork, so
+                                    // the rows take the same white the header and
+                                    // the pills beside them already use.
+                                    contentColor = Color.White,
                                     trailingContent = {
                                         if (!isListenTogetherGuest) {
                                             IconButton(
