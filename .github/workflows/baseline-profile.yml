@@ -1,7 +1,18 @@
+name: Generate Baseline Profiles
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 5 * * 0"
+
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   generate-baseline-profile:
     name: Generate Baseline Profiles (${{ matrix.variant }})
-    runs-on: macos-14 # Fast M1 runners, no long queues
+    runs-on: macos-13
 
     strategy:
       fail-fast: false
@@ -61,12 +72,12 @@ jobs:
       - name: Generate Baseline Profile on Android Emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 34 # Upgraded to 34 for M1 stability
-          target: google_apis # Switched from aosp_atd to fix HVF crash
-          arch: arm64-v8a # Native ARM architecture for M1
-          profile: pixel_6
+          api-level: 33
+          target: aosp_atd
+          arch: x86_64
+          profile: pixel_2
           disable-animations: false
-          emulator-options: -no-window -no-audio -no-boot-anim # Removed software GPU flag
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
           script: |
             adb devices
             ./gradlew :app:generate${{ matrix.variantName }}ReleaseBaselineProfile --stacktrace
@@ -96,7 +107,7 @@ jobs:
           if [[ -z "$PROFILE" ]]; then
             echo "No non-empty Baseline Profile text file found for ${VARIANT}." >&2
             echo "Diagnostic profile-related files:"
-            find app/src app/build baselineprofile/build -type f \\
+            find app/src app/build baselineprofile/build -type f \
               \( -iname '*baseline*' -o -iname '*prof*' \) -print 2>/dev/null || true
             exit 1
           fi
@@ -224,7 +235,6 @@ jobs:
           fi
 
           git commit -m "Update generated Baseline Profiles"
-          # Rebase only a clean working tree. Retry non-fast-forward pushes safely.
           for attempt in 1 2 3 4 5; do
             if git push origin "HEAD:${GITHUB_REF_NAME}"; then
               echo "All generated Baseline Profiles committed to ${GITHUB_REF_NAME}."
