@@ -12,7 +12,7 @@ permissions:
 jobs:
   generate-baseline-profile:
     name: Generate Baseline Profiles (${{ matrix.variant }})
-    runs-on: ubuntu-latest
+    runs-on: macos-13
 
     strategy:
       fail-fast: false
