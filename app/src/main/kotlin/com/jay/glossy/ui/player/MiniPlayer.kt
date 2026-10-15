@@ -66,6 +66,8 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -172,6 +174,7 @@ import com.jay.glossy.ui.component.GlossyIconAction
 import com.jay.glossy.ui.component.GlossyThumb
 import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.component.ArtworkNotesOverlay
+import com.jay.glossy.ui.component.LocalAppScrolledToTop
 import com.jay.glossy.ui.component.NowPlayingAnimationIndicator
 import com.jay.glossy.ui.component.rememberAmbientMotionEnabled
 import com.jay.glossy.ui.theme.GlossyPalette
@@ -219,6 +222,13 @@ fun MiniPlayer(
                 durationState = durationState,
                 modifier = modifier,
                 pureBlack = pureBlack,
+                onClick = onClick,
+            )
+        }
+        MiniPlayerStyle.APPLE_MUSIC -> {
+            AppleMusicMiniPlayer(
+                progressState = progressState,
+                modifier = modifier,
                 onClick = onClick,
             )
         }
@@ -1057,6 +1067,172 @@ private fun GlossySpecialEditionMiniPlayer(
                             contentDescription = "Next",
                             tint = textColor.copy(alpha = if (canSkipNext && !isListenTogetherGuest) 1f else 0.4f),
                             modifier = Modifier.size(28.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ============================================================================
+// APPLE MUSIC PILL — the floating bar from the reference recording
+// ============================================================================
+
+/**
+ * The mini player from the listener's reference recording: one floating bar,
+ * the artwork at its left, the song over a squiggle playhead, and the
+ * transport in a filled capsule.
+ *
+ * Scrolling the list underneath folds the bar away into the round artwork
+ * bubble and leaves it pinned to the right — the same behaviour the recording
+ * shows. The signal is the one the app already collects for this, read through
+ * [LocalAppScrolledToTop].
+ *
+ * A new style rather than a change to the Special Edition pill: that one is a
+ * look people have already picked, and this one has to be a choice of its own.
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun AppleMusicMiniPlayer(
+    progressState: ProgressState,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {},
+) {
+    val playerConnection = LocalPlayerConnection.current ?: return
+    val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
+    val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
+    val canSkipNext by playerConnection.canSkipNext.collectAsStateWithLifecycle()
+    val haptic = LocalHapticFeedback.current
+
+    // Answered once at the app root from every list's own nested scroll, so the
+    // bar does not have to know which screen it is standing on.
+    val foldedAway = !LocalAppScrolledToTop.current
+    val expansion by animateFloatAsState(
+        targetValue = if (foldedAway) 0f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessMediumLow,
+        ),
+        label = "appleMusicPillExpansion",
+    )
+
+    // The bar folds towards its right end, which is where the round form is
+    // pinned; the corners close up as it goes.
+    val cornerPercent by animateFloatAsState(
+        targetValue = if (foldedAway) 50f else 24f,
+        label = "appleMusicPillCorner",
+    )
+    val shape = RoundedCornerShape(percent = cornerPercent.roundToInt())
+    val artworkShape = RoundedCornerShape(percent = if (foldedAway) 50 else 26)
+
+    Box(
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = Alignment.CenterEnd,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = if (foldedAway) Arrangement.Center else Arrangement.Start,
+            modifier =
+                Modifier
+                    .fillMaxWidth(expansion.coerceIn(0.16f, 1f))
+                    .height((56f + 8f * expansion).dp)
+                    .clip(shape)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color.White.copy(alpha = 0.18f),
+                                Color.Black.copy(alpha = 0.55f),
+                            ),
+                        ),
+                    )
+                    .border(1.dp, Color.White.copy(alpha = 0.22f), shape)
+                    .clickable(onClick = onClick)
+                    .padding(horizontal = 8.dp),
+        ) {
+            AsyncImage(
+                model = mediaMetadata?.thumbnailUrl?.resize(120, 120),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.size(48.dp).clip(artworkShape),
+            )
+
+            AnimatedVisibility(visible = !foldedAway, enter = fadeIn(tween(180)), exit = fadeOut(tween(120))) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Column(
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(
+                            text = mediaMetadata?.title ?: "",
+                            color = Color.White,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Text(
+                            text = mediaMetadata?.artists?.joinToArtistString(", ") { it.name }.orEmpty(),
+                            color = Color.White.copy(alpha = 0.72f),
+                            fontSize = 12.5.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        // The playhead is the squiggle: what has played is the
+                        // wave, what is left stays a flat line of the same
+                        // weight, which is what the recording shows under the
+                        // title rather than a hairline under the whole bar.
+                        LinearWavyProgressIndicator(
+                            progress = { progressState.progress },
+                            modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
+                            color = Color.White,
+                            trackColor = Color.White.copy(alpha = 0.3f),
+                            wavelength = 16.dp,
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier =
+                            Modifier
+                                .size(width = 58.dp, height = 44.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(Color.White)
+                                .clickable {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    playerConnection.togglePlayPause()
+                                },
+                    ) {
+                        Icon(
+                            painter =
+                                painterResource(
+                                    if (isPlaying) R.drawable.pause_applemusic else R.drawable.play_applemusic,
+                                ),
+                            contentDescription = if (isPlaying) "Pause" else "Play",
+                            tint = Color(0xFF15121F),
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+
+                    IconButton(
+                        enabled = canSkipNext,
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            playerConnection.seekToNext()
+                        },
+                        modifier = Modifier.size(42.dp),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.apple_skip_next),
+                            contentDescription = "Next",
+                            tint = Color.White.copy(alpha = if (canSkipNext) 1f else 0.4f),
+                            modifier = Modifier.size(26.dp),
                         )
                     }
                 }

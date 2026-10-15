@@ -599,6 +599,7 @@ fun AppearanceSettings(
                     MiniPlayerStyle.LEGACY -> "Legacy (Old Style)"
                     MiniPlayerStyle.MODERN -> "Modern (Default)"
                     MiniPlayerStyle.GLOSSY_SPECIAL -> "Glossy Special Edition"
+                                    MiniPlayerStyle.APPLE_MUSIC -> "Apple Music (from the video)"
                     MiniPlayerStyle.STUDIO -> "Studio"
                 }
             },
@@ -1550,6 +1551,7 @@ fun AppearanceSettings(
                                     MiniPlayerStyle.LEGACY -> "Legacy (Old Style)"
                                     MiniPlayerStyle.MODERN -> "Modern (Default)"
                                     MiniPlayerStyle.GLOSSY_SPECIAL -> "Glossy Special Edition"
+                                    MiniPlayerStyle.APPLE_MUSIC -> "Apple Music (from the video)"
                                     MiniPlayerStyle.STUDIO -> "Studio"
                                 }
                             )
