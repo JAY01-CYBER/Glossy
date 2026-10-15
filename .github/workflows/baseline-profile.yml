@@ -1,18 +1,7 @@
-name: Generate Baseline Profiles
-
-on:
-  workflow_dispatch:
-  schedule:
-    - cron: "17 5 * * 0"
-
-permissions:
-  contents: write
-  pull-requests: write
-
 jobs:
   generate-baseline-profile:
     name: Generate Baseline Profiles (${{ matrix.variant }})
-    runs-on: macos-13
+    runs-on: macos-14 # Fast M1 runners, no long queues
 
     strategy:
       fail-fast: false
@@ -72,12 +61,12 @@ jobs:
       - name: Generate Baseline Profile on Android Emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 33
-          target: aosp_atd
-          arch: x86_64
-          profile: pixel_2
+          api-level: 34 # Upgraded to 34 for M1 stability
+          target: google_apis # Switched from aosp_atd to fix HVF crash
+          arch: arm64-v8a # Native ARM architecture for M1
+          profile: pixel_6
           disable-animations: false
-          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          emulator-options: -no-window -no-audio -no-boot-anim # Removed software GPU flag
           script: |
             adb devices
             ./gradlew :app:generate${{ matrix.variantName }}ReleaseBaselineProfile --stacktrace
