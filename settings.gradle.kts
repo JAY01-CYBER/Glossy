@@ -26,6 +26,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "Glossy"
 include(":app")
+include(":baselineprofile")
 include(":canvas")
 include(":applecanvas")
 include(":innertube")
