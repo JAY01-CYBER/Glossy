@@ -24,6 +24,12 @@
     <!-- Player settings — a badge naming the stream that is actually playing -->
     <string name="show_audio_format">Show audio format</string>
     <string name="show_audio_format_desc">Names the live stream\u2019s container, codec and bitrate \u2014 for example WebM \u00b7 Opus \u00b7 130 kbps \u2014 in the player and the queue header</string>
+    <!-- App Font — importing a font off the device -->
+    <string name="font_import_action">Upload your own font</string>
+    <string name="font_import_description">A .ttf or .otf from your device. It is copied into the app, so it keeps working after you restart.</string>
+    <string name="font_import_none">Nothing imported yet</string>
+    <string name="font_import_unsupported">That file is not a font. Pick a .ttf or .otf.</string>
+    <string name="font_import_failed">The font could not be copied into the app.</string>
     <!-- Player settings — how far Spatial audio pushes the stereo image, shown as a multiple of the untouched mix -->
     <string name="spatial_audio_width_value">Stereo width \u00b7 %1$.1f\u00d7</string>
     <!-- Player menu — forces a fresh animated-canvas lookup for the current song -->

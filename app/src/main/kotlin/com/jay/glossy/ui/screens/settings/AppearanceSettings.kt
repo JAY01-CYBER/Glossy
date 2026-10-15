@@ -103,6 +103,7 @@ import com.jay.glossy.constants.MiniPlayerBackgroundStyle
 import com.jay.glossy.constants.MiniPlayerBackgroundStyleKey
 import com.jay.glossy.constants.MiniPlayerPlayingAnimation
 import com.jay.glossy.constants.MiniPlayerPlayingAnimationKey
+import com.jay.glossy.constants.CustomFontNameKey
 import com.jay.glossy.constants.MiniPlayerStyle
 import com.jay.glossy.constants.MiniLyricsStyle
 import com.jay.glossy.constants.MiniLyricsStyleKey
@@ -202,6 +203,9 @@ fun AppearanceSettings(
 
     val (selectedFontValue) = rememberPreference(SelectedFontKey, defaultValue = AppFont.SYSTEM.value)
     val currentFont = AppFont.fromValue(selectedFontValue)
+    // Named here for the imported font only: it is the one choice whose label is
+    // whatever the listener brought with them, not a typeface Glossy named.
+    val (customFontName) = rememberPreference(CustomFontNameKey, defaultValue = "")
 
     // Ambient motion. Low-RAM phones start with this already on, which is what
     // "support in low end devices" means here — nobody has to hunt for it.
@@ -1510,7 +1514,15 @@ fun AppearanceSettings(
                         Material3SettingsItem(
                             icon = painterResource(R.drawable.palette),
                             title = { Text("App Font") },
-                            description = { Text(currentFont.displayName) },
+                            description = {
+                                Text(
+                                    if (currentFont == AppFont.CUSTOM && customFontName.isNotBlank()) {
+                                        customFontName
+                                    } else {
+                                        currentFont.displayName
+                                    }
+                                )
+                            },
                             onClick = { navController.navigate("settings/appearance/font") },
                         ),
                     )

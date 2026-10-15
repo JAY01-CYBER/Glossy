@@ -12,6 +12,8 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.jay.glossy.constants.AppFont
+import java.io.File
 
 val GoogleSansFontFamily = FontFamily(Font(R.font.google_sans, FontWeight.Normal))
 val GoogleSansFlexFontFamily = FontFamily(Font(R.font.google_sans_flex, FontWeight.Normal))
@@ -21,6 +23,43 @@ val OutfitFontFamily = FontFamily(Font(R.font.outfit, FontWeight.Normal))
 val PlusJakartaSansFontFamily = FontFamily(Font(R.font.plus_jakarta_sans, FontWeight.Normal))
 val PoppinsFontFamily = FontFamily(Font(R.font.poppins, FontWeight.Normal))
 val RoundexFontFamily = FontFamily(Font(R.font.roundex, FontWeight.Normal))
+
+/**
+ * A family built from a font file on the device — the "bring your own font"
+ * option behind [AppFont.CUSTOM].
+ *
+ * The text stack loads the file itself, so nothing has to be bundled or
+ * re-installed with the app. A path that is missing, or a file that turns out
+ * not to be a font at all, returns null and the caller draws the system
+ * typeface instead: a preference set once must not be able to break the app
+ * after the file it points at has been cleared or moved.
+ */
+fun fontFamilyFromFile(path: String?): FontFamily? {
+    val file = path?.takeIf(String::isNotBlank)?.let(::File) ?: return null
+    if (!file.isFile) return null
+    return runCatching { FontFamily(Font(file)) }.getOrNull()
+}
+
+/**
+ * The family one of the app's font choices draws with, in one place so the
+ * theme and the picker cannot disagree about what a choice means.
+ *
+ * [customFontPath] is only read for [AppFont.CUSTOM]; every other choice is a
+ * typeface that ships with the app.
+ */
+fun appFontFamily(appFont: AppFont, customFontPath: String? = null): FontFamily =
+    when (appFont) {
+        AppFont.SYSTEM -> FontFamily.Default
+        AppFont.GOOGLE_SANS -> GoogleSansFontFamily
+        AppFont.GOOGLE_SANS_FLEX -> GoogleSansFlexFontFamily
+        AppFont.INTER -> InterFontFamily
+        AppFont.MANROPE -> ManropeFontFamily
+        AppFont.OUTFIT -> OutfitFontFamily
+        AppFont.PLUS_JAKARTA_SANS -> PlusJakartaSansFontFamily
+        AppFont.POPPINS -> PoppinsFontFamily
+        AppFont.ROUNDEX -> RoundexFontFamily
+        AppFont.CUSTOM -> fontFamilyFromFile(customFontPath) ?: FontFamily.Default
+    }
 
 fun getTypography(brandFont: FontFamily, plainFont: FontFamily = FontFamily.Default): Typography = Typography(
     displayLarge = TextStyle(

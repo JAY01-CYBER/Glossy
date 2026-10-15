@@ -1121,6 +1121,20 @@ val ShowFeaturedCarouselKey = booleanPreferencesKey("showFeaturedCarousel")
 
 val SelectedFontKey = stringPreferencesKey("selected_font")
 
+/**
+ * Absolute path, inside the app's own files directory, of a font the listener
+ * imported.
+ *
+ * Kept beside [SelectedFontKey] rather than folded into it because the choice
+ * and the file are separate facts: the choice can fall back to the system font
+ * while the imported file stays where it is, ready for the next time it is
+ * picked.
+ */
+val CustomFontPathKey = stringPreferencesKey("custom_font_path")
+
+/** What the imported font is called on the picker, taken from the file's own name. */
+val CustomFontNameKey = stringPreferencesKey("custom_font_name")
+
 enum class AppFont(val value: String, val displayName: String, val description: String) {
     SYSTEM("system", "System Default", "Use the default system typeface."),
     GOOGLE_SANS("google_sans", "Google Sans", "Google's signature geometric sans-serif."),
@@ -1130,7 +1144,14 @@ enum class AppFont(val value: String, val displayName: String, val description: 
     OUTFIT("outfit", "Outfit", "A clean and modern geometric sans-serif."),
     PLUS_JAKARTA_SANS("plus_jakarta_sans", "Plus Jakarta Sans", "A premium warm geometric sans-serif typeface."),
     POPPINS("poppins", "Poppins", "A geometric sans-serif typeface with international appeal."),
-    ROUNDEX("roundex", "Roundex", "A smooth, rounded modern typeface.");
+    ROUNDEX("roundex", "Roundex", "A smooth, rounded modern typeface."),
+
+    /**
+     * A font the listener brought with them: the picker copies a .ttf or .otf
+     * off the device into the app's own storage and draws the app with it, so
+     * the choice is not limited to the typefaces Glossy ships.
+     */
+    CUSTOM("custom", "Your font", "A font you imported from your device.");
 
     companion object {
         fun fromValue(value: String): AppFont = entries.find { it.value == value } ?: SYSTEM

@@ -81,6 +81,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -149,6 +150,7 @@ import com.jay.glossy.lyrics.LyricsEntry
 import com.jay.glossy.lyrics.LyricsResyncHelper
 import com.jay.glossy.lyrics.LyricsTranslationHelper
 import com.jay.glossy.lyrics.LyricsUtils.findCurrentLineIndex
+import kotlin.math.abs
 import com.jay.glossy.lyrics.LyricsUtils.isBelarusian
 import com.jay.glossy.lyrics.LyricsUtils.isBulgarian
 import com.jay.glossy.lyrics.LyricsUtils.isChinese
@@ -1100,13 +1102,32 @@ fun OriginalLyrics(
                         // Smaller scale for background vocals
                         val bgScale = if (item.isBackground) 0.85f else 1f
 
+                        // The lines away from the one being sung recede optically as
+                        // well as by alpha: a soft distance blur gives the stack a
+                        // front and a back rather than one flat column of text, and it
+                        // is keyed off the same active line the fade is.
+                        val lineDistance =
+                            if (isSynced && displayedCurrentLineIndex >= 0 && !isActiveByIndex) {
+                                abs(index - displayedCurrentLineIndex)
+                            } else {
+                                0
+                            }
+                        // A step rather than a tween on purpose: re-animating the
+                        // blur radius every frame re-allocates the RenderEffect
+                        // pass each frame, which is what makes blurred text
+                        // stutter. The distance only moves when the sung line
+                        // advances, and the alpha tween below covers the change.
+                        val lineBlur = lyricsLineBlur(lineDistance)
+
                         Column(
                             modifier =
-                                itemModifier.graphicsLayer {
-                                    this.alpha = if (item.isBackground) alpha * 0.8f else alpha
-                                    this.scaleX = scale * bgScale
-                                    this.scaleY = scale * bgScale
-                                },
+                                itemModifier
+                                    .blur(lineBlur)
+                                    .graphicsLayer {
+                                        this.alpha = if (item.isBackground) alpha * 0.8f else alpha
+                                        this.scaleX = scale * bgScale
+                                        this.scaleY = scale * bgScale
+                                    },
                             horizontalAlignment = agentAlignment,
                         ) {
                             // Use time-based active check to sync both main and background lines with same timestamp
