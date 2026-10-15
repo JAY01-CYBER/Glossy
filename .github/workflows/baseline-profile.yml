@@ -12,7 +12,7 @@ permissions:
 jobs:
   generate-baseline-profile:
     name: Generate Baseline Profiles (${{ matrix.variant }})
-    runs-on: macos-13
+    runs-on: macos-14
 
     strategy:
       fail-fast: false
@@ -72,27 +72,16 @@ jobs:
       - name: Generate Baseline Profile on Android Emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          # Match the known-good x86_64 emulator setup used by the reference
-          # workflow. The app APK is ARM-only, so the test task must install/run
-          # against an emulator image that supports ARM translation where available.
           api-level: 33
           target: aosp_atd
-          arch: x86_64
+          arch: arm64-v8a
           profile: pixel_2
-          # Avoid the action's animation-disable command; some images report
-          # "Can't find service: input" for adb shell input.
           disable-animations: false
-          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          emulator-options: -no-window -no-audio -no-boot-anim
           script: |
             adb devices
-            # Use the app module's Baseline Profile task so the AndroidX plugin
-            # collects the profile and, with saveInSrc=true, writes it into app/src.
             ./gradlew :app:generate${{ matrix.variantName }}ReleaseBaselineProfile --stacktrace
 
-      # Normalize the generated profile into the source location configured by
-      # baselineProfile { saveInSrc = true }. Do not push from matrix jobs:
-      # parallel variant jobs pushing to the same branch cause non-fast-forward
-      # errors and failed rebases.
       - name: Prepare generated Baseline Profile
         shell: bash
         env:
