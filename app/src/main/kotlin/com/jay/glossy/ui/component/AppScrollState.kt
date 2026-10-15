@@ -33,13 +33,14 @@ class AppScrollState {
 
     private var accumulated = 0f
 
+    /**
+     * Only the *consumed* delta is tracked, and only after the fact: a scroll
+     * reports both what was offered before the child handled it and what the
+     * child actually used, so counting both would measure every gesture twice
+     * and halve [CollapseThreshold].
+     */
     val connection: NestedScrollConnection =
         object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                track(available.y)
-                return Offset.Zero
-            }
-
             override fun onPostScroll(
                 consumed: Offset,
                 available: Offset,
