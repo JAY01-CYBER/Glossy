@@ -450,6 +450,13 @@ class HomeViewModel @Inject constructor(
         dailyDiscover.value = items.toList().distinctBy { it.recommendation.id }.shuffled()
     }
 
+    /**
+     * How many recently played songs lead the Quick picks shelf. Enough for the
+     * history to read as what you have been playing, few enough that the
+     * generated half of the shelf is still most of it.
+     */
+    private val RECENT_PICKS = 8
+
     private suspend fun getQuickPicks() {
         val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
         when (quickPicksEnum.first()) {
@@ -457,7 +464,20 @@ class HomeViewModel @Inject constructor(
                 val relatedSongs = database.quickPicks().first().filterVideoSongs(hideVideoSongs)
                 val forgotten = database.forgottenFavorites().first().filterVideoSongs(hideVideoSongs).take(8)
 
-                val recentSong = database.events().first().firstOrNull()?.song
+                // The picks above are *related* songs: that query seeds itself
+                // from recent listening but answers with the orbit around it, so
+                // a listener who has had one artist on repeat saw that artist's
+                // neighbours and never the tracks they actually played. The
+                // listen history goes in first, and the generated picks fill out
+                // the shelf behind it.
+                val recentlyPlayed =
+                    database.events().first()
+                        .map { it.song }
+                        .filterVideoSongs(hideVideoSongs)
+                        .distinctBy { it.id }
+                val recentPicks = recentlyPlayed.take(RECENT_PICKS)
+
+                val recentSong = recentlyPlayed.firstOrNull()
                 val ytSimilarSongs = mutableListOf<Song>()
 
                 if (recentSong != null) {
@@ -475,9 +495,13 @@ class HomeViewModel @Inject constructor(
                     }
                 }
 
-                val combined = (relatedSongs + forgotten + ytSimilarSongs)
+                val generated =
+                    (relatedSongs + forgotten + ytSimilarSongs)
+                        .filterNot { candidate -> recentPicks.any { it.id == candidate.id } }
+                        .distinctBy { it.id }
+                        .shuffled()
+                val combined = (recentPicks + generated)
                     .distinctBy { it.id }
-                    .shuffled()
                     .take(20)
 
                 quickPicks.value = combined.ifEmpty { relatedSongs.distinctBy { it.id }.shuffled().take(20) }
