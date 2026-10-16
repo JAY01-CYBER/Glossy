@@ -35,6 +35,7 @@ plugins {
     alias(libs.plugins.kotlin.ksp)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.androidx.baselineprofile)
 }
 
 abstract class GenerateProtoTask : DefaultTask() {
@@ -107,10 +108,6 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
-
-        ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
-        }
 
         // LastFM API keys from GitHub Secrets
         val lastFmKey = localProperties.getProperty("LASTFM_API_KEY") ?: System.getenv("LASTFM_API_KEY") ?: ""
@@ -186,7 +183,19 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            ndk {
+                abiFilters.clear()
+                abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+            }
         }
+        
+        maybeCreate("nonMinifiedRelease").apply {
+            ndk {
+                abiFilters.clear()
+                abiFilters += listOf("x86", "x86_64", "armeabi-v7a", "arm64-v8a")
+            }
+        }
+
         debug {
             if (applicationIdOverride == null) {
                 applicationIdSuffix = ".debug"
@@ -328,7 +337,16 @@ configurations.configureEach {
     exclude(group = "org.json", module = "json")
 }
 
+baselineProfile {
+    // Commit generated, variant-specific profiles under src/<variant>/generated/baselineProfiles.
+    saveInSrc = true
+}
+
 dependencies {
+    // Installs/validates packaged Baseline Profiles on supported Android versions.
+    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
+    baselineProfile(project(":baselineprofile"))
+
     implementation(libs.guava)
     implementation(libs.coroutines.guava)
     implementation(libs.concurrent.futures)
@@ -437,6 +455,4 @@ dependencies {
     implementation("dev.chrisbanes.haze:haze-materials:1.1.1")
 }
 
-
 // Cache bust for spotifycore module update
-

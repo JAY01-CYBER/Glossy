@@ -12,7 +12,7 @@ permissions:
 jobs:
   generate-baseline-profile:
     name: Generate Baseline Profiles (${{ matrix.variant }})
-    runs-on: ubuntu-latest
+    runs-on: macos-13
 
     strategy:
       fail-fast: false
@@ -72,73 +72,59 @@ jobs:
       - name: Generate Baseline Profile on Android Emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          # Match the known-good x86_64 emulator setup used by the reference
-          # workflow. The app APK is ARM-only, so the test task must install/run
-          # against an emulator image that supports ARM translation where available.
           api-level: 33
           target: aosp_atd
           arch: x86_64
           profile: pixel_2
-          # Avoid the action's animation-disable command; some images report
-          # "Can't find service: input" for adb shell input.
           disable-animations: false
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
           script: |
             adb devices
-            ./gradlew :baselineprofile:connected${{ matrix.variantName }}NonMinifiedReleaseAndroidTest --stacktrace
+            ./gradlew :app:generate${{ matrix.variantName }}ReleaseBaselineProfile --stacktrace
 
-      # With baselineProfile.saveInSrc = true, AGP writes profiles under
-      # app/src/<variant>/baselineProfiles (not generated/baselineProfiles).
-      # Resolve the actual variant output, validate it, and commit only this variant.
-      - name: Commit generated Baseline Profile to source
+      - name: Prepare generated Baseline Profile
         shell: bash
         env:
           VARIANT: ${{ matrix.variant }}
         run: |
           set -euo pipefail
-          SOURCE_DIR="app/src/${VARIANT}/baselineProfiles"
-          GENERATED_DIR="app/src/${VARIANT}/generated/baselineProfiles"
+          SOURCE_DIR="app/src/${VARIANT}/generated/baselineProfiles"
+          STANDARD_DIR="app/src/${VARIANT}/baselineProfiles"
           PROFILE=""
-          for DIR in "$SOURCE_DIR" "$GENERATED_DIR"; do
+
+          for DIR in "$SOURCE_DIR" "$STANDARD_DIR"; do
             if [[ -d "$DIR" ]]; then
-              PROFILE="$(find "$DIR" -maxdepth 1 -type f -name '*.txt' -print -quit)"
+              PROFILE="$(find "$DIR" -maxdepth 1 -type f -name '*.txt' -size +0c -print -quit)"
               [[ -n "$PROFILE" ]] && break
             fi
           done
 
           if [[ -z "$PROFILE" ]]; then
-            echo "No source Baseline Profile found for variant ${VARIANT}." >&2
-            echo "Searching all generated profile text files for diagnosis:"
-            find app/src baselineprofile/build -type f -name '*.txt' 2>/dev/null | grep -i 'baseline\|prof' || true
+            PROFILE="$(find baselineprofile/build app/build -type f -name '*.txt' -size +0c \
+              \( -iname '*baseline*' -o -iname '*prof*' \) -print 2>/dev/null | head -n 1 || true)"
+          fi
+
+          if [[ -z "$PROFILE" ]]; then
+            echo "No non-empty Baseline Profile text file found for ${VARIANT}." >&2
+            echo "Diagnostic profile-related files:"
+            find app/src app/build baselineprofile/build -type f \
+              \( -iname '*baseline*' -o -iname '*prof*' \) -print 2>/dev/null || true
             exit 1
           fi
 
-          # Normalize into the standard AGP source location, keeping the profile in source control.
           mkdir -p "$SOURCE_DIR"
-          if [[ "$PROFILE" != "$SOURCE_DIR/baseline-prof.txt" ]]; then
-            cp "$PROFILE" "$SOURCE_DIR/baseline-prof.txt"
-          fi
+          cp "$PROFILE" "$SOURCE_DIR/baseline-prof.txt"
+          test -s "$SOURCE_DIR/baseline-prof.txt"
+          echo "Prepared profile from $PROFILE at $SOURCE_DIR/baseline-prof.txt"
+          head -n 3 "$SOURCE_DIR/baseline-prof.txt"
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "$SOURCE_DIR"/*.txt
-          if git diff --cached --quiet; then
-            echo "Generated profile is unchanged; no source commit needed."
-            exit 0
-          fi
-          git commit -m "Update ${VARIANT} Baseline Profile"
-          for attempt in 1 2 3 4 5; do
-            if git push origin "HEAD:${GITHUB_REF_NAME}"; then
-              echo "Generated profile committed to ${GITHUB_REF_NAME}."
-              exit 0
-            fi
-            echo "Push attempt ${attempt} failed; rebasing on latest branch before retry."
-            git fetch origin "${GITHUB_REF_NAME}"
-            git rebase "origin/${GITHUB_REF_NAME}"
-            sleep 2
-          done
-          echo "Could not push profile after retries." >&2
-          exit 1
+      - name: Upload source Baseline Profile
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-baseline-profile-${{ matrix.variant }}
+          path: app/src/${{ matrix.variant }}/generated/baselineProfiles/baseline-prof.txt
+          if-no-files-found: error
+          retention-days: 3
 
       - name: Build release variant
         run: |
@@ -192,3 +178,72 @@ jobs:
             baselineprofile/build/outputs/**
           if-no-files-found: warn
           retention-days: 14
+
+  persist-baseline-profiles:
+    name: Commit generated Baseline Profiles
+    needs: generate-baseline-profile
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          ref: ${{ github.ref_name }}
+
+      - name: Download FOSS Baseline Profile
+        uses: actions/download-artifact@v4
+        with:
+          name: source-baseline-profile-foss
+          path: downloaded-profiles/foss
+
+      - name: Download GMS Baseline Profile
+        uses: actions/download-artifact@v4
+        with:
+          name: source-baseline-profile-gms
+          path: downloaded-profiles/gms
+
+      - name: Download Izzy Baseline Profile
+        uses: actions/download-artifact@v4
+        with:
+          name: source-baseline-profile-izzy
+          path: downloaded-profiles/izzy
+
+      - name: Commit all generated Baseline Profiles once
+        shell: bash
+        run: |
+          set -euo pipefail
+          for VARIANT in foss gms izzy; do
+            PROFILE="downloaded-profiles/${VARIANT}/baseline-prof.txt"
+            DEST="app/src/${VARIANT}/generated/baselineProfiles/baseline-prof.txt"
+            if [[ ! -s "$PROFILE" ]]; then
+              echo "Missing or empty profile artifact: $PROFILE" >&2
+              exit 1
+            fi
+            mkdir -p "$(dirname "$DEST")"
+            cp "$PROFILE" "$DEST"
+          done
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/foss/generated/baselineProfiles/baseline-prof.txt app/src/gms/generated/baselineProfiles/baseline-prof.txt app/src/izzy/generated/baselineProfiles/baseline-prof.txt
+
+          if git diff --cached --quiet; then
+            echo "Generated Baseline Profiles are unchanged; no commit needed."
+            exit 0
+          fi
+
+          git commit -m "Update generated Baseline Profiles"
+          for attempt in 1 2 3 4 5; do
+            if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              echo "All generated Baseline Profiles committed to ${GITHUB_REF_NAME}."
+              exit 0
+            fi
+            echo "Push attempt ${attempt} failed; fetching and rebasing."
+            git fetch origin "${GITHUB_REF_NAME}"
+            git -c rebase.autoStash=true rebase "origin/${GITHUB_REF_NAME}"
+            sleep 2
+          done
+          echo "Could not push Baseline Profiles after retries." >&2
+          exit 1
