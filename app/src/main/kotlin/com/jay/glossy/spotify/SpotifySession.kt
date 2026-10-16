@@ -15,7 +15,10 @@ import com.jay.glossy.utils.dataStore
 import com.jay.glossy.utils.safeDataStoreEdit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -50,6 +53,14 @@ object SpotifySession {
     val CookieKey = stringPreferencesKey("spotify_sp_dc")
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
     private val mutex = Mutex()
+
+    /**
+     * The token warm-up's own scope.
+     *
+     * A mint that outlives the caller that asked for it is the whole point, so
+     * it cannot run on that caller's job.
+     */
+    private val warmUpScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     @Volatile private var cached: Token? = null
     @Volatile private var cachedSession: SessionInfo? = null
@@ -112,6 +123,36 @@ object SpotifySession {
         val harvested = token(context)?.accessToken?.takeIf(String::isNotBlank)
         val access = harvested ?: freshAccessToken(context)?.takeIf(String::isNotBlank) ?: return null
         return CanvasCredentials(access, clientToken())
+    }
+
+    /**
+     * Mints a token in the background when the session has no live one.
+     *
+     * A mint means loading the web player in an offscreen WebView and reading
+     * the token it hands itself, which takes seconds — longer than any caller's
+     * own patience. Asked for from inside a lookup that is itself on a few
+     * seconds' leash (the lyrics race gives each provider 3.5s), the mint was
+     * cancelled before it could finish, nothing was cached, and the next lookup
+     * paid the same wait again: a signed-in account could go a whole session
+     * with a working cookie and never get a Spotify answer out of it.
+     *
+     * Started here the mint runs on [warmUpScope] instead, so it survives the
+     * caller's timeout and the token is sitting in [cached] for whoever asks
+     * next. Safe to call on every lookup: it is a no-op while the token is live.
+     */
+    fun warmUp(context: Context) {
+        val live = cached?.accessTokenExpirationTimestampMs ?: 0L
+        if (live > System.currentTimeMillis() + 60_000L) return
+        val appContext = context.applicationContext
+        warmUpScope.launch {
+            try {
+                token(appContext)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Nothing was cached; the next caller simply tries again.
+            }
+        }
     }
 
     suspend fun saveCookie(context: Context, value: String) {

@@ -524,6 +524,13 @@ class MusicService :
     private var pausedDueToNetworkError = false
     private var silenceSkipJob: Job? = null
 
+    /**
+     * Songs whose stored lyrics are the "nothing found" note and which have
+     * already been given their one second chance in this run. Touched only from
+     * [scope], which is the main thread, so a plain set is enough.
+     */
+    private val lyricsMissesRetried = mutableSetOf<String>()
+
     // Cached preferences to avoid runBlocking DataStore reads in hot paths
     @Volatile
     private var cachedPersistentQueue = true
@@ -922,20 +929,36 @@ class MusicService :
         currentMediaMetadata
             .distinctUntilChangedBy { it?.id }
             .collectLatest(scope) { mediaMetadata ->
-                if (mediaMetadata != null && database
-                        .lyrics(mediaMetadata.id)
-                        .first() == null
-                ) {
-                    val lyricsWithProvider = lyricsHelper.getLyrics(mediaMetadata)
-                    database.query {
-                        upsert(
-                            LyricsEntity(
-                                id = mediaMetadata.id,
-                                lyrics = lyricsWithProvider.lyrics,
-                                provider = lyricsWithProvider.provider,
-                            ),
-                        )
-                    }
+                val metadata = mediaMetadata ?: return@collectLatest
+                val lyricsId = metadata.id
+                val stored = database.lyrics(lyricsId).first()
+                // A stored "nothing found" is a note about the moment the song
+                // was played, not a verdict on the song itself: the lookup may
+                // have run before Spotify could mint the bearer token its
+                // lyrics need, or while a provider was down. Treating that note
+                // as final is what made the moment permanent — the song was
+                // never asked about again — so a miss gets one more attempt per
+                // run, which is enough to recover without paying for a full race
+                // every time an instrumental comes round again.
+                val storedMiss = stored?.lyrics == LyricsEntity.LYRICS_NOT_FOUND
+                val retryMiss = storedMiss && lyricsId !in lyricsMissesRetried
+                if (stored != null && !retryMiss) return@collectLatest
+
+                // A retry is a real attempt — a miss in the in-memory negative
+                // cache belongs to the attempt that failed, not to this one.
+                val lyricsWithProvider = lyricsHelper.getLyrics(metadata, forceRefresh = retryMiss)
+                // Marked once the attempt is over rather than before it: a song
+                // change cancels the fetch, and a cancelled retry has not had
+                // the second chance this set exists to hand out.
+                if (storedMiss) lyricsMissesRetried += lyricsId
+                database.query {
+                    upsert(
+                        LyricsEntity(
+                            id = lyricsId,
+                            lyrics = lyricsWithProvider.lyrics,
+                            provider = lyricsWithProvider.provider,
+                        ),
+                    )
                 }
             }
 
@@ -2698,6 +2721,24 @@ class MusicService :
                 delay(100)
                 restoreEpisodePosition(newMetadata.id)
             }
+        }
+
+        // Autoplay is off, so the song that just ended has to be the last one.
+        //
+        // The queue is loaded as a single playlist, which means the player rolls
+        // on into the next item by itself — the advance is never this app's
+        // decision to hold back, so "Automatically play the next song when the
+        // current one ends" (see `autoplay_desc`) cannot be expressed as a
+        // player mode and has to be caught as it happens. A repeat mode is the
+        // listener asking for continuous playback in so many words, and a cast
+        // session owns a queue of its own, so those keep rolling.
+        if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO &&
+            !cachedAutoplay &&
+            player.repeatMode == REPEAT_MODE_OFF &&
+            castConnectionHandler?.isCasting?.value != true
+        ) {
+            Timber.tag(TAG).d("Autoplay is off — stopping instead of playing the next song")
+            player.pause()
         }
 
         // Force Repeat One if the player ignored it and auto-advanced

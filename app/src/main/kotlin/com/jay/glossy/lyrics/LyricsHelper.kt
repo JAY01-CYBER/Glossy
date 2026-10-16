@@ -35,6 +35,33 @@ private const val PER_PROVIDER_TIMEOUT_MS = 3500L
 private const val PROVIDER_NONE = ""
 
 /**
+ * How long Spotify is allowed to take.
+ *
+ * Every other provider here starts by asking the network a question, so a few
+ * seconds is generous for them. Spotify's first act can instead be minting the
+ * bearer token its lyrics need, which means loading the web player in an
+ * offscreen WebView and reading the token it mints for itself — seconds before
+ * the lyrics request is even made. On the shared 3.5s budget that mint was
+ * cancelled on the way to the network, every time, which is how a signed-in
+ * account could hold the cookie that fetches Spotify's lyrics and still never
+ * see them. Its budget is its own, and
+ * [com.jay.glossy.spotify.SpotifySession.warmUp] keeps the token hot so the
+ * wider window is only ever needed on a cold session.
+ *
+ * It stays inside the same ceiling as the rest, though: one tier's wait is what
+ * the next tier inherits, so this plus [PER_PROVIDER_TIMEOUT_MS] has to fit
+ * inside [MAX_LYRICS_FETCH_MS] — otherwise a song that only a fallback provider
+ * has would have had its lyrics, and would now be cut off before that provider
+ * was even asked.
+ */
+private const val SPOTIFY_PROVIDER_TIMEOUT_MS = 6000L
+
+/** The leash one provider's lookup runs on. See [SPOTIFY_PROVIDER_TIMEOUT_MS]. */
+private val LyricsProvider.lookupBudgetMs: Long
+    get() =
+        if (this is SpotifyLyricsProvider) SPOTIFY_PROVIDER_TIMEOUT_MS else PER_PROVIDER_TIMEOUT_MS
+
+/**
  * How long a plain-text answer is held back while the other racing providers get
  * a chance to return a time-synced version of the same song. Only lyrics with
  * timestamps can be followed by the player, so a synced result is always worth
@@ -134,6 +161,16 @@ constructor(
             val cleanedTitle = LyricsUtils.cleanTitleForSearch(mediaMetadata.title)
             val artists = mediaMetadata.artists.joinToString { it.name }
             val enabledProviders = orderedProviders.filter { it.isEnabled(context) }
+
+            // Spotify may have to mint a token before it can answer, so that work
+            // is started before the race rather than inside it: the mint runs
+            // alongside the providers that can answer at once, and is immune to
+            // this race's own timeout. Its lookup still gets the wider budget set
+            // out above for a cold session, where the mint started a moment ago
+            // and has not landed yet.
+            if (enabledProviders.any { it is SpotifyLyricsProvider }) {
+                SpotifySession.warmUp(context)
+            }
 
             Timber.tag("LyricsHelper").d("Fast parallel lyrics fetch: $cleanedTitle by $artists across ${enabledProviders.size} providers")
 
@@ -245,7 +282,7 @@ constructor(
         val jobs = providers.map { provider ->
             launch(Dispatchers.IO) {
                 try {
-                    val res = withTimeoutOrNull(PER_PROVIDER_TIMEOUT_MS) {
+                    val res = withTimeoutOrNull(provider.lookupBudgetMs) {
                         provider.getLyrics(context, mediaId, cleanedTitle, artists, duration, album)
                     }
                     if (res != null && res.isSuccess) {

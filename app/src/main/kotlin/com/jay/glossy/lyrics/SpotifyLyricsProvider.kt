@@ -98,6 +98,13 @@ object SpotifyLyricsProvider : LyricsProvider {
         // A synced copy always beats the network.
         readCache(context, id, title, artist)?.let { return Result.success(it) }
 
+        // The bearer token this request needs may have to be minted first, which
+        // means loading the web player in an offscreen WebView — seconds of work.
+        // Started here so it runs on its own scope: the lyrics race gives a
+        // provider a few seconds, and a mint that gets cancelled by that has
+        // minted nothing, leaving the next lookup to pay the same wait again.
+        SpotifySession.warmUp(context)
+
         // The raw library token lapses a little while after login and nothing
         // re-mints it, so reading it directly is what made Spotify lyrics load
         // right after signing in and then never again. Resolve a fresh one the
