@@ -118,12 +118,20 @@ android {
         buildConfigField("String", "ARCHITECTURE", "\"universal\"")
         buildConfigField("Long", "DISCORD_APP_ID", "1447278780795064401L")
 
-        // Shown on the About screen so a freshly built APK can be told apart from
-        // the one already installed: versionCode/versionName are identical for
-        // every local build, so without this there was no way to verify from
-        // inside the app which build is actually running. A new stamp on every
-        // build is the point — accept the BuildConfig recompilation trade-off.
-        buildConfigField("String", "BUILD_STAMP", "\"${Instant.now()}\"")
+        // Shown at the foot of the Settings screen so a freshly built APK can be
+        // told apart from the one already installed: versionCode/versionName are
+        // identical for every build, so without this there was no way to verify
+        // from inside the app which build is actually running. A new stamp on
+        // every build is the point — accept the BuildConfig recompilation
+        // trade-off.
+        //
+        // The commit is part of it because a timestamp alone was not enough to
+        // settle the question it exists to answer. A build that carries a fix
+        // and a build that predates it are both stamped with a plausible recent
+        // time and the same 0.0.4, so "is the fix in this APK?" could only be
+        // guessed at. CI answers it with the SHA it built; a local build says so.
+        val buildRevision = System.getenv("GITHUB_SHA")?.take(7) ?: "local"
+        buildConfigField("String", "BUILD_STAMP", "\"${Instant.now()} · $buildRevision\"")
     }
 
     flavorDimensions += listOf("variant")
