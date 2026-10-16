@@ -224,61 +224,57 @@ fun SimpSectionHeader(
     onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    // Every home section is seated on a pane of sea glass, so the feed reads as
-    // one surface instead of bare headings floating on the backdrop. The pane
-    // is drawn rather than sampled below API 33, so it is still glass on an
-    // older phone.
-    SeaGlassPanel(
+    // Back to a bare heading on the backdrop, with no pane behind it. The
+    // section lockup was briefly seated on a pane of sea glass; on a feed this
+    // long that stacked the material behind every heading as well as every card,
+    // so the glass stopped reading as a surface and started reading as a band
+    // across the page. The rule, eyebrow and title carry the section on their
+    // own.
+    Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .clickable(enabled = onClick != null) { onClick?.invoke() }
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(enabled = onClick != null) { onClick?.invoke() }
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            SectionRule(hasEyebrow = subtitle.isNotEmpty())
+        SectionRule(hasEyebrow = subtitle.isNotEmpty())
 
-            Column(modifier = Modifier.weight(1f)) {
-                if (subtitle.isNotEmpty()) {
-                    Text(
-                        text = subtitle.uppercase(),
-                        fontSize = 10.5.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary,
-                        letterSpacing = 1.3.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                }
+        Column(modifier = Modifier.weight(1f)) {
+            if (subtitle.isNotEmpty()) {
                 Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleLarge,
+                    text = subtitle.uppercase(),
+                    fontSize = 10.5.sp,
                     fontWeight = FontWeight.SemiBold,
-                    letterSpacing = (-0.4).sp,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = MaterialTheme.colorScheme.primary,
+                    letterSpacing = 1.3.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                Spacer(modifier = Modifier.height(2.dp))
             }
-            if (onClick != null) {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                    modifier = Modifier.size(34.dp),
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            painter = painterResource(R.drawable.arrow_forward),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(17.dp),
-                        )
-                    }
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = (-0.4).sp,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        if (onClick != null) {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                modifier = Modifier.size(34.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        painter = painterResource(R.drawable.arrow_forward),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(17.dp),
+                    )
                 }
             }
         }

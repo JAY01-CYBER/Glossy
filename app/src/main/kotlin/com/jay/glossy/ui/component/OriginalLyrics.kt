@@ -1012,7 +1012,7 @@ fun OriginalLyrics(
                                     } else {
                                         Color.Transparent
                                     },
-                                ).padding(horizontal = 24.dp, vertical = 8.dp)
+                                )
 
                         // Check if this line shares the same time as the currently active line
                         // This enables synchronized word-by-word animation for both main and background vocals
@@ -1127,7 +1127,18 @@ fun OriginalLyrics(
                                         this.alpha = if (item.isBackground) alpha * 0.8f else alpha
                                         this.scaleX = scale * bgScale
                                         this.scaleY = scale * bgScale
-                                    },
+                                    }
+                                    // The inset belongs *inside* the blur, not before
+                                    // it. Both blur and graphicsLayer draw into a
+                                    // layer and clip to its bounds, so padding that
+                                    // came earlier shrank those bounds down to the
+                                    // text box — and the item's own rounded clip then
+                                    // shaved the left edge off the first glyph of
+                                    // every line, leaving the first letter as a
+                                    // sliver a couple of pixels wide. With the
+                                    // padding here the layer spans the full row, so
+                                    // the text has room on both sides of it.
+                                    .padding(horizontal = 24.dp, vertical = 8.dp),
                             horizontalAlignment = agentAlignment,
                         ) {
                             // Use time-based active check to sync both main and background lines with same timestamp

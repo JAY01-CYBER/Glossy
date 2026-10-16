@@ -155,12 +155,6 @@ internal fun LyricsLine(
             onLongClick = onLongClick
         )
         .background(if (isSelected && isSelectionModeActive) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f) else Color.Transparent)
-        .padding(
-            start = when (lyricsTextPosition) { LyricsPosition.LEFT, LyricsPosition.RIGHT -> 11.dp; LyricsPosition.CENTER -> 24.dp },
-            end = when (lyricsTextPosition) { LyricsPosition.LEFT, LyricsPosition.RIGHT -> 11.dp; LyricsPosition.CENTER -> 24.dp },
-            top = if (item.isBackground) 0.dp else 12.dp,
-            bottom = if (item.isBackground) 2.dp else 12.dp // simplified gap logic
-        )
 
     val agentAlignment = when {
         respectAgentPositioning && item.agent == "v1" -> Alignment.Start
@@ -202,7 +196,19 @@ internal fun LyricsLine(
     // advances, and the alpha tween below still carries the transition.
     val lineBlur = lyricsLineBlur(lineDistance)
 
-    Box(modifier = itemModifier.blur(lineBlur), contentAlignment = when {
+    // The inset is applied inside the blur, not before it: blur draws into a
+    // layer and clips to its bounds, so padding applied earlier shrinks those
+    // bounds to the text box and the item's own rounded clip then shaves the
+    // left edge off the first glyph of the line.
+    val lineInset =
+        Modifier.padding(
+            start = when (lyricsTextPosition) { LyricsPosition.LEFT, LyricsPosition.RIGHT -> 11.dp; LyricsPosition.CENTER -> 24.dp },
+            end = when (lyricsTextPosition) { LyricsPosition.LEFT, LyricsPosition.RIGHT -> 11.dp; LyricsPosition.CENTER -> 24.dp },
+            top = if (item.isBackground) 0.dp else 12.dp,
+            bottom = if (item.isBackground) 2.dp else 12.dp
+        )
+
+    Box(modifier = itemModifier.blur(lineBlur).then(lineInset), contentAlignment = when {
         respectAgentPositioning && item.agent == "v1" -> Alignment.CenterStart
         respectAgentPositioning && item.agent == "v2" -> Alignment.CenterEnd
         item.isBackground -> Alignment.Center
