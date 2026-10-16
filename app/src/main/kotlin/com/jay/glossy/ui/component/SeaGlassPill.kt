@@ -42,6 +42,18 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
+ * The band the sheen sweeps across the glass.
+ *
+ * Nothing in it depends on the size of the pill or on its tint — it is white at
+ * a fixed alpha between two transparent ends — so it is built once here instead
+ * of being rebuilt into every pill that wears a sheen.
+ */
+private val SheenBand =
+    Brush.horizontalGradient(
+        colors = listOf(Color.Transparent, Color.White.copy(alpha = 0.22f), Color.Transparent),
+    )
+
+/**
  * A pill-shaped action button whose body is sea glass rather than paint.
  *
  * The tint rides in the glass as Beer-Lambert body absorption, so the colour
@@ -97,18 +109,6 @@ fun SeaGlassPill(
         label = "pressScale",
     )
 
-    // Restarts rather than ping-pongs: the highlight has to leave the pill
-    // entirely before the next one starts, or it looks like a stuck band.
-    val sheenOffset by rememberInfiniteTransition(label = "sheen").animateFloat(
-        initialValue = -0.4f,
-        targetValue = 1.4f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 3_800, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart,
-        ),
-        label = "sheenSweep",
-    )
-
     // The sea-glass body replaces the flat fill outright: it paints its own
     // tinted, frosted, rim-lit contour, so a fill underneath would only flatten
     // it back out. Where the shader cannot run — a tooling preview, or a device
@@ -160,20 +160,34 @@ fun SeaGlassPill(
         }
 
         if (sheen) {
+            // Built only for a pill that actually wears a sheen, and read in the
+            // layer block rather than in composition. The sweep never ends, so a
+            // composed read of it would recompose that pill on every frame for
+            // as long as it is on screen; read here it only moves the layer.
+            //
+            // Restarts rather than ping-pongs: the highlight has to leave the
+            // pill entirely before the next one starts, or it looks like a stuck
+            // band.
+            val sweep = rememberInfiniteTransition(label = "sheen").animateFloat(
+                initialValue = -0.4f,
+                targetValue = 1.4f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(durationMillis = 3_800, easing = LinearEasing),
+                    repeatMode = RepeatMode.Restart,
+                ),
+                label = "sheenSweep",
+            )
             Box(
                 modifier = Modifier
                     .matchParentSize()
                     .graphicsLayer {
-                        translationX = sheenOffset * size.width
+                        val offset = sweep.value
+                        translationX = offset * size.width
                         // Brightest as it crosses the middle of the pill, gone
                         // by the time it reaches either edge.
-                        alpha = (1f - kotlin.math.abs(sheenOffset)).coerceIn(0f, 1f)
+                        alpha = (1f - kotlin.math.abs(offset)).coerceIn(0f, 1f)
                     }
-                    .background(
-                        Brush.horizontalGradient(
-                            colors = listOf(Color.Transparent, Color.White.copy(alpha = 0.22f), Color.Transparent),
-                        ),
-                    ),
+                    .background(SheenBand),
             )
         }
     }

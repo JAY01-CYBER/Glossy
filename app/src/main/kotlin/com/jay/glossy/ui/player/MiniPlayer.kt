@@ -76,6 +76,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.MutableLongState
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -465,7 +466,7 @@ private fun GlossyBarMiniPlayer(
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight()
-                .offset { IntOffset(offsetX.roundToInt(), 0) }
+                .offset { IntOffset(offsetX().roundToInt(), 0) }
                 .clip(RoundedCornerShape(12.dp))
                 .background(containerColor)
                 .clickable(onClick = onClick),
@@ -673,12 +674,25 @@ fun SwipeableMiniPlayerBox(
     coroutineScope: CoroutineScope,
     pureBlack: Boolean = false,
     useLegacyBackground: Boolean = false,
-    content: @Composable (Float) -> Unit
+    // Passed as a lambda, not as a value: the offset changes on every frame of a
+    // drag and of the spring back that follows it, and callers only ever need it
+    // inside a layout-phase lambda (`Modifier.offset { }`). Handed over as a
+    // value it would recompose the whole bar sixty times a second for the length
+    // of the gesture; handed over as a function it moves the bar without
+    // recomposing anything.
+    content: @Composable (() -> Float) -> Unit
 ) {
     val offsetXAnimatable = remember { Animatable(0f) }
     var dragStartTime by remember { mutableLongStateOf(0L) }
     var totalDragDistance by remember { mutableFloatStateOf(0f) }
     val haptic = LocalHapticFeedback.current
+
+    // Asked as questions rather than read as values. The drag offset moves every
+    // frame, but these two answers change twice per gesture — when the cue
+    // appears or goes, and when the swipe reverses — so the bar recomposes for
+    // those two moments instead of for every frame in between.
+    val showSkipCue by remember { derivedStateOf { offsetXAnimatable.value.absoluteValue > 50f } }
+    val swipingForward by remember { derivedStateOf { offsetXAnimatable.value > 0f } }
 
     val animationSpec = spring<Float>(
         dampingRatio = Spring.DampingRatioNoBouncy,
@@ -776,23 +790,30 @@ fun SwipeableMiniPlayerBox(
                 }
             }
     ) {
-        content(offsetXAnimatable.value)
+        content { offsetXAnimatable.value }
 
-        if (offsetXAnimatable.value.absoluteValue > 50f) {
+        if (showSkipCue) {
             Box(
                 modifier = Modifier
-                    .align(if (offsetXAnimatable.value > 0) Alignment.CenterStart else Alignment.CenterEnd)
+                    .align(if (swipingForward) Alignment.CenterStart else Alignment.CenterEnd)
                     .padding(horizontal = 16.dp)
             ) {
                 Icon(
                     painter = painterResource(
-                        if (offsetXAnimatable.value > 0) R.drawable.skip_previous else R.drawable.apple_skip_next
+                        if (swipingForward) R.drawable.skip_previous else R.drawable.apple_skip_next
                     ),
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary.copy(
-                        alpha = (offsetXAnimatable.value.absoluteValue / autoSwipeThreshold).coerceIn(0f, 1f)
-                    ),
-                    modifier = Modifier.size(24.dp)
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .size(24.dp)
+                        // The cue fades as the drag goes further, so the fade is
+                        // applied on the layer: reading the offset up here would
+                        // put a sixty-a-second recomposition back into the
+                        // gesture that this whole change is removing.
+                        .graphicsLayer {
+                            alpha = (offsetXAnimatable.value.absoluteValue / autoSwipeThreshold)
+                                .coerceIn(0f, 1f)
+                        },
                 )
             }
         }
@@ -943,7 +964,7 @@ private fun GlossySpecialEditionMiniPlayer(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(72.dp) 
-                .offset { IntOffset(offsetX.roundToInt(), 0) }
+                .offset { IntOffset(offsetX().roundToInt(), 0) }
                 .shadow(
                     elevation = 20.dp, 
                     shape = RoundedCornerShape(32.dp), 
@@ -2131,24 +2152,35 @@ private fun LegacyMiniPlayer(
             }
         }
 
-        if (offsetXAnimatable.value.absoluteValue > 50f) {
+        // Same two questions as the shared swipe container, for the same reason:
+        // the offset moves every frame, the answers do not.
+        val showSkipCue by remember { derivedStateOf { offsetXAnimatable.value.absoluteValue > 50f } }
+        val swipingForward by remember { derivedStateOf { offsetXAnimatable.value > 0f } }
+
+        if (showSkipCue) {
             Box(
                 modifier =
                     Modifier
-                        .align(if (offsetXAnimatable.value > 0) Alignment.CenterStart else Alignment.CenterEnd)
+                        .align(if (swipingForward) Alignment.CenterStart else Alignment.CenterEnd)
                         .padding(horizontal = 16.dp),
             ) {
                 Icon(
                     painter =
                         painterResource(
-                            if (offsetXAnimatable.value > 0) R.drawable.skip_previous else R.drawable.skip_next,
+                            if (swipingForward) R.drawable.skip_previous else R.drawable.skip_next,
                         ),
                     contentDescription = null,
-                    tint =
-                        primaryColor.copy(
-                            alpha = (offsetXAnimatable.value.absoluteValue / autoSwipeThreshold).coerceIn(0f, 1f),
-                        ),
-                    modifier = Modifier.size(24.dp),
+                    tint = primaryColor,
+                    modifier =
+                        Modifier
+                            .size(24.dp)
+                            // Deferred to the layer, so dragging the bar does not
+                            // recompose it.
+                            .graphicsLayer {
+                                alpha =
+                                    (offsetXAnimatable.value.absoluteValue / autoSwipeThreshold)
+                                        .coerceIn(0f, 1f)
+                            },
                 )
             }
         }

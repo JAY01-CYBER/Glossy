@@ -156,32 +156,48 @@ fun seaGlassSurface(
  *
  * Draw it in place of the shader, not underneath it: it clips itself to [shape]
  * and paints its own rim, so a fill behind it would only flatten it back out.
+ *
+ * The three bodies are remembered against [fill] rather than rebuilt into the
+ * modifier chain. A `Brush` is the thing that owns the Skia shader behind a
+ * gradient, and it builds that shader on first draw and then keeps it — so a
+ * remembered brush means one shader reused for the life of the surface, where a
+ * rebuilt one asks Skia for a new shader the next time it is drawn. Below API 33
+ * this is the only body glass has, which makes it the whole cost of the material
+ * on those devices, and it is paid by every chip, tile, dock and panel that
+ * comes back onto the screen while a list scrolls.
  */
+@Composable
 fun Modifier.seaGlassFallback(
     fill: Color,
     shape: Shape,
-): Modifier =
-    this
+): Modifier {
+    // The body: denser where the light lands, thinning downwards the way a
+    // frosted pane does.
+    val body = remember(fill) {
+        Brush.verticalGradient(
+            colors = listOf(
+                fill.copy(alpha = SeaGlassLook.BodyTopAlpha),
+                fill.copy(alpha = SeaGlassLook.BodyBottomAlpha),
+            ),
+        )
+    }
+    // The highlight the frost throws back, and a little bounce along the bottom
+    // lip so the body reads as glass rather than as a gradient. Not keyed on the
+    // fill: it is white against transparent, at the material's own strengths.
+    val sheen = remember {
+        Brush.verticalGradient(
+            colors = listOf(
+                Color.White.copy(alpha = SeaGlassLook.HighlightAlpha),
+                Color.Transparent,
+                Color.White.copy(alpha = SeaGlassLook.BounceAlpha),
+            ),
+        )
+    }
+    val rim = remember { Color.White.copy(alpha = SeaGlassLook.RimAlpha) }
+
+    return this
         .clip(shape)
-        // The body: denser where the light lands, thinning downwards the way a
-        // frosted pane does.
-        .background(
-            Brush.verticalGradient(
-                colors = listOf(
-                    fill.copy(alpha = SeaGlassLook.BodyTopAlpha),
-                    fill.copy(alpha = SeaGlassLook.BodyBottomAlpha),
-                ),
-            ),
-        )
-        // The highlight the frost throws back, and a little bounce along the
-        // bottom lip so the body reads as glass rather than as a gradient.
-        .background(
-            Brush.verticalGradient(
-                colors = listOf(
-                    Color.White.copy(alpha = SeaGlassLook.HighlightAlpha),
-                    Color.Transparent,
-                    Color.White.copy(alpha = SeaGlassLook.BounceAlpha),
-                ),
-            ),
-        )
-        .border(SeaGlassLook.RimWidth, Color.White.copy(alpha = SeaGlassLook.RimAlpha), shape)
+        .background(body)
+        .background(sheen)
+        .border(SeaGlassLook.RimWidth, rim, shape)
+}
