@@ -172,7 +172,6 @@ import com.jay.glossy.ui.screens.MoodAndGenresButton
 import com.jay.glossy.ui.screens.MoodAndGenresButtonHeight
 import com.jay.glossy.ui.component.NavigationTitle
 import com.jay.glossy.ui.component.RandomizeGridItem
-import com.jay.glossy.ui.component.SeaGlassPanel
 import com.jay.glossy.ui.component.SongGridItem
 import com.jay.glossy.ui.component.SongListItem
 import com.jay.glossy.ui.component.SpeedDialGridItem
