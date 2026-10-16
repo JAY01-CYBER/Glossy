@@ -66,7 +66,6 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.Icon
@@ -195,33 +194,18 @@ class ProgressState(
 }
 
 /**
- * The narrowest the bar keeps once it has folded away, as a fraction of the
- * screen. Wide enough for the 48dp artwork plus its padding to stay whole on a
- * phone, which is the point of the folded form — the bubble that is left is the
- * song you are listening to, so it has to be visible.
+ * How far the Apple Music bar has folded down into its round artwork bubble.
  *
- * Also wide enough for [FOLDED_PROGRESS_RING] to sit concentric on the artwork
- * at the smallest phone width the app supports, since the ring is sized in dp
- * and the bubble in a fraction of the screen.
- */
-private const val MIN_FOLDED_WIDTH_FRACTION = 0.24f
-
-/**
- * The wavy progress ring the folded bar wears.
- *
- * Sized to sit just outside the 48dp artwork without reaching the pill's own
- * 64dp height, so it reads as a slider traced around the bubble rather than as
- * a second border on it.
- */
-private val FOLDED_PROGRESS_RING = 56.dp
-
-/**
- * How far the mini player has folded down into its round pill.
+ * This is that one style's own behaviour, kept in its own function. The shared
+ * wrapper in [MiniPlayer] used to fold *every* style into a small round pill,
+ * and that is the form that was wrong everywhere else it appeared: the bar's
+ * height is fixed while the remnant's width is a fraction of the screen, so
+ * what was left standing was a squat rounded rectangle rather than the circle
+ * the fold was aiming for. Only the Apple Music bar, which folds by re-flowing
+ * its own row instead of by clipping, still asks for this.
  *
  * The app answers "has the list under the chrome been scrolled away from its
- * top?" once, at the root, and publishes it through [LocalAppScrolledToTop];
- * only the floating Apple Music bar listened. Every style now folds the same
- * way, so the state and its spring live here and each style just consumes it.
+ * top?" once, at the root, and publishes it through [LocalAppScrolledToTop].
  *
  * [expansion] stays at 1 while the listener is at the top of the page and
  * springs to 0 once they scroll down: it is the share of its own width the bar
@@ -295,9 +279,10 @@ fun MiniPlayer(
 
     val progressState = remember { ProgressState(positionState, durationState) }
 
-    // The Apple Music bar folds by re-flowing its own row — the artwork stays
-    // whole and pinned at the end while the text fades out — which the shared
-    // wrapper below cannot express, so it keeps drawing its own fold.
+    // The Apple Music bar is the one style that still folds: it re-flows its own
+    // row, keeping the artwork whole and pinned at the end while the text fades
+    // out and the bar closes into the round artwork bubble. Every other style is
+    // left at its own full width and its own shape.
     if (miniPlayerStyle == MiniPlayerStyle.APPLE_MUSIC) {
         AppleMusicMiniPlayer(
             progressState = progressState,
@@ -307,73 +292,52 @@ fun MiniPlayer(
         return
     }
 
-    // Everything else folds the same way: the bar keeps its height, gives up its
-    // width from the far end and rounds off as it goes, leaving the artwork as
-    // a round bubble at the start of the row. The clip only comes on while the
-    // fold is animating (or held), so an open bar keeps the exact shape its own
-    // design draws.
-    val fold = rememberMiniPlayerFold(restingCornerPercent = 0)
-    val folding = fold.expansion < 0.999f
-
+    // The bar keeps its full width for as long as it is on screen. It used to
+    // give up its width from the far end and round itself off as it went,
+    // leaving the artwork behind as a round bubble — but that collapsed form was
+    // wrong everywhere it appeared: the bar's height is fixed while the remnant's
+    // width is a fraction of the screen, so what was left was a squat rounded
+    // rectangle, never the circle it was meant to read as. Each style now keeps
+    // exactly the shape its own design draws, and nothing else.
     Box(
         modifier = modifier.fillMaxWidth(),
         contentAlignment = Alignment.CenterStart,
     ) {
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth(fold.expansion.coerceIn(MIN_FOLDED_WIDTH_FRACTION, 1f))
-                    .then(if (folding) Modifier.clip(fold.shape) else Modifier),
-        ) {
-            when (miniPlayerStyle) {
-                MiniPlayerStyle.STUDIO -> {
-                    GlossyBarMiniPlayer(
-                        positionState = positionState,
-                        durationState = durationState,
-                        modifier = Modifier,
-                        pureBlack = pureBlack,
-                        onClick = onClick,
-                    )
-                }
-                MiniPlayerStyle.GLOSSY_SPECIAL -> {
-                    GlossySpecialEditionMiniPlayer(
-                        progressState = progressState,
-                        modifier = Modifier,
-                        pureBlack = pureBlack,
-                        expandProgress = 0f,
-                        onClick = onClick
-                    )
-                }
-                MiniPlayerStyle.MODERN -> {
-                    NewMiniPlayer(
-                        progressState = progressState,
-                        modifier = Modifier,
-                        onClick = onClick,
-                    )
-                }
-                MiniPlayerStyle.LEGACY -> {
-                    LegacyMiniPlayer(
-                        progressState = progressState,
-                        modifier = Modifier,
-                        onClick = onClick,
-                    )
-                }
-                // Drawn above, but the enum still has to be covered here.
-                MiniPlayerStyle.APPLE_MUSIC -> Unit
-            }
-
-            // Folded, what is left *is* the artwork bubble, and a bar that no
-            // longer has a length has nothing to draw a progress hairline
-            // under — so the progress wraps it instead: a wavy slider traced
-            // around the pill, which is the one shape still left to follow.
-            if (folding) {
-                CircularWavyProgressIndicator(
-                    progress = { progressState.progress },
-                    modifier = Modifier.align(Alignment.Center).size(FOLDED_PROGRESS_RING),
-                    color = Color.White,
-                    trackColor = Color.White.copy(alpha = 0.30f),
+        when (miniPlayerStyle) {
+            MiniPlayerStyle.STUDIO -> {
+                GlossyBarMiniPlayer(
+                    positionState = positionState,
+                    durationState = durationState,
+                    modifier = Modifier,
+                    pureBlack = pureBlack,
+                    onClick = onClick,
                 )
             }
+            MiniPlayerStyle.GLOSSY_SPECIAL -> {
+                GlossySpecialEditionMiniPlayer(
+                    progressState = progressState,
+                    modifier = Modifier,
+                    pureBlack = pureBlack,
+                    expandProgress = 0f,
+                    onClick = onClick
+                )
+            }
+            MiniPlayerStyle.MODERN -> {
+                NewMiniPlayer(
+                    progressState = progressState,
+                    modifier = Modifier,
+                    onClick = onClick,
+                )
+            }
+            MiniPlayerStyle.LEGACY -> {
+                LegacyMiniPlayer(
+                    progressState = progressState,
+                    modifier = Modifier,
+                    onClick = onClick,
+                )
+            }
+            // Drawn above, but the enum still has to be covered here.
+            MiniPlayerStyle.APPLE_MUSIC -> Unit
         }
     }
 }
@@ -1269,9 +1233,8 @@ private fun AppleMusicMiniPlayer(
     val haptic = LocalHapticFeedback.current
 
     // Answered once at the app root from every list's own nested scroll, so the
-    // bar does not have to know which screen it is standing on. The fold state
-    // and its springs are shared with every other style; only the resting shape
-    // and the re-flow below are this bar's own.
+    // bar does not have to know which screen it is standing on. This is the only
+    // style left that folds, so the state and its springs are read here alone.
     val fold = rememberMiniPlayerFold(restingCornerPercent = 24)
     val foldedAway = fold.foldedAway
     val expansion = fold.expansion

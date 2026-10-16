@@ -9,6 +9,7 @@ import android.content.Context
 import android.util.LruCache
 import com.jay.glossy.constants.LyricsProviderOrderKey
 import com.jay.glossy.db.entities.LyricsEntity.Companion.LYRICS_NOT_FOUND
+import com.jay.glossy.spotify.SpotifySession
 import com.jay.glossy.utils.NetworkConnectivityObserver
 import com.jay.glossy.utils.dataStore
 import com.jay.glossy.utils.reportException
@@ -423,7 +424,22 @@ constructor(
             .mapNotNull { LyricsProviderRegistry.getProviderByName(it) }
             .filter { known -> configured.none { it.name == known.name } }
 
-        return configured + missing
+        val order = configured + missing
+
+        // A signed-in Spotify account settles the top of the race by itself.
+        // Spotify's own lyrics are the text every other provider here is
+        // scraping a copy of, they arrive with real timestamps to animate
+        // against, and the app is already holding the cookie that fetches them —
+        // so they go first. The order the listener arranged is not rewritten:
+        // this decides who leads today, and stops deciding the moment the
+        // session is gone.
+        val signedInToSpotify =
+            preferences[SpotifySession.CookieKey].orEmpty().isNotBlank()
+        if (!signedInToSpotify) return order
+
+        val spotify =
+            order.filter { provider -> provider.name == SpotifyLyricsProvider.name }
+        return spotify + order.filterNot { provider -> provider.name == SpotifyLyricsProvider.name }
     }
 
     companion object {

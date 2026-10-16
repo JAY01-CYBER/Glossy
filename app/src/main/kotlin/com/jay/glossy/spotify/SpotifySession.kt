@@ -38,7 +38,16 @@ object SpotifySession {
     private const val HARVEST_TIMEOUT_MS = 20_000L
     private const val DEFAULT_TOKEN_LIFETIME_MS = 3_600_000L
 
-    private val cookieKey = stringPreferencesKey("spotify_sp_dc")
+    /**
+     * The DataStore key the sp_dc cookie is kept under.
+     *
+     * Public so a caller that already holds a preferences snapshot can ask "is a
+     * Spotify account signed in?" without a second suspend round-trip into the
+     * same store. The lyrics race is that caller: it resolves its provider order
+     * from a snapshot it has already read, and cannot afford to suspend again
+     * just to find out whether one provider should go first.
+     */
+    val CookieKey = stringPreferencesKey("spotify_sp_dc")
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
     private val mutex = Mutex()
 
@@ -47,7 +56,7 @@ object SpotifySession {
     @Volatile private var cachedClientToken: String? = null
     @Volatile private var clientTokenExpiresAtMs = 0L
 
-    suspend fun cookie(context: Context): String = context.dataStore.data.first()[cookieKey].orEmpty()
+    suspend fun cookie(context: Context): String = context.dataStore.data.first()[CookieKey].orEmpty()
 
     /**
      * A bearer token that is still good for API calls, wherever it can be got
@@ -106,12 +115,12 @@ object SpotifySession {
     }
 
     suspend fun saveCookie(context: Context, value: String) {
-        context.safeDataStoreEdit { preferences -> preferences[cookieKey] = value }
+        context.safeDataStoreEdit { preferences -> preferences[CookieKey] = value }
         cached = null
     }
 
     suspend fun clear(context: Context) {
-        context.safeDataStoreEdit { preferences -> preferences.remove(cookieKey) }
+        context.safeDataStoreEdit { preferences -> preferences.remove(CookieKey) }
         cached = null
     }
 
