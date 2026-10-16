@@ -172,6 +172,7 @@ import com.jay.glossy.ui.screens.MoodAndGenresButton
 import com.jay.glossy.ui.screens.MoodAndGenresButtonHeight
 import com.jay.glossy.ui.component.NavigationTitle
 import com.jay.glossy.ui.component.RandomizeGridItem
+import com.jay.glossy.ui.component.SeaGlassPanel
 import com.jay.glossy.ui.component.SongGridItem
 import com.jay.glossy.ui.component.SongListItem
 import com.jay.glossy.ui.component.SpeedDialGridItem
@@ -223,51 +224,61 @@ fun SimpSectionHeader(
     onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    // Every home section is seated on a pane of sea glass, so the feed reads as
+    // one surface instead of bare headings floating on the backdrop. The pane
+    // is drawn rather than sampled below API 33, so it is still glass on an
+    // older phone.
+    SeaGlassPanel(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(enabled = onClick != null) { onClick?.invoke() }
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .padding(horizontal = 12.dp, vertical = 6.dp),
     ) {
-        SectionRule(hasEyebrow = subtitle.isNotEmpty())
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(enabled = onClick != null) { onClick?.invoke() }
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SectionRule(hasEyebrow = subtitle.isNotEmpty())
 
-        Column(modifier = Modifier.weight(1f)) {
-            if (subtitle.isNotEmpty()) {
+            Column(modifier = Modifier.weight(1f)) {
+                if (subtitle.isNotEmpty()) {
+                    Text(
+                        text = subtitle.uppercase(),
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary,
+                        letterSpacing = 1.3.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                }
                 Text(
-                    text = subtitle.uppercase(),
-                    fontSize = 10.5.sp,
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary,
-                    letterSpacing = 1.3.sp,
+                    letterSpacing = (-0.4).sp,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(modifier = Modifier.height(2.dp))
             }
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = (-0.4).sp,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        if (onClick != null) {
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                modifier = Modifier.size(34.dp),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        painter = painterResource(R.drawable.arrow_forward),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(17.dp),
-                    )
+            if (onClick != null) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                    modifier = Modifier.size(34.dp),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            painter = painterResource(R.drawable.arrow_forward),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(17.dp),
+                        )
+                    }
                 }
             }
         }

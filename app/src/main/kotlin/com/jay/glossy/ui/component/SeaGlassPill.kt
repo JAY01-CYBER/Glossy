@@ -53,11 +53,12 @@ import dev.seaglass.core.SeaGlassMaterial
  * pill instead of drawing a colour on top of it. A pale, see-through body with
  * dark ink is what keeps it readable — sea glass is a surface, not a fill.
  *
- * [fill] is the flat colour the pill falls back to, and it is not a throwaway:
- * a tooling preview has no GPU pass to sample, and a device below API 33 has no
- * `RuntimeShader` to run one on, so both paint [fill] outright. Choose it as the
- * colour the un-frosted button should be, not as a placeholder — and keep [ink]
- * legible against it, because on those paths the pill really is flat.
+ * [fill] is the colour the pill's glass is tinted with. A tooling preview has
+ * no GPU pass to sample, and a device below API 33 has no `RuntimeShader` to
+ * run one on; both get the same body painted directly (see
+ * [seaGlassFallback]), tinted with [fill]. Choose it as the colour the frosted
+ * body should read as — and keep [ink] legible against it, because on those
+ * paths the tint is the body.
  *
  * @param ink the colour of the icon and label. Passed separately rather than
  *   read from `LocalContentColor` because the glass body is composited in a draw
@@ -66,6 +67,10 @@ import dev.seaglass.core.SeaGlassMaterial
  *   keeps the shadow looking like the same material rather than a grey smudge.
  * @param sheen sweeps a highlight across the pill. Reserve it for the one
  *   primary action on a screen: on two pills at once it stops meaning anything.
+ * @param enabled false leaves the pill drawn but inert: the touch is refused
+ *   rather than accepted and ignored, so talkback and the gesture both report
+ *   the truth. The caller still owns the *look* of a disabled pill — usually by
+ *   withdrawing the tint it passes as [fill].
  */
 @Composable
 fun SeaGlassPill(
@@ -77,6 +82,7 @@ fun SeaGlassPill(
     shadowTint: Color = fill,
     height: Dp = 52.dp,
     sheen: Boolean = false,
+    enabled: Boolean = true,
     contentPadding: PaddingValues = PaddingValues(horizontal = 20.dp),
     content: @Composable RowScope.() -> Unit,
 ) {
@@ -109,10 +115,12 @@ fun SeaGlassPill(
 
     // The sea-glass body replaces the flat fill outright: it paints its own
     // tinted, frosted, rim-lit contour, so a fill underneath would only flatten
-    // it back out.
+    // it back out. Where the shader cannot run — a tooling preview, or a device
+    // below API 33 — the same body is *drawn* rather than sampled, so the pill
+    // is still glass there instead of the flat fill it used to fall back to.
     val surface =
         if (LocalInspectionMode.current || !seaGlassSurfacesAvailable) {
-            Modifier.background(fill)
+            Modifier.seaGlassFallback(fill = fill, shape = RoundedCornerShape(percent = 50))
         } else {
             Modifier.seaGlass(
                 material = material,
@@ -145,6 +153,7 @@ fun SeaGlassPill(
                 interactionSource = interactionSource,
                 // No ripple: the pill is the feedback.
                 indication = null,
+                enabled = enabled,
                 onClick = onClick,
             ),
         contentAlignment = Alignment.Center,

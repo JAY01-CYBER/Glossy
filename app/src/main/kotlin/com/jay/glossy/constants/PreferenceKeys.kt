@@ -46,6 +46,15 @@ enum class MiniPlayerBackgroundStyle {
 
     /** Drifting, pulsing artwork-palette glow behind the mini player. */
     GLOW,
+
+    /**
+     * The Material 3 tonal card: a `surfaceContainer` body that lifts to
+     * `surfaceContainerHigh` behind the artwork, a hairline `outlineVariant`
+     * edge and the progress drawn in the `primary` role. It is the look the new
+     * mini player wears out of the box, and it repaints from the seed colour so
+     * it follows Material You.
+     */
+    MATERIALISTIC,
 }
 
 /**

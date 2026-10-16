@@ -66,6 +66,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.Icon
@@ -192,6 +193,75 @@ class ProgressState(
         }
 }
 
+/**
+ * The narrowest the bar keeps once it has folded away, as a fraction of the
+ * screen. Wide enough for the 48dp artwork plus its padding to stay whole on a
+ * phone, which is the point of the folded form — the bubble that is left is the
+ * song you are listening to, so it has to be visible.
+ *
+ * Also wide enough for [FOLDED_PROGRESS_RING] to sit concentric on the artwork
+ * at the smallest phone width the app supports, since the ring is sized in dp
+ * and the bubble in a fraction of the screen.
+ */
+private const val MIN_FOLDED_WIDTH_FRACTION = 0.24f
+
+/**
+ * The wavy progress ring the folded bar wears.
+ *
+ * Sized to sit just outside the 48dp artwork without reaching the pill's own
+ * 64dp height, so it reads as a slider traced around the bubble rather than as
+ * a second border on it.
+ */
+private val FOLDED_PROGRESS_RING = 56.dp
+
+/**
+ * How far the mini player has folded down into its round pill.
+ *
+ * The app answers "has the list under the chrome been scrolled away from its
+ * top?" once, at the root, and publishes it through [LocalAppScrolledToTop];
+ * only the floating Apple Music bar listened. Every style now folds the same
+ * way, so the state and its spring live here and each style just consumes it.
+ *
+ * [expansion] stays at 1 while the listener is at the top of the page and
+ * springs to 0 once they scroll down: it is the share of its own width the bar
+ * keeps. [cornerPercent] rounds the remnant off into a pill as it shrinks, and
+ * sits at [restingCornerPercent] while the bar is open so an unfolded bar keeps
+ * whatever shape its own design already gives it.
+ */
+@Composable
+private fun rememberMiniPlayerFold(restingCornerPercent: Int): MiniPlayerFold {
+    val foldedAway = !LocalAppScrolledToTop.current
+    val foldSpec = remember {
+        spring<Float>(
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessMediumLow,
+        )
+    }
+    val expansion by animateFloatAsState(
+        targetValue = if (foldedAway) 0f else 1f,
+        animationSpec = foldSpec,
+        label = "miniPlayerFoldExpansion",
+    )
+    val cornerPercent by animateFloatAsState(
+        targetValue = if (foldedAway) 50f else restingCornerPercent.toFloat(),
+        animationSpec = foldSpec,
+        label = "miniPlayerFoldCorner",
+    )
+    return MiniPlayerFold(
+        foldedAway = foldedAway,
+        expansion = expansion,
+        shape = RoundedCornerShape(percent = cornerPercent.roundToInt()),
+    )
+}
+
+/** See [rememberMiniPlayerFold]. */
+private data class MiniPlayerFold(
+    val foldedAway: Boolean,
+    val expansion: Float,
+    val shape: RoundedCornerShape,
+)
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun MiniPlayer(
     positionState: MutableLongState,
@@ -215,45 +285,83 @@ fun MiniPlayer(
 
     val progressState = remember { ProgressState(positionState, durationState) }
 
-    when (miniPlayerStyle) {
-        MiniPlayerStyle.STUDIO -> {
-            GlossyBarMiniPlayer(
-                positionState = positionState,
-                durationState = durationState,
-                modifier = modifier,
-                pureBlack = pureBlack,
-                onClick = onClick,
-            )
-        }
-        MiniPlayerStyle.APPLE_MUSIC -> {
-            AppleMusicMiniPlayer(
-                progressState = progressState,
-                modifier = modifier,
-                onClick = onClick,
-            )
-        }
-        MiniPlayerStyle.GLOSSY_SPECIAL -> {
-            GlossySpecialEditionMiniPlayer(
-                progressState = progressState,
-                modifier = modifier,
-                pureBlack = pureBlack,
-                expandProgress = 0f,
-                onClick = onClick
-            )
-        }
-        MiniPlayerStyle.MODERN -> {
-            NewMiniPlayer(
-                progressState = progressState,
-                modifier = modifier,
-                onClick = onClick,
-            )
-        }
-        MiniPlayerStyle.LEGACY -> {
-            Box(modifier = modifier.fillMaxWidth()) {
-                LegacyMiniPlayer(
-                    progressState = progressState,
-                    modifier = Modifier.align(Alignment.Center),
-                    onClick = onClick,
+    // The Apple Music bar folds by re-flowing its own row — the artwork stays
+    // whole and pinned at the end while the text fades out — which the shared
+    // wrapper below cannot express, so it keeps drawing its own fold.
+    if (miniPlayerStyle == MiniPlayerStyle.APPLE_MUSIC) {
+        AppleMusicMiniPlayer(
+            progressState = progressState,
+            modifier = modifier,
+            onClick = onClick,
+        )
+        return
+    }
+
+    // Everything else folds the same way: the bar keeps its height, gives up its
+    // width from the far end and rounds off as it goes, leaving the artwork as
+    // a round bubble at the start of the row. The clip only comes on while the
+    // fold is animating (or held), so an open bar keeps the exact shape its own
+    // design draws.
+    val fold = rememberMiniPlayerFold(restingCornerPercent = 0)
+    val folding = fold.expansion < 0.999f
+
+    Box(
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth(fold.expansion.coerceIn(MIN_FOLDED_WIDTH_FRACTION, 1f))
+                    .then(if (folding) Modifier.clip(fold.shape) else Modifier),
+        ) {
+            when (miniPlayerStyle) {
+                MiniPlayerStyle.STUDIO -> {
+                    GlossyBarMiniPlayer(
+                        positionState = positionState,
+                        durationState = durationState,
+                        modifier = Modifier,
+                        pureBlack = pureBlack,
+                        onClick = onClick,
+                    )
+                }
+                MiniPlayerStyle.GLOSSY_SPECIAL -> {
+                    GlossySpecialEditionMiniPlayer(
+                        progressState = progressState,
+                        modifier = Modifier,
+                        pureBlack = pureBlack,
+                        expandProgress = 0f,
+                        onClick = onClick
+                    )
+                }
+                MiniPlayerStyle.MODERN -> {
+                    NewMiniPlayer(
+                        progressState = progressState,
+                        modifier = Modifier,
+                        onClick = onClick,
+                    )
+                }
+                MiniPlayerStyle.LEGACY -> {
+                    LegacyMiniPlayer(
+                        progressState = progressState,
+                        modifier = Modifier,
+                        onClick = onClick,
+                    )
+                }
+                // Drawn above, but the enum still has to be covered here.
+                MiniPlayerStyle.APPLE_MUSIC -> Unit
+            }
+
+            // Folded, what is left *is* the artwork bubble, and a bar that no
+            // longer has a length has nothing to draw a progress hairline
+            // under — so the progress wraps it instead: a wavy slider traced
+            // around the pill, which is the one shape still left to follow.
+            if (folding) {
+                CircularWavyProgressIndicator(
+                    progress = { progressState.progress },
+                    modifier = Modifier.align(Alignment.Center).size(FOLDED_PROGRESS_RING),
+                    color = Color.White,
+                    trackColor = Color.White.copy(alpha = 0.30f),
                 )
             }
         }
@@ -301,16 +409,23 @@ private fun GlossyBarMiniPlayer(
     val artistText = mediaMetadata?.artists?.joinToArtistString(", ") { it.name }.orEmpty()
 
     // Every one of these backgrounds is dark, so the bar switches to white
-    // content whenever a style other than the theme surface is painted.
-    val styledBackground = miniPlayerBackground != MiniPlayerBackgroundStyle.DEFAULT || pureBlack
+    // content whenever one is painted. The Material 3 tonal card is the
+    // exception: it is a light surface taken from the scheme, so it keeps the
+    // scheme's own on-surface ink instead of forcing white.
+    val darkBackground = when (miniPlayerBackground) {
+        MiniPlayerBackgroundStyle.DEFAULT -> pureBlack
+        MiniPlayerBackgroundStyle.MATERIALISTIC -> false
+        else -> true
+    }
     val containerColor = when (miniPlayerBackground) {
         MiniPlayerBackgroundStyle.DEFAULT -> if (pureBlack) Color.Black else GlossyPalette.MiniBar
         MiniPlayerBackgroundStyle.TRANSPARENT -> Color.Black.copy(alpha = 0.25f)
         MiniPlayerBackgroundStyle.PURE_BLACK -> Color.Black
+        MiniPlayerBackgroundStyle.MATERIALISTIC -> MaterialTheme.colorScheme.surfaceContainer
         else -> Color.Transparent
     }
-    val primaryTextColor = if (styledBackground) Color.White else GlossyPalette.TextPrimary
-    val secondaryTextColor = if (styledBackground) Color.White.copy(alpha = 0.75f) else GlossyPalette.TextSecondary
+    val primaryTextColor = if (darkBackground) Color.White else GlossyPalette.TextPrimary
+    val secondaryTextColor = if (darkBackground) Color.White.copy(alpha = 0.75f) else GlossyPalette.TextSecondary
 
     // Swipe engine shared with the Modern bar: drag offset + skip cues +
     // velocity/distance song change. Studio previously never applied its
@@ -365,7 +480,7 @@ private fun GlossyBarMiniPlayer(
                     modifier = Modifier
                         .fillMaxWidth(progress)
                         .height(2.dp)
-                        .background(if (styledBackground) Color.White else GlossyPalette.Accent),
+                        .background(if (darkBackground) Color.White else GlossyPalette.Accent),
                 )
             }
 
@@ -430,7 +545,7 @@ private fun GlossyBarMiniPlayer(
                         icon = if (isFavorite) R.drawable.favorite else R.drawable.favorite_border,
                         contentDescription = null,
                         tint = if (isFavorite) {
-                            if (styledBackground) Color(0xFFFF7A9A) else GlossyPalette.Accent
+                            if (darkBackground) Color(0xFFFF7A9A) else GlossyPalette.Accent
                         } else {
                             primaryTextColor
                         },
@@ -511,6 +626,24 @@ private fun MiniPlayerStyleBackground(
             GlowAnimatedBackground(colors = colors, modifier = modifier)
             // Scrim so the title and controls stay readable over the glow.
             Box(modifier = modifier.background(Color.Black.copy(alpha = 0.32f)))
+        }
+
+        // Tonal elevation, the way a Material 3 card lifts: the surface is
+        // brightest where the content starts — behind the artwork — and settles
+        // into the plain container tone across the rest of the bar. The caller
+        // has already laid down `surfaceContainer`, so this only paints the
+        // lift.
+        MiniPlayerBackgroundStyle.MATERIALISTIC -> {
+            Box(
+                modifier = modifier.background(
+                    Brush.horizontalGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.surfaceContainerHigh,
+                            MaterialTheme.colorScheme.surfaceContainer,
+                        ),
+                    ),
+                ),
+            )
         }
 
         else -> Unit
@@ -1106,24 +1239,16 @@ private fun AppleMusicMiniPlayer(
     val haptic = LocalHapticFeedback.current
 
     // Answered once at the app root from every list's own nested scroll, so the
-    // bar does not have to know which screen it is standing on.
-    val foldedAway = !LocalAppScrolledToTop.current
-    val expansion by animateFloatAsState(
-        targetValue = if (foldedAway) 0f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioLowBouncy,
-            stiffness = Spring.StiffnessMediumLow,
-        ),
-        label = "appleMusicPillExpansion",
-    )
+    // bar does not have to know which screen it is standing on. The fold state
+    // and its springs are shared with every other style; only the resting shape
+    // and the re-flow below are this bar's own.
+    val fold = rememberMiniPlayerFold(restingCornerPercent = 24)
+    val foldedAway = fold.foldedAway
+    val expansion = fold.expansion
+    val shape = fold.shape
 
     // The bar folds towards its right end, which is where the round form is
-    // pinned; the corners close up as it goes.
-    val cornerPercent by animateFloatAsState(
-        targetValue = if (foldedAway) 50f else 24f,
-        label = "appleMusicPillCorner",
-    )
-    val shape = RoundedCornerShape(percent = cornerPercent.roundToInt())
+    // pinned; the artwork closes up into a bubble as it goes.
     val artworkShape = RoundedCornerShape(percent = if (foldedAway) 50 else 26)
 
     Box(
@@ -1361,6 +1486,7 @@ private fun NewMiniPlayer(
         MiniPlayerBackgroundStyle.GRADIENT   -> MaterialTheme.colorScheme.surfaceContainer
         MiniPlayerBackgroundStyle.GLOW       -> MaterialTheme.colorScheme.surfaceContainer
         MiniPlayerBackgroundStyle.PURE_BLACK -> Color.Black
+        MiniPlayerBackgroundStyle.MATERIALISTIC -> MaterialTheme.colorScheme.surfaceContainer
     }
     val forceLightColors = !useDarkTheme && (miniPlayerBackground == MiniPlayerBackgroundStyle.PURE_BLACK ||
             miniPlayerBackground == MiniPlayerBackgroundStyle.BLUR ||
@@ -1503,6 +1629,24 @@ private fun NewMiniPlayer(
                         Modifier
                             .fillMaxSize()
                             .background(Color.Black.copy(alpha = 0.32f)),
+                    )
+                }
+                MiniPlayerBackgroundStyle.MATERIALISTIC -> {
+                    // The Material 3 card lift: a tonal surface, brightest where
+                    // the content starts and settling to the plain container
+                    // tone across the bar. The base colour is already
+                    // `surfaceContainer`, so only the lift is painted here.
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(
+                                        MaterialTheme.colorScheme.surfaceContainerHigh,
+                                        MaterialTheme.colorScheme.surfaceContainer,
+                                    ),
+                                ),
+                            ),
                     )
                 }
                 else -> {}

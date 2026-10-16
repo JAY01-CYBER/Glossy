@@ -930,6 +930,7 @@ fun AppearanceSettings(
                     MiniPlayerBackgroundStyle.GRADIENT -> stringResource(R.string.gradient)
                     MiniPlayerBackgroundStyle.PURE_BLACK -> stringResource(R.string.pure_black)
                     MiniPlayerBackgroundStyle.GLOW -> "Glow (animated)"
+                    MiniPlayerBackgroundStyle.MATERIALISTIC -> "Materialistic (tonal)"
                 }
             },
         )
@@ -1602,6 +1603,7 @@ fun AppearanceSettings(
                                         MiniPlayerBackgroundStyle.GRADIENT -> stringResource(R.string.gradient)
                                         MiniPlayerBackgroundStyle.PURE_BLACK -> stringResource(R.string.pure_black)
                                                             MiniPlayerBackgroundStyle.GLOW -> "Glow (animated)"
+                                                            MiniPlayerBackgroundStyle.MATERIALISTIC -> "Materialistic (tonal)"
                                     }
                                 },
                                 color = if (miniPlayerStyle == MiniPlayerStyle.LEGACY) {

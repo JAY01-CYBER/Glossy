@@ -136,7 +136,17 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-private const val LYRICS_ANCHOR_RATIO = 0.35f
+/**
+ * Where the active line sits down the view, as a fraction of its height.
+ *
+ * Every line is drawn at `anchorY + its offset from the active line`, so this
+ * ratio is also the empty band above the first line when a song starts. At the
+ * old 0.35 a third of the view was blank backdrop before any lyric appeared —
+ * the "third of the lyrics is cut off" report. Kept low enough that the active
+ * line starts near the top and the lines above it still have room to scroll in
+ * from.
+ */
+private const val LYRICS_ANCHOR_RATIO = 0.12f
 private val LYRICS_ITEM_FALLBACK_HEIGHT_DP = 68.dp
 private val LYRICS_ITEM_GAP_DP = 16.dp
 private val LYRICS_FADE_TOP_DP = 130.dp
