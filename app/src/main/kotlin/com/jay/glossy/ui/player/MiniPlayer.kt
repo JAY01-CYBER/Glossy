@@ -242,6 +242,13 @@ private fun rememberMiniPlayerFold(restingCornerPercent: Int): MiniPlayerFold {
         animationSpec = foldSpec,
         label = "miniPlayerFoldExpansion",
     )
+    // The fold springs with a low-bouncy spec, and its resting target is 0:
+    // a bouncy spring overshoots past whatever it is heading for, so this
+    // crosses below zero on its first bounce. RoundedCornerShape(percent = …)
+    // rejects anything outside [0, 100] by throwing, which crashed the app the
+    // moment the bar folded. Clamping costs nothing visually — there is no
+    // rounder corner than 0%, so the overshoot was never going to be drawn —
+    // and it keeps a future resting percent from throwing too.
     val cornerPercent by animateFloatAsState(
         targetValue = if (foldedAway) 50f else restingCornerPercent.toFloat(),
         animationSpec = foldSpec,
@@ -250,7 +257,9 @@ private fun rememberMiniPlayerFold(restingCornerPercent: Int): MiniPlayerFold {
     return MiniPlayerFold(
         foldedAway = foldedAway,
         expansion = expansion,
-        shape = RoundedCornerShape(percent = cornerPercent.roundToInt()),
+        shape = RoundedCornerShape(
+            percent = cornerPercent.roundToInt().coerceIn(0, 100),
+        ),
     )
 }
 
