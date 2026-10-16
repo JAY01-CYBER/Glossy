@@ -14,19 +14,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import dev.seaglass.compose.SeaGlassContentRole
-import dev.seaglass.compose.seaGlass
-import dev.seaglass.core.SeaGlassMaterial
 
 /** The corner the section panels are cut to, in dp. */
 private val SectionPanelCorner = 20.dp
@@ -53,36 +47,12 @@ fun SeaGlassPanel(
     corner: Dp = SectionPanelCorner,
     content: @Composable () -> Unit,
 ) {
-    val glass =
-        if (LocalInspectionMode.current || !seaGlassSurfacesAvailable) {
-            Modifier.seaGlassFallback(fill = fill, shape = shape)
-        } else {
-            Modifier.seaGlass(
-                material = remember(fill, corner) { seaGlassBody(fill, corner.value) },
-                contentRole = SeaGlassContentRole.TEXT_AND_ICONS,
-            )
-        }
-
-    Box(modifier = modifier.clip(shape).then(glass)) { content() }
+    Box(
+        modifier = modifier
+            .clip(shape)
+            .then(seaGlassSurface(fill = fill, shape = shape, cornerRadius = corner)),
+    ) { content() }
 }
-
-/**
- * The glass body: the pane's tint rides inside the glass as Beer-Lambert body
- * absorption, so the colour sits *inside* the surface and the rim picks up
- * whatever is behind it rather than drawing a colour on top. Values are tuned
- * for a wide, fairly flat panel rather than the login screen's small pills.
- */
-private fun seaGlassBody(fill: Color, corner: Float): SeaGlassMaterial =
-    SeaGlassMaterial(
-        tintColorArgb = fill.toArgb(),
-        tintDensity = 0.40f,
-        coarseness = 0.28f,
-        frostRadiusDp = 26f,
-        thicknessDp = 14f,
-        rimChalkiness = 0.55f,
-        transparency = 0.72f,
-        cornerRadiusDp = corner,
-    )
 
 /**
  * A section lockup — the eyebrow over the title — on a sea-glass panel.

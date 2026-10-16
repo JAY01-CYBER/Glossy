@@ -38,12 +38,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import dev.seaglass.compose.SeaGlassContentRole
-import dev.seaglass.compose.seaGlass
-import dev.seaglass.core.SeaGlassMaterial
 
 /**
  * A pill-shaped action button whose body is sea glass rather than paint.
@@ -53,12 +49,13 @@ import dev.seaglass.core.SeaGlassMaterial
  * pill instead of drawing a colour on top of it. A pale, see-through body with
  * dark ink is what keeps it readable — sea glass is a surface, not a fill.
  *
- * [fill] is the colour the pill's glass is tinted with. A tooling preview has
- * no GPU pass to sample, and a device below API 33 has no `RuntimeShader` to
- * run one on; both get the same body painted directly (see
- * [seaGlassFallback]), tinted with [fill]. Choose it as the colour the frosted
- * body should read as — and keep [ink] legible against it, because on those
- * paths the tint is the body.
+ * [fill] is the colour the pill's glass is tinted with. The body comes from
+ * [seaGlassSurface], so the pill is cut from the app's one material rather than
+ * from a tuning passed in here. A tooling preview has no GPU pass to sample, and
+ * a device below API 33 has no `RuntimeShader` to run one on; both get the same
+ * body painted directly (see [seaGlassFallback]), tinted with [fill]. Choose
+ * [fill] as the colour the frosted body should read as — and keep [ink] legible
+ * against it, because on those paths the tint is the body.
  *
  * @param ink the colour of the icon and label. Passed separately rather than
  *   read from `LocalContentColor` because the glass body is composited in a draw
@@ -76,7 +73,6 @@ import dev.seaglass.core.SeaGlassMaterial
 fun SeaGlassPill(
     fill: Color,
     ink: Color,
-    material: SeaGlassMaterial,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     shadowTint: Color = fill,
@@ -118,15 +114,8 @@ fun SeaGlassPill(
     // it back out. Where the shader cannot run — a tooling preview, or a device
     // below API 33 — the same body is *drawn* rather than sampled, so the pill
     // is still glass there instead of the flat fill it used to fall back to.
-    val surface =
-        if (LocalInspectionMode.current || !seaGlassSurfacesAvailable) {
-            Modifier.seaGlassFallback(fill = fill, shape = RoundedCornerShape(percent = 50))
-        } else {
-            Modifier.seaGlass(
-                material = material,
-                contentRole = SeaGlassContentRole.TEXT_AND_ICONS,
-            )
-        }
+    val shape = RoundedCornerShape(percent = 50)
+    val surface = seaGlassSurface(fill = fill, shape = shape, cornerRadius = height / 2)
 
     Box(
         modifier = modifier

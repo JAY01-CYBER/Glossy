@@ -8,12 +8,20 @@ package com.jay.glossy.ui.component
 import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import dev.seaglass.compose.SeaGlassContentRole
+import dev.seaglass.compose.seaGlass
+import dev.seaglass.core.SeaGlassMaterial
 
 /**
  * Whether this device can run the real SeaGlass pass.
@@ -30,6 +38,112 @@ import androidx.compose.ui.unit.dp
  * leaves for older devices is now a painted surface rather than a fill.
  */
 val seaGlassSurfacesAvailable: Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+
+/**
+ * The app's sea glass, defined once.
+ *
+ * Every surface in the app — the sign-in pills, the onboarding button, the
+ * section panels, the chips, the search dock, the floating nav bar — is cut from
+ * these values, so the material is the same material everywhere and a change
+ * here changes all of it. Before this there were five separate tunings
+ * (0.44/0.70 on the login pills, 0.38/0.66 on the guest pill, 0.40/0.72 on the
+ * panels, 0.62/0.45 on onboarding, 0.44/0.70 on the hero), so the same glass read
+ * at a different strength on each screen.
+ *
+ * The strengths are the denser end of that range on purpose: glass you can read
+ * the wallpaper through stopped reading as glass at all, and the tint has to hold
+ * on its own on the devices where the body is painted rather than sampled. If
+ * the look ever wants to be lighter or heavier, this object is the one place to
+ * turn the dial.
+ */
+object SeaGlassLook {
+    /** How much of [SeaGlassMaterial.tintColorArgb] the body absorbs. */
+    const val TintDensity = 0.62f
+
+    /** How uneven the frost is: higher reads as more stone-like. */
+    const val Coarseness = 0.28f
+
+    /** How far the pass looks behind the surface, in dp. */
+    const val FrostRadiusDp = 26f
+
+    /** How far the body's edge thickness runs, which is what lights the rim. */
+    const val ThicknessDp = 15f
+
+    /** How chalky the rim is, against how much of the backdrop it picks up. */
+    const val RimChalkiness = 0.55f
+
+    /** How much of the backdrop survives the body. Lower is denser. */
+    const val Transparency = 0.45f
+
+    // --- The painted body ([seaGlassFallback]). Kept as alphas of the surface's
+    // own tint rather than of white, so the drawn pane sits at the same strength
+    // as the sampled one and a phone below API 33 sees the same material.
+
+    /** The tint at the top lip, where the light lands. */
+    const val BodyTopAlpha = 0.58f
+
+    /** The tint at the bottom lip, where the pane has thinned out. */
+    const val BodyBottomAlpha = 0.34f
+
+    /** The highlight the frost throws back at the light. */
+    const val HighlightAlpha = 0.22f
+
+    /** A little bounce along the bottom lip, so the body is not just a gradient. */
+    const val BounceAlpha = 0.08f
+
+    /** The chalky rim around the outline. */
+    const val RimAlpha = 0.32f
+
+    /** The rim's width. */
+    val RimWidth = 1.dp
+}
+
+/**
+ * The glass body for [fill] at the app's one set of values.
+ *
+ * [cornerRadiusDp] is the corner the surface is cut to: half a pill's height for
+ * a pill, the panel's corner for a panel. It has to be the real corner, because
+ * the pass rounds its own contour to it.
+ */
+fun seaGlassMaterial(fill: Color, cornerRadiusDp: Float): SeaGlassMaterial =
+    SeaGlassMaterial(
+        tintColorArgb = fill.toArgb(),
+        tintDensity = SeaGlassLook.TintDensity,
+        coarseness = SeaGlassLook.Coarseness,
+        frostRadiusDp = SeaGlassLook.FrostRadiusDp,
+        thicknessDp = SeaGlassLook.ThicknessDp,
+        rimChalkiness = SeaGlassLook.RimChalkiness,
+        transparency = SeaGlassLook.Transparency,
+        cornerRadiusDp = cornerRadiusDp,
+    )
+
+/**
+ * The app's sea-glass surface: the sampled pane on a device that can run the
+ * pass, the painted pane ([seaGlassFallback]) everywhere else.
+ *
+ * This is the only way a surface should be made into glass. Going through one
+ * entry point is what keeps the material consistent — a caller that builds its
+ * own [SeaGlassMaterial] is a caller that has its own opinion about how glassy
+ * the glass is, and the app had five of those.
+ *
+ * [cornerRadius] is both the fallback's clipping corner (through [shape]) and the
+ * shader's contour radius, so the two paths cover the same area and nothing is
+ * cut off on either.
+ */
+@Composable
+fun seaGlassSurface(
+    fill: Color,
+    shape: Shape,
+    cornerRadius: Dp,
+): Modifier =
+    if (LocalInspectionMode.current || !seaGlassSurfacesAvailable) {
+        Modifier.seaGlassFallback(fill = fill, shape = shape)
+    } else {
+        Modifier.seaGlass(
+            material = remember(fill, cornerRadius) { seaGlassMaterial(fill, cornerRadius.value) },
+            contentRole = SeaGlassContentRole.TEXT_AND_ICONS,
+        )
+    }
 
 /**
  * The sea-glass body for a device with no shader to run one on.
@@ -54,8 +168,8 @@ fun Modifier.seaGlassFallback(
         .background(
             Brush.verticalGradient(
                 colors = listOf(
-                    fill.copy(alpha = 0.58f),
-                    fill.copy(alpha = 0.34f),
+                    fill.copy(alpha = SeaGlassLook.BodyTopAlpha),
+                    fill.copy(alpha = SeaGlassLook.BodyBottomAlpha),
                 ),
             ),
         )
@@ -64,10 +178,10 @@ fun Modifier.seaGlassFallback(
         .background(
             Brush.verticalGradient(
                 colors = listOf(
-                    Color.White.copy(alpha = 0.22f),
+                    Color.White.copy(alpha = SeaGlassLook.HighlightAlpha),
                     Color.Transparent,
-                    Color.White.copy(alpha = 0.08f),
+                    Color.White.copy(alpha = SeaGlassLook.BounceAlpha),
                 ),
             ),
         )
-        .border(1.dp, Color.White.copy(alpha = 0.32f), shape)
+        .border(SeaGlassLook.RimWidth, Color.White.copy(alpha = SeaGlassLook.RimAlpha), shape)

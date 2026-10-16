@@ -14,7 +14,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
@@ -29,7 +28,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import dev.seaglass.core.SeaGlassMaterial
 import coil3.compose.AsyncImage
 import com.jay.glossy.R
 import com.jay.glossy.constants.AppBarHeight
@@ -230,27 +228,12 @@ fun MediaDetailPrimaryActions(
             }
             Spacer(Modifier.width(12.dp))
             onPlay?.let { play ->
-                // The same sea-glass pill the login card uses. Below API 33 it
-                // paints contentColor flat, which is exactly what this button
-                // was before, so the fallback is invisible rather than a change.
-                val playGlass = remember(contentColor) {
-                    SeaGlassMaterial(
-                        tintColorArgb = contentColor.toArgb(),
-                        tintDensity = 0.44f,
-                        coarseness = 0.30f,
-                        frostRadiusDp = 28f,
-                        thicknessDp = 15f,
-                        rimChalkiness = 0.58f,
-                        transparency = 0.70f,
-                        // Half of the 52dp pill: fully round, matching the
-                        // percent-50 outline it replaces.
-                        cornerRadiusDp = 26f,
-                    )
-                }
+                // The same sea-glass pill the login card uses, and cut from
+                // the same material — the pill takes its body from the app's
+                // one definition rather than from a tuning built here.
                 SeaGlassPill(
                     fill = contentColor,
                     ink = contrastingColor,
-                    material = playGlass,
                     shadowTint = contentColor,
                     onClick = play,
                 ) {

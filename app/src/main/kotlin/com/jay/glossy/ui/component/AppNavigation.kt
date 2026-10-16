@@ -494,13 +494,30 @@ private fun MaterialLiquidTabBar(
         dampedDrag.animateToValue(selectedIndex.toFloat())
     }
 
+    val barShape = RoundedCornerShape(50)
     Box(
         modifier = Modifier
             .height(barHeight)
             .width(totalWidth)
-            .shadow(elevation = 12.dp, shape = RoundedCornerShape(50)) 
-            .clip(RoundedCornerShape(50))
-            .background(floatingToolbarContainerColor(pureBlack)),
+            .shadow(elevation = 12.dp, shape = barShape)
+            .clip(barShape)
+            // The one surface in the app that always has something behind it, so
+            // it is the clearest place for the glass: the list scrolls under the
+            // bar and the bar refracts it. A pure-black bar is the exception the
+            // setting exists for — it is meant to vanish into an OLED bezel, and
+            // translucent glass is the opposite of vanishing.
+            .then(
+                if (pureBlack) {
+                    Modifier.background(floatingToolbarContainerColor(true))
+                } else {
+                    // Half the bar's height: fully round, matching the clip.
+                    seaGlassSurface(
+                        fill = floatingToolbarContainerColor(false),
+                        shape = barShape,
+                        cornerRadius = barHeight / 2,
+                    )
+                },
+            ),
         contentAlignment = Alignment.CenterStart
     ) {
         val indicatorOpacity by animateFloatAsState(targetValue = if (isMainTabActive) 1f else 0f, label = "Opacity")

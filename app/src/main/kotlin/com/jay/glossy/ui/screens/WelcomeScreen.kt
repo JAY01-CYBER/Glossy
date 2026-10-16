@@ -74,7 +74,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
@@ -99,7 +98,6 @@ import com.jay.glossy.ui.theme.GlossyDimens
 import com.jay.glossy.ui.theme.GlossyOnboardingPalette
 import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.utils.safeDataStoreEdit
-import dev.seaglass.core.SeaGlassMaterial
 import kotlinx.coroutines.launch
 
 enum class WelcomeState {
@@ -436,7 +434,6 @@ private fun OnboardingPrimaryButton(
     SeaGlassPill(
         fill = fill,
         ink = GlossyOnboardingPalette.OnPrimary,
-        material = remember(fill) { OnboardingSeaGlass(fill) },
         shadowTint = GlossyOnboardingPalette.Primary,
         onClick = onClick,
         enabled = enabled,
@@ -456,26 +453,6 @@ private fun OnboardingPrimaryButton(
         )
     }
 }
-
-/**
- * The primary pill as sea glass, tinted with [fill].
- *
- * Denser than the pastel pills on the sign-in card on purpose: those carry dark
- * ink, this one carries white, so it has to hold on to more of its colour to
- * stay readable over whatever the backdrop is doing.
- */
-private fun OnboardingSeaGlass(fill: Color): SeaGlassMaterial =
-    SeaGlassMaterial(
-        tintColorArgb = fill.toArgb(),
-        tintDensity = 0.62f,
-        coarseness = 0.28f,
-        frostRadiusDp = 26f,
-        thicknessDp = 15f,
-        rimChalkiness = 0.55f,
-        transparency = 0.45f,
-        // Half of the 54dp pill: fully round, matching the outline it had.
-        cornerRadiusDp = 27f,
-    )
 
 /** Small round glassy icon action, used to step back. */
 @Composable

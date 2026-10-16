@@ -86,7 +86,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.painterResource
@@ -99,11 +98,9 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jay.glossy.R
+import com.jay.glossy.ui.component.seaGlassSurface
 import com.jay.glossy.ui.component.seaGlassSurfacesAvailable
-import dev.seaglass.compose.SeaGlassContentRole
 import dev.seaglass.compose.SeaGlassStageHost
-import dev.seaglass.compose.seaGlass
-import dev.seaglass.core.SeaGlassMaterial
 import kotlin.math.roundToInt
 
 // ============================================================================
@@ -158,30 +155,6 @@ private val GuestShadow = Color(0xFF2F5B9E)
  * Material 4 sea-glass reading — a frosted pastel pebble with dark lettering —
  * and it is also what keeps the pills quiet next to the white card.
  */
-private val GoogleSeaGlass = SeaGlassMaterial(
-    tintColorArgb = GoogleButton.toArgb(),
-    tintDensity = 0.44f,
-    coarseness = 0.30f,
-    frostRadiusDp = 28f,
-    thicknessDp = 15f,
-    rimChalkiness = 0.58f,
-    transparency = 0.70f,
-    // Half the 52dp pill: fully round, matching the percent-50 outline it had.
-    cornerRadiusDp = 26f,
-)
-
-private val GuestSeaGlass = SeaGlassMaterial(
-    tintColorArgb = GuestButton.toArgb(),
-    // A shade more frost than the Google pill: it is the quieter of the two, so
-    // it should read as more stone-like, not as a second highlight.
-    tintDensity = 0.38f,
-    coarseness = 0.34f,
-    frostRadiusDp = 30f,
-    thicknessDp = 16f,
-    rimChalkiness = 0.62f,
-    transparency = 0.66f,
-    cornerRadiusDp = 26f,
-)
 
 /** Footnote and credits, small type sitting on the gradient below the card. */
 private val FootnoteWhite = Color(0xF0FFFFFF)
@@ -361,8 +334,10 @@ fun GlossyLoginScreen(
     }
 
     // A preview has no GPU pass to sample, and a device below API 33 has no
-    // RuntimeShader for the pass to run on — asking for glass there only fails.
-    // Both get the plain tree, where the pills keep their flat fills.
+    // RuntimeShader for the pass to run on — asking for the stage's glass backdrop
+    // there only fails. Both get the plain tree instead. The pills inside it are
+    // still glass: they fall back to a painted pane rather than to a flat fill,
+    // which is why the card reads the same on Android 10 as it does on 13.
     if (LocalInspectionMode.current || !seaGlassSurfacesAvailable) {
         Box(modifier = modifier.fillMaxSize()) {
             backdrop()
@@ -683,7 +658,6 @@ private fun LoginCard(
             // either is read.
             LoginActionButton(
                 fill = GoogleButton,
-                material = GoogleSeaGlass,
                 shadowTint = GoogleShadow,
                 sheen = true,
                 onClick = onGoogleClick,
@@ -707,7 +681,6 @@ private fun LoginCard(
 
             LoginActionButton(
                 fill = GuestButton,
-                material = GuestSeaGlass,
                 shadowTint = GuestShadow,
                 onClick = onGuestClick,
             ) {
@@ -740,9 +713,9 @@ private fun LoginCard(
 }
 
 /**
- * One pill inside the action card: a sea-glass body tinted with [material]
- * behind centred [content], lifted off the card by a shadow of its own, with
- * press feedback and, when [sheen] is set, a slow highlight crossing it.
+ * One pill inside the action card: a sea-glass body tinted with [fill] behind
+ * centered [content], lifted off the card by a shadow of its own, with press
+ * feedback and, when [sheen] is set, a slow highlight crossing it.
  *
  * [fill] is only the fallback — it is painted when the glass cannot be drawn,
  * which is the tooling preview. Everywhere else the pill is a real surface: it
@@ -760,7 +733,6 @@ private fun LoginCard(
 @Composable
 private fun LoginActionButton(
     fill: Color,
-    material: SeaGlassMaterial,
     shadowTint: Color,
     onClick: () -> Unit,
     sheen: Boolean = false,
@@ -790,17 +762,14 @@ private fun LoginActionButton(
     )
 
     // The sea-glass body replaces the flat fill outright: it paints its own
-    // tinted, frosted, rim-lit contour, so a fill underneath would only
-    // flatten it back out.
-    val surface =
-        if (LocalInspectionMode.current || !seaGlassSurfacesAvailable) {
-            Modifier.background(fill)
-        } else {
-            Modifier.seaGlass(
-                material = material,
-                contentRole = SeaGlassContentRole.TEXT_AND_ICONS,
-            )
-        }
+    // tinted, frosted, rim-lit contour, so a fill underneath would only flatten
+    // it back out. Where the shader cannot run — a tooling preview, or a device
+    // below API 33 such as Android 10 — the same body is drawn rather than
+    // sampled, so the pill is glass there too instead of the flat fill it used
+    // to fall back to. The body itself comes from [seaGlassSurface], so the two
+    // pills here are cut from the same material as the rest of the app.
+    val shape = RoundedCornerShape(percent = 50)
+    val surface = seaGlassSurface(fill = fill, shape = shape, cornerRadius = 26.dp)
 
     Box(
         modifier = Modifier
