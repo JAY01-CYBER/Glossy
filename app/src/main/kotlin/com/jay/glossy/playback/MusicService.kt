@@ -799,7 +799,9 @@ class MusicService :
 
         audioQuality = startupPrefs!![AudioQualityKey]?.let { value ->
             // Resolved by name alone: the stored value is the tier's own name,
-            // including VERY_HIGH and OPUS, each of which now means itself.
+            // including VERY_HIGH, which now means itself. A tier this build no
+            // longer knows (a stored OPUS from an older version) resolves to
+            // nothing and falls back to AUTO.
             com.jay.glossy.constants.AudioQuality.entries.find { it.name == value }
         } ?: com.jay.glossy.constants.AudioQuality.AUTO
         playerVolume = MutableStateFlow((startupPrefs!![PlayerVolumeKey] ?: 1f).coerceIn(0f, 1f))

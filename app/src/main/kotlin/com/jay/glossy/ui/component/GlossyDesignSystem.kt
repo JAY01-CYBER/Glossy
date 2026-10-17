@@ -13,9 +13,11 @@
 
 package com.jay.glossy.ui.component
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -123,16 +125,8 @@ fun GlossySectionTitle(
 // ============================================================================
 
 /**
- * Full pill filter chip: the accent when selected, a pane of the app's sea
- * glass when not.
- *
- * The unselected chip used to be a flat tonal fill behind a hairline outline.
- * It is now the same glass the rest of the app is cut from, so the filter row
- * keeps the material when nothing in it is selected — and it paints its own
- * chalky rim, which is why the outline is gone rather than drawn twice.
- *
- * The selected chip is still the accent painted on: a selected state has to be
- * read at a glance, and glass makes a surface recede rather than stand out.
+ * Full pill filter chip: the accent when selected, a tonal neutral with a
+ * hairline outline when not — the Material 3 filter-chip form.
  */
 @Composable
 fun GlossyChip(
@@ -141,18 +135,19 @@ fun GlossyChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val container = if (active) GlossyPalette.Accent else GlossyPalette.Chip
+    val container by animateColorAsState(
+        targetValue = if (active) GlossyPalette.Accent else GlossyPalette.Chip,
+        label = "glossyChipContainer",
+    )
+    // Captured before the draw phase: the palette reads are composition-only.
+    val outline = GlossyPalette.ChipOutline
     val shape = RoundedCornerShape(GlossyDimens.CornerPill)
     Box(
         modifier = modifier
             .clip(shape)
+            .background(container)
             .then(
-                if (active) {
-                    Modifier.background(container)
-                } else {
-                    // Half the chip's ~36dp height: fully round.
-                    seaGlassSurface(fill = container, shape = shape, cornerRadius = 18.dp)
-                },
+                if (active) Modifier else Modifier.border(1.dp, outline, shape),
             )
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -294,14 +289,7 @@ fun GlossyIconAction(
             )
             .clip(CircleShape)
             .then(
-                // The filled form is a pane of sea glass the size of the button
-                // rather than a colour dropped into it, so a raised icon action
-                // and the pills it sits beside are the same material.
-                if (background != null) {
-                    seaGlassSurface(fill = background, shape = CircleShape, cornerRadius = buttonSize / 2)
-                } else {
-                    Modifier
-                },
+                if (background != null) Modifier.background(background) else Modifier,
             )
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
@@ -350,10 +338,7 @@ fun GlossySearchDock(
                 .weight(1f)
                 .shadow(elevation = 6.dp, shape = pillShape, clip = false)
                 .clip(pillShape)
-                // Half the pill's ~48dp height: fully round. The dock is the one
-                // control hovering over a scrolling list, so it is the surface
-                // where reading as glass matters most.
-                .then(seaGlassSurface(fill = GlossyPalette.Row, shape = pillShape, cornerRadius = 24.dp))
+                .background(GlossyPalette.Row)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = ripple(color = GlossyPalette.Accent),
@@ -418,7 +403,6 @@ fun GlossyQuickTile(
     val shape = RoundedCornerShape(18.dp)
     val tileColor = GlossyPalette.Row
     val tint = GlossyPalette.Accent
-
     Column(
         modifier = modifier.clickable(
             interactionSource = remember { MutableInteractionSource() },
@@ -433,9 +417,7 @@ fun GlossyQuickTile(
                 .height(54.dp)
                 .shadow(elevation = 6.dp, shape = shape, clip = false)
                 .clip(shape)
-                // The tile's own corner, which is also half its height here, so
-                // the glass contour and the clip cover the same square.
-                .then(seaGlassSurface(fill = tileColor, shape = shape, cornerRadius = 18.dp)),
+                .background(tileColor),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
@@ -467,25 +449,19 @@ fun GlossyPillButton(
     filled: Boolean = true,
     leading: (@Composable () -> Unit)? = null,
 ) {
-    val fill = GlossyPalette.TextPrimary
+    val container = if (filled) GlossyPalette.TextPrimary else Color.Transparent
     val content = if (filled) GlossyPalette.Page else GlossyPalette.TextPrimary
     // Captured before the draw scope: the palette cannot be read from there.
     val outlineColor = GlossyPalette.Border
-    val shape = RoundedCornerShape(GlossyDimens.CornerPill)
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(52.dp)
-            .clip(shape)
+            .clip(RoundedCornerShape(GlossyDimens.CornerPill))
+            .background(container)
             .then(
                 if (filled) {
-                    // The light pill is glass rather than a slab of the light
-                    // ink colour, so the primary action belongs to the same
-                    // material as the rest of the screen. Half the 52dp pill:
-                    // fully round. The outlined form keeps its drawn outline —
-                    // it is the one button that is meant to be an edge, not a
-                    // surface.
-                    seaGlassSurface(fill = fill, shape = shape, cornerRadius = 26.dp)
+                    Modifier
                 } else {
                     Modifier.drawBehind {
                         drawRoundRect(
@@ -765,17 +741,10 @@ fun GlossyDashedTile(
 ) {
     // Captured before the draw scope: the palette cannot be read from there.
     val dashColor = GlossyPalette.TextLow
-    val tileFill = GlossyPalette.Row
-    val shape = RoundedCornerShape(corner)
     Box(
         modifier = modifier
             .size(size)
-            .clip(shape)
-            // Glass behind the dashes rather than an empty outline: an empty
-            // tile in a grid of glass tiles read as a hole in the page, and the
-            // dashed rim on top is what still says "this one is new" — the
-            // material is what says it belongs here.
-            .then(seaGlassSurface(fill = tileFill, shape = shape, cornerRadius = corner))
+            .clip(RoundedCornerShape(corner))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = ripple(color = GlossyPalette.Accent),

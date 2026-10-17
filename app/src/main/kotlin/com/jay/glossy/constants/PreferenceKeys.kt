@@ -406,17 +406,6 @@ enum class AudioQuality {
      * the highest bitrate available rather than the highest *reported* tier.
      */
     VERY_HIGH,
-
-    /**
-     * Opus (WebM) audio, capped at ~130 kbps rather than climbing to the
-     * track's largest stream. Opus is what YouTube Music itself serves for most
-     * tracks, so this is the codec as the service intends it — and it is a
-     * smaller download than the AAC stream of the same quality. The cap is what
-     * makes the tier worth choosing: above it the extra bits buy nothing a
-     * phone can hear. Tracks whose only Opus streams sit higher still play, at
-     * the smallest one they carry.
-     */
-    OPUS,
 }
 
 /**
@@ -426,8 +415,8 @@ enum class AudioQuality {
  * Off by default because the answer is about the file being fetched rather than
  * about the song, and it changes as tracks do. It is the counterpart to
  * [AudioQualityKey]: that one says what was asked for, this one shows what
- * arrived, so a listener can check that the Opus tier really did land on WebM
- * instead of quietly falling back to AAC.
+ * arrived, so a listener can check that what was asked for is really what
+ * landed.
  */
 val ShowAudioFormatKey = booleanPreferencesKey("showAudioFormat")
 

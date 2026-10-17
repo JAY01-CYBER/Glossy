@@ -42,7 +42,6 @@ import com.jay.glossy.ui.component.GlossyEyebrow
 import com.jay.glossy.ui.component.GlossyIconAction
 import com.jay.glossy.ui.component.GlossyQuickTile
 import com.jay.glossy.ui.component.GlossySearchDock
-import com.jay.glossy.ui.component.SeaGlassPanel
 import com.jay.glossy.ui.screens.SectionRule
 import com.jay.glossy.ui.theme.GlossyDimens
 import com.jay.glossy.ui.theme.GlossyPalette
@@ -94,81 +93,72 @@ fun LibraryScreen() {
             modifier = Modifier.fillMaxWidth(),
         ) {
             // Lockup: accent rule, eyebrow and title — the same shape the home
-            // sections use, so the library reads as part of the same page. It
-            // sits on the same pane of sea glass the home sections and the mix
-            // tab do, and the pane is drawn rather than sampled below API 33, so
-            // it is glass on an older device too.
-            SeaGlassPanel(
+            // sections use, so the library reads as part of the same page.
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                    .padding(start = GlossyDimens.ScreenPadding, end = 8.dp, top = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = GlossyDimens.ScreenPadding, end = 8.dp, top = 12.dp, bottom = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    SectionRule(hasEyebrow = true)
-                    Column(modifier = Modifier.weight(1f)) {
-                        GlossyEyebrow(
-                            text = stringResource(R.string.glossy_library_eyebrow),
-                            color = GlossyPalette.Accent,
+                SectionRule(hasEyebrow = true)
+                Column(modifier = Modifier.weight(1f)) {
+                    GlossyEyebrow(
+                        text = stringResource(R.string.glossy_library_eyebrow),
+                        color = GlossyPalette.Accent,
+                    )
+                    Text(
+                        text = stringResource(R.string.filter_library),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = GlossyPalette.TextPrimary,
+                    )
+                }
+                Box {
+                    GlossyIconAction(
+                        icon = R.drawable.more_vert,
+                        contentDescription = stringResource(R.string.more_options),
+                        tint = GlossyPalette.TextSecondary,
+                        onClick = { showOverflowMenu = true },
+                    )
+                    DropdownMenu(
+                        expanded = showOverflowMenu,
+                        onDismissRequest = { showOverflowMenu = false },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.cached_playlist)) },
+                            onClick = {
+                                showOverflowMenu = false
+                                navController.navigate("cache_playlist/cached")
+                            },
                         )
-                        Text(
-                            text = stringResource(R.string.filter_library),
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = GlossyPalette.TextPrimary,
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.glossy_downloaded)) },
+                            onClick = {
+                                showOverflowMenu = false
+                                navController.navigate("auto_playlist/downloaded")
+                            },
                         )
-                    }
-                    Box {
-                        GlossyIconAction(
-                            icon = R.drawable.more_vert,
-                            contentDescription = stringResource(R.string.more_options),
-                            tint = GlossyPalette.TextSecondary,
-                            onClick = { showOverflowMenu = true },
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.history)) },
+                            onClick = {
+                                showOverflowMenu = false
+                                navController.navigate("history")
+                            },
                         )
-                        DropdownMenu(
-                            expanded = showOverflowMenu,
-                            onDismissRequest = { showOverflowMenu = false },
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.cached_playlist)) },
-                                onClick = {
-                                    showOverflowMenu = false
-                                    navController.navigate("cache_playlist/cached")
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.glossy_downloaded)) },
-                                onClick = {
-                                    showOverflowMenu = false
-                                    navController.navigate("auto_playlist/downloaded")
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.history)) },
-                                onClick = {
-                                    showOverflowMenu = false
-                                    navController.navigate("history")
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.glossy_explore_charts)) },
-                                onClick = {
-                                    showOverflowMenu = false
-                                    navController.navigate("charts_screen")
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.stats)) },
-                                onClick = {
-                                    showOverflowMenu = false
-                                    navController.navigate("stats")
-                                },
-                            )
-                        }
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.glossy_explore_charts)) },
+                            onClick = {
+                                showOverflowMenu = false
+                                navController.navigate("charts_screen")
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.stats)) },
+                            onClick = {
+                                showOverflowMenu = false
+                                navController.navigate("stats")
+                            },
+                        )
                     }
                 }
             }

@@ -267,7 +267,6 @@ fun PlayerSettings(
                     AudioQuality.AUTO -> stringResource(R.string.audio_quality_auto)
                     AudioQuality.HIGH -> stringResource(R.string.audio_quality_high)
                     AudioQuality.VERY_HIGH -> stringResource(R.string.audio_quality_very_high)
-                    AudioQuality.OPUS -> stringResource(R.string.audio_quality_opus)
                     AudioQuality.LOW -> stringResource(R.string.audio_quality_low)
                 }
             }
@@ -318,7 +317,6 @@ fun PlayerSettings(
                                 AudioQuality.AUTO -> stringResource(R.string.audio_quality_auto)
                                 AudioQuality.HIGH -> stringResource(R.string.audio_quality_high)
                                 AudioQuality.VERY_HIGH -> stringResource(R.string.audio_quality_very_high)
-                                AudioQuality.OPUS -> stringResource(R.string.audio_quality_opus)
                                 AudioQuality.LOW -> stringResource(R.string.audio_quality_low)
                             }
                         )

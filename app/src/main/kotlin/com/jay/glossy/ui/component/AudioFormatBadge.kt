@@ -22,11 +22,11 @@ import com.jay.glossy.db.entities.FormatEntity
  * Names the stream that is actually being fetched, as one short line: the
  * container, the codec and the bitrate — `WebM · Opus · 130 kbps`.
  *
- * This is deliberately not the *setting* (Auto / High / Opus): the setting is
- * what was asked for, and the interesting answer is whether the request was
- * honoured — whether the Opus tier really landed on a WebM stream, or whether a
- * track only offered AAC and fell back. [AudioQuality] is chosen once in
- * settings; this is per song, so it belongs next to the song.
+ * This is deliberately not the *setting* (Auto / Low / High / Very high): the
+ * setting is what was asked for, and the interesting answer is whether the
+ * request was honoured — whether the high tier really landed on a WebM stream,
+ * or whether a track only offered AAC and fell back. [AudioQuality] is chosen
+ * once in settings; this is per song, so it belongs next to the song.
  *
  * Renders nothing at all without a format: before the first stream is resolved
  * there is no honest answer to give, and an empty chip would only be noise.
