@@ -153,8 +153,6 @@ import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.WatchEndpoint
 import com.jay.glossy.constants.AppBarHeight
-import com.jay.glossy.ui.component.AppScrollState
-import com.jay.glossy.ui.component.LocalAppScrolledToTop
 import com.jay.glossy.constants.AppLanguageKey
 import com.jay.glossy.constants.BackgroundBlurEnabledKey
 import com.jay.glossy.constants.CheckForUpdatesKey
@@ -1021,13 +1019,6 @@ class MainActivity : ComponentActivity() {
 
                 val baseBg = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
 
-                // The chrome reacts to scrolling — the mini player folds into its
-                // round form and springs back at the top — and no screen owns a
-                // signal for that, because every screen owns a different list. It
-                // is collected here instead, from the nested scroll those lists
-                // already report through. See [AppScrollState].
-                val appScrollState = remember { AppScrollState() }
-
                 CompositionLocalProvider(
                     LocalDatabase provides database,
                     LocalNavController provides navController,
@@ -1039,7 +1030,6 @@ class MainActivity : ComponentActivity() {
                     LocalSyncUtils provides syncUtils,
                     LocalListenTogetherManager provides listenTogetherManager,
                     LocalChangelogState provides showChangelog,
-                    LocalAppScrolledToTop provides appScrollState.isScrolledToTop,
                 ) {
                     if (showChangelog.value) {
                         ChangelogScreen(onDismiss = { showChangelog.value = false })
@@ -1409,8 +1399,7 @@ class MainActivity : ComponentActivity() {
                         modifier =
                             Modifier
                                 .fillMaxSize()
-                                .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
-                                .nestedScroll(appScrollState.connection),
+                                .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
                     ) {
                         Row(Modifier.fillMaxSize()) {
                             val onRailItemClick: (Screens, Boolean) -> Unit =
