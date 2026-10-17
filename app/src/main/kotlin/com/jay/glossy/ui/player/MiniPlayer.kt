@@ -163,6 +163,7 @@ import com.metrolist.models.MediaMetadata
 import com.jay.glossy.playback.CastConnectionHandler
 import com.jay.glossy.playback.PlayerConnection
 import com.jay.glossy.ui.screens.settings.DarkMode
+import com.jay.glossy.ui.utils.isYouTubeVideoStill
 import com.jay.glossy.ui.utils.resize
 import com.jay.glossy.utils.joinToArtistString
 import com.jay.glossy.utils.rememberEnumPreference
@@ -320,19 +321,16 @@ private fun GlossyBarMiniPlayer(
     val artistText = mediaMetadata?.artists?.joinToArtistString(", ") { it.name }.orEmpty()
 
     // Every one of these backgrounds is dark, so the bar switches to white
-    // content whenever one is painted. The Material 3 tonal card is the
-    // exception: it is a light surface taken from the scheme, so it keeps the
-    // scheme's own on-surface ink instead of forcing white.
+    // content whenever one is painted — except the plain themed one, which is a
+    // surface taken from the scheme and keeps the scheme's own on-surface ink.
     val darkBackground = when (miniPlayerBackground) {
         MiniPlayerBackgroundStyle.DEFAULT -> pureBlack
-        MiniPlayerBackgroundStyle.MATERIALISTIC -> false
         else -> true
     }
     val containerColor = when (miniPlayerBackground) {
         MiniPlayerBackgroundStyle.DEFAULT -> if (pureBlack) Color.Black else GlossyPalette.MiniBar
         MiniPlayerBackgroundStyle.TRANSPARENT -> Color.Black.copy(alpha = 0.25f)
         MiniPlayerBackgroundStyle.PURE_BLACK -> Color.Black
-        MiniPlayerBackgroundStyle.MATERIALISTIC -> MaterialTheme.colorScheme.surfaceContainer
         else -> Color.Transparent
     }
     val primaryTextColor = if (darkBackground) Color.White else GlossyPalette.TextPrimary
@@ -537,24 +535,6 @@ private fun MiniPlayerStyleBackground(
             GlowAnimatedBackground(colors = colors, modifier = modifier)
             // Scrim so the title and controls stay readable over the glow.
             Box(modifier = modifier.background(Color.Black.copy(alpha = 0.32f)))
-        }
-
-        // Tonal elevation, the way a Material 3 card lifts: the surface is
-        // brightest where the content starts — behind the artwork — and settles
-        // into the plain container tone across the rest of the bar. The caller
-        // has already laid down `surfaceContainer`, so this only paints the
-        // lift.
-        MiniPlayerBackgroundStyle.MATERIALISTIC -> {
-            Box(
-                modifier = modifier.background(
-                    Brush.horizontalGradient(
-                        listOf(
-                            MaterialTheme.colorScheme.surfaceContainerHigh,
-                            MaterialTheme.colorScheme.surfaceContainer,
-                        ),
-                    ),
-                ),
-            )
         }
 
         else -> Unit
@@ -1175,15 +1155,44 @@ private fun AppleMusicMiniPlayer(
     val canSkipNext by playerConnection.canSkipNext.collectAsStateWithLifecycle()
     val haptic = LocalHapticFeedback.current
 
-    // Scheme roles rather than literal colours: the bar inherits whatever
-    // surface and accent the active theme and dynamic colour produce, which is
-    // what makes it Material 3 instead of a fixed glass gradient.
-    val containerColor = MaterialTheme.colorScheme.surfaceContainer
-    val outlineColor = MaterialTheme.colorScheme.outline
-    val onContainerColor = MaterialTheme.colorScheme.onSurface
-    val onContainerVariantColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val accentColor = MaterialTheme.colorScheme.primary
-    val onAccentColor = MaterialTheme.colorScheme.onPrimary
+    // The bar reads the same background setting as every other style — Blur,
+    // Gradient, Glow, Transparent and Pure black were ignored here before, so
+    // this bar alone kept one look whatever the setting said. Its *plain*
+    // option is the scheme's own surface, which is what makes it Material 3
+    // instead of a fixed glass gradient.
+    val miniPlayerBackground by rememberEnumPreference(
+        MiniPlayerBackgroundStyleKey,
+        defaultValue = MiniPlayerBackgroundStyle.DEFAULT,
+    )
+    val pureBlack by rememberPreference(PureBlackMiniPlayerKey, defaultValue = false)
+    val (gradientColors, onGradientColorsChange) = remember { mutableStateOf<List<Color>>(emptyList()) }
+    MiniPlayerColorExtractor(
+        mediaMetadata = mediaMetadata,
+        miniPlayerBackground = miniPlayerBackground,
+        onGradientColorsChange = onGradientColorsChange,
+    )
+
+    // Every artwork-derived background is dark, so the bar switches to white
+    // content over it, exactly as the other styles do. Only the plain surface
+    // keeps the scheme's ink.
+    val darkBackground = when (miniPlayerBackground) {
+        MiniPlayerBackgroundStyle.DEFAULT -> pureBlack
+        else -> true
+    }
+    val containerColor = when (miniPlayerBackground) {
+        MiniPlayerBackgroundStyle.DEFAULT ->
+            if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
+        MiniPlayerBackgroundStyle.TRANSPARENT -> Color.Black.copy(alpha = 0.25f)
+        MiniPlayerBackgroundStyle.PURE_BLACK -> Color.Black
+        else -> Color.Transparent
+    }
+    val onContainerColor = if (darkBackground) Color.White else MaterialTheme.colorScheme.onSurface
+    val onContainerVariantColor =
+        if (darkBackground) Color.White.copy(alpha = 0.75f) else MaterialTheme.colorScheme.onSurfaceVariant
+    val accentColor = if (darkBackground) Color.White else MaterialTheme.colorScheme.primary
+    val onAccentColor = if (darkBackground) Color(0xFF15121F) else MaterialTheme.colorScheme.onPrimary
+    val outlineColor =
+        if (darkBackground) Color.White.copy(alpha = 0.16f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
 
     // One fixed shape at one fixed width. Scrolling the list underneath used to
     // close the bar down into a round artwork bubble; the bar now stays exactly
@@ -1191,21 +1200,27 @@ private fun AppleMusicMiniPlayer(
     val shape = RoundedCornerShape(32.dp)
 
     Box(
-        modifier = modifier.fillMaxWidth(),
-        contentAlignment = Alignment.CenterEnd,
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(64.dp)
+                .clip(shape)
+                .background(containerColor)
+                .border(1.dp, outlineColor, shape)
+                .clickable(onClick = onClick),
     ) {
+        // Whichever artwork style is selected is painted by the shared painter
+        // the other bars use, so all four styles behave the same here.
+        MiniPlayerStyleBackground(
+            style = miniPlayerBackground,
+            colors = gradientColors,
+            artworkUrl = mediaMetadata?.thumbnailUrl,
+            modifier = Modifier.matchParentSize(),
+        )
+
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Start,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(64.dp)
-                    .clip(shape)
-                    .background(containerColor)
-                    .border(1.dp, outlineColor.copy(alpha = 0.3f), shape)
-                    .clickable(onClick = onClick)
-                    .padding(horizontal = 8.dp),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
         ) {
             GlossyThumb(
                 seed = mediaMetadata?.id,
@@ -1411,13 +1426,9 @@ private fun NewMiniPlayer(
     }
 
     val backgroundColor = when (miniPlayerBackground) {
-        MiniPlayerBackgroundStyle.DEFAULT    -> MaterialTheme.colorScheme.surfaceContainer
         MiniPlayerBackgroundStyle.TRANSPARENT -> Color.Black.copy(alpha = 0.25f)
-        MiniPlayerBackgroundStyle.BLUR       -> MaterialTheme.colorScheme.surfaceContainer
-        MiniPlayerBackgroundStyle.GRADIENT   -> MaterialTheme.colorScheme.surfaceContainer
-        MiniPlayerBackgroundStyle.GLOW       -> MaterialTheme.colorScheme.surfaceContainer
         MiniPlayerBackgroundStyle.PURE_BLACK -> Color.Black
-        MiniPlayerBackgroundStyle.MATERIALISTIC -> MaterialTheme.colorScheme.surfaceContainer
+        else -> MaterialTheme.colorScheme.surfaceContainer
     }
     val forceLightColors = !useDarkTheme && (miniPlayerBackground == MiniPlayerBackgroundStyle.PURE_BLACK ||
             miniPlayerBackground == MiniPlayerBackgroundStyle.BLUR ||
@@ -1560,24 +1571,6 @@ private fun NewMiniPlayer(
                         Modifier
                             .fillMaxSize()
                             .background(Color.Black.copy(alpha = 0.32f)),
-                    )
-                }
-                MiniPlayerBackgroundStyle.MATERIALISTIC -> {
-                    // The Material 3 card lift: a tonal surface, brightest where
-                    // the content starts and settling to the plain container
-                    // tone across the bar. The base colour is already
-                    // `surfaceContainer`, so only the lift is painted here.
-                    Box(
-                        Modifier
-                            .fillMaxSize()
-                            .background(
-                                Brush.horizontalGradient(
-                                    listOf(
-                                        MaterialTheme.colorScheme.surfaceContainerHigh,
-                                        MaterialTheme.colorScheme.surfaceContainer,
-                                    ),
-                                ),
-                            ),
                     )
                 }
                 else -> {}
@@ -2194,7 +2187,13 @@ private fun LegacyMiniMediaInfo(
                 AsyncImage(
                     model = thumbnailUrl,
                     contentDescription = null,
-                    contentScale = if (cropAlbumArt) ContentScale.Crop else ContentScale.Fit,
+                    // A video frame is 16:9 and this artwork is a 48dp square, so
+                    // fitting it would leave the bar's own background showing as
+                    // two bands — the same letterboxing a video card used to
+                    // show. It fills here too; only the full player, where a
+                    // frame is the subject rather than a thumbnail, keeps the
+                    // whole frame.
+                    contentScale = if (cropAlbumArt || isYouTubeVideoStill(thumbnailUrl)) ContentScale.Crop else ContentScale.Fit,
                     modifier =
                         Modifier
                             .fillMaxSize()

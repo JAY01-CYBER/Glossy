@@ -145,6 +145,7 @@ import com.jay.glossy.db.entities.Song
 import com.jay.glossy.extensions.toMediaItem
 import com.metrolist.models.MediaMetadata
 import com.jay.glossy.playback.queues.LocalAlbumRadio
+import com.jay.glossy.ui.utils.isYouTubeVideoStill
 import com.jay.glossy.ui.utils.resize
 import com.jay.glossy.utils.joinByBullet
 import com.jay.glossy.utils.joinToArtistString
@@ -1828,7 +1829,16 @@ fun ItemThumbnail(
 ) {
     val cropAlbumArt by rememberPreference(CropAlbumArtKey, false)
     val context = LocalContext.current
-    
+
+    // A YouTube video frame is 16:9 and the tile it lands in is square, so
+    // fitting it left a band of the tile's own background above and below the
+    // picture — a video song read as a letterboxed strip in a card while the
+    // covers either side of it filled their tiles, which is the bug. Covers are
+    // square and cost nothing either way; a frame always fills, and the album
+    // art preference keeps deciding the only case it was ever about — whether a
+    // square *cover* is shown whole or cropped.
+    val videoStill = isYouTubeVideoStill(thumbnailUrl)
+
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
@@ -1848,7 +1858,7 @@ fun ItemThumbnail(
                         .build()
                 },
                 contentDescription = null,
-                contentScale = if (cropAlbumArt) ContentScale.Crop else ContentScale.Fit,
+                contentScale = if (cropAlbumArt || videoStill) ContentScale.Crop else ContentScale.Fit,
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(shape)
