@@ -18,6 +18,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -73,6 +78,23 @@ private val TabWidth = 96.dp
 private val BarHeight = 64.dp
 private val BlobHeight = 56.dp
 private val BarInset = 6.dp
+
+/**
+ * One destination of the tab bar below: its route, its label and the icon it
+ * draws. Defined here because this bar is the only thing that reads it — the
+ * floating navigation bar the app actually shows has its own [Screens]-based
+ * tabs.
+ */
+sealed class BottomNavScreen(
+    val ordinal: Int,
+    val route: String,
+    val title: String,
+    val icon: @Composable () -> Unit,
+) {
+    data object Home : BottomNavScreen(0, "home", "Home", { Icon(Icons.Default.Home, contentDescription = null) })
+    data object Search : BottomNavScreen(1, "search", "Search", { Icon(Icons.Default.Search, contentDescription = null) })
+    data object Library : BottomNavScreen(2, "library", "Library", { Icon(Icons.Default.LibraryMusic, contentDescription = null) })
+}
 
 @Composable
 fun LiquidGlassTabBar(
