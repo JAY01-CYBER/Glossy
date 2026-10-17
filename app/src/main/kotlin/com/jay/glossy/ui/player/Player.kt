@@ -618,12 +618,6 @@ fun BottomSheetPlayer(
     BottomSheet(
         state = state,
         modifier = modifier,
-        // The bar growing into the player: a bloom of the artwork's own colour
-        // that leaves the mini player's thumbnail and washes over the sheet as
-        // it opens. Gated on the app's one motion switch, so "Reduce animation"
-        // (or the system's own Remove animations) turns it off with everything
-        // else rather than leaving one flourish still moving.
-        openOverlay = {},
         background = {
             if (playerStyle.name != "APPLE_MUSIC") {
                 Box(modifier = Modifier.fillMaxSize().background(bottomSheetBackgroundColor)) {
@@ -1885,18 +1879,6 @@ fun InlineLyricsView(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
-        // Apple Music-style frosted glass: the artwork blurred behind the text,
-        // so the full-screen lyrics view looks the same in every player design.
-        // Full-bleed with square corners on purpose: rounded corners used to cut
-        // out little triangles that revealed the (often much lighter) sheet
-        // behind as white corner padding. The backdrop fades in down the panel,
-        // so the blur builds up from the top instead of starting at a hard edge.
-        GlassBackdrop(
-            thumbnailUrl = mediaMetadata?.thumbnailUrl?.toHighRes(),
-            shape = RectangleShape,
-            border = null,
-            modifier = Modifier.fillMaxSize(),
-        )
         // Buttery-smooth cross-state animation: scale + fade between loading,
         // not-found and loaded states instead of an abrupt swap.
         AnimatedContent(
