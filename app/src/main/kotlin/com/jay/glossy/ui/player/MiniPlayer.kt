@@ -216,10 +216,9 @@ fun MiniPlayer(
 
     val progressState = remember { ProgressState(positionState, durationState) }
 
-    // The Apple Music bar is the one style that still folds: it re-flows its own
-    // row, keeping the artwork whole and pinned at the end while the text fades
-    // out and the bar closes into the round artwork bubble. Every other style is
-    // left at its own full width and its own shape.
+    // The Apple Music bar draws its own row rather than a shape the wrapper
+    // hands it, so it is its own composable. It no longer closes down into the
+    // round artwork bubble while scrolling, and neither does any other style.
     if (miniPlayerStyle == MiniPlayerStyle.APPLE_MUSIC) {
         AppleMusicMiniPlayer(
             progressState = progressState,
@@ -234,8 +233,9 @@ fun MiniPlayer(
     // leaving the artwork behind as a round bubble — but that collapsed form was
     // wrong everywhere it appeared: the bar's height is fixed while the remnant's
     // width is a fraction of the screen, so what was left was a squat rounded
-    // rectangle, never the circle it was meant to read as. Each style now keeps
-    // exactly the shape its own design draws, and nothing else.
+    // rectangle, never the circle it was meant to read as. Each style keeps
+    // exactly the shape its own design draws, and nothing else — on every style,
+    // at every scroll position.
     Box(
         modifier = modifier.fillMaxWidth(),
         contentAlignment = Alignment.CenterStart,
