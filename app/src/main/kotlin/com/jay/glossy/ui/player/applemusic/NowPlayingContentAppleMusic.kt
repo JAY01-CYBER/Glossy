@@ -143,8 +143,9 @@ private val ArtworkBottomFade =
     )
 
 /**
- * The gentle tier's mask: it fades in early and is most of the way present by
- * the middle of the band, so the whole block reads as one soft sheet of glass.
+ * The gentle tier's mask: a quarter of the way down it is already half present
+ * and by the middle it is nearly full, so the whole block reads as one sheet of
+ * frosted glass rather than a band that has to be looked for.
  *
  * Every stop is a fraction of what it is drawn over and every colour is a fixed
  * black with a fixed alpha, so the brush never varies and is made once. Built
@@ -155,37 +156,40 @@ private val BottomFrostSoftRamp =
     Brush.verticalGradient(
         colorStops = arrayOf(
             0.00f to Color.Black.copy(alpha = 0f),
-            0.30f to Color.Black.copy(alpha = 0.35f),
-            0.65f to Color.Black.copy(alpha = 0.70f),
-            1.00f to Color.Black.copy(alpha = 0.85f),
+            0.12f to Color.Black.copy(alpha = 0.30f),
+            0.38f to Color.Black.copy(alpha = 0.72f),
+            0.70f to Color.Black.copy(alpha = 0.94f),
+            1.00f to Color.Black,
         ),
     )
 
 /**
- * The heavy tier's mask: nothing at all through the upper half of the band, so
- * the strong blur exists only where the band is deep — which is what makes the
- * blur look like it *grows* towards the bottom instead of switching on.
+ * The heavy tier's mask: still nothing at the very top of the band, so the
+ * frost *starts* at the song name, and then it comes in fast — the heavy blur is
+ * most of the way there by the time the artist line is behind it. A band that
+ * only reaches full strength in its last few pixels reads as a soft edge rather
+ * than as a blur, which is exactly what this used to look like.
  */
 private val BottomFrostHeavyRamp =
     Brush.verticalGradient(
         colorStops = arrayOf(
             0.00f to Color.Black.copy(alpha = 0f),
-            0.42f to Color.Black.copy(alpha = 0f),
-            0.62f to Color.Black.copy(alpha = 0.35f),
-            1.00f to Color.Black.copy(alpha = 0.95f),
+            0.22f to Color.Black.copy(alpha = 0f),
+            0.45f to Color.Black.copy(alpha = 0.60f),
+            1.00f to Color.Black,
         ),
     )
 
 /**
  * The contrast that arrives with the heavy tier: no darkening where the cover
- * is still readable, most of it at the controls.
+ * is still readable, most of it at the controls and the queue pills.
  */
 private val BottomFrostScrim =
     Brush.verticalGradient(
         colorStops = arrayOf(
             0.00f to Color.Transparent,
-            0.55f to Color.Black.copy(alpha = 0.10f),
-            1.00f to Color.Black.copy(alpha = 0.46f),
+            0.50f to Color.Black.copy(alpha = 0.14f),
+            1.00f to Color.Black.copy(alpha = 0.50f),
         ),
     )
 
@@ -213,6 +217,7 @@ private fun BottomFrostTier(
     ramp: Brush,
     modifier: Modifier = Modifier,
     scrim: Brush? = null,
+    zoom: Float = 1f,
 ) {
     Box(
         modifier =
@@ -227,7 +232,18 @@ private fun BottomFrostTier(
         BlurredArtworkBackdrop(
             url = artworkUrl,
             blurStrength = blurStrength,
-            modifier = Modifier.fillMaxSize(),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    // The tier below samples the cover larger as well as softer,
+                    // so the two tiers differ in what they show and not only in
+                    // how much of it is visible — the same way the sample at the
+                    // bottom of a real sheet of glass is bigger than the one at
+                    // its edge.
+                    .graphicsLayer {
+                        scaleX = zoom
+                        scaleY = zoom
+                    },
         )
         if (scrim != null) {
             Box(modifier = Modifier.fillMaxSize().background(scrim))
@@ -256,19 +272,25 @@ private fun AppleMusicBottomBlur(
     // Both tiers are drawn even without artwork: the cover half then paints
     // nothing and what is left is the heavy tier's scrim, which is still the
     // contrast the title and controls need to stay legible.
+    //
+    // The strengths are deliberately light. The page behind this band is the
+    // same cover blurred to nothing at 180dp, so a *very* blurred copy in the
+    // band is indistinguishable from what is already there — which is why the
+    // frost had to be made out of a sharper sample to be seen at all.
     Box(modifier = modifier.fillMaxWidth().height(height)) {
         BottomFrostTier(
             artworkUrl = artworkUrl,
-            blurStrength = 0.5f,
+            blurStrength = 0.22f,
             ramp = BottomFrostSoftRamp,
         )
         // The darkening rides the heavy tier, so contrast and depth arrive
         // together at the bottom rather than as a band of their own.
         BottomFrostTier(
             artworkUrl = artworkUrl,
-            blurStrength = 0.92f,
+            blurStrength = 0.58f,
             ramp = BottomFrostHeavyRamp,
             scrim = BottomFrostScrim,
+            zoom = 1.25f,
         )
     }
 }
