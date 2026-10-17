@@ -623,11 +623,7 @@ fun BottomSheetPlayer(
         // it opens. Gated on the app's one motion switch, so "Reduce animation"
         // (or the system's own Remove animations) turns it off with everything
         // else rather than leaving one flourish still moving.
-        openOverlay = {
-            if (rememberAmbientMotionEnabled()) {
-                PlayerOpenBloom(progress = state.progress, accent = TextBackgroundColor)
-            }
-        },
+        openOverlay = {},
         background = {
             if (playerStyle.name != "APPLE_MUSIC") {
                 Box(modifier = Modifier.fillMaxSize().background(bottomSheetBackgroundColor)) {
