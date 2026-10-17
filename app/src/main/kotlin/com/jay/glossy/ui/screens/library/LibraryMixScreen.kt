@@ -101,7 +101,6 @@ import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.component.PlayStoreRefreshIndicator
 import com.jay.glossy.ui.component.PlaylistGridItem
 import com.jay.glossy.ui.component.PlaylistListItem
-import com.jay.glossy.ui.component.SeaGlassSectionHeader
 import com.jay.glossy.ui.component.SongGridItem
 import com.jay.glossy.ui.component.SongListItem
 import com.jay.glossy.ui.component.SortHeader
@@ -821,10 +820,17 @@ fun LibraryMixScreen(
 
 @Composable
 private fun SectionHeader(title: String) {
-    // The section breaks are drawn on sea glass — the same pane the library and
-    // the home feed are seated on — rather than as bare text on the backdrop.
-    SeaGlassSectionHeader(
-        title = title,
-        modifier = Modifier.padding(top = 18.dp),
+    // A bare heading on the backdrop: the mix tab keeps the section break it has
+    // always had, with no pane of sea glass behind it.
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleLarge.copy(
+            fontWeight = FontWeight.Bold,
+            fontSize = 22.sp
+        ),
+        color = MaterialTheme.colorScheme.onBackground,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 8.dp)
     )
 }
