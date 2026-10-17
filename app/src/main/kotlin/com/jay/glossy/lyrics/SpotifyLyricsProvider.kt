@@ -43,11 +43,12 @@ import io.ktor.serialization.kotlinx.json.json
 import java.io.File
 import java.security.MessageDigest
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.longOrNull
 
 object SpotifyLyricsProvider : LyricsProvider {
     override val name = "Spotify"
@@ -71,8 +72,20 @@ object SpotifyLyricsProvider : LyricsProvider {
         }
     }
 
+    /**
+     * On when the switch in Settings says so — and, until that switch has been
+     * answered for itself, on when a Spotify account is signed in.
+     *
+     * The flat "off" this used to be is why a signed-in account could have
+     * Spotify's lyrics sitting one endpoint away and never see them: the
+     * provider was enabled only for a listener who had found a toggle buried in
+     * Content settings. A stored `false` still means false, so turning the
+     * switch off keeps working, and a listener who never touches it gets the
+     * lyrics their own account can already provide.
+     */
     override fun isEnabled(context: Context): Boolean =
-        context.dataStore[EnableSpotifyLyricsKey] ?: false
+        context.dataStore[EnableSpotifyLyricsKey]
+            ?: context.dataStore[SpotifySession.CookieKey].orEmpty().isNotBlank()
 
     override suspend fun getLyrics(
         context: Context,
@@ -84,6 +97,13 @@ object SpotifyLyricsProvider : LyricsProvider {
     ): Result<String> {
         // A synced copy always beats the network.
         readCache(context, id, title, artist)?.let { return Result.success(it) }
+
+        // The bearer token this request needs may have to be minted first, which
+        // means loading the web player in an offscreen WebView — seconds of work.
+        // Started here so it runs on its own scope: the lyrics race gives a
+        // provider a few seconds, and a mint that gets cancelled by that has
+        // minted nothing, leaving the next lookup to pay the same wait again.
+        SpotifySession.warmUp(context)
 
         // The raw library token lapses a little while after login and nothing
         // re-mints it, so reading it directly is what made Spotify lyrics load
@@ -129,43 +149,67 @@ object SpotifyLyricsProvider : LyricsProvider {
         }
 
     /**
-     * Turns the color-lyrics payload into LRC. Timed lines come first, stamped
-     * `[mm:ss.xx]`; a track with only untimed lines still yields plain text,
-     * which the helpers treat as a last-resort answer like every other
-     * provider's plain text.
+     * Turns the color-lyrics payload into LRC, every line stamped `[mm:ss.xx]`.
+     *
+     * The live endpoint answers with `lyrics.lines`, and each line carries
+     * `startTimeMs` as a *string* of milliseconds beside its finished text in
+     * `words` — also a string. This parser used to read a `syncedLines` array
+     * whose entries held `words` as an array of word objects, which is not a
+     * shape this endpoint returns: every line was rejected, the provider
+     * reported "no usable lyrics", and Spotify's lyrics never reached the
+     * screen even on a track it had answered for. Both shapes are read now. The
+     * string form is the one that actually comes back; the array form is kept so
+     * that nothing which used to match stops matching.
+     *
+     * A line with no start time is dropped rather than returned as text. The
+     * lyric view scrolls and animates off those timestamps, so an unstamped
+     * answer would look like a working request and behave like a broken one.
      */
     private fun lyricsFromColorResponse(body: String): String? = runCatching {
         val root = json.parseToJsonElement(body).jsonObject
         val lyrics = (root["lyrics"] ?: root).jsonObject
 
-        val synced = lyrics["syncedLines"]?.jsonArray
-        if (!synced.isNullOrEmpty()) {
-            synced.mapNotNull { element ->
-                val line = element.jsonObject
-                val startMs = line["startTime"]?.jsonPrimitive?.contentOrNull?.toLongOrNull()
-                    ?: line["startTime"]?.jsonPrimitive?.longOrNull
-                    ?: return@mapNotNull null
-                val text = line["words"]?.jsonArray
-                    ?.joinToString(" ") { word ->
-                        word.jsonObject["words"]?.jsonPrimitive?.contentOrNull.orEmpty()
-                    }
-                    ?.replace(Regex("\\s+"), " ")
-                    ?.trim()
-                    .orEmpty()
-                if (text.isEmpty()) null else "${lrcStamp(startMs)}$text"
-            }.joinToString("\n").takeIf { it.isNotBlank() }
-        } else {
-            lyrics["lines"]?.jsonArray?.mapNotNull { element ->
-                element.jsonObject["words"]?.jsonArray
-                    ?.joinToString(" ") { word ->
-                        word.jsonObject["words"]?.jsonPrimitive?.contentOrNull.orEmpty()
-                    }
-                    ?.replace(Regex("\\s+"), " ")
-                    ?.trim()
-                    ?.takeIf { it.isNotEmpty() }
-            }?.joinToString("\n")?.takeIf { it.isNotBlank() }
-        }
+        val lines = lyrics["lines"].asArray().orEmpty()
+            .ifEmpty { lyrics["syncedLines"].asArray().orEmpty() }
+
+        lines.mapNotNull { element ->
+            val line = element.jsonObject
+            val startMs = (line["startTimeMs"] ?: line["startTime"]).asMillis()
+                ?: return@mapNotNull null
+            val text = line["words"].asWords() ?: line["syllables"].asWords()
+            if (text.isNullOrBlank()) null else "${lrcStamp(startMs)}$text"
+        }.joinToString("\n").takeIf { it.isNotBlank() }
     }.getOrNull()
+
+    /** `lines` and `syncedLines` are both arrays; anything else is not one. */
+    private fun JsonElement?.asArray(): List<JsonElement>? = (this as? JsonArray)?.toList()
+
+    /** Milliseconds, whichever way the endpoint spells the field. */
+    private fun JsonElement?.asMillis(): Long? =
+        (this as? JsonPrimitive)?.content?.trim()?.toLongOrNull()
+
+    /**
+     * A line's words: one string on the shape that comes back, or an array of
+     * word objects on the older one. Both flatten to a single line of text,
+     * because a stamped lyric line is one line of text.
+     */
+    private fun JsonElement?.asWords(): String? {
+        val element = this ?: return null
+        if (element is JsonNull) return null
+        val raw = when (element) {
+            is JsonPrimitive -> element.content
+            is JsonArray ->
+                element.joinToString(" ") { part ->
+                    if (part is JsonPrimitive) {
+                        part.content
+                    } else {
+                        (part as? JsonObject)?.get("words").asWords().orEmpty()
+                    }
+                }
+            else -> null
+        }
+        return raw?.replace(Regex("\\s+"), " ")?.trim()
+    }
 
     private fun lrcStamp(millis: Long): String {
         val minutes = millis / 60_000L

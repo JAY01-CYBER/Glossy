@@ -121,6 +121,25 @@ internal fun getAppleMediaItems(player: Player): AppleMediaItemsData {
     return AppleMediaItemsData(items, currentIdx)
 }
 
+/**
+ * The ramp that feathers the bottom of the artwork away into the page.
+ *
+ * Every stop in it is a fraction of what it is drawn over and every colour is
+ * fixed, so the ramp never varies and can be made once. Built inside the draw
+ * pass instead it would ask Skia for a new shader on every frame the artwork,
+ * the video canvas or the lyrics move — which on this screen is always — and it
+ * is drawn twice, over the artwork and over the canvas.
+ */
+private val ArtworkBottomFade =
+    Brush.verticalGradient(
+        colorStops = arrayOf(
+            0.00f to Color.Black,
+            0.65f to Color.Black,
+            0.92f to Color.Black.copy(alpha = 0.4f),
+            1.00f to Color.Transparent,
+        ),
+    )
+
 @Composable
 fun NowPlayingContentAppleMusic(
     bottomSheetState: BottomSheetState,
@@ -436,14 +455,7 @@ private fun AppleMusicArtworkPage(
                         .drawWithContent {
                             drawContent()
                             drawRect(
-                                brush = Brush.verticalGradient(
-                                    colorStops = arrayOf(
-                                        0.00f to Color.Black,
-                                        0.65f to Color.Black,
-                                        0.92f to Color.Black.copy(alpha = 0.4f),
-                                        1.00f to Color.Transparent,
-                                    )
-                                ),
+                                brush = ArtworkBottomFade,
                                 blendMode = BlendMode.DstIn
                             )
                         }
@@ -462,14 +474,7 @@ private fun AppleMusicArtworkPage(
                             .drawWithContent {
                                 drawContent()
                                 drawRect(
-                                    brush = Brush.verticalGradient(
-                                        colorStops = arrayOf(
-                                            0.00f to Color.Black,
-                                            0.65f to Color.Black,
-                                            0.92f to Color.Black.copy(alpha = 0.4f),
-                                            1.00f to Color.Transparent,
-                                        )
-                                    ),
+                                    brush = ArtworkBottomFade,
                                     blendMode = BlendMode.DstIn
                                 )
                             }

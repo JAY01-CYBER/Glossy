@@ -425,6 +425,40 @@ object LyricsUtils {
         return sb.toString()
     }
 
+    /**
+     * Drops a line that repeats the one before it word for word.
+     *
+     * Providers do sometimes stamp the same sentence two or three times in a
+     * row, and the listener reads that stack as the app being broken rather
+     * than as a lyric. The repeat is dropped rather than merged, because it
+     * carries its own timestamps: merging would leave the player highlighting
+     * the same words a second time.
+     *
+     * A backing vocal echoing the main line is a different line on screen, so
+     * the background flag has to match as well — it is the same layer repeating
+     * itself that gets collapsed.
+     */
+    fun collapseConsecutiveDuplicates(entries: List<LyricsEntry>): List<LyricsEntry> {
+        if (entries.size < 2) return entries
+        val collapsed = ArrayList<LyricsEntry>(entries.size)
+        var previousText: String? = null
+        var previousWasBackground = false
+        entries.forEach { entry ->
+            val text = entry.text.trim()
+            val repeatsPreviousLine =
+                text.isNotEmpty() &&
+                    previousText != null &&
+                    text.equals(previousText, ignoreCase = true) &&
+                    entry.isBackground == previousWasBackground
+            if (!repeatsPreviousLine) {
+                collapsed.add(entry)
+                previousText = text
+                previousWasBackground = entry.isBackground
+            }
+        }
+        return collapsed
+    }
+
     fun parseLyrics(lyrics: String): List<LyricsEntry> {
         if (lyrics.isBlank()) return emptyList()
 
@@ -554,7 +588,7 @@ object LyricsUtils {
             parseLine(trimmed)?.let { result.addAll(it) }
         }
 
-        return result.sortedBy { it.time }
+        return collapseConsecutiveDuplicates(result.sortedBy { it.time })
     }
 
     /**

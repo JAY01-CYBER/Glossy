@@ -23,6 +23,8 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
@@ -33,7 +35,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -96,6 +100,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
@@ -148,6 +153,8 @@ import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.WatchEndpoint
 import com.jay.glossy.constants.AppBarHeight
+import com.jay.glossy.ui.component.AppScrollState
+import com.jay.glossy.ui.component.LocalAppScrolledToTop
 import com.jay.glossy.constants.AppLanguageKey
 import com.jay.glossy.constants.BackgroundBlurEnabledKey
 import com.jay.glossy.constants.CheckForUpdatesKey
@@ -200,6 +207,7 @@ import com.jay.glossy.ui.component.LocalBottomSheetPageState
 import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.component.rememberBottomSheetState
 import com.jay.glossy.ui.component.shimmer.ShimmerTheme
+import com.jay.glossy.ui.component.rememberAmbientMotionEnabled
 import com.jay.glossy.ui.menu.YouTubeSongMenu
 import com.jay.glossy.ui.player.BottomSheetPlayer
 import com.jay.glossy.ui.screens.ListenTogetherSuggestionDialog
@@ -1013,6 +1021,13 @@ class MainActivity : ComponentActivity() {
 
                 val baseBg = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
 
+                // The chrome reacts to scrolling — the mini player folds into its
+                // round form and springs back at the top — and no screen owns a
+                // signal for that, because every screen owns a different list. It
+                // is collected here instead, from the nested scroll those lists
+                // already report through. See [AppScrollState].
+                val appScrollState = remember { AppScrollState() }
+
                 CompositionLocalProvider(
                     LocalDatabase provides database,
                     LocalNavController provides navController,
@@ -1024,6 +1039,7 @@ class MainActivity : ComponentActivity() {
                     LocalSyncUtils provides syncUtils,
                     LocalListenTogetherManager provides listenTogetherManager,
                     LocalChangelogState provides showChangelog,
+                    LocalAppScrolledToTop provides appScrollState.isScrolledToTop,
                 ) {
                     if (showChangelog.value) {
                         ChangelogScreen(onDismiss = { showChangelog.value = false })
@@ -1393,7 +1409,8 @@ class MainActivity : ComponentActivity() {
                         modifier =
                             Modifier
                                 .fillMaxSize()
-                                .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
+                                .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+                                .nestedScroll(appScrollState.connection),
                     ) {
                         Row(Modifier.fillMaxSize()) {
                             val onRailItemClick: (Screens, Boolean) -> Unit =
@@ -1439,6 +1456,12 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                             Box(Modifier.weight(1f)) {
+                                // One read of the app's single motion switch, used by every
+                                // page transition below. It is the same answer the mini
+                                // player's decorations and the player's opening bloom use, so
+                                // "Reduce animation" turns the whole app's motion off at once
+                                // rather than leaving a few page changes still sliding.
+                                val motionEnabled = rememberAmbientMotionEnabled()
                                 NavHost(
                                     navController = navController,
                                     startDestination =
@@ -1450,51 +1473,73 @@ class MainActivity : ComponentActivity() {
                                             }.route
                                         },
                                     enterTransition = {
-                                        val isFromWelcome = initialState.destination.route == "welcome"
-                                        if (isFromWelcome) {
-                                            fadeIn(tween(400, easing = LinearOutSlowInEasing)) + scaleIn(
-                                                initialScale = 0.94f,
-                                                animationSpec = tween(400, easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f))
-                                            )
-                                        } else {
-                                            val currentRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
-                                            val previousRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
-                                            val enterSpec = tween<Float>(durationMillis = 360, easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f))
-                                            val slideSpec = tween<androidx.compose.ui.unit.IntOffset>(durationMillis = 360, easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f))
+                                        val currentRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
+                                        val previousRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
+                                        val enterSpec = tween<Float>(durationMillis = 360, easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f))
+                                        val slideSpec = tween<androidx.compose.ui.unit.IntOffset>(durationMillis = 360, easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f))
 
-                                            if (currentRouteIndex == -1 || currentRouteIndex > previousRouteIndex) {
+                                        when {
+                                            !motionEnabled -> EnterTransition.None
+
+                                            initialState.destination.route == "welcome" ->
+                                                fadeIn(tween(400, easing = LinearOutSlowInEasing)) + scaleIn(
+                                                    initialScale = 0.94f,
+                                                    animationSpec = tween(400, easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f))
+                                                )
+
+                                            // Settings, an artist, a playlist, an album: here the
+                                            // page is not one of the five tabs, so it rises into
+                                            // place and grows the last few percent instead of
+                                            // sliding sideways. Opening a page can then never be
+                                            // mistaken for switching a tab.
+                                            currentRouteIndex == -1 ->
+                                                slideInVertically(animationSpec = slideSpec) { it / 3 } +
+                                                    fadeIn(animationSpec = enterSpec) +
+                                                    scaleIn(initialScale = 0.94f, animationSpec = enterSpec)
+
+                                            currentRouteIndex > previousRouteIndex ->
                                                 slideInHorizontally(animationSpec = slideSpec) { it / 5 } +
                                                     fadeIn(animationSpec = enterSpec) +
                                                     scaleIn(initialScale = 0.96f, animationSpec = enterSpec)
-                                            } else {
+
+                                            else ->
                                                 slideInHorizontally(animationSpec = slideSpec) { -it / 5 } +
                                                     fadeIn(animationSpec = enterSpec) +
                                                     scaleIn(initialScale = 0.96f, animationSpec = enterSpec)
-                                            }
                                         }
                                     },
                                     exitTransition = {
-                                        val isToWelcome = targetState.destination.route == "welcome"
-                                        if (isToWelcome) {
-                                            fadeOut(tween(250, easing = FastOutLinearInEasing)) + scaleOut(
-                                                targetScale = 0.94f,
-                                                animationSpec = tween(250)
-                                            )
-                                        } else {
-                                            val currentRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
-                                            val targetRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
-                                            val exitSpec = tween<Float>(durationMillis = 280, easing = FastOutLinearInEasing)
-                                            val slideSpec = tween<androidx.compose.ui.unit.IntOffset>(durationMillis = 300, easing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f))
+                                        val currentRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
+                                        val targetRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
+                                        val exitSpec = tween<Float>(durationMillis = 280, easing = FastOutLinearInEasing)
+                                        val slideSpec = tween<androidx.compose.ui.unit.IntOffset>(durationMillis = 300, easing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f))
 
-                                            if (targetRouteIndex == -1 || targetRouteIndex > currentRouteIndex) {
+                                        when {
+                                            !motionEnabled -> ExitTransition.None
+
+                                            targetState.destination.route == "welcome" ->
+                                                fadeOut(tween(250, easing = FastOutLinearInEasing)) + scaleOut(
+                                                    targetScale = 0.94f,
+                                                    animationSpec = tween(250)
+                                                )
+
+                                            // A detail page is arriving on top of this one, so the
+                                            // page being left simply recedes — it dims and shrinks
+                                            // a touch rather than sliding away, and the new page
+                                            // has the whole screen to arrive on.
+                                            targetRouteIndex == -1 ->
+                                                fadeOut(animationSpec = exitSpec) +
+                                                    scaleOut(targetScale = 0.96f, animationSpec = exitSpec)
+
+                                            targetRouteIndex > currentRouteIndex ->
                                                 slideOutHorizontally(animationSpec = slideSpec) { -it / 5 } +
                                                     fadeOut(animationSpec = exitSpec) +
                                                     scaleOut(targetScale = 0.96f, animationSpec = exitSpec)
-                                            } else {
+
+                                            else ->
                                                 slideOutHorizontally(animationSpec = slideSpec) { it / 5 } +
                                                     fadeOut(animationSpec = exitSpec) +
                                                     scaleOut(targetScale = 0.96f, animationSpec = exitSpec)
-                                            }
                                         }
                                     },
                                     popEnterTransition = {
@@ -1503,14 +1548,25 @@ class MainActivity : ComponentActivity() {
                                         val enterSpec = tween<Float>(durationMillis = 360, easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f))
                                         val slideSpec = tween<androidx.compose.ui.unit.IntOffset>(durationMillis = 360, easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f))
 
-                                        if (previousRouteIndex != -1 && previousRouteIndex < currentRouteIndex) {
-                                            slideInHorizontally(animationSpec = slideSpec) { it / 5 } +
+                                        when {
+                                            !motionEnabled -> EnterTransition.None
+
+                                            // Coming back out of a detail page: the page that was
+                                            // underneath returns to full size and sharpness, so the
+                                            // pair reads as the detail having sat on top of it.
+                                            previousRouteIndex == -1 ->
                                                 fadeIn(animationSpec = enterSpec) +
-                                                scaleIn(initialScale = 0.96f, animationSpec = enterSpec)
-                                        } else {
-                                            slideInHorizontally(animationSpec = slideSpec) { -it / 5 } +
-                                                fadeIn(animationSpec = enterSpec) +
-                                                scaleIn(initialScale = 0.96f, animationSpec = enterSpec)
+                                                    scaleIn(initialScale = 0.96f, animationSpec = enterSpec)
+
+                                            previousRouteIndex < currentRouteIndex ->
+                                                slideInHorizontally(animationSpec = slideSpec) { it / 5 } +
+                                                    fadeIn(animationSpec = enterSpec) +
+                                                    scaleIn(initialScale = 0.96f, animationSpec = enterSpec)
+
+                                            else ->
+                                                slideInHorizontally(animationSpec = slideSpec) { -it / 5 } +
+                                                    fadeIn(animationSpec = enterSpec) +
+                                                    scaleIn(initialScale = 0.96f, animationSpec = enterSpec)
                                         }
                                     },
                                     popExitTransition = {
@@ -1519,14 +1575,25 @@ class MainActivity : ComponentActivity() {
                                         val exitSpec = tween<Float>(durationMillis = 280, easing = FastOutLinearInEasing)
                                         val slideSpec = tween<androidx.compose.ui.unit.IntOffset>(durationMillis = 300, easing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f))
 
-                                        if (currentRouteIndex != -1 && currentRouteIndex < targetRouteIndex) {
-                                            slideOutHorizontally(animationSpec = slideSpec) { -it / 5 } +
-                                                fadeOut(animationSpec = exitSpec) +
-                                                scaleOut(targetScale = 0.96f, animationSpec = exitSpec)
-                                        } else {
-                                            slideOutHorizontally(animationSpec = slideSpec) { it / 5 } +
-                                                fadeOut(animationSpec = exitSpec) +
-                                                scaleOut(targetScale = 0.96f, animationSpec = exitSpec)
+                                        when {
+                                            !motionEnabled -> ExitTransition.None
+
+                                            // Closing a detail page: it sinks back down out of the
+                                            // way, the reverse of the rise it arrived with.
+                                            currentRouteIndex == -1 ->
+                                                slideOutVertically(animationSpec = slideSpec) { it / 3 } +
+                                                    fadeOut(animationSpec = exitSpec) +
+                                                    scaleOut(targetScale = 0.96f, animationSpec = exitSpec)
+
+                                            currentRouteIndex < targetRouteIndex ->
+                                                slideOutHorizontally(animationSpec = slideSpec) { -it / 5 } +
+                                                    fadeOut(animationSpec = exitSpec) +
+                                                    scaleOut(targetScale = 0.96f, animationSpec = exitSpec)
+
+                                            else ->
+                                                slideOutHorizontally(animationSpec = slideSpec) { it / 5 } +
+                                                    fadeOut(animationSpec = exitSpec) +
+                                                    scaleOut(targetScale = 0.96f, animationSpec = exitSpec)
                                         }
                                     },
                                     modifier = Modifier.nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),

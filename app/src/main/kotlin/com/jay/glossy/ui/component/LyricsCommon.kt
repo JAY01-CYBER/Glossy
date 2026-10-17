@@ -27,8 +27,32 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.jay.glossy.lyrics.LyricsEntry
+
+/**
+ * How far a lyric line is blurred, keyed by how many lines away from the one
+ * being sung it sits.
+ *
+ * The line being sung is left untouched — it is the only line that has to be
+ * read — and the steps behind it grow quickly, so the stack reads as having a
+ * front and a back rather than as one flat column of text. It is the same
+ * distance the line alpha already keys off, so blur and fade move together
+ * instead of disagreeing about how far a line has receded.
+ *
+ * `Modifier.blur` is a RenderEffect pass, so below Android 12 it does nothing at
+ * all and the distance is carried by alpha alone; nothing here can fail on those
+ * devices, they simply keep the fade they always had.
+ */
+internal fun lyricsLineBlur(distance: Int): Dp =
+    when (distance) {
+        0 -> 0.dp
+        1 -> 1.5.dp
+        2 -> 3.dp
+        3 -> 5.dp
+        else -> 7.dp
+    }
 
 sealed class LyricsListItem {
     data class Line(val index: Int, val entry: LyricsEntry) : LyricsListItem()

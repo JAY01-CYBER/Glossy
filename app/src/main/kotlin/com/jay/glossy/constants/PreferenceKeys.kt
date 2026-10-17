@@ -46,6 +46,15 @@ enum class MiniPlayerBackgroundStyle {
 
     /** Drifting, pulsing artwork-palette glow behind the mini player. */
     GLOW,
+
+    /**
+     * The Material 3 tonal card: a `surfaceContainer` body that lifts to
+     * `surfaceContainerHigh` behind the artwork, a hairline `outlineVariant`
+     * edge and the progress drawn in the `primary` role. It is the look the new
+     * mini player wears out of the box, and it repaints from the seed colour so
+     * it follows Material You.
+     */
+    MATERIALISTIC,
 }
 
 /**
@@ -123,6 +132,14 @@ enum class MiniPlayerStyle {
     LEGACY,
     MODERN,
     GLOSSY_SPECIAL,
+
+    /**
+     * The floating bar from the reference recording: square artwork, the
+     * playhead as a squiggle under the title, the transport in a filled
+     * capsule, and — once the list underneath is scrolled — the whole bar
+     * folding away into the round artwork bubble.
+     */
+    APPLE_MUSIC,
 
     /** The teal design system's compact bar with a teal progress hairline. */
     STUDIO
@@ -391,13 +408,28 @@ enum class AudioQuality {
     VERY_HIGH,
 
     /**
-     * Opus (WebM) audio at the highest bitrate the track carries. Opus is what
-     * YouTube Music itself serves for most tracks, so this is the codec as the
-     * service intends it — and it is a smaller download than the AAC stream of
-     * the same quality.
+     * Opus (WebM) audio, capped at ~130 kbps rather than climbing to the
+     * track's largest stream. Opus is what YouTube Music itself serves for most
+     * tracks, so this is the codec as the service intends it — and it is a
+     * smaller download than the AAC stream of the same quality. The cap is what
+     * makes the tier worth choosing: above it the extra bits buy nothing a
+     * phone can hear. Tracks whose only Opus streams sit higher still play, at
+     * the smallest one they carry.
      */
     OPUS,
 }
+
+/**
+ * Whether the player and the queue header name the stream that is actually
+ * playing — its container, codec and bitrate, e.g. `WebM · Opus · 130 kbps`.
+ *
+ * Off by default because the answer is about the file being fetched rather than
+ * about the song, and it changes as tracks do. It is the counterpart to
+ * [AudioQualityKey]: that one says what was asked for, this one shows what
+ * arrived, so a listener can check that the Opus tier really did land on WebM
+ * instead of quietly falling back to AAC.
+ */
+val ShowAudioFormatKey = booleanPreferencesKey("showAudioFormat")
 
 val AudioOffload = booleanPreferencesKey("enableOffload")
 val AudioTrackPlaybackParamsKey = booleanPreferencesKey("audioTrackPlaybackParams")
@@ -414,6 +446,23 @@ val AudioNormalizationKey = booleanPreferencesKey("audioNormalization")
 
 /** Mid/side stereo widening ("Spatial Audio") applied in the audio sink. */
 val SpatialAudioKey = booleanPreferencesKey("spatialAudio")
+
+/**
+ * How wide [SpatialAudioKey] pushes the stereo image, as the `width` handed to
+ * the mid/side widener (1.0 is the untouched mix). The widener runs with this
+ * value only while spatial audio is on.
+ */
+val SpatialAudioWidthKey = floatPreferencesKey("spatialAudioWidth")
+
+/** Width the widener uses when the setting has never been moved. */
+const val DefaultSpatialAudioWidth = 1.7f
+
+/**
+ * The widest the slider is allowed to go. Past roughly here the phantom centre
+ * starts to hollow out — voices lead the mix instead of sitting in it — so the
+ * ceiling is a listening decision rather than a numeric one.
+ */
+const val MaxSpatialAudioWidth = 2.5f
 
 val LoudnessLevelKey = stringPreferencesKey("loudnessLevel")
 
@@ -439,16 +488,6 @@ val SoundFxVirtualizerEnabledKey = booleanPreferencesKey("soundFxVirtualizerEnab
 val SoundFxVirtualizerStrengthKey = intPreferencesKey("soundFxVirtualizerStrength")
 val SoundFxAutoHeadroomKey = booleanPreferencesKey("soundFxAutoHeadroom")
 val SoundFxProfilesJsonKey = stringPreferencesKey("soundFxProfilesJson")
-
-/**
- * The one-tap loudness boost, stored as the name of a
- * [com.jay.glossy.eq.soundfx.AudioBoostLevel]. It is not a separate audio
- * effect: the level is folded into the sound fx settings as they are applied to
- * the live session, so it drives the very same LoudnessEnhancer the equalizer
- * screen writes to, and it rides along with the existing "settings changed"
- * observer in MusicService.
- */
-val AudioBoostLevelKey = stringPreferencesKey("audioBoostLevel")
 
 val AutoLoadMoreKey = booleanPreferencesKey("autoLoadMore")
 val AutoRadioQueueKey = booleanPreferencesKey("autoRadioQueue")
@@ -819,6 +858,15 @@ enum class LyricsAnimationStyle {
 }
 
 val LyricsTextSizeKey = floatPreferencesKey("lyricsTextSize")
+
+/**
+ * The size the lyrics were drawn at before [LyricsTextSizeKey] existed: the
+ * word-by-word view painted everything at a fixed 36sp, so this is the size a
+ * listener who never touched the slider has always been reading. It is the
+ * default for the setting rather than a hardcoded size, so the look is restored
+ * without taking the slider away from anyone who wants a different one.
+ */
+const val LyricsTextSizeDefault = 36f
 val LyricsLineSpacingKey = floatPreferencesKey("lyricsLineSpacing")
 val RespectAgentPositioningKey = booleanPreferencesKey("respectAgentPositioning")
 val ShowIntervalIndicatorKey = booleanPreferencesKey("showIntervalIndicator")
@@ -1090,6 +1138,20 @@ val ShowFeaturedCarouselKey = booleanPreferencesKey("showFeaturedCarousel")
 
 val SelectedFontKey = stringPreferencesKey("selected_font")
 
+/**
+ * Absolute path, inside the app's own files directory, of a font the listener
+ * imported.
+ *
+ * Kept beside [SelectedFontKey] rather than folded into it because the choice
+ * and the file are separate facts: the choice can fall back to the system font
+ * while the imported file stays where it is, ready for the next time it is
+ * picked.
+ */
+val CustomFontPathKey = stringPreferencesKey("custom_font_path")
+
+/** What the imported font is called on the picker, taken from the file's own name. */
+val CustomFontNameKey = stringPreferencesKey("custom_font_name")
+
 enum class AppFont(val value: String, val displayName: String, val description: String) {
     SYSTEM("system", "System Default", "Use the default system typeface."),
     GOOGLE_SANS("google_sans", "Google Sans", "Google's signature geometric sans-serif."),
@@ -1099,7 +1161,14 @@ enum class AppFont(val value: String, val displayName: String, val description: 
     OUTFIT("outfit", "Outfit", "A clean and modern geometric sans-serif."),
     PLUS_JAKARTA_SANS("plus_jakarta_sans", "Plus Jakarta Sans", "A premium warm geometric sans-serif typeface."),
     POPPINS("poppins", "Poppins", "A geometric sans-serif typeface with international appeal."),
-    ROUNDEX("roundex", "Roundex", "A smooth, rounded modern typeface.");
+    ROUNDEX("roundex", "Roundex", "A smooth, rounded modern typeface."),
+
+    /**
+     * A font the listener brought with them: the picker copies a .ttf or .otf
+     * off the device into the app's own storage and draws the app with it, so
+     * the choice is not limited to the typefaces Glossy ships.
+     */
+    CUSTOM("custom", "Your font", "A font you imported from your device.");
 
     companion object {
         fun fromValue(value: String): AppFont = entries.find { it.value == value } ?: SYSTEM

@@ -57,9 +57,20 @@ object LyricsProviderRegistry {
         return providers.filter { it in providerNames }.joinToString(",")
     }
 
+    /**
+     * The order a fresh install races in.
+     *
+     * Spotify leads. It is the one provider here whose lyrics come from the
+     * listener's own account instead of a third-party index, it answers with
+     * real timestamps for the lyric view to animate against, and it is the only
+     * one the app is already signed in to. A provider that has nothing to say is
+     * skipped in moments, so leading costs the race nothing when no Spotify
+     * account is signed in — and when one is, these are the lyrics it can
+     * already provide.
+     */
     fun getDefaultProviderOrder(): List<String> = listOf(
-        "NetEase",
         "Spotify",
+        "NetEase",
         "YouLyPlus",
         "Unison",
         "BiniLyrics",

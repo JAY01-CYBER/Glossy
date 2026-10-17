@@ -83,6 +83,14 @@ object YTPlayerUtils {
     private const val POTOKEN_WARMUP_VIDEO_ID = "jNQXAC9IVRw"
 
     /**
+     * Bitrate ceiling for [AudioQuality.OPUS]. YouTube's Opus tiers step through
+     * roughly 50 / 70 / 130 / 160 kbps; the ceiling lets the tier land on the
+     * 130 kbps step, keeping Opus's efficiency while cutting most of the top
+     * tier's download, whose extra bits buy little a phone can resolve.
+     */
+    private const val OPUS_MAX_BITRATE = 130_000
+
+    /**
      * Best-effort warm-up of the PoToken/BotGuard generator (BotGuard cold-start is ~2–5s) so the
      * first real playback skips it. Requires a session (visitorData); the caller should gate this on
      * visitorData being ready. The cipher WebView warm-up is separate (CipherDeobfuscator.prewarm)
@@ -597,15 +605,27 @@ object YTPlayerUtils {
             }
 
             AudioQuality.OPUS -> {
-                // Opus is the codec YouTube Music itself serves, so this asks
-                // for the highest-bitrate WebM audio stream — falling back to
-                // the best overall master only when the track carries no Opus
-                // at all, so playback never fails for want of a codec.
+                // Opus is the codec YouTube Music itself serves, so this asks for
+                // a WebM audio stream rather than the largest master — but only
+                // up to [OPUS_MAX_BITRATE], where the codec is already
+                // transparent for music. Falling back in steps keeps playback
+                // alive for the tracks that cannot honour the ceiling: the best
+                // Opus of a track that has nothing that low, and the best master
+                // only when the track carries no Opus at all.
                 val opusFormats = audioCapableFormats.filter { it.mimeType.contains("opus", ignoreCase = true) }
-                opusFormats.filter { it.isOriginal }.maxByOrNull { it.bitrate }
+                val cappedOpusFormats = opusFormats.filter { it.bitrate <= OPUS_MAX_BITRATE }
+                val opusFormat = cappedOpusFormats.filter { it.isOriginal }.maxByOrNull { it.bitrate }
+                    ?: cappedOpusFormats.maxByOrNull { it.bitrate }
+                    ?: opusFormats.filter { it.isOriginal }.maxByOrNull { it.bitrate }
                     ?: opusFormats.maxByOrNull { it.bitrate }
                     ?: audioCapableFormats.filter { it.isOriginal }.maxByOrNull { it.bitrate }
                     ?: audioCapableFormats.maxByOrNull { it.bitrate }
+
+                if (opusFormat != null) {
+                    Timber.tag(logTag).d("Selected OPUS format: itag=${opusFormat.itag}, bitrate: ${opusFormat.bitrate}")
+                }
+
+                opusFormat
             }
 
             AudioQuality.LOW -> {

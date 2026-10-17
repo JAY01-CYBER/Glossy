@@ -78,6 +78,7 @@ import com.jay.glossy.constants.HideExplicitKey
 import com.jay.glossy.constants.HideVideoSongsKey
 import com.jay.glossy.constants.HideYoutubeShortsKey
 import com.jay.glossy.constants.LanguageCodeToName
+import com.jay.glossy.spotify.SpotifySession
 import com.jay.glossy.constants.LyricsProviderOrderKey
 import com.jay.glossy.constants.ProxyEnabledKey
 import com.jay.glossy.constants.ProxyPasswordKey
@@ -140,7 +141,17 @@ fun ContentSettings(
     val (enableSimpMusic, onEnableSimpMusicChange) = rememberPreference(key = EnableSimpMusicKey, defaultValue = true)
     val (enableNetEase, onEnableNetEaseChange) = rememberPreference(key = EnableNetEaseKey, defaultValue = true)
     val (enableMegalobiz, onEnableMegalobizChange) = rememberPreference(key = EnableMegalobizKey, defaultValue = true)
-    val (enableSpotifyLyrics, onEnableSpotifyLyricsChange) = rememberPreference(key = EnableSpotifyLyricsKey, defaultValue = false)
+    val (spotifyCookie) = rememberPreference(key = SpotifySession.CookieKey, defaultValue = "")
+
+    val (enableSpotifyLyrics, onEnableSpotifyLyricsChange) =
+        // The switch has to say what the provider actually does. Until it has
+        // been answered for itself, Spotify's lyrics are on whenever a Spotify
+        // account is signed in — that is the state the provider is enabled by
+        // (see SpotifyLyricsProvider.isEnabled) — so a listener who never
+        // touched this switch used to read "off" here while Spotify's own lyrics
+        // were being fetched, and had no reason to look any further for why the
+        // song had none.
+        rememberPreference(key = EnableSpotifyLyricsKey, defaultValue = spotifyCookie.isNotBlank())
 
     val (lyricsProviderOrder, onLyricsProviderOrderChange) = rememberPreference(
         key = LyricsProviderOrderKey,

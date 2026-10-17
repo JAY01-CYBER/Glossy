@@ -37,7 +37,6 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.jay.glossy.BuildConfig
 import com.jay.glossy.LocalPlayerAwareWindowInsets
-import com.jay.glossy.constants.AudioBoostLevelKey
 import com.jay.glossy.constants.AudioNormalizationKey
 import com.jay.glossy.constants.AudioOffload
 import com.jay.glossy.constants.AudioTrackPlaybackParamsKey
@@ -46,6 +45,7 @@ import com.jay.glossy.constants.AudioQualityKey
 import com.jay.glossy.constants.AutoDownloadOnLikeKey
 import com.jay.glossy.constants.CrossfadeDurationKey
 import com.jay.glossy.constants.CrossfadeEnabledKey
+import com.jay.glossy.constants.DefaultSpatialAudioWidth
 import com.jay.glossy.constants.CrossfadeGaplessKey
 import com.jay.glossy.constants.AutoLoadMoreKey
 import com.jay.glossy.constants.AutoRadioQueueKey
@@ -68,17 +68,16 @@ import com.jay.glossy.constants.ShufflePlaylistFirstKey
 import com.jay.glossy.constants.SimilarContent
 import com.jay.glossy.constants.SkipSilenceInstantKey
 import com.jay.glossy.constants.SkipSilenceKey
+import com.jay.glossy.constants.MaxSpatialAudioWidth
 import com.jay.glossy.constants.SpatialAudioKey
+import com.jay.glossy.constants.SpatialAudioWidthKey
 import com.jay.glossy.constants.StopMusicOnTaskClearKey
 import com.jay.glossy.constants.VarispeedKey
-import com.jay.glossy.eq.soundfx.AudioBoostLevel
-import com.jay.glossy.ui.component.AudioBoostDialog
 import com.jay.glossy.ui.component.DefaultDialog
 import com.jay.glossy.ui.component.EnumDialog
 import com.jay.glossy.ui.component.IconButton
 import com.jay.glossy.ui.component.Material3SettingsGroup
 import com.jay.glossy.ui.component.Material3SettingsItem
-import com.jay.glossy.ui.component.getAudioBoostLabel
 import com.jay.glossy.ui.utils.backToMain
 import com.jay.glossy.utils.rememberEnumPreference
 import com.jay.glossy.utils.rememberPreference
@@ -92,6 +91,7 @@ import com.jay.glossy.constants.SleepTimerStartTimeKey
 import com.jay.glossy.constants.SleepTimerDayTimesKey
 import com.jay.glossy.ui.component.decodeDayTimes
 import com.jay.glossy.ui.component.encodeDayTimes
+import com.jay.glossy.constants.ShowAudioFormatKey
 import com.jay.glossy.constants.SleepTimerFadeOutKey
 import com.jay.glossy.constants.SleepTimerStopAfterCurrentSongKey
 import com.jay.glossy.ui.utils.getLoudnessLevelLabel
@@ -104,6 +104,10 @@ fun PlayerSettings(
     val (audioQuality, onAudioQualityChange) = rememberEnumPreference(
         AudioQualityKey,
         defaultValue = AudioQuality.AUTO
+    )
+    val (showAudioFormat, onShowAudioFormatChange) = rememberPreference(
+        ShowAudioFormatKey,
+        defaultValue = false,
     )
     val (crossfadeEnabled, onCrossfadeEnabledChange) = rememberPreference(
         CrossfadeEnabledKey,
@@ -137,13 +141,12 @@ fun PlayerSettings(
         SpatialAudioKey,
         defaultValue = false
     )
-
-    // The one-tap boost. Written straight to its own preference: it is layered
-    // over the equalizer settings as they reach the audio session, so this row
-    // never has to touch, and never destroys, a hand-tuned equalizer.
-    val (audioBoost, onAudioBoostChange) = rememberEnumPreference(
-        AudioBoostLevelKey,
-        defaultValue = AudioBoostLevel.OFF,
+    // How far the widener pushes the image. Stored in preference units, so the
+    // slider reads as "×1.4" against the untouched mix rather than as a number
+    // whose meaning has to be looked up.
+    val (spatialAudioWidth, onSpatialAudioWidthChange) = rememberPreference(
+        SpatialAudioWidthKey,
+        defaultValue = DefaultSpatialAudioWidth
     )
 
     val (loudnessLevel, onLoudnessLevelChange) = rememberEnumPreference(
@@ -249,21 +252,6 @@ fun PlayerSettings(
         mutableStateOf(false)
     }
 
-    var showAudioBoostDialog by remember {
-        mutableStateOf(false)
-    }
-
-    if (showAudioBoostDialog) {
-        AudioBoostDialog(
-            current = audioBoost,
-            onDismiss = { showAudioBoostDialog = false },
-            onSelect = {
-                onAudioBoostChange(it)
-                showAudioBoostDialog = false
-            },
-        )
-    }
-
     if (showAudioQualityDialog) {
         EnumDialog(
             onDismiss = { showAudioQualityDialog = false },
@@ -336,6 +324,17 @@ fun PlayerSettings(
                         )
                     },
                     onClick = { showAudioQualityDialog = true }
+                ))
+                add(Material3SettingsItem(
+                    icon = painterResource(R.drawable.info),
+                    title = { Text(stringResource(R.string.show_audio_format)) },
+                    description = { Text(stringResource(R.string.show_audio_format_desc)) },
+                    trailingContent = {
+                        Switch(
+                            checked = showAudioFormat,
+                            onCheckedChange = onShowAudioFormatChange,
+                        )
+                    },
                 ))
                 add(Material3SettingsItem(
                     icon = painterResource(R.drawable.linear_scale),
@@ -486,7 +485,28 @@ fun PlayerSettings(
                 add(Material3SettingsItem(
                     icon = painterResource(R.drawable.spatial_audio),
                     title = { Text(stringResource(R.string.spatial_audio)) },
-                    description = { Text(stringResource(R.string.spatial_audio_desc)) },
+                    description = {
+                        Column {
+                            Text(stringResource(R.string.spatial_audio_desc))
+                            // The width is part of the switch, not a second
+                            // setting: it only means anything while the widener
+                            // is running, so it appears with it and goes with it.
+                            if (spatialAudio) {
+                                Text(
+                                    stringResource(
+                                        R.string.spatial_audio_width_value,
+                                        spatialAudioWidth,
+                                    )
+                                )
+                                Slider(
+                                    value = spatialAudioWidth,
+                                    onValueChange = onSpatialAudioWidthChange,
+                                    valueRange = 1f..MaxSpatialAudioWidth,
+                                    steps = 14
+                                )
+                            }
+                        }
+                    },
                     trailingContent = {
                         Switch(
                             checked = spatialAudio,
@@ -503,28 +523,6 @@ fun PlayerSettings(
                         )
                     },
                     onClick = { onSpatialAudioChange(!spatialAudio) }
-                ))
-                add(Material3SettingsItem(
-                    icon = painterResource(R.drawable.volume_up),
-                    title = { Text(stringResource(R.string.audio_boost)) },
-                    description = {
-                        Text(
-                            if (audioBoost.isOn) getAudioBoostLabel(audioBoost)
-                            else stringResource(R.string.audio_boost_desc)
-                        )
-                    },
-                    trailingContent = if (audioBoost.isOn) {
-                        {
-                            Icon(
-                                painter = painterResource(id = R.drawable.check),
-                                contentDescription = null,
-                                modifier = Modifier.size(SwitchDefaults.IconSize),
-                            )
-                        }
-                    } else {
-                        null
-                    },
-                    onClick = { showAudioBoostDialog = true }
                 ))
                 add(Material3SettingsItem(
                     icon = painterResource(R.drawable.graphic_eq),

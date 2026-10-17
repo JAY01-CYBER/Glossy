@@ -81,6 +81,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -135,6 +136,7 @@ import com.jay.glossy.constants.LyricsRomanizeCyrillicByLineKey
 import com.jay.glossy.constants.LyricsRomanizeList
 import com.jay.glossy.constants.LyricsScrollKey
 import com.jay.glossy.constants.LyricsTextPositionKey
+import com.jay.glossy.constants.LyricsTextSizeDefault
 import com.jay.glossy.constants.LyricsTextSizeKey
 import com.jay.glossy.constants.OpenRouterApiKey
 import com.jay.glossy.constants.OpenRouterBaseUrlKey
@@ -148,6 +150,7 @@ import com.jay.glossy.lyrics.LyricsEntry
 import com.jay.glossy.lyrics.LyricsResyncHelper
 import com.jay.glossy.lyrics.LyricsTranslationHelper
 import com.jay.glossy.lyrics.LyricsUtils.findCurrentLineIndex
+import kotlin.math.abs
 import com.jay.glossy.lyrics.LyricsUtils.isBelarusian
 import com.jay.glossy.lyrics.LyricsUtils.isBulgarian
 import com.jay.glossy.lyrics.LyricsUtils.isChinese
@@ -216,7 +219,7 @@ fun OriginalLyrics(
     val romanizeCyrillicByLine by rememberPreference(LyricsRomanizeCyrillicByLineKey, false)
     val lyricsGlowEffect by rememberPreference(LyricsGlowEffectKey, false)
     val lyricsAnimationStyle by rememberEnumPreference(LyricsAnimationStyleKey, LyricsAnimationStyle.APPLE)
-    val lyricsTextSize by rememberPreference(LyricsTextSizeKey, 24f)
+    val lyricsTextSize by rememberPreference(LyricsTextSizeKey, LyricsTextSizeDefault)
     val lyricsLineSpacing by rememberPreference(LyricsLineSpacingKey, 1.3f)
 
     val openRouterApiKey by rememberPreference(OpenRouterApiKey, "")
@@ -1009,7 +1012,7 @@ fun OriginalLyrics(
                                     } else {
                                         Color.Transparent
                                     },
-                                ).padding(horizontal = 24.dp, vertical = 8.dp)
+                                )
 
                         // Check if this line shares the same time as the currently active line
                         // This enables synchronized word-by-word animation for both main and background vocals
@@ -1099,13 +1102,43 @@ fun OriginalLyrics(
                         // Smaller scale for background vocals
                         val bgScale = if (item.isBackground) 0.85f else 1f
 
+                        // The lines away from the one being sung recede optically as
+                        // well as by alpha: a soft distance blur gives the stack a
+                        // front and a back rather than one flat column of text, and it
+                        // is keyed off the same active line the fade is.
+                        val lineDistance =
+                            if (isSynced && displayedCurrentLineIndex >= 0 && !isActiveByIndex) {
+                                abs(index - displayedCurrentLineIndex)
+                            } else {
+                                0
+                            }
+                        // A step rather than a tween on purpose: re-animating the
+                        // blur radius every frame re-allocates the RenderEffect
+                        // pass each frame, which is what makes blurred text
+                        // stutter. The distance only moves when the sung line
+                        // advances, and the alpha tween below covers the change.
+                        val lineBlur = lyricsLineBlur(lineDistance)
+
                         Column(
                             modifier =
-                                itemModifier.graphicsLayer {
-                                    this.alpha = if (item.isBackground) alpha * 0.8f else alpha
-                                    this.scaleX = scale * bgScale
-                                    this.scaleY = scale * bgScale
-                                },
+                                itemModifier
+                                    .blur(lineBlur)
+                                    .graphicsLayer {
+                                        this.alpha = if (item.isBackground) alpha * 0.8f else alpha
+                                        this.scaleX = scale * bgScale
+                                        this.scaleY = scale * bgScale
+                                    }
+                                    // The inset belongs *inside* the blur, not before
+                                    // it. Both blur and graphicsLayer draw into a
+                                    // layer and clip to its bounds, so padding that
+                                    // came earlier shrank those bounds down to the
+                                    // text box — and the item's own rounded clip then
+                                    // shaved the left edge off the first glyph of
+                                    // every line, leaving the first letter as a
+                                    // sliver a couple of pixels wide. With the
+                                    // padding here the layer spans the full row, so
+                                    // the text has room on both sides of it.
+                                    .padding(horizontal = 24.dp, vertical = 8.dp),
                             horizontalAlignment = agentAlignment,
                         ) {
                             // Use time-based active check to sync both main and background lines with same timestamp

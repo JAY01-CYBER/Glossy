@@ -61,6 +61,7 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -85,6 +86,8 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleButton
@@ -139,6 +142,7 @@ import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.constants.ListItemHeight
 import com.jay.glossy.constants.PlayerBackgroundStyle
 import com.jay.glossy.constants.QueueEditLockKey
+import com.jay.glossy.constants.ShowAudioFormatKey
 import com.jay.glossy.constants.UseNewPlayerDesignKey
 import com.jay.glossy.extensions.metadata
 import com.jay.glossy.extensions.move
@@ -146,6 +150,7 @@ import com.jay.glossy.extensions.toggleRepeatMode
 import com.jay.glossy.listentogether.RoomRole
 import com.metrolist.models.MediaMetadata
 import com.jay.glossy.ui.component.ActionPromptDialog
+import com.jay.glossy.ui.component.AudioFormatBadge
 import com.jay.glossy.ui.component.BottomSheet
 import com.jay.glossy.ui.component.BottomSheetState
 import com.jay.glossy.ui.component.LocalBottomSheetPageState
@@ -169,6 +174,7 @@ import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import kotlin.math.roundToInt
+import com.jay.glossy.constants.AutoplayKey
 import com.jay.glossy.constants.SleepTimerDefaultKey
 import androidx.compose.runtime.derivedStateOf
 import com.jay.glossy.constants.SleepTimerFadeOutKey
@@ -277,6 +283,30 @@ fun Queue(
     val castIsPlaying by castHandler?.castIsPlaying?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(false) }
 
     var inSelectMode by rememberSaveable { mutableStateOf(false) }
+
+    // The queue's own header controls. Autoplay lives here because it is a
+    // decision about the queue — whether it keeps growing once it runs out —
+    // and the search box narrows the list in place rather than opening
+    // anything, so a typed track is found without leaving the queue.
+    val (autoplay, onAutoplayChange) = rememberPreference(AutoplayKey, defaultValue = true)
+    // Whether the header names the stream that is actually being fetched. Off
+    // unless asked for: it is an answer about the file, and it changes as the
+    // queue moves on, so it stays quiet until a listener wants to check it.
+    val (showAudioFormat) = rememberPreference(ShowAudioFormatKey, defaultValue = false)
+    // The queue is drawn over the player's own backdrop, not over a surface the
+    // theme picked, so its text does not read the colour scheme here: on a
+    // saturated cover the scheme's onSurface can sit at a contrast that is
+    // barely legible. Over the artwork the queue writes white, exactly as the
+    // player's transport controls beside it already do, and keeps the scheme's
+    // own colour when the background is a plain themed surface.
+    val queueTextColor =
+        if (playerBackground == PlayerBackgroundStyle.DEFAULT) {
+            null
+        } else {
+            Color.White
+        }
+    var showQueueSearch by rememberSaveable { mutableStateOf(false) }
+    var queueSearchQuery by rememberSaveable { mutableStateOf("") }
     val selection =
         rememberSaveable(
             saver =
@@ -970,6 +1000,17 @@ fun Queue(
             } else null
         }
 
+        val queueQuery = queueSearchQuery.trim()
+        val visibleQueueWindows = if (queueQuery.isEmpty()) {
+            mutableQueueWindows
+        } else {
+            mutableQueueWindows.filter { window ->
+                val metadata = window.mediaItem.metadata
+                metadata?.title?.contains(queueQuery, ignoreCase = true) == true ||
+                    metadata?.artists?.any { it.name.contains(queueQuery, ignoreCase = true) } == true
+            }
+        }
+
         val reorderableState = rememberReorderableLazyListState(
             lazyListState = lazyListState,
             scrollThresholdPadding = WindowInsets.systemBars
@@ -1259,42 +1300,86 @@ fun Queue(
                     }
                 }
 
-                Row(
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "Continue playing",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface
+                            text = stringResource(R.string.playback_queue),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = queueTextColor ?: MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f),
                         )
-                        Text(
-                            text = "Next in queue",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    Column(
-                        horizontalAlignment = Alignment.End,
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        Text(
-                            text = pluralStringResource(R.plurals.n_song, queueWindows.size, queueWindows.size),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        // Sits with the title because it describes the song that
+                        // is playing, not the queue: WebM or M4A, Opus or AAC,
+                        // and how many bits per second arrived.
+                        if (showAudioFormat) {
+                            AudioFormatBadge(
+                                format = currentFormat,
+                                modifier = Modifier.padding(start = 8.dp),
+                            )
+                        }
                         Text(
                             text = makeTimeString(queueLength * 1000L),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            style = MaterialTheme.typography.labelMedium,
+                            color = queueTextColor ?: MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        IconButton(onClick = { playerBottomSheetState.collapseSoft() }) {
+                            Icon(
+                                painter = painterResource(R.drawable.expand_more),
+                                contentDescription = stringResource(R.string.queue_collapse),
+                                modifier = Modifier.size(26.dp),
+                            )
+                        }
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = pluralStringResource(R.plurals.n_song, queueWindows.size, queueWindows.size) +
+                                " • " + stringResource(R.string.queue_playing_next),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = queueTextColor?.copy(alpha = 0.85f) ?: MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text(
+                            text = stringResource(R.string.autoplay),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = queueTextColor?.copy(alpha = 0.85f) ?: MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Switch(
+                            checked = autoplay,
+                            onCheckedChange = onAutoplayChange,
+                            modifier = Modifier.padding(start = 6.dp),
+                        )
+                        IconButton(
+                            onClick = {
+                                showQueueSearch = !showQueueSearch
+                                if (!showQueueSearch) queueSearchQuery = ""
+                            },
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.search),
+                                contentDescription = stringResource(R.string.search),
+                            )
+                        }
+                    }
+
+                    AnimatedVisibility(visible = showQueueSearch) {
+                        OutlinedTextField(
+                            value = queueSearchQuery,
+                            onValueChange = { queueSearchQuery = it },
+                            singleLine = true,
+                            placeholder = { Text(stringResource(R.string.search)) },
+                            leadingIcon = {
+                                Icon(painter = painterResource(R.drawable.search), contentDescription = null)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
                         )
                     }
                 }
@@ -1377,10 +1462,10 @@ fun Queue(
                         )
                     }
 
-                    itemsIndexed(
-                        items = mutableQueueWindows,
-                        key = { _, item -> item.uid.hashCode() },
-                    ) { index, window ->
+                    items(
+                        items = visibleQueueWindows,
+                        key = { item -> item.uid.hashCode() },
+                    ) { window ->
                         ReorderableItem(
                             state = reorderableState,
                             key = window.uid.hashCode(),
@@ -1392,6 +1477,32 @@ fun Queue(
                             )
 
                             var processedDismiss by remember { mutableStateOf(false) }
+
+                            // Removing is one action whether it comes from the
+                            // row's ✕ or from the swipe, so both run this path —
+                            // undo snackbar included — and neither can drift
+                            // away from the other.
+                            val removeFromQueue: () -> Unit = {
+                                playerConnection.player.removeMediaItem(currentItem.firstPeriodIndex)
+                                dismissJob?.cancel()
+                                dismissJob = coroutineScope.launch {
+                                    val snackbarResult = snackbarHostState.showSnackbar(
+                                        message = context.getString(
+                                            R.string.removed_song_from_playlist,
+                                            currentItem.mediaItem.metadata?.title,
+                                        ),
+                                        actionLabel = context.getString(R.string.undo),
+                                        duration = SnackbarDuration.Short,
+                                    )
+                                    if (snackbarResult == SnackbarResult.ActionPerformed) {
+                                        playerConnection.player.addMediaItem(currentItem.mediaItem)
+                                        playerConnection.player.moveMediaItem(
+                                            mutableQueueWindows.size,
+                                            currentItem.firstPeriodIndex,
+                                        )
+                                    }
+                                }
+                            }
                             LaunchedEffect(dismissBoxState.currentValue) {
                                 val dv = dismissBoxState.currentValue
                                 if (!processedDismiss && !isListenTogetherGuest && (
@@ -1399,25 +1510,7 @@ fun Queue(
                                         )
                                 ) {
                                     processedDismiss = true
-                                    playerConnection.player.removeMediaItem(currentItem.firstPeriodIndex)
-                                    dismissJob?.cancel()
-                                    dismissJob = coroutineScope.launch {
-                                        val snackbarResult = snackbarHostState.showSnackbar(
-                                            message = context.getString(
-                                                R.string.removed_song_from_playlist,
-                                                currentItem.mediaItem.metadata?.title,
-                                            ),
-                                            actionLabel = context.getString(R.string.undo),
-                                            duration = SnackbarDuration.Short,
-                                        )
-                                        if (snackbarResult == SnackbarResult.ActionPerformed) {
-                                            playerConnection.player.addMediaItem(currentItem.mediaItem)
-                                            playerConnection.player.moveMediaItem(
-                                                mutableQueueWindows.size,
-                                                currentItem.firstPeriodIndex,
-                                            )
-                                        }
-                                    }
+                                    removeFromQueue()
                                 }
                                 if (dv == SwipeToDismissBoxValue.Settled) {
                                     processedDismiss = false
@@ -1439,6 +1532,7 @@ fun Queue(
                                         isSelected = false,
                                         isActive = isActive,
                                         isPlaying = isPlaying && isActive,
+                                        contentColor = queueTextColor,
                                         trailingContent = {
                                             if (inSelectMode) {
                                                 Checkbox(
@@ -1447,31 +1541,23 @@ fun Queue(
                                                 )
                                             } else {
                                                 if (!isListenTogetherGuest) {
-                                                    IconButton(
-                                                        onClick = {
-                                                            menuState.show {
-                                                                QueueMenu(
-                                                                    mediaMetadata = window.mediaItem.metadata!!,
-                                                                    playerBottomSheetState = playerBottomSheetState,
-                                                                    onShowDetailsDialog = {
-                                                                        window.mediaItem.mediaId.let {
-                                                                            bottomSheetPageState.show {
-                                                                                ShowMediaInfo(it)
-                                                                            }
-                                                                        }
-                                                                    },
-                                                                    onDismiss = menuState::dismiss,
-                                                                )
-                                                            }
-                                                        }
-                                                    ) {
+                                                    // The design asks for a direct ✕ here
+                                                    // rather than the overflow menu: removing
+                                                    // a track is the common case, and the
+                                                    // menu's bulk actions still live in
+                                                    // select mode.
+                                                    IconButton(onClick = removeFromQueue) {
                                                         Icon(
-                                                            painter = painterResource(R.drawable.more_vert),
-                                                            contentDescription = null,
+                                                            painter = painterResource(R.drawable.close),
+                                                            contentDescription = stringResource(R.string.queue_remove_item),
                                                         )
                                                     }
                                                 }
-                                                if (!locked && !isListenTogetherGuest) {
+                                                // A drag would move items by their position
+                                                // in the filtered list, which no longer
+                                                // matches the queue, so the handle is held
+                                                // back until the search is cleared.
+                                                if (!locked && !isListenTogetherGuest && queueQuery.isEmpty()) {
                                                     IconButton(
                                                         onClick = { },
                                                         modifier = Modifier.draggableHandle()
@@ -1492,7 +1578,7 @@ fun Queue(
                                                     if (inSelectMode) {
                                                         onCheckedChange(window.mediaItem.mediaId !in selection)
                                                     } else if (!isListenTogetherGuest) {
-                                                        if (index == currentWindowIndex) {
+                                                        if (isActive) {
                                                             if (isCasting) {
                                                                 if (castIsPlaying) castHandler?.pause() else castHandler?.play()
                                                             } else {

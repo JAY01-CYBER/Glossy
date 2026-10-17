@@ -97,11 +97,13 @@ import com.jay.glossy.constants.LyricsGlowEffectKey
 import com.jay.glossy.constants.LyricsLineSpacingKey
 import com.jay.glossy.constants.LyricsScrollKey
 import com.jay.glossy.constants.LyricsTextPositionKey
+import com.jay.glossy.constants.LyricsTextSizeDefault
 import com.jay.glossy.constants.LyricsTextSizeKey
 import com.jay.glossy.constants.MiniPlayerBackgroundStyle
 import com.jay.glossy.constants.MiniPlayerBackgroundStyleKey
 import com.jay.glossy.constants.MiniPlayerPlayingAnimation
 import com.jay.glossy.constants.MiniPlayerPlayingAnimationKey
+import com.jay.glossy.constants.CustomFontNameKey
 import com.jay.glossy.constants.MiniPlayerStyle
 import com.jay.glossy.constants.MiniLyricsStyle
 import com.jay.glossy.constants.MiniLyricsStyleKey
@@ -201,6 +203,9 @@ fun AppearanceSettings(
 
     val (selectedFontValue) = rememberPreference(SelectedFontKey, defaultValue = AppFont.SYSTEM.value)
     val currentFont = AppFont.fromValue(selectedFontValue)
+    // Named here for the imported font only: it is the one choice whose label is
+    // whatever the listener brought with them, not a typeface Glossy named.
+    val (customFontName) = rememberPreference(CustomFontNameKey, defaultValue = "")
 
     // Ambient motion. Low-RAM phones start with this already on, which is what
     // "support in low end devices" means here — nobody has to hunt for it.
@@ -356,7 +361,7 @@ fun AppearanceSettings(
             LyricsAnimationStyleKey,
             defaultValue = LyricsAnimationStyle.FADE,
         )
-    val (lyricsTextSize, onLyricsTextSizeChange) = rememberPreference(LyricsTextSizeKey, defaultValue = 24f)
+    val (lyricsTextSize, onLyricsTextSizeChange) = rememberPreference(LyricsTextSizeKey, defaultValue = LyricsTextSizeDefault)
     val (lyricsLineSpacing, onLyricsLineSpacingChange) = rememberPreference(LyricsLineSpacingKey, defaultValue = 1.2f)
 
     val (showFeaturedCarousel, onShowFeaturedCarouselChange) = rememberPreference(ShowFeaturedCarouselKey, defaultValue = true)
@@ -594,6 +599,7 @@ fun AppearanceSettings(
                     MiniPlayerStyle.LEGACY -> "Legacy (Old Style)"
                     MiniPlayerStyle.MODERN -> "Modern (Default)"
                     MiniPlayerStyle.GLOSSY_SPECIAL -> "Glossy Special Edition"
+                                    MiniPlayerStyle.APPLE_MUSIC -> "Apple Music (from the video)"
                     MiniPlayerStyle.STUDIO -> "Studio"
                 }
             },
@@ -762,7 +768,7 @@ fun AppearanceSettings(
             },
             buttons = {
                 TextButton(
-                    onClick = { tempTextSize = 24f },
+                    onClick = { tempTextSize = LyricsTextSizeDefault },
                 ) {
                     Text(stringResource(R.string.reset))
                 }
@@ -924,6 +930,7 @@ fun AppearanceSettings(
                     MiniPlayerBackgroundStyle.GRADIENT -> stringResource(R.string.gradient)
                     MiniPlayerBackgroundStyle.PURE_BLACK -> stringResource(R.string.pure_black)
                     MiniPlayerBackgroundStyle.GLOW -> "Glow (animated)"
+                    MiniPlayerBackgroundStyle.MATERIALISTIC -> "Materialistic (tonal)"
                 }
             },
         )
@@ -1509,7 +1516,15 @@ fun AppearanceSettings(
                         Material3SettingsItem(
                             icon = painterResource(R.drawable.palette),
                             title = { Text("App Font") },
-                            description = { Text(currentFont.displayName) },
+                            description = {
+                                Text(
+                                    if (currentFont == AppFont.CUSTOM && customFontName.isNotBlank()) {
+                                        customFontName
+                                    } else {
+                                        currentFont.displayName
+                                    }
+                                )
+                            },
                             onClick = { navController.navigate("settings/appearance/font") },
                         ),
                     )
@@ -1537,6 +1552,7 @@ fun AppearanceSettings(
                                     MiniPlayerStyle.LEGACY -> "Legacy (Old Style)"
                                     MiniPlayerStyle.MODERN -> "Modern (Default)"
                                     MiniPlayerStyle.GLOSSY_SPECIAL -> "Glossy Special Edition"
+                                    MiniPlayerStyle.APPLE_MUSIC -> "Apple Music (from the video)"
                                     MiniPlayerStyle.STUDIO -> "Studio"
                                 }
                             )
@@ -1587,6 +1603,7 @@ fun AppearanceSettings(
                                         MiniPlayerBackgroundStyle.GRADIENT -> stringResource(R.string.gradient)
                                         MiniPlayerBackgroundStyle.PURE_BLACK -> stringResource(R.string.pure_black)
                                                             MiniPlayerBackgroundStyle.GLOW -> "Glow (animated)"
+                                                            MiniPlayerBackgroundStyle.MATERIALISTIC -> "Materialistic (tonal)"
                                     }
                                 },
                                 color = if (miniPlayerStyle == MiniPlayerStyle.LEGACY) {

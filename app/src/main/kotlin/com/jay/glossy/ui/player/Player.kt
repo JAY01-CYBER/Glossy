@@ -204,6 +204,7 @@ import com.jay.glossy.ui.component.PlayerSliderTrack
 import com.jay.glossy.ui.component.ResizableIconButton
 import com.jay.glossy.ui.component.SquigglySlider
 import com.jay.glossy.ui.component.WavySlider
+import com.jay.glossy.ui.component.rememberAmbientMotionEnabled
 import com.jay.glossy.ui.menu.PlayerMenu
 import com.jay.glossy.ui.player.applemusic.toHighRes
 import com.jay.glossy.ui.screens.settings.DarkMode
@@ -214,6 +215,7 @@ import com.jay.glossy.ui.utils.ShowOffsetDialog
 import com.jay.glossy.utils.dataStore
 import com.jay.glossy.utils.makeTimeString
 import com.jay.glossy.utils.rememberEnumPreference
+import com.jay.glossy.constants.AutoplayKey
 import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.utils.safeDataStoreEdit
 import com.jay.glossy.utils.joinToArtistString
@@ -385,7 +387,14 @@ fun BottomSheetPlayer(
     var gradientColors by remember { mutableStateOf<List<Color>>(emptyList()) }
     val gradientColorsCache = remember { mutableMapOf<String, List<Color>>() }
 
-    if (!canSkipNext && automix.isNotEmpty()) {
+    // Autoplay is the switch that decides whether playback may continue on its
+    // own once the queue runs out. Extending the queue with a related track is
+    // exactly that decision, so it waits for autoplay to be on: with autoplay
+    // off the last track ends and the player stops, which is what the switch in
+    // the queue header promises. The related tracks still appear in the queue
+    // for anyone who wants to add one by hand.
+    val (autoplayEnabled) = rememberPreference(AutoplayKey, defaultValue = true)
+    if (autoplayEnabled && !canSkipNext && automix.isNotEmpty()) {
         playerConnection.service.addToQueueAutomix(automix[0], 0)
     }
 
@@ -609,6 +618,16 @@ fun BottomSheetPlayer(
     BottomSheet(
         state = state,
         modifier = modifier,
+        // The bar growing into the player: a bloom of the artwork's own colour
+        // that leaves the mini player's thumbnail and washes over the sheet as
+        // it opens. Gated on the app's one motion switch, so "Reduce animation"
+        // (or the system's own Remove animations) turns it off with everything
+        // else rather than leaving one flourish still moving.
+        openOverlay = {
+            if (rememberAmbientMotionEnabled()) {
+                PlayerOpenBloom(progress = state.progress, accent = TextBackgroundColor)
+            }
+        },
         background = {
             if (playerStyle.name != "APPLE_MUSIC") {
                 Box(modifier = Modifier.fillMaxSize().background(bottomSheetBackgroundColor)) {

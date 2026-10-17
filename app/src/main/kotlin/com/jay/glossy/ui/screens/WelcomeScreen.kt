@@ -93,6 +93,7 @@ import com.jay.glossy.constants.GuestNameKey
 import com.jay.glossy.constants.InnerTubeCookieKey
 import com.jay.glossy.constants.PendingCommunityIntroKey
 import com.jay.glossy.ui.component.GlossyDotsIndicator
+import com.jay.glossy.ui.component.SeaGlassPill
 import com.jay.glossy.ui.theme.GlossyDimens
 import com.jay.glossy.ui.theme.GlossyOnboardingPalette
 import com.jay.glossy.utils.rememberPreference
@@ -405,7 +406,16 @@ private fun GlossyMark(markSize: Dp = 88.dp) {
     }
 }
 
-/** Filled violet action, used for Primary/Next. */
+/**
+ * The onboarding's primary action — Continue, Next, Start listening — as the
+ * same sea-glass pill the sign-in card uses, so the flow reads as one screen
+ * handing over to the next rather than as a glass landing page followed by a
+ * flat one. The violet is carried *inside* the glass as tint, with a chalky rim
+ * and a frosted body, instead of being painted on.
+ *
+ * The disabled pill keeps the same body and withdraws its tint, because the
+ * step is not finished yet rather than because the control has changed.
+ */
 @Composable
 private fun OnboardingPrimaryButton(
     text: String,
@@ -414,18 +424,22 @@ private fun OnboardingPrimaryButton(
     enabled: Boolean = true,
     leading: (@Composable () -> Unit)? = null,
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(54.dp)
-            .clip(RoundedCornerShape(GlossyDimens.CornerPill))
-            .background(
-                if (enabled) GlossyOnboardingPalette.Primary
-                else GlossyOnboardingPalette.Primary.copy(alpha = 0.35f),
-            )
-            .clickable(enabled = enabled, onClick = onClick),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
+    val fill =
+        if (enabled) {
+            GlossyOnboardingPalette.Primary
+        } else {
+            GlossyOnboardingPalette.Primary.copy(alpha = 0.35f)
+        }
+
+    SeaGlassPill(
+        fill = fill,
+        ink = GlossyOnboardingPalette.OnPrimary,
+        shadowTint = GlossyOnboardingPalette.Primary,
+        onClick = onClick,
+        enabled = enabled,
+        sheen = enabled,
+        height = 54.dp,
+        modifier = modifier.fillMaxWidth(),
     ) {
         if (leading != null) {
             leading()

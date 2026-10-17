@@ -31,6 +31,7 @@ import com.materialkolor.score.Score
 import androidx.compose.runtime.CompositionLocalProvider
 import com.jay.glossy.constants.ActiveDesignStyle
 import com.jay.glossy.constants.AppFont
+import com.jay.glossy.constants.CustomFontPathKey
 import com.jay.glossy.constants.DesignStyle
 import com.jay.glossy.constants.SelectedFontKey
 import com.jay.glossy.utils.rememberPreference
@@ -47,19 +48,13 @@ fun MetrolistTheme(
     val context = LocalContext.current
     
     val (selectedFontValue) = rememberPreference(SelectedFontKey, AppFont.SYSTEM.value)
+    // Read here as well as in the picker: the imported font is the one choice
+    // whose family comes from a file on the device instead of the app's own
+    // resources, so the theme cannot answer it from the stored choice alone.
+    val (customFontPath) = rememberPreference(CustomFontPathKey, "")
 
-    val brandFont = remember(selectedFontValue) {
-        when (AppFont.fromValue(selectedFontValue)) {
-            AppFont.SYSTEM -> FontFamily.Default
-            AppFont.GOOGLE_SANS -> GoogleSansFontFamily
-            AppFont.GOOGLE_SANS_FLEX -> GoogleSansFlexFontFamily
-            AppFont.INTER -> InterFontFamily
-            AppFont.MANROPE -> ManropeFontFamily
-            AppFont.OUTFIT -> OutfitFontFamily
-            AppFont.PLUS_JAKARTA_SANS -> PlusJakartaSansFontFamily
-            AppFont.POPPINS -> PoppinsFontFamily
-            AppFont.ROUNDEX -> RoundexFontFamily
-        }
+    val brandFont = remember(selectedFontValue, customFontPath) {
+        appFontFamily(AppFont.fromValue(selectedFontValue), customFontPath)
     }
 
     // The new design is dark-only: in light mode we keep the Material You

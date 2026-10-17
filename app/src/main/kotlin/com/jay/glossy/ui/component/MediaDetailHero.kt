@@ -228,19 +228,24 @@ fun MediaDetailPrimaryActions(
             }
             Spacer(Modifier.width(12.dp))
             onPlay?.let { play ->
-                Button(
+                // The same sea-glass pill the login card uses, and cut from
+                // the same material — the pill takes its body from the app's
+                // one definition rather than from a tuning built here.
+                SeaGlassPill(
+                    fill = contentColor,
+                    ink = contrastingColor,
+                    shadowTint = contentColor,
                     onClick = play,
-                    shape = RoundedCornerShape(percent = 50),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = contentColor,
-                        contentColor = contrastingColor,
-                    ),
-                    modifier = Modifier.heightIn(min = 52.dp),
                 ) {
-                    Icon(painter = painterResource(R.drawable.play), contentDescription = null)
+                    Icon(
+                        painter = painterResource(R.drawable.play),
+                        contentDescription = null,
+                        tint = contrastingColor,
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = stringResource(R.string.play),
+                        color = contrastingColor,
                         fontWeight = FontWeight.Bold,
                     )
                 }

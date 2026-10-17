@@ -223,6 +223,12 @@ fun SimpSectionHeader(
     onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    // Back to a bare heading on the backdrop, with no pane behind it. The
+    // section lockup was briefly seated on a pane of sea glass; on a feed this
+    // long that stacked the material behind every heading as well as every card,
+    // so the glass stopped reading as a surface and started reading as a band
+    // across the page. The rule, eyebrow and title carry the section on their
+    // own.
     Row(
         modifier = modifier
             .fillMaxWidth()

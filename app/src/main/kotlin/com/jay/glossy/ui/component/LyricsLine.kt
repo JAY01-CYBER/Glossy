@@ -37,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -154,12 +155,6 @@ internal fun LyricsLine(
             onLongClick = onLongClick
         )
         .background(if (isSelected && isSelectionModeActive) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f) else Color.Transparent)
-        .padding(
-            start = when (lyricsTextPosition) { LyricsPosition.LEFT, LyricsPosition.RIGHT -> 11.dp; LyricsPosition.CENTER -> 24.dp },
-            end = when (lyricsTextPosition) { LyricsPosition.LEFT, LyricsPosition.RIGHT -> 11.dp; LyricsPosition.CENTER -> 24.dp },
-            top = if (item.isBackground) 0.dp else 12.dp,
-            bottom = if (item.isBackground) 2.dp else 12.dp // simplified gap logic
-        )
 
     val agentAlignment = when {
         respectAgentPositioning && item.agent == "v1" -> Alignment.Start
@@ -185,7 +180,35 @@ internal fun LyricsLine(
         }
     }
 
-    Box(modifier = itemModifier, contentAlignment = when {
+    // The lines away from the one being sung recede optically as well as by
+    // alpha: a soft distance blur is what makes the stack read as having a front
+    // and a back instead of being one flat column of text. The distance is the
+    // same one the alpha above already keys off, so the two move together.
+    val lineDistance =
+        if (isSynced && isAutoScrollEnabled && displayedCurrentLineIndex >= 0) {
+            abs(index - displayedCurrentLineIndex)
+        } else {
+            0
+        }
+    // Deliberately a step, not a tween: a blur radius that moves every frame
+    // re-allocates the RenderEffect pass on each one, which is exactly what
+    // makes blurred text stutter. The distance only changes when the sung line
+    // advances, and the alpha tween below still carries the transition.
+    val lineBlur = lyricsLineBlur(lineDistance)
+
+    // The inset is applied inside the blur, not before it: blur draws into a
+    // layer and clips to its bounds, so padding applied earlier shrinks those
+    // bounds to the text box and the item's own rounded clip then shaves the
+    // left edge off the first glyph of the line.
+    val lineInset =
+        Modifier.padding(
+            start = when (lyricsTextPosition) { LyricsPosition.LEFT, LyricsPosition.RIGHT -> 11.dp; LyricsPosition.CENTER -> 24.dp },
+            end = when (lyricsTextPosition) { LyricsPosition.LEFT, LyricsPosition.RIGHT -> 11.dp; LyricsPosition.CENTER -> 24.dp },
+            top = if (item.isBackground) 0.dp else 12.dp,
+            bottom = if (item.isBackground) 2.dp else 12.dp
+        )
+
+    Box(modifier = itemModifier.blur(lineBlur).then(lineInset), contentAlignment = when {
         respectAgentPositioning && item.agent == "v1" -> Alignment.CenterStart
         respectAgentPositioning && item.agent == "v2" -> Alignment.CenterEnd
         item.isBackground -> Alignment.Center

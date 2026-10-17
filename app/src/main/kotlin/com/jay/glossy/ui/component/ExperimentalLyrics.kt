@@ -100,6 +100,7 @@ import com.jay.glossy.constants.LyricsRomanizeAsMainKey
 import com.jay.glossy.constants.LyricsRomanizeCyrillicByLineKey
 import com.jay.glossy.constants.LyricsRomanizeList
 import com.jay.glossy.constants.LyricsTextPositionKey
+import com.jay.glossy.constants.LyricsTextSizeDefault
 import com.jay.glossy.constants.LyricsTextSizeKey
 import com.jay.glossy.constants.OpenRouterApiKey
 import com.jay.glossy.constants.OpenRouterBaseUrlKey
@@ -135,7 +136,17 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-private const val LYRICS_ANCHOR_RATIO = 0.35f
+/**
+ * Where the active line sits down the view, as a fraction of its height.
+ *
+ * Every line is drawn at `anchorY + its offset from the active line`, so this
+ * ratio is also the empty band above the first line when a song starts. At the
+ * old 0.35 a third of the view was blank backdrop before any lyric appeared —
+ * the "third of the lyrics is cut off" report. Kept low enough that the active
+ * line starts near the top and the lines above it still have room to scroll in
+ * from.
+ */
+private const val LYRICS_ANCHOR_RATIO = 0.12f
 private val LYRICS_ITEM_FALLBACK_HEIGHT_DP = 68.dp
 private val LYRICS_ITEM_GAP_DP = 16.dp
 private val LYRICS_FADE_TOP_DP = 130.dp
@@ -172,9 +183,11 @@ fun ExperimentalLyrics(
     val respectAgentPositioning by rememberPreference(RespectAgentPositioningKey, true)
     val showIntervalIndicator by rememberPreference(ShowIntervalIndicatorKey, true)
     // Honoured instead of a hardcoded size so the Appearance → Lyrics text-size
-    // and line-spacing settings actually apply to this view too (it used to
-    // render everything at a fixed 36sp regardless of the preference).
-    val lyricsTextSize by rememberPreference(LyricsTextSizeKey, 24f)
+    // and line-spacing settings actually apply to this view too. The default is
+    // the 36sp this view drew at before it became adjustable, so a listener who
+    // never opened the slider gets the size that was always there, and the
+    // slider still moves away from it.
+    val lyricsTextSize by rememberPreference(LyricsTextSizeKey, LyricsTextSizeDefault)
     val lyricsLineSpacing by rememberPreference(LyricsLineSpacingKey, 1.3f)
     
     // AI Translation Preferences

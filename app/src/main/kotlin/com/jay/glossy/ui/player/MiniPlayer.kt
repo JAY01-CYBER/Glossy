@@ -66,6 +66,8 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -73,6 +75,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.MutableLongState
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -172,6 +175,7 @@ import com.jay.glossy.ui.component.GlossyIconAction
 import com.jay.glossy.ui.component.GlossyThumb
 import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.component.ArtworkNotesOverlay
+import com.jay.glossy.ui.component.LocalAppScrolledToTop
 import com.jay.glossy.ui.component.NowPlayingAnimationIndicator
 import com.jay.glossy.ui.component.rememberAmbientMotionEnabled
 import com.jay.glossy.ui.theme.GlossyPalette
@@ -189,6 +193,69 @@ class ProgressState(
         }
 }
 
+/**
+ * How far the Apple Music bar has folded down into its round artwork bubble.
+ *
+ * This is that one style's own behaviour, kept in its own function. The shared
+ * wrapper in [MiniPlayer] used to fold *every* style into a small round pill,
+ * and that is the form that was wrong everywhere else it appeared: the bar's
+ * height is fixed while the remnant's width is a fraction of the screen, so
+ * what was left standing was a squat rounded rectangle rather than the circle
+ * the fold was aiming for. Only the Apple Music bar, which folds by re-flowing
+ * its own row instead of by clipping, still asks for this.
+ *
+ * The app answers "has the list under the chrome been scrolled away from its
+ * top?" once, at the root, and publishes it through [LocalAppScrolledToTop].
+ *
+ * [expansion] stays at 1 while the listener is at the top of the page and
+ * springs to 0 once they scroll down: it is the share of its own width the bar
+ * keeps. [cornerPercent] rounds the remnant off into a pill as it shrinks, and
+ * sits at [restingCornerPercent] while the bar is open so an unfolded bar keeps
+ * whatever shape its own design already gives it.
+ */
+@Composable
+private fun rememberMiniPlayerFold(restingCornerPercent: Int): MiniPlayerFold {
+    val foldedAway = !LocalAppScrolledToTop.current
+    val foldSpec = remember {
+        spring<Float>(
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessMediumLow,
+        )
+    }
+    val expansion by animateFloatAsState(
+        targetValue = if (foldedAway) 0f else 1f,
+        animationSpec = foldSpec,
+        label = "miniPlayerFoldExpansion",
+    )
+    // The fold springs with a low-bouncy spec, and its resting target is 0:
+    // a bouncy spring overshoots past whatever it is heading for, so this
+    // crosses below zero on its first bounce. RoundedCornerShape(percent = …)
+    // rejects anything outside [0, 100] by throwing, which crashed the app the
+    // moment the bar folded. Clamping costs nothing visually — there is no
+    // rounder corner than 0%, so the overshoot was never going to be drawn —
+    // and it keeps a future resting percent from throwing too.
+    val cornerPercent by animateFloatAsState(
+        targetValue = if (foldedAway) 50f else restingCornerPercent.toFloat(),
+        animationSpec = foldSpec,
+        label = "miniPlayerFoldCorner",
+    )
+    return MiniPlayerFold(
+        foldedAway = foldedAway,
+        expansion = expansion,
+        shape = RoundedCornerShape(
+            percent = cornerPercent.roundToInt().coerceIn(0, 100),
+        ),
+    )
+}
+
+/** See [rememberMiniPlayerFold]. */
+private data class MiniPlayerFold(
+    val foldedAway: Boolean,
+    val expansion: Float,
+    val shape: RoundedCornerShape,
+)
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun MiniPlayer(
     positionState: MutableLongState,
@@ -212,40 +279,65 @@ fun MiniPlayer(
 
     val progressState = remember { ProgressState(positionState, durationState) }
 
-    when (miniPlayerStyle) {
-        MiniPlayerStyle.STUDIO -> {
-            GlossyBarMiniPlayer(
-                positionState = positionState,
-                durationState = durationState,
-                modifier = modifier,
-                pureBlack = pureBlack,
-                onClick = onClick,
-            )
-        }
-        MiniPlayerStyle.GLOSSY_SPECIAL -> {
-            GlossySpecialEditionMiniPlayer(
-                progressState = progressState,
-                modifier = modifier,
-                pureBlack = pureBlack,
-                expandProgress = 0f,
-                onClick = onClick
-            )
-        }
-        MiniPlayerStyle.MODERN -> {
-            NewMiniPlayer(
-                progressState = progressState,
-                modifier = modifier,
-                onClick = onClick,
-            )
-        }
-        MiniPlayerStyle.LEGACY -> {
-            Box(modifier = modifier.fillMaxWidth()) {
-                LegacyMiniPlayer(
-                    progressState = progressState,
-                    modifier = Modifier.align(Alignment.Center),
+    // The Apple Music bar is the one style that still folds: it re-flows its own
+    // row, keeping the artwork whole and pinned at the end while the text fades
+    // out and the bar closes into the round artwork bubble. Every other style is
+    // left at its own full width and its own shape.
+    if (miniPlayerStyle == MiniPlayerStyle.APPLE_MUSIC) {
+        AppleMusicMiniPlayer(
+            progressState = progressState,
+            modifier = modifier,
+            onClick = onClick,
+        )
+        return
+    }
+
+    // The bar keeps its full width for as long as it is on screen. It used to
+    // give up its width from the far end and round itself off as it went,
+    // leaving the artwork behind as a round bubble — but that collapsed form was
+    // wrong everywhere it appeared: the bar's height is fixed while the remnant's
+    // width is a fraction of the screen, so what was left was a squat rounded
+    // rectangle, never the circle it was meant to read as. Each style now keeps
+    // exactly the shape its own design draws, and nothing else.
+    Box(
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        when (miniPlayerStyle) {
+            MiniPlayerStyle.STUDIO -> {
+                GlossyBarMiniPlayer(
+                    positionState = positionState,
+                    durationState = durationState,
+                    modifier = Modifier,
+                    pureBlack = pureBlack,
                     onClick = onClick,
                 )
             }
+            MiniPlayerStyle.GLOSSY_SPECIAL -> {
+                GlossySpecialEditionMiniPlayer(
+                    progressState = progressState,
+                    modifier = Modifier,
+                    pureBlack = pureBlack,
+                    expandProgress = 0f,
+                    onClick = onClick
+                )
+            }
+            MiniPlayerStyle.MODERN -> {
+                NewMiniPlayer(
+                    progressState = progressState,
+                    modifier = Modifier,
+                    onClick = onClick,
+                )
+            }
+            MiniPlayerStyle.LEGACY -> {
+                LegacyMiniPlayer(
+                    progressState = progressState,
+                    modifier = Modifier,
+                    onClick = onClick,
+                )
+            }
+            // Drawn above, but the enum still has to be covered here.
+            MiniPlayerStyle.APPLE_MUSIC -> Unit
         }
     }
 }
@@ -291,16 +383,23 @@ private fun GlossyBarMiniPlayer(
     val artistText = mediaMetadata?.artists?.joinToArtistString(", ") { it.name }.orEmpty()
 
     // Every one of these backgrounds is dark, so the bar switches to white
-    // content whenever a style other than the theme surface is painted.
-    val styledBackground = miniPlayerBackground != MiniPlayerBackgroundStyle.DEFAULT || pureBlack
+    // content whenever one is painted. The Material 3 tonal card is the
+    // exception: it is a light surface taken from the scheme, so it keeps the
+    // scheme's own on-surface ink instead of forcing white.
+    val darkBackground = when (miniPlayerBackground) {
+        MiniPlayerBackgroundStyle.DEFAULT -> pureBlack
+        MiniPlayerBackgroundStyle.MATERIALISTIC -> false
+        else -> true
+    }
     val containerColor = when (miniPlayerBackground) {
         MiniPlayerBackgroundStyle.DEFAULT -> if (pureBlack) Color.Black else GlossyPalette.MiniBar
         MiniPlayerBackgroundStyle.TRANSPARENT -> Color.Black.copy(alpha = 0.25f)
         MiniPlayerBackgroundStyle.PURE_BLACK -> Color.Black
+        MiniPlayerBackgroundStyle.MATERIALISTIC -> MaterialTheme.colorScheme.surfaceContainer
         else -> Color.Transparent
     }
-    val primaryTextColor = if (styledBackground) Color.White else GlossyPalette.TextPrimary
-    val secondaryTextColor = if (styledBackground) Color.White.copy(alpha = 0.75f) else GlossyPalette.TextSecondary
+    val primaryTextColor = if (darkBackground) Color.White else GlossyPalette.TextPrimary
+    val secondaryTextColor = if (darkBackground) Color.White.copy(alpha = 0.75f) else GlossyPalette.TextSecondary
 
     // Swipe engine shared with the Modern bar: drag offset + skip cues +
     // velocity/distance song change. Studio previously never applied its
@@ -331,7 +430,7 @@ private fun GlossyBarMiniPlayer(
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight()
-                .offset { IntOffset(offsetX.roundToInt(), 0) }
+                .offset { IntOffset(offsetX().roundToInt(), 0) }
                 .clip(RoundedCornerShape(12.dp))
                 .background(containerColor)
                 .clickable(onClick = onClick),
@@ -355,7 +454,7 @@ private fun GlossyBarMiniPlayer(
                     modifier = Modifier
                         .fillMaxWidth(progress)
                         .height(2.dp)
-                        .background(if (styledBackground) Color.White else GlossyPalette.Accent),
+                        .background(if (darkBackground) Color.White else GlossyPalette.Accent),
                 )
             }
 
@@ -420,7 +519,7 @@ private fun GlossyBarMiniPlayer(
                         icon = if (isFavorite) R.drawable.favorite else R.drawable.favorite_border,
                         contentDescription = null,
                         tint = if (isFavorite) {
-                            if (styledBackground) Color(0xFFFF7A9A) else GlossyPalette.Accent
+                            if (darkBackground) Color(0xFFFF7A9A) else GlossyPalette.Accent
                         } else {
                             primaryTextColor
                         },
@@ -503,6 +602,24 @@ private fun MiniPlayerStyleBackground(
             Box(modifier = modifier.background(Color.Black.copy(alpha = 0.32f)))
         }
 
+        // Tonal elevation, the way a Material 3 card lifts: the surface is
+        // brightest where the content starts — behind the artwork — and settles
+        // into the plain container tone across the rest of the bar. The caller
+        // has already laid down `surfaceContainer`, so this only paints the
+        // lift.
+        MiniPlayerBackgroundStyle.MATERIALISTIC -> {
+            Box(
+                modifier = modifier.background(
+                    Brush.horizontalGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.surfaceContainerHigh,
+                            MaterialTheme.colorScheme.surfaceContainer,
+                        ),
+                    ),
+                ),
+            )
+        }
+
         else -> Unit
     }
 }
@@ -521,12 +638,25 @@ fun SwipeableMiniPlayerBox(
     coroutineScope: CoroutineScope,
     pureBlack: Boolean = false,
     useLegacyBackground: Boolean = false,
-    content: @Composable (Float) -> Unit
+    // Passed as a lambda, not as a value: the offset changes on every frame of a
+    // drag and of the spring back that follows it, and callers only ever need it
+    // inside a layout-phase lambda (`Modifier.offset { }`). Handed over as a
+    // value it would recompose the whole bar sixty times a second for the length
+    // of the gesture; handed over as a function it moves the bar without
+    // recomposing anything.
+    content: @Composable (() -> Float) -> Unit
 ) {
     val offsetXAnimatable = remember { Animatable(0f) }
     var dragStartTime by remember { mutableLongStateOf(0L) }
     var totalDragDistance by remember { mutableFloatStateOf(0f) }
     val haptic = LocalHapticFeedback.current
+
+    // Asked as questions rather than read as values. The drag offset moves every
+    // frame, but these two answers change twice per gesture — when the cue
+    // appears or goes, and when the swipe reverses — so the bar recomposes for
+    // those two moments instead of for every frame in between.
+    val showSkipCue by remember { derivedStateOf { offsetXAnimatable.value.absoluteValue > 50f } }
+    val swipingForward by remember { derivedStateOf { offsetXAnimatable.value > 0f } }
 
     val animationSpec = spring<Float>(
         dampingRatio = Spring.DampingRatioNoBouncy,
@@ -624,23 +754,30 @@ fun SwipeableMiniPlayerBox(
                 }
             }
     ) {
-        content(offsetXAnimatable.value)
+        content { offsetXAnimatable.value }
 
-        if (offsetXAnimatable.value.absoluteValue > 50f) {
+        if (showSkipCue) {
             Box(
                 modifier = Modifier
-                    .align(if (offsetXAnimatable.value > 0) Alignment.CenterStart else Alignment.CenterEnd)
+                    .align(if (swipingForward) Alignment.CenterStart else Alignment.CenterEnd)
                     .padding(horizontal = 16.dp)
             ) {
                 Icon(
                     painter = painterResource(
-                        if (offsetXAnimatable.value > 0) R.drawable.skip_previous else R.drawable.apple_skip_next
+                        if (swipingForward) R.drawable.skip_previous else R.drawable.apple_skip_next
                     ),
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary.copy(
-                        alpha = (offsetXAnimatable.value.absoluteValue / autoSwipeThreshold).coerceIn(0f, 1f)
-                    ),
-                    modifier = Modifier.size(24.dp)
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .size(24.dp)
+                        // The cue fades as the drag goes further, so the fade is
+                        // applied on the layer: reading the offset up here would
+                        // put a sixty-a-second recomposition back into the
+                        // gesture that this whole change is removing.
+                        .graphicsLayer {
+                            alpha = (offsetXAnimatable.value.absoluteValue / autoSwipeThreshold)
+                                .coerceIn(0f, 1f)
+                        },
                 )
             }
         }
@@ -791,7 +928,7 @@ private fun GlossySpecialEditionMiniPlayer(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(72.dp) 
-                .offset { IntOffset(offsetX.roundToInt(), 0) }
+                .offset { IntOffset(offsetX().roundToInt(), 0) }
                 .shadow(
                     elevation = 20.dp, 
                     shape = RoundedCornerShape(32.dp), 
@@ -1066,6 +1203,163 @@ private fun GlossySpecialEditionMiniPlayer(
 }
 
 // ============================================================================
+// APPLE MUSIC PILL — the floating bar from the reference recording
+// ============================================================================
+
+/**
+ * The mini player from the listener's reference recording: one floating bar,
+ * the artwork at its left, the song over a squiggle playhead, and the
+ * transport in a filled capsule.
+ *
+ * Scrolling the list underneath folds the bar away into the round artwork
+ * bubble and leaves it pinned to the right — the same behaviour the recording
+ * shows. The signal is the one the app already collects for this, read through
+ * [LocalAppScrolledToTop].
+ *
+ * A new style rather than a change to the Special Edition pill: that one is a
+ * look people have already picked, and this one has to be a choice of its own.
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun AppleMusicMiniPlayer(
+    progressState: ProgressState,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {},
+) {
+    val playerConnection = LocalPlayerConnection.current ?: return
+    val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
+    val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
+    val canSkipNext by playerConnection.canSkipNext.collectAsStateWithLifecycle()
+    val haptic = LocalHapticFeedback.current
+
+    // Answered once at the app root from every list's own nested scroll, so the
+    // bar does not have to know which screen it is standing on. This is the only
+    // style left that folds, so the state and its springs are read here alone.
+    val fold = rememberMiniPlayerFold(restingCornerPercent = 24)
+    val foldedAway = fold.foldedAway
+    val expansion = fold.expansion
+    val shape = fold.shape
+
+    // The bar folds towards its right end, which is where the round form is
+    // pinned; the artwork closes up into a bubble as it goes.
+    val artworkShape = RoundedCornerShape(percent = if (foldedAway) 50 else 26)
+
+    Box(
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = Alignment.CenterEnd,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = if (foldedAway) Arrangement.Center else Arrangement.Start,
+            modifier =
+                Modifier
+                    .fillMaxWidth(expansion.coerceIn(0.16f, 1f))
+                    .height((56f + 8f * expansion).dp)
+                    .clip(shape)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color.White.copy(alpha = 0.18f),
+                                Color.Black.copy(alpha = 0.55f),
+                            ),
+                        ),
+                    )
+                    .border(1.dp, Color.White.copy(alpha = 0.22f), shape)
+                    .clickable(onClick = onClick)
+                    .padding(horizontal = 8.dp),
+        ) {
+            AsyncImage(
+                model = mediaMetadata?.thumbnailUrl?.resize(120, 120),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.size(48.dp).clip(artworkShape),
+            )
+
+            AnimatedVisibility(visible = !foldedAway, enter = fadeIn(tween(180)), exit = fadeOut(tween(120))) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Column(
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(
+                            text = mediaMetadata?.title ?: "",
+                            color = Color.White,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Text(
+                            text = mediaMetadata?.artists?.joinToArtistString(", ") { it.name }.orEmpty(),
+                            color = Color.White.copy(alpha = 0.72f),
+                            fontSize = 12.5.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        // The playhead is the squiggle: what has played is the
+                        // wave, what is left stays a flat line of the same
+                        // weight, which is what the recording shows under the
+                        // title rather than a hairline under the whole bar.
+                        LinearWavyProgressIndicator(
+                            progress = { progressState.progress },
+                            modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
+                            color = Color.White,
+                            trackColor = Color.White.copy(alpha = 0.3f),
+                            wavelength = 16.dp,
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier =
+                            Modifier
+                                .size(width = 58.dp, height = 44.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(Color.White)
+                                .clickable {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    playerConnection.togglePlayPause()
+                                },
+                    ) {
+                        Icon(
+                            painter =
+                                painterResource(
+                                    if (isPlaying) R.drawable.pause_applemusic else R.drawable.play_applemusic,
+                                ),
+                            contentDescription = if (isPlaying) "Pause" else "Play",
+                            tint = Color(0xFF15121F),
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+
+                    IconButton(
+                        enabled = canSkipNext,
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            playerConnection.seekToNext()
+                        },
+                        modifier = Modifier.size(42.dp),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.apple_skip_next),
+                            contentDescription = "Next",
+                            tint = Color.White.copy(alpha = if (canSkipNext) 1f else 0.4f),
+                            modifier = Modifier.size(26.dp),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ============================================================================
 // NEW MINI PLAYER DESIGN (GLOSSY ORIGINAL)
 // ============================================================================
 
@@ -1185,6 +1479,7 @@ private fun NewMiniPlayer(
         MiniPlayerBackgroundStyle.GRADIENT   -> MaterialTheme.colorScheme.surfaceContainer
         MiniPlayerBackgroundStyle.GLOW       -> MaterialTheme.colorScheme.surfaceContainer
         MiniPlayerBackgroundStyle.PURE_BLACK -> Color.Black
+        MiniPlayerBackgroundStyle.MATERIALISTIC -> MaterialTheme.colorScheme.surfaceContainer
     }
     val forceLightColors = !useDarkTheme && (miniPlayerBackground == MiniPlayerBackgroundStyle.PURE_BLACK ||
             miniPlayerBackground == MiniPlayerBackgroundStyle.BLUR ||
@@ -1327,6 +1622,24 @@ private fun NewMiniPlayer(
                         Modifier
                             .fillMaxSize()
                             .background(Color.Black.copy(alpha = 0.32f)),
+                    )
+                }
+                MiniPlayerBackgroundStyle.MATERIALISTIC -> {
+                    // The Material 3 card lift: a tonal surface, brightest where
+                    // the content starts and settling to the plain container
+                    // tone across the bar. The base colour is already
+                    // `surfaceContainer`, so only the lift is painted here.
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(
+                                        MaterialTheme.colorScheme.surfaceContainerHigh,
+                                        MaterialTheme.colorScheme.surfaceContainer,
+                                    ),
+                                ),
+                            ),
                     )
                 }
                 else -> {}
@@ -1802,24 +2115,35 @@ private fun LegacyMiniPlayer(
             }
         }
 
-        if (offsetXAnimatable.value.absoluteValue > 50f) {
+        // Same two questions as the shared swipe container, for the same reason:
+        // the offset moves every frame, the answers do not.
+        val showSkipCue by remember { derivedStateOf { offsetXAnimatable.value.absoluteValue > 50f } }
+        val swipingForward by remember { derivedStateOf { offsetXAnimatable.value > 0f } }
+
+        if (showSkipCue) {
             Box(
                 modifier =
                     Modifier
-                        .align(if (offsetXAnimatable.value > 0) Alignment.CenterStart else Alignment.CenterEnd)
+                        .align(if (swipingForward) Alignment.CenterStart else Alignment.CenterEnd)
                         .padding(horizontal = 16.dp),
             ) {
                 Icon(
                     painter =
                         painterResource(
-                            if (offsetXAnimatable.value > 0) R.drawable.skip_previous else R.drawable.skip_next,
+                            if (swipingForward) R.drawable.skip_previous else R.drawable.skip_next,
                         ),
                     contentDescription = null,
-                    tint =
-                        primaryColor.copy(
-                            alpha = (offsetXAnimatable.value.absoluteValue / autoSwipeThreshold).coerceIn(0f, 1f),
-                        ),
-                    modifier = Modifier.size(24.dp),
+                    tint = primaryColor,
+                    modifier =
+                        Modifier
+                            .size(24.dp)
+                            // Deferred to the layer, so dragging the bar does not
+                            // recompose it.
+                            .graphicsLayer {
+                                alpha =
+                                    (offsetXAnimatable.value.absoluteValue / autoSwipeThreshold)
+                                        .coerceIn(0f, 1f)
+                            },
                 )
             }
         }

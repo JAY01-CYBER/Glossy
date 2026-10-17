@@ -169,7 +169,9 @@ import com.jay.glossy.constants.ShufflePlaylistFirstKey
 import com.jay.glossy.constants.SimilarContent
 import com.jay.glossy.constants.SkipSilenceInstantKey
 import com.jay.glossy.constants.SkipSilenceKey
+import com.jay.glossy.constants.DefaultSpatialAudioWidth
 import com.jay.glossy.constants.SpatialAudioKey
+import com.jay.glossy.constants.SpatialAudioWidthKey
 import com.jay.glossy.constants.StopMusicOnTaskClearKey
 import com.jay.glossy.db.MusicDatabase
 import com.jay.glossy.db.entities.Event
@@ -271,7 +273,6 @@ private const val INSTANT_SILENCE_SKIP_STEP_MS = 15_000L
 private const val INSTANT_SILENCE_SKIP_SETTLE_MS = 350L
 
 /** Side-channel gain used while "Spatial Audio" is on (see [StereoWidenerAudioProcessor]). */
-private const val SPATIAL_AUDIO_WIDTH = 1.7f
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @androidx.annotation.OptIn(UnstableApi::class)
@@ -522,6 +523,13 @@ class MusicService :
     // leaving the player "prepared but paused" forever.
     private var pausedDueToNetworkError = false
     private var silenceSkipJob: Job? = null
+
+    /**
+     * Songs whose stored lyrics are the "nothing found" note and which have
+     * already been given their one second chance in this run. Touched only from
+     * [scope], which is the main thread, so a plain set is enough.
+     */
+    private val lyricsMissesRetried = mutableSetOf<String>()
 
     // Cached preferences to avoid runBlocking DataStore reads in hot paths
     @Volatile
@@ -921,20 +929,36 @@ class MusicService :
         currentMediaMetadata
             .distinctUntilChangedBy { it?.id }
             .collectLatest(scope) { mediaMetadata ->
-                if (mediaMetadata != null && database
-                        .lyrics(mediaMetadata.id)
-                        .first() == null
-                ) {
-                    val lyricsWithProvider = lyricsHelper.getLyrics(mediaMetadata)
-                    database.query {
-                        upsert(
-                            LyricsEntity(
-                                id = mediaMetadata.id,
-                                lyrics = lyricsWithProvider.lyrics,
-                                provider = lyricsWithProvider.provider,
-                            ),
-                        )
-                    }
+                val metadata = mediaMetadata ?: return@collectLatest
+                val lyricsId = metadata.id
+                val stored = database.lyrics(lyricsId).first()
+                // A stored "nothing found" is a note about the moment the song
+                // was played, not a verdict on the song itself: the lookup may
+                // have run before Spotify could mint the bearer token its
+                // lyrics need, or while a provider was down. Treating that note
+                // as final is what made the moment permanent — the song was
+                // never asked about again — so a miss gets one more attempt per
+                // run, which is enough to recover without paying for a full race
+                // every time an instrumental comes round again.
+                val storedMiss = stored?.lyrics == LyricsEntity.LYRICS_NOT_FOUND
+                val retryMiss = storedMiss && lyricsId !in lyricsMissesRetried
+                if (stored != null && !retryMiss) return@collectLatest
+
+                // A retry is a real attempt — a miss in the in-memory negative
+                // cache belongs to the attempt that failed, not to this one.
+                val lyricsWithProvider = lyricsHelper.getLyrics(metadata, forceRefresh = retryMiss)
+                // Marked once the attempt is over rather than before it: a song
+                // change cancels the fetch, and a cancelled retry has not had
+                // the second chance this set exists to hand out.
+                if (storedMiss) lyricsMissesRetried += lyricsId
+                database.query {
+                    upsert(
+                        LyricsEntity(
+                            id = lyricsId,
+                            lyrics = lyricsWithProvider.lyrics,
+                            provider = lyricsWithProvider.provider,
+                        ),
+                    )
                 }
             }
 
@@ -1046,11 +1070,12 @@ class MusicService :
                 }
             }
 
-        dataStore.data
-            .map { it[SpatialAudioKey] ?: false }
+        combine(
+            dataStore.data.map { it[SpatialAudioKey] ?: false },
+            dataStore.data.map { it[SpatialAudioWidthKey] ?: DefaultSpatialAudioWidth },
+        ) { spatialAudio, chosenWidth -> if (spatialAudio) chosenWidth else 1f }
             .distinctUntilChanged()
-            .collectLatest(scope) { spatialAudio ->
-                val width = if (spatialAudio) SPATIAL_AUDIO_WIDTH else 1f
+            .collectLatest(scope) { width ->
                 playerStereoWideners.values.forEach { processor -> processor.width = width }
             }
 
@@ -1472,14 +1497,24 @@ class MusicService :
             val skipSilence = prefs[SkipSilenceKey] ?: false
             val instantSkip = prefs[SkipSilenceInstantKey] ?: false
             silenceProcessor.instantModeEnabled = skipSilence && instantSkip
-            stereoWidener.width = if (prefs[SpatialAudioKey] ?: false) SPATIAL_AUDIO_WIDTH else 1f
+            stereoWidener.width =
+                if (prefs[SpatialAudioKey] ?: false) {
+                    prefs[SpatialAudioWidthKey] ?: DefaultSpatialAudioWidth
+                } else {
+                    1f
+                }
             prefs[AudioTrackPlaybackParamsKey] ?: true
         } else {
             runBlocking {
                 val skipSilence = dataStore.get(SkipSilenceKey, false)
                 val instantSkip = dataStore.get(SkipSilenceInstantKey, false)
                 silenceProcessor.instantModeEnabled = skipSilence && instantSkip
-                stereoWidener.width = if (dataStore.get(SpatialAudioKey, false)) SPATIAL_AUDIO_WIDTH else 1f
+                stereoWidener.width =
+                    if (dataStore.get(SpatialAudioKey, false)) {
+                        dataStore.get(SpatialAudioWidthKey, DefaultSpatialAudioWidth)
+                    } else {
+                        1f
+                    }
                 dataStore.get(AudioTrackPlaybackParamsKey, true)
             }
         }
@@ -2686,6 +2721,24 @@ class MusicService :
                 delay(100)
                 restoreEpisodePosition(newMetadata.id)
             }
+        }
+
+        // Autoplay is off, so the song that just ended has to be the last one.
+        //
+        // The queue is loaded as a single playlist, which means the player rolls
+        // on into the next item by itself — the advance is never this app's
+        // decision to hold back, so "Automatically play the next song when the
+        // current one ends" (see `autoplay_desc`) cannot be expressed as a
+        // player mode and has to be caught as it happens. A repeat mode is the
+        // listener asking for continuous playback in so many words, and a cast
+        // session owns a queue of its own, so those keep rolling.
+        if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO &&
+            !cachedAutoplay &&
+            player.repeatMode == REPEAT_MODE_OFF &&
+            castConnectionHandler?.isCasting?.value != true
+        ) {
+            Timber.tag(TAG).d("Autoplay is off — stopping instead of playing the next song")
+            player.pause()
         }
 
         // Force Repeat One if the player ignored it and auto-advanced

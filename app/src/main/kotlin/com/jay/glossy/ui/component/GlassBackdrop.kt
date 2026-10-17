@@ -26,6 +26,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
@@ -81,6 +82,20 @@ fun GlassBackdrop(
 ) {
     val (fadeTop, fadeBottom) = fade
 
+    // Built once per fade rather than inside the draw pass. Its stops are
+    // fractions of whatever it is drawn over, so the mask does not depend on the
+    // size at all — which means the brush, and the Skia shader it owns, can be
+    // made once and drawn every frame instead of being rebuilt on each one. The
+    // player screen draws this continuously while its lyrics move.
+    val fadeMask =
+        remember(fadeTop, fadeBottom) {
+            Brush.verticalGradient(
+                0f to Color.Black.copy(alpha = fadeTop),
+                FadeKnee to Color.Black.copy(alpha = fadeBottom),
+                1f to Color.Black.copy(alpha = fadeBottom),
+            )
+        }
+
     Box(modifier = modifier.clip(shape)) {
         Box(
             modifier = Modifier
@@ -92,11 +107,7 @@ fun GlassBackdrop(
                     // opaque, so one ramp multiplies the blur, the scrim and the
                     // border at once.
                     drawRect(
-                        brush = Brush.verticalGradient(
-                            0f to Color.Black.copy(alpha = fadeTop),
-                            FadeKnee to Color.Black.copy(alpha = fadeBottom),
-                            1f to Color.Black.copy(alpha = fadeBottom),
-                        ),
+                        brush = fadeMask,
                         blendMode = BlendMode.DstIn,
                     )
                 },

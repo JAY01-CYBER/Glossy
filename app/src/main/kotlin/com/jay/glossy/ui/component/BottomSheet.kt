@@ -66,6 +66,13 @@ fun BottomSheet(
     onDismiss: (() -> Unit)? = null,
     collapsedContent: @Composable BoxScope.() -> Unit,
     isExpandable: Boolean = true,
+    /**
+     * Drawn over [content] while the sheet is not collapsed, so it can follow
+     * [BottomSheetState.progress] with the sheet itself and stay in step with
+     * the drag. The player's opening bloom lives here — see
+     * [com.jay.glossy.ui.player.PlayerOpenBloom].
+     */
+    openOverlay: @Composable () -> Unit = {},
     content: @Composable BoxScope.() -> Unit,
 ) {
     val density = LocalDensity.current
@@ -142,6 +149,10 @@ fun BottomSheet(
                     },
                 content = content
             )
+
+            // Drawn last so it lands on top of the content, and inside the same
+            // window as it so nothing animates over an empty sheet.
+            openOverlay()
         }
 
         if (!state.isExpanded && (onDismiss == null || !state.isDismissed)) {
