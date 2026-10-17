@@ -50,6 +50,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -72,6 +73,7 @@ import com.jay.glossy.constants.MiniLyricsStyle
 import com.jay.glossy.constants.MiniLyricsStyleKey
 import com.jay.glossy.constants.ShowLyricsOnPlayerKey
 import com.jay.glossy.extensions.metadata
+import com.jay.glossy.ui.component.BlurredArtworkBackdrop
 import com.jay.glossy.ui.component.BottomSheetState
 import com.jay.glossy.ui.component.LocalBottomSheetPageState
 import com.jay.glossy.ui.component.LocalMenuState
@@ -139,6 +141,137 @@ private val ArtworkBottomFade =
             1.00f to Color.Transparent,
         ),
     )
+
+/**
+ * The gentle tier's mask: it fades in early and is most of the way present by
+ * the middle of the band, so the whole block reads as one soft sheet of glass.
+ *
+ * Every stop is a fraction of what it is drawn over and every colour is a fixed
+ * black with a fixed alpha, so the brush never varies and is made once. Built
+ * inside the draw pass it would ask Skia for a new shader on every frame the
+ * cover behind it moves — which on this screen is always.
+ */
+private val BottomFrostSoftRamp =
+    Brush.verticalGradient(
+        colorStops = arrayOf(
+            0.00f to Color.Black.copy(alpha = 0f),
+            0.30f to Color.Black.copy(alpha = 0.35f),
+            0.65f to Color.Black.copy(alpha = 0.70f),
+            1.00f to Color.Black.copy(alpha = 0.85f),
+        ),
+    )
+
+/**
+ * The heavy tier's mask: nothing at all through the upper half of the band, so
+ * the strong blur exists only where the band is deep — which is what makes the
+ * blur look like it *grows* towards the bottom instead of switching on.
+ */
+private val BottomFrostHeavyRamp =
+    Brush.verticalGradient(
+        colorStops = arrayOf(
+            0.00f to Color.Black.copy(alpha = 0f),
+            0.42f to Color.Black.copy(alpha = 0f),
+            0.62f to Color.Black.copy(alpha = 0.35f),
+            1.00f to Color.Black.copy(alpha = 0.95f),
+        ),
+    )
+
+/**
+ * The contrast that arrives with the heavy tier: no darkening where the cover
+ * is still readable, most of it at the controls.
+ */
+private val BottomFrostScrim =
+    Brush.verticalGradient(
+        colorStops = arrayOf(
+            0.00f to Color.Transparent,
+            0.55f to Color.Black.copy(alpha = 0.10f),
+            1.00f to Color.Black.copy(alpha = 0.46f),
+        ),
+    )
+
+/**
+ * One *tier* of the frost: the cover, blurred at one fixed strength, masked by
+ * its own alpha ramp.
+ *
+ * Skia cannot grade a blur radius — `Modifier.blur` takes one value for a whole
+ * node and nothing can make it grow across it — so "more blur towards the
+ * bottom" is built the only way it can be: by stacking tiers. A soft tier that
+ * covers the entire band and a heavy tier that only appears in its lower half,
+ * each masked separately. The eye reads the sum as a radius that increases
+ * downwards, because down there it literally is two blurs deep.
+ *
+ * The blur is the CPU one from [BlurredArtworkBackdrop], not `Modifier.blur`,
+ * because the latter is a no-op below API 31 and this design cannot lose its
+ * backdrop on older phones. The mask is applied with `DstIn` inside an offscreen
+ * layer so it clips the blurred cover and the scrim together, and every tier
+ * keeps its own layer so one tier's mask never eats another's.
+ */
+@Composable
+private fun BottomFrostTier(
+    artworkUrl: String?,
+    blurStrength: Float,
+    ramp: Brush,
+    modifier: Modifier = Modifier,
+    scrim: Brush? = null,
+) {
+    Box(
+        modifier =
+            modifier
+                .fillMaxSize()
+                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                .drawWithContent {
+                    drawContent()
+                    drawRect(brush = ramp, blendMode = BlendMode.DstIn)
+                },
+    ) {
+        BlurredArtworkBackdrop(
+            url = artworkUrl,
+            blurStrength = blurStrength,
+            modifier = Modifier.fillMaxSize(),
+        )
+        if (scrim != null) {
+            Box(modifier = Modifier.fillMaxSize().background(scrim))
+        }
+    }
+}
+
+/**
+ * The frost that starts at the bottom edge of the Apple Music player and rises
+ * to the top of the song name — nothing there, everything at the bottom.
+ *
+ * Two tiers, not one: [BottomFrostSoftRamp] spreads a light blur across the
+ * whole band from the title down, and [BottomFrostHeavyRamp] adds a second,
+ * much heavier one that only exists in the bottom half. Stacked, the blur is
+ * deepest at the controls and thins out upwards until it is gone at the name,
+ * which is the premium look wanted here — a single uniformly blurred sheet
+ * ramped only in opacity does not read that way, because its blur is the same
+ * strength everywhere it appears.
+ */
+@Composable
+private fun AppleMusicBottomBlur(
+    artworkUrl: String?,
+    height: Dp,
+    modifier: Modifier = Modifier,
+) {
+    // Both tiers are drawn even without artwork: the cover half then paints
+    // nothing and what is left is the heavy tier's scrim, which is still the
+    // contrast the title and controls need to stay legible.
+    Box(modifier = modifier.fillMaxWidth().height(height)) {
+        BottomFrostTier(
+            artworkUrl = artworkUrl,
+            blurStrength = 0.5f,
+            ramp = BottomFrostSoftRamp,
+        )
+        // The darkening rides the heavy tier, so contrast and depth arrive
+        // together at the bottom rather than as a band of their own.
+        BottomFrostTier(
+            artworkUrl = artworkUrl,
+            blurStrength = 0.92f,
+            ramp = BottomFrostHeavyRamp,
+            scrim = BottomFrostScrim,
+        )
+    }
+}
 
 @Composable
 fun NowPlayingContentAppleMusic(
@@ -347,6 +480,17 @@ private fun AppleMusicMainView(
                 onCanvasReady = { /* Managed internally */ }
             )
         }
+
+        // The frost sits between the artwork and the title block, and its height
+        // is that block's own measured height — so its ramp ends exactly at the
+        // top of the song name, whether or not lyrics are on. Measuring the
+        // block instead of guessing a height is the only way it stays right as
+        // the title wraps, the lyrics grow and the controls come and go.
+        AppleMusicBottomBlur(
+            artworkUrl = mediaMetadata?.thumbnailUrl,
+            height = bottomContentHeightDp.dp,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
 
         Box(
             modifier = Modifier

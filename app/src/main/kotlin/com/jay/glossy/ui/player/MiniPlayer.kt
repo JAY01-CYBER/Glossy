@@ -1144,9 +1144,16 @@ private fun GlossySpecialEditionMiniPlayer(
 // ============================================================================
 
 /**
- * The mini player from the listener's reference recording: one floating bar,
- * the artwork at its left, the song over a squiggle playhead, and the
- * transport in a filled capsule.
+ * The Apple Music bar: one floating bar, the artwork at its left, the song over
+ * a squiggle playhead, and the transport at the right.
+ *
+ * Its layout follows the reference recording, but its surface does not: it used
+ * to paint a translucent white-to-black glass gradient inside a white hairline
+ * border, which read as the sea-glass look and drifted away from every other
+ * bar in the app. It is now Material 3 like its neighbours — a tonal
+ * `surfaceContainer`, scheme ink and a single primary accent on the playhead
+ * and the play button — so the shape is the only thing that stays specific to
+ * this style.
  *
  * The bar keeps its full width and its own shape at all times: it used to fold
  * away into the artwork bubble as the list underneath was scrolled, and that
@@ -1168,11 +1175,20 @@ private fun AppleMusicMiniPlayer(
     val canSkipNext by playerConnection.canSkipNext.collectAsStateWithLifecycle()
     val haptic = LocalHapticFeedback.current
 
+    // Scheme roles rather than literal colours: the bar inherits whatever
+    // surface and accent the active theme and dynamic colour produce, which is
+    // what makes it Material 3 instead of a fixed glass gradient.
+    val containerColor = MaterialTheme.colorScheme.surfaceContainer
+    val outlineColor = MaterialTheme.colorScheme.outline
+    val onContainerColor = MaterialTheme.colorScheme.onSurface
+    val onContainerVariantColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val accentColor = MaterialTheme.colorScheme.primary
+    val onAccentColor = MaterialTheme.colorScheme.onPrimary
+
     // One fixed shape at one fixed width. Scrolling the list underneath used to
     // close the bar down into a round artwork bubble; the bar now stays exactly
     // as it is drawn, whatever the list under it is doing.
-    val shape = RoundedCornerShape(percent = 24)
-    val artworkShape = RoundedCornerShape(percent = 26)
+    val shape = RoundedCornerShape(32.dp)
 
     Box(
         modifier = modifier.fillMaxWidth(),
@@ -1186,23 +1202,16 @@ private fun AppleMusicMiniPlayer(
                     .fillMaxWidth()
                     .height(64.dp)
                     .clip(shape)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                Color.White.copy(alpha = 0.18f),
-                                Color.Black.copy(alpha = 0.55f),
-                            ),
-                        ),
-                    )
-                    .border(1.dp, Color.White.copy(alpha = 0.22f), shape)
+                    .background(containerColor)
+                    .border(1.dp, outlineColor.copy(alpha = 0.3f), shape)
                     .clickable(onClick = onClick)
                     .padding(horizontal = 8.dp),
         ) {
-            AsyncImage(
-                model = mediaMetadata?.thumbnailUrl?.resize(120, 120),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.size(48.dp).clip(artworkShape),
+            GlossyThumb(
+                seed = mediaMetadata?.id,
+                size = 48.dp,
+                corner = 12.dp,
+                imageUrl = mediaMetadata?.thumbnailUrl,
             )
 
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1214,8 +1223,9 @@ private fun AppleMusicMiniPlayer(
                 ) {
                     Text(
                         text = mediaMetadata?.title ?: "",
-                        color = Color.White,
-                        fontSize = 15.sp,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = onContainerColor,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -1223,8 +1233,9 @@ private fun AppleMusicMiniPlayer(
                     )
                     Text(
                         text = mediaMetadata?.artists?.joinToArtistString(", ") { it.name }.orEmpty(),
-                        color = Color.White.copy(alpha = 0.72f),
-                        fontSize = 12.5.sp,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = onContainerVariantColor,
+                        fontSize = 11.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.fillMaxWidth(),
@@ -1235,35 +1246,34 @@ private fun AppleMusicMiniPlayer(
                     // title rather than a hairline under the whole bar.
                     LinearWavyProgressIndicator(
                         progress = { progressState.progress },
-                        modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
-                        color = Color.White,
-                        trackColor = Color.White.copy(alpha = 0.3f),
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                        color = accentColor,
+                        trackColor = accentColor.copy(alpha = 0.24f),
                         wavelength = 16.dp,
                     )
                 }
 
                 Spacer(modifier = Modifier.width(12.dp))
 
+                // The filled primary circle is the Material 3 playback affordance,
+                // and it is the one saturated thing on the bar.
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier =
                         Modifier
-                            .size(width = 58.dp, height = 44.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(Color.White)
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(accentColor)
                             .clickable {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 playerConnection.togglePlayPause()
                             },
                 ) {
                     Icon(
-                        painter =
-                            painterResource(
-                                if (isPlaying) R.drawable.pause_applemusic else R.drawable.play_applemusic,
-                            ),
+                        painter = painterResource(if (isPlaying) R.drawable.pause else R.drawable.play),
                         contentDescription = if (isPlaying) "Pause" else "Play",
-                        tint = Color(0xFF15121F),
-                        modifier = Modifier.size(22.dp),
+                        tint = onAccentColor,
+                        modifier = Modifier.size(20.dp),
                     )
                 }
 
@@ -1276,10 +1286,10 @@ private fun AppleMusicMiniPlayer(
                     modifier = Modifier.size(42.dp),
                 ) {
                     Icon(
-                        painter = painterResource(R.drawable.apple_skip_next),
+                        painter = painterResource(R.drawable.skip_next),
                         contentDescription = "Next",
-                        tint = Color.White.copy(alpha = if (canSkipNext) 1f else 0.4f),
-                        modifier = Modifier.size(26.dp),
+                        tint = onContainerColor.copy(alpha = if (canSkipNext) 1f else 0.4f),
+                        modifier = Modifier.size(22.dp),
                     )
                 }
             }
