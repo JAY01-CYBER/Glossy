@@ -72,6 +72,7 @@ import com.jay.glossy.constants.SearchSource
 import com.jay.glossy.constants.SearchSourceKey
 import com.jay.glossy.db.entities.SearchHistory
 import com.jay.glossy.playback.queues.YouTubeQueue
+import com.jay.glossy.ui.component.GlossySearchLanding
 import com.jay.glossy.ui.component.HideOnScrollFAB
 import com.jay.glossy.ui.component.TiledListRows
 import com.jay.glossy.utils.SearchRoutes
@@ -318,8 +319,15 @@ fun SearchScreen(
         ) {
             // Both search surfaces draw their rows as tiles; no other list in
             // the app does (see TiledListRows).
-            when (searchSource) {
-                SearchSource.LOCAL -> {
+            when {
+                // Nothing typed yet: the design's landing page, built from the
+                // mood shelf and the last few searches, takes the whole body.
+                query.text.isEmpty() -> GlossySearchLanding(
+                    onSearch = onSearchFromSuggestion,
+                    onSeeAll = { navController.navigate("history") },
+                )
+
+                searchSource == SearchSource.LOCAL -> {
                     TiledListRows {
                         LocalSearchScreen(
                             query = query.text,
@@ -329,7 +337,7 @@ fun SearchScreen(
                     }
                 }
 
-                SearchSource.ONLINE -> {
+                else -> {
                     TiledListRows {
                         OnlineSearchScreen(
                             query = query.text,

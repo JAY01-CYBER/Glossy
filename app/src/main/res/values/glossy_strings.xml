@@ -50,4 +50,19 @@
     <string name="glossy_mix_eyebrow">Your sound, reimagined</string>
     <!-- Mix — the line under the grid -->
     <string name="glossy_mix_evolving">Always evolving with your listening.</string>
+    <!-- Search — the landing page before a query is typed -->
+    <string name="glossy_search_eyebrow">Follow your curiosity</string>
+    <string name="glossy_search_title">Find your sound</string>
+    <string name="glossy_search_shelf">Go somewhere new</string>
+    <string name="glossy_search_recent">In the moment</string>
+    <string name="glossy_search_see_all">See all</string>
+    <string name="glossy_search_recent_caption">Recent search</string>
+    <string name="glossy_search_mood_indie">Indie &amp; soul</string>
+    <string name="glossy_search_mood_indie_sub">A little closer to the feeling</string>
+    <string name="glossy_search_mood_after_dark">After dark</string>
+    <string name="glossy_search_mood_after_dark_sub">For the hours that are yours</string>
+    <string name="glossy_search_mood_easy">Easy listening</string>
+    <string name="glossy_search_mood_easy_sub">Room to slow down</string>
+    <string name="glossy_search_mood_desi">Desi favourites</string>
+    <string name="glossy_search_mood_desi_sub">Sounds like home</string>
 </resources>
