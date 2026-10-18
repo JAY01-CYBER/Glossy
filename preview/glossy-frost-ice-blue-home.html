@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Glossy — Frost / Ice-Blue Light Theme</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; }
+  body {
+    font-family:'Segoe UI', 'Outfit', Roboto, system-ui, sans-serif;
+    background:linear-gradient(160deg,#cfe6ef 0%,#dbeaf2 30%,#e3f0f6 62%,#d3e7ef 100%);
+    display:flex; justify-content:center; align-items:flex-start;
+    color:#10262d; overflow-x:hidden;
+  }
+  .phone {
+    width:390px; min-height:100vh; position:relative;
+    background:linear-gradient(165deg,#d3e8f1 0%,#e0eef5 40%,#d7eaf2 100%);
+    box-shadow:0 0 60px rgba(14,126,141,.12);
+    overflow:hidden; padding-bottom:150px;
+  }
+  /* soft aurora bloom, like the */
+  .bloom { position:absolute; border-radius:50%; filter:blur(70px); pointer-events:none; }
+  .bloom.one { width:420px;height:420px; left:-120px; top:-140px; background:rgba(150,212,228,.55); }
+  .bloom.two { width:380px;height:380px; right:-140px; top:180px; background:rgba(184,224,238,.5); }
+  .bloom.three { width:420px;height:320px; left:40px; bottom:-80px; background:rgba(160,214,230,.45); }
+
+  .statusbar { display:flex; justify-content:space-between; padding:14px 22px 6px; font-size:13px; font-weight:600; color:#223c45; position:relative; }
+
+  /* top row: logo + glassy actions pill */
+  .toprow { position:relative; display:flex; justify-content:space-between; align-items:center; padding:16px 16px 10px; }
+  .brand { display:flex; align-items:center; gap:9px; color:#123a44; }
+  .brand .mark { width:34px;height:34px; border-radius:10px; display:grid; place-items:center; font-weight:800; font-size:15px; color:#0b2c33; background:linear-gradient(140deg,#bfe2ee,#8fc6d8); }
+  .brand .name { font-weight:800; font-size:27px; letter-spacing:-.5px; color:#11333d; }
+  .actions {
+    display:flex; align-items:center; gap:2px;
+    background:linear-gradient(120deg,rgba(233,246,250,.85),rgba(206,232,242,.75));
+    border:1px solid rgba(255,255,255,.75);
+    border-radius:999px; padding:5px 6px 5px 10px;
+    box-shadow:0 6px 18px rgba(64,140,160,.14); backdrop-filter:blur(8px);
+  }
+  .actions .ic { width:32px;height:32px; border-radius:50%; display:grid; place-items:center; color:#17505c; font-size:16px; cursor:pointer; transition:background .15s; }
+  .actions .ic:hover { background:rgba(255,255,255,.5); }
+  .avatar { width:30px;height:30px;border-radius:50%; background:radial-gradient(circle at 30% 30%, #e6737f, #b03a63); border:2px solid #fff; }
+
+  /* greeting card */
+  .greet {
+    margin:14px 16px 0; padding:18px 22px 20px;
+    background:linear-gradient(120deg,rgba(199,230,242,.78),rgba(178,220,236,.62) 60%,rgba(206,233,243,.8));
+    border:1px solid rgba(255,255,255,.7);
+    border-radius:26px;
+    box-shadow:0 10px 26px rgba(58,136,158,.15), inset 0 1px 0 rgba(255,255,255,.6);
+    backdrop-filter:blur(10px); position:relative;
+  }
+  .greet .hi { font-size:14px; font-weight:600; color:#3e6b78; }
+  .greet .who { font-size:32px; font-weight:700; letter-spacing:-.6px; color:#0d2f38; margin-top:2px; }
+
+  /* chips */
+  .chips { position:relative; display:flex; gap:10px; padding:16px 16px 6px; overflow:hidden; }
+  .chip {
+    flex-shrink:0; padding:8px 18px; border-radius:999px; font-size:14px; font-weight:600; color:#2b5560;
+    background:linear-gradient(120deg,rgba(228,242,247,.9),rgba(198,228,239,.75));
+    border:1px solid rgba(255,255,255,.8); box-shadow:0 3px 10px rgba(64,140,160,.10);
+    cursor:pointer;
+  }
+  .chip:nth-child(2) { background:linear-gradient(120deg,rgba(216,238,246,.95),rgba(184,222,236,.8)); }
+
+  /* section headers */
+  .eyebrow { position:relative; display:flex; align-items:center; gap:8px; padding:22px 16px 2px; font-size:11px; font-weight:800; letter-spacing:1.4px; color:#0e7e8d; }
+  .eyebrow .bar { width:3px; height:16px; border-radius:2px; background:#0e7e8d; }
+  .sect { position:relative; padding:2px 16px 4px 26px; font-size:22px; font-weight:700; color:#0d2f38; letter-spacing:-.3px; }
+
+  /* featured spotlight card */
+  .spotlight { position:relative; margin:10px 16px 0; border-radius:26px; overflow:hidden; height:225px; box-shadow:0 14px 30px rgba(20,60,72,.25); cursor:pointer; }
+  .spotlight .art { position:absolute; inset:0; background:
+    linear-gradient(180deg,rgba(10,14,20,.05) 30%,rgba(6,10,16,.78) 100%),
+    repeating-linear-gradient(0deg,#3a3f46 0 10px,#2c3138 10px 20px);
+  }
+  .spotlight .people { position:absolute; inset:0; opacity:.0; }
+  .badge { position:absolute; top:70px; left:16px; font-size:10px; font-weight:800; letter-spacing:1.6px; color:#eef6f9; background:rgba(20,30,40,.45); border:1px solid rgba(255,255,255,.25); padding:5px 10px; border-radius:999px; backdrop-filter:blur(6px); }
+  .spotlight .t { position:absolute; left:16px; top:104px; font-size:30px; font-weight:800; color:#fff; letter-spacing:-.4px; }
+  .spotlight .a { position:absolute; left:16px; top:144px; font-size:15px; color:rgba(255,255,255,.85); }
+  .playpill { position:absolute; right:14px; bottom:14px; display:flex; align-items:center; gap:8px; background:#fff; color:#0d2f38; font-weight:700; font-size:14px; border-radius:999px; padding:8px 16px 8px 8px; box-shadow:0 6px 16px rgba(0,0,0,.25); }
+  .playpill .c { width:24px;height:24px;border-radius:50%;background:#0e7e8d;color:#fff;display:grid;place-items:center;font-size:9px; }
+  .dots { display:flex; gap:6px; justify-content:center; padding:12px 0 0; }
+  .dots i { width:7px;height:7px;border-radius:50%;background:rgba(23,80,92,.25); }
+  .dots i.on { width:18px; border-radius:4px; background:#0e7e8d; }
+
+  /* mixes row */
+  .mixes { position:relative; display:flex; gap:12px; padding:8px 16px 0; overflow:hidden; }
+  .mix { width:112px; flex-shrink:0; }
+  .mix .tile { height:112px; border-radius:16px; box-shadow:0 8px 18px rgba(20,60,72,.16); }
+  .mix .lbl { font-size:14px; font-weight:700; color:#123a44; margin-top:7px; }
+  .mix .sub { font-size:11px; color:#54707b; }
+  .t1 { background:linear-gradient(150deg,#b06ef0,#e08bd0 70%,#f0b0d0); position:relative; }
+  .t1 .thumb { position:absolute; right:12px; bottom:10px; font-size:44px; color:rgba(255,255,255,.9); }
+  .t2 { background:linear-gradient(0deg,rgba(10,14,20,.6),transparent),repeating-linear-gradient(0deg,#22262c 0 8px,#16181d 8px 16px); }
+  .t3 { background:radial-gradient(circle at 70% 30%,#f0a040,#c04020 70%); }
+  .floatbtn { position:absolute; border-radius:50%; display:grid; place-items:center; color:#fff; box-shadow:0 8px 18px rgba(0,0,0,.2); cursor:pointer; }
+  .fb1 { width:44px;height:44px; right:36px; top:-16px; background:linear-gradient(140deg,#8fd0e8,#4da8c8); font-size:18px; }
+  .fb2 { width:56px;height:56px; right:0; top:26px; background:linear-gradient(140deg,#7ec6dd,#3a92b8); font-size:20px; }
+
+  /* mini player */
+  .mini {
+    position:fixed; bottom:118px; left:50%; transform:translateX(-50%); width:362px; z-index:9;
+    display:flex; align-items:center; gap:12px; padding:9px 12px;
+    background:linear-gradient(120deg,rgba(238,247,250,.82),rgba(203,231,241,.72));
+    border:1px solid rgba(255,255,255,.8); border-radius:18px;
+    box-shadow:0 10px 28px rgba(40,110,130,.22); backdrop-filter:blur(12px);
+  }
+  .mini img, .mini .cov { width:46px;height:46px;border-radius:10px;background:linear-gradient(140deg,#d98a4a,#8a3a2a 75%); flex-shrink:0; position:relative; overflow:hidden; }
+  .cov i { position:absolute; inset:0; display:grid; place-items:center; color:rgba(255,255,255,.85); font-style:normal; font-size:20px; }
+  .mini .meta { flex:1; min-width:0; }
+  .mini .t { font-size:15px; font-weight:700; color:#0d2f38; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center; gap:7px; }
+  .mini .t .eq { display:inline-flex; gap:2px; align-items:flex-end; height:12px; }
+  .mini .t .eq b { width:3px; background:#0e7e8d; border-radius:2px; display:block; }
+  .mini .s { font-size:12.5px; color:#4e6e7a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mini .pp { width:38px;height:38px; border-radius:50%; display:grid; place-items:center; color:#0d2f38; cursor:pointer; }
+  .mini .nx { width:38px;height:38px; border-radius:50%; background:#0e7e8d; display:grid; place-items:center; color:#fff; cursor:pointer; }
+
+  /* bottom nav */
+  .nav {
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%); width:362px; z-index:9;
+    display:flex; align-items:center; gap:12px;
+  }
+  .tabs {
+    flex:1; display:flex;
+    background:linear-gradient(120deg,rgba(236,247,251,.9),rgba(200,230,241,.78));
+    border:1px solid rgba(255,255,255,.8); border-radius:999px; padding:8px 10px;
+    box-shadow:0 10px 26px rgba(40,110,130,.20); backdrop-filter:blur(12px);
+  }
+  .tab { flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; font-size:11px; font-weight:700; color:#4e6e7a; cursor:pointer; border-radius:999px; padding:5px 0; }
+  .tab.on { color:#0b3540; background:linear-gradient(120deg,rgba(255,255,255,.85),rgba(178,220,236,.65)); box-shadow:0 3px 10px rgba(64,140,160,.16); }
+  .tab .i { font-size:17px; }
+  .searchbtn {
+    width:52px;height:52px; border-radius:50%; flex-shrink:0; display:grid; place-items:center; color:#fff; font-size:18px; cursor:pointer;
+    background:linear-gradient(140deg,#1ba9bf,#0e7e8d);
+    box-shadow:0 10px 24px rgba(14,126,141,.4);
+  }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="bloom one"></div><div class="bloom two"></div><div class="bloom three"></div>
+
+  <div class="statusbar"><span>7:34</span><span style="font-size:11px">▮▮ ᯤ 5G ▐ 95%</span></div>
+
+  <div class="toprow">
+    <div class="brand">
+      <div class="mark">◖◗</div>
+      <div class="name">Glossy</div>
+    </div>
+    <div class="actions">
+      <div class="ic">⏱</div>
+      <div class="ic">◔</div>
+      <div class="ic">👤</div>
+      <div class="avatar"></div>
+    </div>
+  </div>
+
+  <div class="greet">
+    <div class="hi">Good morning</div>
+    <div class="who">Matrix</div>
+  </div>
+
+  <div class="chips">
+    <div class="chip">Podcasts</div>
+    <div class="chip">Relax</div>
+    <div class="chip">Workout</div>
+    <div class="chip">Feel good</div>
+  </div>
+
+  <div class="eyebrow"><span class="bar"></span>HANDPICKED FOR YOU</div>
+  <div class="sect">Featured Spotlight</div>
+
+  <div class="spotlight">
+    <div class="art"></div>
+    <div class="badge">FEATURED</div>
+    <div class="t">Homicide</div>
+    <div class="a">Sidhu Moose Wala</div>
+    <div class="playpill"><div class="c">▶</div>Play</div>
+  </div>
+  <div class="dots"><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+
+  <div class="eyebrow"><span class="bar"></span>FROM YOUR LIBRARY</div>
+  <div class="sect">Mixes</div>
+  <div class="mixes">
+    <div class="mix">
+      <div class="tile t1"><span class="thumb">👍</span><div class="floatbtn fb1" style="right:-24px;top:104px">🎤</div></div>
+      <div class="lbl">Liked Music</div>
+      <div class="sub">Auto playlist</div>
+    </div>
+    <div class="mix">
+      <div class="tile t2"></div>
+      <div class="lbl">Discover</div>
+      <div class="sub">Weekly</div>
+    </div>
+    <div class="mix">
+      <div class="tile t3"></div>
+      <div class="lbl">Top tracks</div>
+      <div class="sub">Arab Money</div>
+    </div>
+    <div class="floatbtn fb2">🔀</div>
+  </div>
+
+  <div class="mini">
+    <div class="cov"><i>♪</i></div>
+    <div class="meta">
+      <div class="t"><span class="eq"><b style="height:5px"></b><b style="height:11px"></b><b style="height:7px"></b></span>Qatal</div>
+      <div class="s">Guru Randhawa, S…</div>
+    </div>
+    <div class="pp">▶</div>
+    <div class="nx">⏩</div>
+  </div>
+
+  <div class="nav">
+    <div class="tabs">
+      <div class="tab on"><span class="i">⌂</span>Home</div>
+      <div class="tab"><span class="i">((•))</span>Mix</div>
+      <div class="tab"><span class="i">▤</span>Library</div>
+    </div>
+    <div class="searchbtn">⌕</div>
+  </div>
+</div>
+</body>
+</html>
