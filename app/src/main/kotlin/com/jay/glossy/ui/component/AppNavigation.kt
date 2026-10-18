@@ -493,7 +493,9 @@ private fun MaterialLiquidTabBar(
 
     LaunchedEffect(selectedIndex) {
         dampedDrag.animateToValue(selectedIndex.toFloat())
-    }            Box(
+    }
+
+    Box(
         modifier = Modifier
             .height(barHeight)
             .width(totalWidth)
