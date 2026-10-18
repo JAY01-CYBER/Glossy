@@ -4,7 +4,10 @@ package com.jay.glossy.ui.component
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
@@ -55,12 +58,15 @@ import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.jay.glossy.constants.ActiveDesignStyle
 import com.jay.glossy.constants.DesignStyle
 import com.jay.glossy.constants.UseFloatingNavBarKey
 import com.jay.glossy.ui.screens.Screens
+import com.jay.glossy.ui.theme.GlossyDimens
 import com.jay.glossy.ui.theme.GlossyPalette
 import com.jay.glossy.utils.rememberPreference
 import kotlinx.coroutines.delay
@@ -179,72 +185,79 @@ fun AppNavigationBar(
     slimNav: Boolean = false,
     onSearchLongClick: (() -> Unit)? = null
 ) {
-    val (useFloatingNavBar) = rememberPreference(UseFloatingNavBarKey, defaultValue = true)
-    // Pinned to the classic look: the redesigned bar is no longer selectable.
-    val newDesign = ActiveDesignStyle == DesignStyle.TEAL
-
-    if (newDesign) {
-        GlossyBottomNav(
-            navigationItems = navigationItems,
-            currentRoute = currentRoute,
-            onItemClick = onItemClick,
-            modifier = modifier
-        )
-    } else if (useFloatingNavBar) {
-        FloatingAppNavigationBar(
-            // The floating bar draws Search as its own pill beside the tab pill
-            // rather than as a tab, so the list it is handed (the tab set,
-            // which has no Search in it) is not enough on its own — without
-            // this the lookup came back empty and the pill never appeared.
-            navigationItems = navigationItems.withSearchPill(),
-            currentRoute = currentRoute,
-            onItemClick = onItemClick,
-            modifier = modifier,
-            pureBlack = pureBlack,
-            slimNav = slimNav,
-            onSearchLongClick = onSearchLongClick
-        )
-    } else {
-        StandardAppNavigationBar(
-            navigationItems = navigationItems,
-            currentRoute = currentRoute,
-            onItemClick = onItemClick,
-            modifier = modifier,
-            pureBlack = pureBlack,
-            slimNav = slimNav,
-            onSearchLongClick = onSearchLongClick
-        )
-    }
+    // One bar for the whole app: the floating pill of the design, painted with
+    // whatever scheme the theme resolved. [pureBlack] is still accepted so the
+    // callers keep compiling; the bar reads its colours from the palette.
+    GlossyBottomNav(
+        navigationItems = navigationItems,
+        currentRoute = currentRoute,
+        onItemClick = onItemClick,
+        modifier = modifier,
+        slimNav = slimNav,
+        onSearchLongClick = onSearchLongClick,
+    )
 }
 
 // ----------------------------------------------------
-// New design system: flat four-item bar
+// New design system: the floating pill bar
 // ----------------------------------------------------
+/**
+ * The bar from the design: one floating pill holding the four destinations,
+ * with the active one carried by a soft accent capsule. Search is a tab here
+ * rather than a second bubble beside the bar, and a long press still opens
+ * recognition.
+ *
+ * The bar stays inside [com.jay.glossy.constants.NavigationBarHeight], so the
+ * mini player, the sheet player and the window insets keep the geometry they
+ * were tuned for; only the paint and the shape are new.
+ */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun GlossyBottomNav(
     navigationItems: List<Screens>,
     currentRoute: String?,
     onItemClick: (Screens, Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    slimNav: Boolean = false,
+    onSearchLongClick: (() -> Unit)? = null,
 ) {
+    val items = navigationItems.withSearchPill()
+    val pill = RoundedCornerShape(GlossyDimens.CornerPill)
+    val itemShape = RoundedCornerShape(20.dp)
+    // Captured before the draw phase: the palette reads are composition-only.
+    val container = GlossyPalette.MiniBar
+    val outline = GlossyPalette.Border
+
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(GlossyPalette.Page)
-            .padding(horizontal = 8.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp)
+                .height(if (slimNav) 56.dp else 62.dp)
+                .clip(pill)
+                .background(container)
+                .border(GlossyDimens.Hairline, outline, pill)
+                .padding(horizontal = 6.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        navigationItems.forEach { screen ->
+        items.forEach { screen ->
             val selected = isRouteSelected(currentRoute, screen.route, navigationItems)
             Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable { onItemClick(screen, selected) }
-                    .padding(vertical = 6.dp),
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clip(itemShape)
+                        .then(
+                            if (selected) Modifier.background(GlossyPalette.AccentSoft) else Modifier,
+                        )
+                        .combinedClickable(
+                            onClick = { onItemClick(screen, selected) },
+                            onLongClick = if (screen == Screens.Search) onSearchLongClick else null,
+                        ),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(3.dp),
+                verticalArrangement = Arrangement.Center,
             ) {
                 Icon(
                     painter = painterResource(
@@ -252,12 +265,15 @@ fun GlossyBottomNav(
                     ),
                     contentDescription = stringResource(screen.titleId),
                     tint = if (selected) GlossyPalette.Accent else GlossyPalette.TextSecondary,
-                    modifier = Modifier.size(22.dp),
+                    modifier = Modifier.size(20.dp),
                 )
+                Spacer(Modifier.height(3.dp))
                 Text(
                     text = stringResource(screen.titleId),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (selected) GlossyPalette.Accent else GlossyPalette.TextSecondary,
+                    fontSize = 10.sp,
+                    lineHeight = 12.sp,
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                    color = if (selected) GlossyPalette.Accent else GlossyPalette.TextMuted,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )

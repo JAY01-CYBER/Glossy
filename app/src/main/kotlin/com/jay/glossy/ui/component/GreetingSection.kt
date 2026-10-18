@@ -25,12 +25,15 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -62,7 +65,11 @@ private const val AuroraMid = 0.10f
 
 /** Home header: greeting and the user's name. */
 @Composable
-fun GreetingSection(userName: String) {
+fun GreetingSection(
+    userName: String,
+    avatarUrl: String? = null,
+    onAvatarClick: (() -> Unit)? = null,
+) {
     // The wash behind the header drifts instead of sitting still. It is one
     // radial gradient repainted per frame — no blur, no layer, no
     // recomposition — and with ambient motion off the drift pins at zero and no
@@ -155,29 +162,47 @@ fun GreetingSection(userName: String) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
+                // The greeting and the listener's name share one uppercase
+                // eyebrow line, exactly as the design has them: the hour and
+                // the person on one small tracked-out label.
                 Text(
-                    text = greeting,
-                    fontSize = 13.5.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 0.2.sp,
+                    text = "$greeting, $firstName".uppercase(),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 1.3.sp,
                     color = greetColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(6.dp))
+                // Under it the app signs its own name. The wordmark wears the
+                // display face instead of the body font, so the top of the feed
+                // reads as a brand line rather than a second heading.
                 Text(
-                    text = firstName,
-                    // The name wears a display face of its own instead of the
-                    // app-wide body font, so the header has a signature of its
-                    // own. One static weight ships per family, so the
-                    // semi-bold is synthesised from that single file.
+                    text = stringResource(R.string.glossy_home_wordmark),
                     fontFamily = OutfitFontFamily,
-                    fontSize = 30.sp,
+                    fontSize = 34.sp,
                     fontWeight = FontWeight.SemiBold,
-                    letterSpacing = (-0.6).sp,
+                    letterSpacing = (-1.1).sp,
                     color = textPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                )
+            }
+            if (avatarUrl != null || onAvatarClick != null) {
+                Spacer(Modifier.width(12.dp))
+                GlossyInitialAvatar(
+                    name = firstName,
+                    size = 42.dp,
+                    imageUrl = avatarUrl,
+                    modifier =
+                        Modifier.clip(CircleShape).then(
+                            if (onAvatarClick != null) {
+                                Modifier.clickable(onClick = onAvatarClick)
+                            } else {
+                                Modifier
+                            },
+                        ),
                 )
             }
         }

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -31,17 +32,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.jay.glossy.R
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.ui.component.LocalMenuState
+import com.jay.glossy.ui.component.GlossySectionTitle
 import com.jay.glossy.ui.component.PlayStoreRefreshIndicator
 import com.jay.glossy.ui.component.YouTubeGridItem
 import com.jay.glossy.ui.menu.YouTubeAlbumMenu
+import com.jay.glossy.ui.theme.GlossyPalette
 import com.jay.glossy.ui.menu.YouTubePlaylistMenu
 import com.jay.glossy.viewmodels.HomeViewModel
 import com.jay.glossy.viewmodels.MixViewModel
@@ -114,12 +120,13 @@ fun MixScreen(
             ) {
                 
                 item(span = { GridItemSpan(2) }) {
-                    Text(
-                        text = "Mix for you",
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.headlineMedium,
-                        // Crisp spacing for a premium look
-                        modifier = Modifier.padding(bottom = 8.dp) 
+                    // The same eyebrow-over-title lockup the other screens use,
+                    // so "Mix for you" reads as a page heading and not as the
+                    // first row of the grid.
+                    GlossySectionTitle(
+                        title = "Mix for you",
+                        eyebrow = stringResource(R.string.glossy_mix_eyebrow),
+                        modifier = Modifier.padding(bottom = 12.dp, top = 4.dp),
                     )
                 }
 
@@ -162,6 +169,16 @@ fun MixScreen(
                                 }
                             }
                         )
+                    )
+                }
+
+                item(span = { GridItemSpan(2) }) {
+                    Text(
+                        text = stringResource(R.string.glossy_mix_evolving),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = GlossyPalette.TextMuted,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 10.dp),
                     )
                 }
             }
