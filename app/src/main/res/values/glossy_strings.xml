@@ -65,4 +65,7 @@
     <string name="glossy_search_mood_easy_sub">Room to slow down</string>
     <string name="glossy_search_mood_desi">Desi favourites</string>
     <string name="glossy_search_mood_desi_sub">Sounds like home</string>
+    <!-- Listen Together — the shortcut on Home and its group in Settings -->
+    <string name="glossy_listen_together_hint">Start a session and listen with friends</string>
+    <string name="glossy_together_group">With friends</string>
 </resources>

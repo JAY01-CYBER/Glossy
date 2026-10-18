@@ -309,6 +309,23 @@ fun SettingsScreen(
                 )
             }
 
+            // ---- Listen Together -----------------------------------------
+            // It left the bottom bar with the redesign, so Settings is where
+            // it stays discoverable next to the other ways to play.
+            item(key = "group_together") {
+                Material3SettingsGroup(
+                    title = stringResource(R.string.glossy_together_group),
+                    items = listOf(
+                        navRow(
+                            icon = R.drawable.group_outlined,
+                            title = stringResource(R.string.together),
+                            subtitle = stringResource(R.string.glossy_listen_together_hint),
+                            onClick = { navController.navigate("listen_together_from_topbar") },
+                        ),
+                    ),
+                )
+            }
+
             // ---- Playback -------------------------------------------------
             item(key = "group_playback") {
                 Material3SettingsGroup(

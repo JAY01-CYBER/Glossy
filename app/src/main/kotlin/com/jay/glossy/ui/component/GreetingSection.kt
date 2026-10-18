@@ -69,6 +69,7 @@ fun GreetingSection(
     userName: String,
     avatarUrl: String? = null,
     onAvatarClick: (() -> Unit)? = null,
+    onListenTogetherClick: (() -> Unit)? = null,
 ) {
     // The wash behind the header drifts instead of sitting still. It is one
     // radial gradient repainted per frame — no blur, no layer, no
@@ -188,6 +189,20 @@ fun GreetingSection(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+            }
+            // Listen Together sits in the header beside the listener's own
+            // avatar, where the old top bar kept it — one tap from the top of
+            // the feed without taking a row of its own.
+            if (onListenTogetherClick != null) {
+                GlossyIconAction(
+                    icon = R.drawable.group_outlined,
+                    contentDescription = stringResource(R.string.together),
+                    tint = greetColor,
+                    buttonSize = 40.dp,
+                    iconSize = 21.dp,
+                    onClick = onListenTogetherClick,
+                )
+                Spacer(Modifier.width(4.dp))
             }
             if (avatarUrl != null || onAvatarClick != null) {
                 Spacer(Modifier.width(12.dp))

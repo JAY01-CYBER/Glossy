@@ -845,9 +845,10 @@ fun HomeScreen(
     // the same order, so the two lines can never disagree.
     val guestNamePref by rememberPreference(stringPreferencesKey("guest_name"), "")
     val namelessFallback = stringResource(R.string.glossy_you)
+    val accountNameValue = accountName.orEmpty()
     val homeName =
         when {
-            !accountName.isNullOrBlank() && !accountName.equals("Guest", ignoreCase = true) -> accountName.orEmpty()
+            accountNameValue.isNotBlank() && !accountNameValue.equals("Guest", ignoreCase = true) -> accountNameValue
             guestNamePref.isNotBlank() -> guestNamePref
             else -> namelessFallback
         }
@@ -1081,6 +1082,9 @@ fun HomeScreen(
                             avatarUrl = url,
                             onAvatarClick = {
                                 navController.navigate("settings") { launchSingleTop = true }
+                            },
+                            onListenTogetherClick = {
+                                navController.navigate("listen_together_from_topbar")
                             },
                         )
                     }

@@ -125,6 +125,21 @@
   .nav a i{font-style:normal;font-size:14px;line-height:1}
   .nav a.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
   .home-indicator{width:110px;height:4px;border-radius:4px;background:#3a3b45;margin:0 auto 8px}
+  .hdr-action{
+    width:34px;height:34px;border-radius:50%;display:flex;align-items:center;
+    justify-content:center;color:var(--accent);font-size:14px;
+  }
+  /* listen together shortcut */
+  .listen{
+    display:flex;align-items:center;gap:11px;margin:14px 20px 0;
+    background:var(--surface);border:1px solid rgba(255,255,255,.05);
+    border-radius:16px;padding:11px 13px;
+  }
+  .listen .ico{color:var(--accent);font-size:14px}
+  .listen .meta{flex:1;min-width:0}
+  .listen .meta b{display:block;font-size:12.5px;font-weight:600}
+  .listen .meta span{font-size:10.5px;color:var(--text-2)}
+  .listen .chev{color:var(--text-3)}
   /* chips */
   .chips{display:flex;gap:8px;padding:10px 20px 0;overflow:hidden}
   .chip{
@@ -206,7 +221,10 @@
             <div class="eyebrow">Good evening, chikku</div>
             <div class="headline" style="font-size:33px;letter-spacing:-1.1px">glossy</div>
           </div>
-          <div class="avatar">C</div>
+          <div style="display:flex;align-items:center;gap:4px">
+            <div class="hdr-action">◍</div>
+            <div class="avatar">C</div>
+          </div>
         </div>
 
         <div class="chips">
@@ -255,7 +273,7 @@
       </nav>
       <div class="home-indicator"></div>
     </div>
-    <div class="tag">Greeting eyebrow · glossy wordmark · avatar · hero card · “Made for” shelf</div>
+    <div class="tag">Greeting eyebrow · glossy wordmark · Listen Together and avatar in the header · hero card · “Made for” shelf</div>
   </div>
 
   <!-- MIX -->
@@ -463,6 +481,11 @@
           <div class="grow"><div class="ico">≋</div><div class="meta"><b>Audio quality</b></div><div class="val">High ›</div></div>
           <div class="grow"><div class="ico">↻</div><div class="meta"><b>Gapless playback</b></div><div class="switch"><i></i></div></div>
           <div class="grow"><div class="ico">◔</div><div class="meta"><b>Sleep timer</b></div><div class="val">Off ›</div></div>
+        </div>
+
+        <div class="eyebrow" style="padding:20px 20px 0">With friends</div>
+        <div class="group">
+          <div class="grow"><div class="ico">◍</div><div class="meta"><b>Listen Together</b><span>Start a session and listen with friends</span></div><div class="val">›</div></div>
         </div>
 
         <div class="eyebrow" style="padding:20px 20px 0">Make it yours</div>
