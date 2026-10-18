@@ -1109,16 +1109,8 @@ class MainActivity : ComponentActivity() {
                                         },
                                         actions = {
                                             Surface(
-                                                shape = CircleShape,
-                                                // Frosted glass like the reference: the ice
-                                                // scheme's translucent container over the page
-                                                // wash, with a white hairline so the edge reads
-                                                // as glass rather than flat paint.
-                                                color = MaterialTheme.colorScheme.secondaryContainer,
-                                                border = androidx.compose.foundation.BorderStroke(
-                                                    1.dp,
-                                                    androidx.compose.ui.graphics.Color.White.copy(alpha = 0.55f),
-                                                ),
+                                                shape = CircleShape, 
+                                                color = MaterialTheme.colorScheme.surfaceVariant, 
                                                 modifier = Modifier.padding(end = 8.dp)
                                             ) {
                                                 Box(

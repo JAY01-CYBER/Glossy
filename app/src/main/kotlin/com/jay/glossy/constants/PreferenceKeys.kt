@@ -126,9 +126,9 @@ enum class MiniPlayerStyle {
 
     /**
      * The floating bar from the reference recording: square artwork, the
-     * playhead as a squiggle under the title, the transport in a filled
-     * capsule, and — once the list underneath is scrolled — the whole bar
-     * folding away into the round artwork bubble.
+     * playhead as a squiggle under the title and the transport in a filled
+     * capsule. It keeps its full width and its own shape at every scroll
+     * position — it never folds away into a round artwork bubble.
      */
     APPLE_MUSIC,
 

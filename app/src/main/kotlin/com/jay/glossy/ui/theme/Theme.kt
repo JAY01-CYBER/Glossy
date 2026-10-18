@@ -12,7 +12,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
@@ -38,60 +37,6 @@ import com.jay.glossy.constants.SelectedFontKey
 import com.jay.glossy.utils.rememberPreference
 
 val DefaultThemeColor = Color(0xFFED5564)
-
-/**
- * The light-mode "frost" scheme: the ice-blue look from the reference shot —
- * pale glacial surfaces, glassy blue cards and one deep ice-teal accent.
- *
- * The roles ride the Material 3 names the app already paints from (the
- * Materialistic skin reads every Glossy token out of this scheme), so hour
- * cards land on `primaryContainer`, chips on the container levels, and the
- * accent on `primary` — no screen knows the look changed. Fixed colours, not
- * sampled from the seed: the point of this theme is to look exactly like the
- * reference, and a wallpaper or swatch seed fought the ice.
- */
-private fun frostLightColorScheme(): ColorScheme = lightColorScheme(
-    primary = Color(0xFF0E7E8D),
-    onPrimary = Color.White,
-    primaryContainer = Color(0xCBC7E6F2),
-    onPrimaryContainer = Color(0xFF0A3F4A),
-
-    secondary = Color(0xFF3E6B78),
-    onSecondary = Color.White,
-    secondaryContainer = Color(0xB3E4F2F7),
-    onSecondaryContainer = Color(0xFF123B46),
-
-    tertiary = Color(0xFF1BA9BF),
-    onTertiary = Color.White,
-
-    background = Color(0xFFDBEBF2),
-    onBackground = Color(0xFF10262D),
-
-    surface = Color(0xFFE9F4F8),
-    onSurface = Color(0xFF10262D),
-    surfaceVariant = Color(0xFFE1EEF4),
-    onSurfaceVariant = Color(0xFF4E6E7A),
-    surfaceTint = Color(0xFF0E7E8D),
-
-    surfaceContainerLowest = Color(0xFFD2E6EE),
-    surfaceContainerLow = Color(0xFFF6FBFD),
-    surfaceContainer = Color(0xFFEFF8FB),
-    surfaceContainerHigh = Color(0xFFE7F2F7),
-    surfaceContainerHighest = Color(0xFFDDEDF4),
-
-    outline = Color(0xFF6E8B96),
-    outlineVariant = Color(0xFFCBDEE6),
-
-    error = Color(0xFFB3261E),
-    onError = Color.White,
-    errorContainer = Color(0xFFF9DEDC),
-    onErrorContainer = Color(0xFF410E0B),
-
-    inverseSurface = Color(0xFF10262D),
-    inverseOnSurface = Color(0xFFEFF6F9),
-    inversePrimary = Color(0xFF9BD5E3),
-    scrim = Color.Black,
-)
 
 @Composable
 fun MetrolistTheme(
@@ -128,9 +73,6 @@ fun MetrolistTheme(
     // from. The scheme now always comes from the chosen seed colour.
     val baseColorScheme = when {
         useNewDesign -> glossyDarkColorScheme()
-        // Light mode is the fixed ice-blue frost scheme above; the seed colour
-        // keeps driving dark mode only.
-        !darkTheme -> frostLightColorScheme()
         else ->
             rememberDynamicColorScheme(
                 seedColor = themeColor,
