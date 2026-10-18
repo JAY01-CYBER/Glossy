@@ -92,23 +92,29 @@ data class GlossyColors(
             onHeaderBand = Color(0xFF1D9E75),
         )
 
+        // The ice-blue frost palette: pale glacial surfaces, glassy blue rows
+        // and the deep ice-teal accent from the reference look. Kept in lockstep
+        // with frostLightColorScheme() in Theme.kt.
         val Light = GlossyColors(
-            page = Color(0xFFF4F4F7),
-            player = Color(0xFFFFFFFF),
-            row = Color(0xFFFFFFFF),
-            miniBar = Color(0xFFFFFFFF),
-            chip = Color(0xFFEDEDF2),
-            chipOutline = Color(0xFFE3E3EA),
-            border = Color(0xFFE3E3EA),
-            accent = Color(0xFF1D9E75),
-            onAccent = Color(0xFF04342C),
-            textPrimary = Color(0xFF15171C),
-            textSecondary = Color(0xFF5A5F6B),
-            textLow = Color(0xFF8A8F9A),
-            textMuted = Color(0xFFA6ABB6),
-            accentSoft = Color(0x1F1D9E75),
-            headerBand = Color.Transparent,
-            onHeaderBand = Color(0xFF1D9E75),
+            page = Color(0xFFDBEBF2),
+            player = Color(0xFFE9F4F8),
+            row = Color(0xFFF6FBFD),
+            miniBar = Color(0xFFF0F8FB),
+            // Chip and band carries on real alpha: they sit over the glacial
+            // page wash as frosted glass, not solid paint — like the reference
+            // shot where the feed's cards and pills are translucent.
+            chip = Color(0xC6E4F2F7),
+            chipOutline = Color(0x99FFFFFF),
+            border = Color(0xFFCBDEE6),
+            accent = Color(0xFF0E7E8D),
+            onAccent = Color(0xFFFFFFFF),
+            textPrimary = Color(0xFF10262D),
+            textSecondary = Color(0xFF3E6B78),
+            textLow = Color(0xFF6E8B96),
+            textMuted = Color(0xFF8AA4AE),
+            accentSoft = Color(0x330E7E8D),
+            headerBand = Color(0xA6D7ECF5),
+            onHeaderBand = Color(0xFF0A3F4A),
         )
 
         val PureBlack = Dark.copy(

@@ -5,6 +5,7 @@ package com.jay.glossy.ui.component
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
@@ -492,15 +493,21 @@ private fun MaterialLiquidTabBar(
 
     LaunchedEffect(selectedIndex) {
         dampedDrag.animateToValue(selectedIndex.toFloat())
-    }
-
-    Box(
+    }            Box(
         modifier = Modifier
             .height(barHeight)
             .width(totalWidth)
             .shadow(elevation = 12.dp, shape = RoundedCornerShape(50)) 
             .clip(RoundedCornerShape(50))
-            .background(floatingToolbarContainerColor(pureBlack)),
+            .background(floatingToolbarContainerColor(pureBlack))
+            .then(
+                // Glass hairline rim — the visible edge of the frost.
+                if (pureBlack) Modifier else Modifier.border(
+                    1.dp,
+                    Color.White.copy(alpha = 0.55f),
+                    RoundedCornerShape(50),
+                )
+            ),
         contentAlignment = Alignment.CenterStart
     ) {
         val indicatorOpacity by animateFloatAsState(targetValue = if (isMainTabActive) 1f else 0f, label = "Opacity")
@@ -673,10 +680,19 @@ private fun StandardAppNavigationBar(
 // ----------------------------------------------------
 // Color Providers
 // ----------------------------------------------------
+
+// The floating bar is frosted glass over the feed, not flat paint: a
+// translucent ice container with a white hairline rim, exactly like the
+// reference. Pure black keeps its opaque look.
 @Composable
-private fun floatingToolbarContainerColor(pureBlack: Boolean): Color = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
+private fun floatingToolbarContainerColor(pureBlack: Boolean): Color =
+    if (pureBlack) Color.Black
+    else MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.72f)
+
 @Composable
-private fun floatingToolbarSelectedItemContainerColor(pureBlack: Boolean): Color = if (pureBlack) Color.White.copy(alpha = 0.12f) else MaterialTheme.colorScheme.secondaryContainer
+private fun floatingToolbarSelectedItemContainerColor(pureBlack: Boolean): Color =
+    if (pureBlack) Color.White.copy(alpha = 0.12f)
+    else MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.85f)
 @Composable
 private fun floatingToolbarSelectedItemContentColor(pureBlack: Boolean): Color = if (pureBlack) Color.White else MaterialTheme.colorScheme.onSecondaryContainer
 @Composable
