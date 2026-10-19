@@ -62,8 +62,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.jay.glossy.constants.ActiveDesignStyle
-import com.jay.glossy.constants.DesignStyle
 import com.jay.glossy.constants.UseFloatingNavBarKey
 import com.jay.glossy.ui.screens.Screens
 import com.jay.glossy.ui.theme.GlossyDimens
@@ -233,7 +231,7 @@ fun GlossyBottomNav(
             modifier
                 .fillMaxWidth()
                 .padding(horizontal = 4.dp)
-                .height(if (slimNav) 56.dp else 62.dp)
+                .height(if (slimNav) 56.dp else GlossyDimens.NavPillHeight)
                 .clip(pill)
                 .background(container)
                 .border(GlossyDimens.Hairline, outline, pill)

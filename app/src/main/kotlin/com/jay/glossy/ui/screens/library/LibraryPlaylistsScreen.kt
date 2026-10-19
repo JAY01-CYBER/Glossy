@@ -132,9 +132,10 @@ fun LibraryPlaylistsScreen(
 
     val coroutineScope = rememberCoroutineScope()
 
-    // The redesigned Library showed a continuous list of rows. It is pinned off
-    // now, so the stored grid/list preference always wins.
-    val newDesign = ActiveDesignStyle == DesignStyle.TEAL
+    // The redesign is the app's look now: the Library is a continuous list of
+    // artwork-led rows. Only the classic style keeps the stored grid/list
+    // preference, and nothing selects it.
+    val newDesign = ActiveDesignStyle != DesignStyle.CLASSIC
 
     var viewType by rememberEnumPreference(PlaylistViewTypeKey, LibraryViewType.GRID)
 

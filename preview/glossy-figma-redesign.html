@@ -101,7 +101,7 @@
   .mix p{font-size:11px;color:var(--text-2);margin-top:2px}
   /* mini player */
     .mini{
-    margin:0 16px;height:58px;border-radius:26px;background:var(--surface-2);
+    margin:0 16px;height:58px;border-radius:18px;background:var(--surface-2);
     border:1px solid var(--outline);display:flex;align-items:center;gap:10px;
     padding:0 12px;position:relative;
   }
@@ -114,11 +114,11 @@
   .mini .actions{display:flex;align-items:center;gap:14px;color:var(--text-2);font-size:12px}
   /* nav */
   .nav{
-    margin:10px 16px 14px;height:60px;border-radius:30px;background:var(--surface-2);
+    margin:10px 16px 14px;height:70px;border-radius:35px;background:var(--surface-2);
     border:1px solid var(--outline);display:flex;align-items:center;padding:0 6px;gap:4px;
   }
   .nav a{
-    flex:1;height:46px;border-radius:22px;display:flex;flex-direction:column;
+    flex:1;height:54px;border-radius:27px;display:flex;flex-direction:column;
     align-items:center;justify-content:center;gap:3px;
     font-size:9px;color:var(--text-3);text-decoration:none;
   }
@@ -129,6 +129,32 @@
     width:34px;height:34px;border-radius:50%;display:flex;align-items:center;
     justify-content:center;color:var(--accent);font-size:14px;
   }
+  .together{
+    display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;
+    border-radius:999px;border:1px solid rgba(240,174,196,.38);
+    color:var(--accent);font-size:11px;font-weight:500;white-space:nowrap;
+  }
+  /* account sheet */
+  .dim{position:absolute;inset:0;background:rgba(8,8,11,.62);z-index:2}
+  .sheet{
+    position:absolute;left:0;right:0;bottom:0;z-index:3;
+    background:var(--surface);border-radius:28px 28px 0 0;
+    border-top:1px solid rgba(255,255,255,.07);
+    padding:10px 18px 22px;max-height:86%;overflow:hidden;
+  }
+  .sheet .grab{width:38px;height:4px;border-radius:4px;background:#3c3d47;margin:0 auto 12px}
+  .sheet .sheet-head{display:flex;align-items:center;justify-content:space-between;padding:0 2px}
+  .sheet .sheet-head h3{font-size:24px;font-weight:600;letter-spacing:-.5px}
+  .sheet .close{width:34px;height:34px;border-radius:50%;background:var(--surface-3);display:flex;align-items:center;justify-content:center;color:var(--text-2);font-size:12px}
+  .sheet .who{display:flex;align-items:center;gap:11px;margin-top:14px;background:var(--surface-2);border:1px solid var(--outline);border-radius:18px;padding:11px}
+  .sheet .who .art{width:46px;height:46px;border-radius:50%;background:linear-gradient(140deg,#6b4a58,#221c2a)}
+  .sheet .who .meta{flex:1;min-width:0}
+  .sheet .who .meta b{display:block;font-size:15px;font-weight:600}
+  .sheet .who .meta span{font-size:11px;color:var(--text-2)}
+  .sheet .who .logout{font-size:11px;font-weight:600;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:7px 12px}
+  .sheet .sect{font-size:9.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-3);font-weight:600;margin:18px 2px 6px}
+  .sheet .group{margin:0;background:var(--surface-2)}
+  .sheet .foot-note{font-size:10.5px;color:var(--text-3);text-align:center;margin-top:14px}
   /* listen together shortcut */
   .listen{
     display:flex;align-items:center;gap:11px;margin:14px 20px 0;
@@ -200,11 +226,12 @@
 <header class="page-head">
   <h1>Glossy · the screens, after the design</h1>
   <p>
-    Home, Mix, Library, Search and Settings as they are drawn now. The geometry, the
-    type scale and the spacing follow the Figma frames; every colour is a Material 3
-    role — <code>surface</code>, <code>surfaceContainer</code>, <code>primary</code> —
-    so the palette still comes from the theme seed (here the app's own pink) and the
-    mini player is the one you already ship.
+    Home, Mix, Library, Search, Settings and the Account sheet as they are drawn now.
+    The geometry, the type scale and the spacing follow the Figma frames; every colour
+    is a Material 3 role — <code>surface</code>, <code>surfaceContainer</code>,
+    <code>primary</code> — so the Materialistic skin still paints from the theme seed
+    (here the app's own pink). The mini player and the floating pill navigation are
+    the design's own, drawn once and shared by every screen.
   </p>
 </header>
 
@@ -221,8 +248,8 @@
             <div class="eyebrow">Good evening, chikku</div>
             <div class="headline" style="font-size:33px;letter-spacing:-1.1px">glossy</div>
           </div>
-          <div style="display:flex;align-items:center;gap:4px">
-            <div class="hdr-action">◍</div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div class="together">◍ Together</div>
             <div class="avatar">C</div>
           </div>
         </div>
@@ -296,13 +323,17 @@
           <div class="chip">Discover</div>
         </div>
 
-        <div class="grid2" style="padding-top:16px">
-          <div class="mix">
-            <div class="cover" style="height:122px;background:linear-gradient(160deg,#7a5367,#2a1f2a 78%)">
-              <div class="label">Your favourites</div>
-            </div>
-            <h5>Liked music</h5><p>128 songs · Auto playlist</p>
+        <div class="hero" style="height:158px;margin-top:14px;background:radial-gradient(120% 90% at 30% 15%,#7a5367 0%,#3a2630 48%,#17141b 100%)">
+          <div class="scrim"></div>
+          <div class="pill" style="top:14px;left:14px">Featured</div>
+          <div class="copy" style="bottom:16px">
+            <h3 style="font-size:21px">Liked music</h3>
+            <p>128 songs · Your favourites</p>
           </div>
+          <div class="play" style="right:14px;bottom:14px;width:42px;height:42px">▶</div>
+        </div>
+
+        <div class="grid2" style="padding-top:16px">
           <div class="mix">
             <div class="cover" style="height:122px"><div class="label">Made for you</div></div>
             <h5>Replay Mix</h5><p>Ryanded · Vivek</p>
@@ -336,7 +367,7 @@
       </nav>
       <div class="home-indicator"></div>
     </div>
-    <div class="tag">Eyebrow + title lockup · filter chips · labelled mix cards · footer line</div>
+    <div class="tag">Eyebrow + title lockup · For you / Favourites / Discover · featured Liked card · labelled mixes from the real feed · footer line</div>
   </div>
 
   <!-- LIBRARY -->
@@ -513,6 +544,67 @@
       <div class="home-indicator"></div>
     </div>
     <div class="tag">Account card · grouped rows with values and switches · quiet footer</div>
+  </div>
+
+  <!-- ACCOUNT SHEET -->
+  <div class="device">
+    <div class="label">Account</div>
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span class="glyphs">▮▮ ᯤ ▮</span></div>
+      <div class="body">
+        <div class="top row-between">
+          <div>
+            <div class="eyebrow">Your sound, reimagined</div>
+            <div class="headline">Mix for you</div>
+          </div>
+          <div class="avatar">C</div>
+        </div>
+        <div class="chips">
+          <div class="chip on">For you</div>
+          <div class="chip">Favourites</div>
+          <div class="chip">Discover</div>
+        </div>
+        <div class="grid2" style="padding-top:16px">
+          <div class="mix">
+            <div class="cover" style="height:110px"><div class="label">Made for you</div></div>
+            <h5>Replay Mix</h5><p>Ryanded · Vivek</p>
+          </div>
+          <div class="mix">
+            <div class="cover" style="height:110px;background:linear-gradient(160deg,#4a3340,#191a20 70%)"><div class="label">Made for you</div></div>
+            <h5>My Supermix</h5><p>A little of everything</p>
+          </div>
+        </div>
+      </div>
+      <div class="dim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <div class="sheet-head">
+          <h3>Glossy Nightly</h3>
+          <div class="close">✕</div>
+        </div>
+        <div class="who">
+          <div class="art"></div>
+          <div class="meta"><b>MYT--FOXA</b><span>@MYT--FOXA</span></div>
+          <div class="logout">Log out</div>
+          <div style="color:var(--text-3);font-size:12px">›</div>
+        </div>
+
+        <div class="sect">Account</div>
+        <div class="group">
+          <div class="grow"><div class="ico">⬡</div><div class="meta"><b>Tap to show token</b><span>Hidden until you ask for it</span></div><div class="val">›</div></div>
+          <div class="grow"><div class="ico">⊘</div><div class="meta"><b>More content</b></div><div class="switch"><i></i></div></div>
+          <div class="grow"><div class="ico">↻</div><div class="meta"><b>Auto-sync with account</b></div><div class="switch"><i></i></div></div>
+        </div>
+
+        <div class="sect">App</div>
+        <div class="group">
+          <div class="grow"><div class="ico">✳</div><div class="meta"><b>Integrations</b></div><div class="val">›</div></div>
+          <div class="grow"><div class="ico">⚙</div><div class="meta"><b>Settings</b></div><div class="val">›</div></div>
+        </div>
+        <div class="foot-note">The token stays hidden until you tap it.</div>
+      </div>
+    </div>
+    <div class="tag">Rounded-top sheet over the dimmed Mix screen · profile and sign-in state · hidden token · grouped app rows</div>
   </div>
 
 </div>

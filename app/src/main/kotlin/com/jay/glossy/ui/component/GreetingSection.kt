@@ -25,16 +25,21 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -48,6 +53,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -111,8 +117,12 @@ fun GreetingSection(
     // primaryContainer — so the text has to come from onPrimaryContainer rather
     // than the page's own onSurface.
     val tonalBand = band.alpha > 0f
-    val greetColor = if (tonalBand) GlossyPalette.OnHeaderBand else aurora
+    // On the page itself the eyebrow is the design's quiet secondary grey and
+    // the wordmark is primary text; the rose is reserved for the Listen
+    // Together action beside the avatar, not the greeting.
+    val greetColor = if (tonalBand) GlossyPalette.OnHeaderBand else GlossyPalette.TextSecondary
     val textPrimary = if (tonalBand) GlossyPalette.OnHeaderBand else GlossyPalette.TextPrimary
+    val actionColor = if (tonalBand) GlossyPalette.OnHeaderBand else GlossyPalette.Accent
     // A tonal band is a card of its own — fully rounded and inset from the
     // edges. The wash design runs edge to edge and only rounds its bottom.
     val bandShape = if (tonalBand) {
@@ -156,9 +166,9 @@ fun GreetingSection(
             }
             .padding(
                 start = GlossyDimens.ScreenPadding,
-                end = 16.dp,
-                top = 16.dp,
-                bottom = 20.dp,
+                end = GlossyDimens.ScreenPadding,
+                top = 14.dp,
+                bottom = 18.dp,
             ),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -194,17 +204,15 @@ fun GreetingSection(
             // avatar, where the old top bar kept it — one tap from the top of
             // the feed without taking a row of its own.
             if (onListenTogetherClick != null) {
-                GlossyIconAction(
-                    icon = R.drawable.group_outlined,
-                    contentDescription = stringResource(R.string.together),
-                    tint = greetColor,
-                    buttonSize = 40.dp,
-                    iconSize = 21.dp,
+                HeaderTogetherButton(
+                    label = stringResource(R.string.together),
+                    tint = actionColor,
                     onClick = onListenTogetherClick,
                 )
-                Spacer(Modifier.width(4.dp))
             }
             if (avatarUrl != null || onAvatarClick != null) {
+                // The design groups the two header actions with a hand's width
+                // between them; the button carries no margin of its own.
                 Spacer(Modifier.width(12.dp))
                 GlossyInitialAvatar(
                     name = firstName,
@@ -220,6 +228,54 @@ fun GreetingSection(
                         ),
                 )
             }
+        }
+    }
+}
+
+/**
+ * The compact "Listen together" button of the design's home header: a people
+ * icon and its label in an outlined pill that is only as wide as its content.
+ *
+ * The pill itself is 36dp tall, but the clickable box around it is 48dp so the
+ * touch target still meets the accessibility minimum without making the header
+ * look like a toolbar.
+ */
+@Composable
+private fun HeaderTogetherButton(
+    label: String,
+    tint: Color,
+    onClick: () -> Unit,
+) {
+    val pill = RoundedCornerShape(GlossyDimens.CornerPill)
+    Box(
+        modifier = Modifier
+            .heightIn(min = 48.dp)
+            .clip(pill)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(
+            modifier = Modifier
+                .height(36.dp)
+                .clip(pill)
+                .border(GlossyDimens.Hairline, tint.copy(alpha = 0.38f), pill)
+                .padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.group_outlined),
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(17.dp),
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text = label,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                color = tint,
+                maxLines = 1,
+            )
         }
     }
 }

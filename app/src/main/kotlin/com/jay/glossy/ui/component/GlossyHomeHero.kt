@@ -17,7 +17,9 @@
 package com.jay.glossy.ui.component
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -50,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.jay.glossy.R
+import com.jay.glossy.ui.theme.GlossyDimens
 import com.jay.glossy.ui.theme.GlossyPalette
 import com.jay.glossy.ui.theme.glossySwatchFor
 import com.jay.glossy.utils.joinToArtistString
@@ -78,7 +81,7 @@ fun GlossyDailyHero(
     // composition-only.
     val accent = GlossyPalette.Accent
     val onAccent = GlossyPalette.OnAccent
-    val shape = RoundedCornerShape(28.dp)
+    val shape = RoundedCornerShape(GlossyDimens.CornerHero)
 
     Box(
         modifier =
@@ -189,6 +192,7 @@ fun GlossyDailyHero(
  * [label] is the small caps line over the artwork ("MADE FOR YOU"); [subtitle]
  * is the caption under the title, which for an account playlist is its author.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun GlossyMixCard(
     title: String,
@@ -198,12 +202,16 @@ fun GlossyMixCard(
     subtitle: String? = null,
     imageUrl: String? = null,
     label: String? = null,
+    onLongClick: (() -> Unit)? = null,
 ) {
     val swatch = remember(seed) { glossySwatchFor(seed) }
     val coverShape = RoundedCornerShape(18.dp)
 
     Column(
-        modifier = modifier.clickable(onClick = onClick),
+        modifier = modifier.combinedClickable(
+            onClick = onClick,
+            onLongClick = onLongClick,
+        ),
     ) {
         Box(
             modifier =

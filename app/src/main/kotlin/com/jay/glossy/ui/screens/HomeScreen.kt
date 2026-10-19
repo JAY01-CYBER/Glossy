@@ -836,9 +836,10 @@ fun HomeScreen(
     val showFeaturedCarouselPref by rememberPreference(ShowFeaturedCarouselKey, defaultValue = true)
     val quickPicksStylePref by rememberEnumPreference(QuickPicksStyleKey, defaultValue = QuickPicksStyle.GRID)
 
-    // The new design always drew the compact "Quick picks" rows and the 96dp
-    // "Listen again" cards. It is pinned off now, so the classic home wins.
-    val newDesign = ActiveDesignStyle == DesignStyle.TEAL
+    // The redesign is the app's look now: it draws the compact "Quick picks"
+    // rows and the 96dp "Listen again" cards. Only the classic style keeps the
+    // old home, and nothing selects it.
+    val newDesign = ActiveDesignStyle != DesignStyle.CLASSIC
 
     // The header signs the feed with the listener's name and the "Made for …"
     // shelf names them again. Both resolve it from the same three sources in

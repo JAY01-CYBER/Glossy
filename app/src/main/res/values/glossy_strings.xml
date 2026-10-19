@@ -48,6 +48,13 @@
     <string name="glossy_hero_eyebrow">The daily edit</string>
     <!-- Mix — the eyebrow above the title -->
     <string name="glossy_mix_eyebrow">Your sound, reimagined</string>
+    <!-- Mix — the page title, filters, featured card and empty state -->
+    <string name="mix_for_you_title">Mix for you</string>
+    <string name="glossy_mix_for_you">For you</string>
+    <string name="glossy_mix_favourites">Favourites</string>
+    <string name="glossy_mix_discover">Discover</string>
+    <string name="glossy_mix_featured">Featured</string>
+    <string name="glossy_mix_empty">Play a few songs and your mixes will appear here.</string>
     <!-- Mix — the line under the grid -->
     <string name="glossy_mix_evolving">Always evolving with your listening.</string>
     <!-- Search — the landing page before a query is typed -->

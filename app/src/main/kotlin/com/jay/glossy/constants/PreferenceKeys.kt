@@ -139,22 +139,23 @@ enum class MiniPlayerStyle {
 /**
  * Which visual language the app paints itself with.
  *
- * [TEAL] is the dark design system with the fixed palette, and [CLASSIC] is
- * the previous Material You look. Only dark mode is themed: light mode keeps
- * the Material You scheme in both cases.
+ * [FIGMA] is the design's own after-dark palette (charcoal surfaces, soft-rose
+ * accent), [TEAL] the earlier fixed teal system, [CLASSIC] the previous
+ * Material You look and [MATERIALISTIC] the tonal skin that repaints from the
+ * seed colour. Only dark mode is themed: light mode keeps the Material You
+ * scheme in every case.
  */
 val DesignStyleKey = stringPreferencesKey("designStyle")
 
 /**
  * The look the app actually paints with.
  *
- * The app runs the Materialistic skin: the redesigned screens keep their
- * layout, but every colour comes from the Material 3 scheme — tonal surfaces,
- * the primary role as the accent, a `primaryContainer` home header — so the
- * whole app repaints from the seed colour and follows Material You on
- * Android 12+. The classic near-black/teal palette and the teal design are
- * still described by [DesignStyle] so those code paths keep compiling, but
- * nothing selects them.
+ * The redesign is a fixed layout with a tonal palette: the screens keep the
+ * design's geometry, type and spacing, while [DesignStyle.MATERIALISTIC] paints
+ * them from the Material 3 scheme so the app follows the listener's seed colour
+ * and Material You wallpaper theming. [DesignStyle.FIGMA] can pin the design's
+ * exact charcoal/rose tokens instead; [DesignStyle.TEAL] and
+ * [DesignStyle.CLASSIC] describe the earlier looks, and nothing selects those.
  */
 val ActiveDesignStyle = DesignStyle.MATERIALISTIC
 
@@ -183,6 +184,9 @@ val DynamicColorEnabledKey = booleanPreferencesKey("dynamicColorEnabled")
 val DownloadOverWifiOnlyKey = booleanPreferencesKey("downloadOverWifiOnly")
 
 enum class DesignStyle {
+    /** The design's fixed after-dark palette: charcoal with the rose accent. */
+    FIGMA,
+
     /** The hand-tuned dark design with the fixed teal palette. */
     TEAL,
 

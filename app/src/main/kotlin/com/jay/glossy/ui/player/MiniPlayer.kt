@@ -178,6 +178,7 @@ import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.component.ArtworkNotesOverlay
 import com.jay.glossy.ui.component.NowPlayingAnimationIndicator
 import com.jay.glossy.ui.component.rememberAmbientMotionEnabled
+import com.jay.glossy.ui.theme.GlossyDimens
 import com.jay.glossy.ui.theme.GlossyPalette
 import com.jay.glossy.ui.menu.AddToPlaylistDialog
 
@@ -206,9 +207,10 @@ fun MiniPlayer(
         defaultValue = MiniPlayerStyle.MODERN
     )
 
-    // The design style is pinned to classic, so the stored mini player style
-    // always wins. While the new design was selectable it forced Studio.
-    val miniPlayerStyle = if (ActiveDesignStyle == DesignStyle.TEAL) {
+    // The redesigned app always draws the design's own bar: square artwork, the
+    // title/artist pair and the transport in one row over the rose hairline. The
+    // stored style only applies to the classic look, which nothing selects.
+    val miniPlayerStyle = if (ActiveDesignStyle != DesignStyle.CLASSIC) {
         MiniPlayerStyle.STUDIO
     } else {
         miniPlayerStylePreference
@@ -366,7 +368,7 @@ private fun GlossyBarMiniPlayer(
                 .fillMaxWidth()
                 .fillMaxHeight()
                 .offset { IntOffset(offsetX().roundToInt(), 0) }
-                .clip(RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(GlossyDimens.CornerMiniPlayer))
                 .background(containerColor)
                 .clickable(onClick = onClick),
         ) {

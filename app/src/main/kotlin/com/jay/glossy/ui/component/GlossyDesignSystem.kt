@@ -171,12 +171,13 @@ fun <T> GlossyChipRow(
     currentValue: T?,
     onValueUpdate: (T) -> Unit,
     modifier: Modifier = Modifier,
+    contentPadding: Dp = GlossyDimens.ScreenPadding,
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
-            .padding(horizontal = GlossyDimens.ScreenPadding),
+            .padding(horizontal = contentPadding),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
