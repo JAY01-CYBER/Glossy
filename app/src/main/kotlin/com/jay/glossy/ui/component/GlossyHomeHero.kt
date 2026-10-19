@@ -141,12 +141,15 @@ fun GlossyDailyHero(
             }
 
             Column(modifier = Modifier.padding(end = 62.dp)) {
+                // The design's editorial headline: 35 with a 108% line box and
+                // slightly tight tracking — the one headline at that scale, so
+                // it stays the loudest thing under the eyebrow.
                 Text(
                     text = item.recommendation.title,
-                    fontSize = 25.sp,
-                    lineHeight = 30.sp,
+                    fontSize = 35.sp,
+                    lineHeight = 38.sp,
                     fontWeight = FontWeight.SemiBold,
-                    letterSpacing = (-0.4).sp,
+                    letterSpacing = (-0.6).sp,
                     color = Color.White,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,

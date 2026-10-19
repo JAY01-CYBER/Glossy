@@ -232,6 +232,10 @@ fun GlossyBottomNav(
                 .fillMaxWidth()
                 .padding(horizontal = 4.dp)
                 .height(if (slimNav) 56.dp else GlossyDimens.NavPillHeight)
+                // The design's bar carries a border *and* a soft shadow, so it
+                // reads as a control floating over the feed rather than a strip
+                // painted onto it.
+                .shadow(elevation = 12.dp, shape = pill, clip = false)
                 .clip(pill)
                 .background(container)
                 .border(GlossyDimens.Hairline, outline, pill)

@@ -151,8 +151,6 @@ import com.jay.glossy.constants.SwipeSensitivityKey
 import com.jay.glossy.constants.SwipeThumbnailKey
 import com.jay.glossy.constants.ThumbnailCornerRadius
 import com.jay.glossy.constants.ThumbnailShadowKey
-import com.jay.glossy.constants.ActiveDesignStyle
-import com.jay.glossy.constants.DesignStyle
 import com.jay.glossy.constants.MiniPlayerStyle
 import com.jay.glossy.constants.MiniPlayerStyleKey
 import com.jay.glossy.constants.MiniPlayerPlayingAnimation
@@ -202,18 +200,18 @@ fun MiniPlayer(
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {},
 ) {
-    val miniPlayerStylePreference by rememberEnumPreference(
-        MiniPlayerStyleKey,
-        defaultValue = MiniPlayerStyle.MODERN
-    )
+    // Read as the raw string so "never touched" and "picked the default" are
+    // not the same thing: unset falls back to the design's bar, a saved choice
+    // always wins.
+    val (storedMiniPlayerStyle) = rememberPreference(MiniPlayerStyleKey, defaultValue = "")
 
-    // The redesigned app always draws the design's own bar: square artwork, the
-    // title/artist pair and the transport in one row over the rose hairline. The
-    // stored style only applies to the classic look, which nothing selects.
-    val miniPlayerStyle = if (ActiveDesignStyle != DesignStyle.CLASSIC) {
-        MiniPlayerStyle.STUDIO
-    } else {
-        miniPlayerStylePreference
+    // The style the listener picked is the style they get — every entry in
+    // Settings › Appearance › Mini player style still works. The design's own
+    // bar is only what an unset preference falls back to, so the redesign ships
+    // with the bar of the design without pinning anybody to it.
+    val miniPlayerStyle = remember(storedMiniPlayerStyle) {
+        MiniPlayerStyle.entries.firstOrNull { it.name == storedMiniPlayerStyle }
+            ?: MiniPlayerStyle.STUDIO
     }
     val pureBlack by rememberPreference(PureBlackMiniPlayerKey, defaultValue = false)
 

@@ -33,6 +33,7 @@ import com.jay.glossy.constants.ActiveDesignStyle
 import com.jay.glossy.constants.AppFont
 import com.jay.glossy.constants.CustomFontPathKey
 import com.jay.glossy.constants.DesignStyle
+import com.jay.glossy.constants.DesignStyleKey
 import com.jay.glossy.constants.SelectedFontKey
 import com.jay.glossy.utils.rememberPreference
 
@@ -76,11 +77,13 @@ fun MetrolistTheme(
         style = PaletteStyle.Expressive
     )
 
-    // The redesigned surfaces read these tokens instead of hardcoded colours,
-    // so they follow the theme. Under the tonal style they are derived from the
-    // seed scheme; under the design style they are the design's own set, so the
-    // app never drifts back to the seed's maroon.
-    val materialistic = ActiveDesignStyle == DesignStyle.MATERIALISTIC
+    // The redesigned surfaces read these tokens instead of hardcoded colours.
+    // Which set they read is the listener's choice — the design's own
+    // charcoal/rose tokens by default, or the Materialistic skin that derives
+    // every role from the seed scheme (and Material You on Android 12+).
+    // [ActiveDesignStyle] only decides which layout is drawn, never the paint.
+    val (paletteName) = rememberPreference(DesignStyleKey, defaultValue = ActiveDesignStyle.name)
+    val materialistic = remember(paletteName) { paletteName == DesignStyle.MATERIALISTIC.name }
     val designColors =
         if (ActiveDesignStyle == DesignStyle.FIGMA) GlossyColors.Figma else GlossyColors.Dark
     val glossyColors = when {

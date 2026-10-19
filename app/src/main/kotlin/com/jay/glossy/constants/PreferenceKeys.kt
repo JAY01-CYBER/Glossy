@@ -137,27 +137,29 @@ enum class MiniPlayerStyle {
 }
 
 /**
- * Which visual language the app paints itself with.
+ * Which palette the redesign paints with — a real, changeable choice, read by
+ * the theme and written by Settings › Appearance › Design palette.
  *
  * [FIGMA] is the design's own after-dark palette (charcoal surfaces, soft-rose
- * accent), [TEAL] the earlier fixed teal system, [CLASSIC] the previous
- * Material You look and [MATERIALISTIC] the tonal skin that repaints from the
- * seed colour. Only dark mode is themed: light mode keeps the Material You
- * scheme in every case.
+ * accent) and is what the app ships with. [MATERIALISTIC] is the tonal skin
+ * that repaints every surface from the listener's seed colour. Both draw the
+ * same layout; only the paint differs. [TEAL] and [CLASSIC] describe the
+ * retired looks and are accepted but never offered.
  */
 val DesignStyleKey = stringPreferencesKey("designStyle")
 
 /**
- * The look the app actually paints with.
+ * The look the app actually draws with.
  *
- * The redesign is a fixed layout with a tonal palette: the screens keep the
- * design's geometry, type and spacing, while [DesignStyle.MATERIALISTIC] paints
- * them from the Material 3 scheme so the app follows the listener's seed colour
- * and Material You wallpaper theming. [DesignStyle.FIGMA] can pin the design's
- * exact charcoal/rose tokens instead; [DesignStyle.TEAL] and
- * [DesignStyle.CLASSIC] describe the earlier looks, and nothing selects those.
+ * The redesign is one layout painted two ways: [ActiveDesignStyle] says the app
+ * draws the design's screens, and [DesignStyleKey] below says which palette
+ * paints them — [DesignStyle.FIGMA] for the design's own charcoal/rose tokens
+ * (the default, so the app looks exactly like the frames) or
+ * [DesignStyle.MATERIALISTIC] for the tonal skin that repaints from the seed
+ * colour. [DesignStyle.TEAL] and [DesignStyle.CLASSIC] describe the earlier
+ * looks and nothing selects them.
  */
-val ActiveDesignStyle = DesignStyle.MATERIALISTIC
+val ActiveDesignStyle = DesignStyle.FIGMA
 
 /** Nickname a guest picks on the welcome screen. */
 val GuestNameKey = stringPreferencesKey("guest_name")

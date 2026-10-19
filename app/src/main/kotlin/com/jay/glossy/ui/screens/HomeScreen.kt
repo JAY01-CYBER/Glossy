@@ -1020,6 +1020,13 @@ fun HomeScreen(
     LaunchedEffect(quickPicks) { quickPicksLazyGridState.scrollToItem(0) }
     LaunchedEffect(forgottenFavorites) { forgottenFavoritesLazyGridState.scrollToItem(0) }
 
+    // The design opens the feed with one editorial card, so the first of the
+    // daily-discover recommendations is lifted out of its section and drawn as
+    // the hero right under the header; the rest keep their own shelf below.
+    val discoverItems = dailyDiscover.orEmpty()
+    val heroDiscover = if (newDesign && selectedChip == null) discoverItems.firstOrNull() else null
+    val restDiscover = if (heroDiscover != null) discoverItems.drop(1) else discoverItems
+
     PullToRefreshBox(
         state = pullRefreshState,
         isRefreshing = isRefreshing,
@@ -1100,6 +1107,41 @@ fun HomeScreen(
                                 items = chipItems,
                                 currentValue = selectedChip,
                                 onValueUpdate = { viewModel.toggleChip(it) },
+                            )
+                        }
+                    }
+                }
+
+                // The editorial hero of the design: one recommendation given the
+                // whole width, opening the page the way the frames do — after the
+                // greeting and the chips, before the personal shelf.
+                if (heroDiscover != null) {
+                    item(key = "hero_editorial", contentType = "hero") {
+                        Box(
+                            modifier = Modifier
+                                .animateItem()
+                                .fillMaxWidth()
+                                .padding(horizontal = GlossyDimens.ScreenPadding),
+                        ) {
+                            GlossyDailyHero(
+                                item = heroDiscover,
+                                onClick = {
+                                    val song = heroDiscover.recommendation as? SongItem
+                                    val heroMetadata = song?.toMediaMetadata()
+                                    if (song != null && heroMetadata != null) {
+                                        playerConnection.playQueue(
+                                            if (autoRadioQueue) {
+                                                YouTubeQueue(
+                                                    song.endpoint ?: WatchEndpoint(videoId = song.id),
+                                                    heroMetadata,
+                                                )
+                                            } else {
+                                                ListQueue(title = song.title, items = listOf(song.toMediaItem()))
+                                            },
+                                        )
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth().height(250.dp),
                             )
                         }
                     }
@@ -1723,7 +1765,9 @@ fun HomeScreen(
 
                         HomeSection.QuickPicks -> {
                             quickPicks?.takeIf { it.isNotEmpty() }?.let { quickPicksList ->
-                                val materialistic = ActiveDesignStyle == DesignStyle.MATERIALISTIC
+                                // The art-forward shelf is part of the redesign
+                                // and belongs to every palette it paints with.
+                                val materialistic = ActiveDesignStyle != DesignStyle.CLASSIC
                                 item(key = "quick_picks_title", contentType = "section_header") {
                                     if (materialistic) {
                                         val quickPicksTitle = stringResource(R.string.quick_picks)
@@ -2061,7 +2105,7 @@ fun HomeScreen(
                         }
 
                         HomeSection.DailyDiscover -> {
-                            dailyDiscover?.takeIf { it.isNotEmpty() }?.let { discoverList ->
+                            restDiscover.takeIf { it.isNotEmpty() }?.let { discoverList ->
                                 item(key = "daily_discover_title", contentType = "section_header") {
                                     Box(modifier = Modifier.animateItem()) {
                                         NavigationTitle(
