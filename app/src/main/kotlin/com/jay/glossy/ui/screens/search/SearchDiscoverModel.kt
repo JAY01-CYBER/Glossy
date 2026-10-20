@@ -95,9 +95,13 @@ fun ChartsPage.toDiscover(
     rankedCount: Int = RankedCount,
     albumCount: Int = AlbumCount,
 ): SearchDiscoverData {
-    val sections = sections.filter { it.title != "Top music videos" }
-    val trending = sections.firstOrNull { it.chartType == ChartsPage.ChartType.TRENDING }
-    val ordered = listOfNotNull(trending) + sections.filter { it !== trending }
+    // Music videos are not what the page's rows want, but a response that holds
+    // nothing else still beats an empty page: fall back to the whole sheet
+    // rather than dropping every row the chart did return.
+    val withoutVideos = sections.filter { it.title != "Top music videos" }
+    val usable = withoutVideos.ifEmpty { sections }
+    val trending = usable.firstOrNull { it.chartType == ChartsPage.ChartType.TRENDING }
+    val ordered = listOfNotNull(trending) + usable.filter { it !== trending }
 
     val ranked = ordered
         .asSequence()
@@ -107,8 +111,8 @@ fun ChartsPage.toDiscover(
         .take(rankedCount)
         .toList()
 
-    val albums = (sections.firstOrNull { it.chartType == ChartsPage.ChartType.NEW_RELEASES }
-        ?.let { listOf(it) } ?: sections)
+    val albums = (usable.firstOrNull { it.chartType == ChartsPage.ChartType.NEW_RELEASES }
+        ?.let { listOf(it) } ?: usable)
         .asSequence()
         .flatMap { it.items.asSequence() }
         .filterIsInstance<AlbumItem>()

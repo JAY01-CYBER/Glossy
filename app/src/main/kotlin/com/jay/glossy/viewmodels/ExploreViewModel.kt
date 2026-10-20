@@ -73,6 +73,16 @@ constructor(
             }
     }
 
+    /**
+     * Re-runs the browse request. The discovery page's "Try again" calls this,
+     * so a failed first load is not the end of the page for the session.
+     */
+    fun refresh() {
+        viewModelScope.launch(Dispatchers.IO) {
+            load()
+        }
+    }
+
     init {
         viewModelScope.launch(Dispatchers.IO) {
             load()

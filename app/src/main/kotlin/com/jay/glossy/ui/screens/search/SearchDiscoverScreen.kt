@@ -74,6 +74,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -92,6 +93,7 @@ import com.jay.glossy.ui.theme.GlossyDimens
 import com.jay.glossy.ui.theme.GlossyPalette
 import com.jay.glossy.ui.theme.glossySwatchFor
 import com.jay.glossy.viewmodels.ChartsViewModel
+import com.jay.glossy.viewmodels.ExploreViewModel
 import com.metrolist.innertube.models.AlbumItem
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.WatchEndpoint
@@ -114,10 +116,14 @@ fun SearchDiscoverRoute(
     onSeeAllRecent: () -> Unit,
     modifier: Modifier = Modifier,
     chartsViewModel: ChartsViewModel = hiltViewModel(),
+    exploreViewModel: ExploreViewModel = hiltViewModel(),
 ) {
     val chartsPage by chartsViewModel.chartsPage.collectAsStateWithLifecycle()
     val isLoading by chartsViewModel.isLoading.collectAsStateWithLifecycle()
     val error by chartsViewModel.error.collectAsStateWithLifecycle()
+    // The explore browse is the fallback source: it returns the new-release
+    // albums in every region, where the charts response can come back empty.
+    val explorePage by exploreViewModel.explorePage.collectAsStateWithLifecycle()
 
     val database = LocalDatabase.current
     val history by database.searchHistory().collectAsState(initial = emptyList())
@@ -145,9 +151,17 @@ fun SearchDiscoverRoute(
         focusRequester = focusRequester,
         tab = tab,
         onTabChange = { tab = it },
-        data = remember(chartsPage) { chartsPage?.toDiscover() ?: SearchDiscoverData() },
-        isLoading = isLoading && chartsPage == null,
-        errorMessage = if (chartsPage == null) error else null,
+        data = remember(chartsPage, explorePage) {
+            val fromCharts = chartsPage?.toDiscover() ?: SearchDiscoverData()
+            fromCharts.copy(
+                albums = fromCharts.albums
+                    .ifEmpty { explorePage?.newReleaseAlbums.orEmpty() }
+                    .distinctBy { it.id }
+                    .take(8),
+            )
+        },
+        isLoading = isLoading && chartsPage == null && explorePage == null,
+        errorMessage = if (chartsPage == null && explorePage == null) error else null,
         recentSearches = remember(history) { history.take(3).map { it.query } },
         nowPlayingId = mediaMetadata?.id,
         onSearch = onSearch,
@@ -162,7 +176,10 @@ fun SearchDiscoverRoute(
             )
         },
         onOpenAlbum = { album -> navController.navigate("album/${album.id}") },
-        onRetry = chartsViewModel::loadCharts,
+        onRetry = {
+            chartsViewModel.loadCharts()
+            exploreViewModel.refresh()
+        },
         modifier = modifier,
     )
 }
@@ -195,6 +212,12 @@ fun SearchDiscoverPage(
             .only(WindowInsetsSides.Bottom)
             .asPaddingValues()
             .calculateBottomPadding()
+
+    // Read here, not inside the lazy content lambda: [LazyColumn]'s scope is not
+    // composable, so the shelf states take their copy as plain strings.
+    val retryLabel = stringResource(R.string.glossy_search_retry)
+    val emptyText = stringResource(R.string.glossy_search_empty)
+    val shelfMessage = errorMessage?.takeIf { it.isNotBlank() } ?: emptyText
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -229,28 +252,13 @@ fun SearchDiscoverPage(
             }
         }
 
-        when {
-            isLoading -> item(key = "discover_loading") { DiscoverSkeleton() }
+        // The header and the tabs always draw, and so does everything the page
+        // can show without a network: the mood grid and the recent searches are
+        // local. A slow, empty or failed chart response must never blank the
+        // whole page — each shelf that needs it reports itself instead.
 
-            errorMessage != null ->
-                item(key = "discover_error") {
-                    DiscoverMessage(
-                        message = errorMessage.ifBlank { stringResource(R.string.glossy_search_error) },
-                        action = stringResource(R.string.glossy_search_retry),
-                        onAction = onRetry,
-                    )
-                }
-
-            data.isEmpty ->
-                item(key = "discover_empty") {
-                    DiscoverMessage(
-                        message = stringResource(R.string.glossy_search_empty),
-                        action = stringResource(R.string.glossy_search_retry),
-                        onAction = onRetry,
-                    )
-                }
-
-            tab == DiscoverTab.Explore -> {
+        when (tab) {
+            DiscoverTab.Explore -> {
                 item(key = "discover_moods_title") {
                     DiscoverSectionTitle(stringResource(R.string.glossy_search_shelf))
                 }
@@ -272,30 +280,59 @@ fun SearchDiscoverPage(
                         )
                     }
                 }
-                if (data.albums.isNotEmpty()) {
-                    item(key = "discover_trending_title") {
-                        DiscoverSectionTitle(stringResource(R.string.glossy_search_trending))
-                    }
-                    item(key = "discover_trending") {
-                        TrendingShelf(albums = data.albums, onOpenAlbum = onOpenAlbum)
-                    }
+                item(key = "discover_trending_title") {
+                    DiscoverSectionTitle(stringResource(R.string.glossy_search_trending))
+                }
+                when {
+                    data.albums.isNotEmpty() ->
+                        item(key = "discover_trending") {
+                            TrendingShelf(albums = data.albums, onOpenAlbum = onOpenAlbum)
+                        }
+
+                    isLoading ->
+                        item(key = "discover_trending_loading") { DiscoverSkeleton() }
+
+                    else ->
+                        item(key = "discover_trending_notice") {
+                            DiscoverNotice(
+                                message = shelfMessage,
+                                action = retryLabel,
+                                onAction = onRetry,
+                            )
+                        }
                 }
             }
 
-            tab == DiscoverTab.Suggestions -> {
-                item(key = "discover_ranked_title") {
-                    DiscoverSectionTitle(stringResource(R.string.glossy_search_trending))
-                }
-                itemsIndexed(
-                    items = data.ranked,
-                    key = { _, song -> "discover_rank_${song.id}" },
-                ) { index, song ->
-                    RankedSongRow(
-                        rank = song.chartPosition ?: (index + 1),
-                        song = song,
-                        isActive = song.id == nowPlayingId,
-                        onClick = { onPlaySong(song) },
-                    )
+            DiscoverTab.Suggestions -> {
+                when {
+                    data.ranked.isNotEmpty() -> {
+                        item(key = "discover_ranked_title") {
+                            DiscoverSectionTitle(stringResource(R.string.glossy_search_trending))
+                        }
+                        itemsIndexed(
+                            items = data.ranked,
+                            key = { _, song -> "discover_rank_${song.id}" },
+                        ) { index, song ->
+                            RankedSongRow(
+                                rank = song.chartPosition ?: (index + 1),
+                                song = song,
+                                isActive = song.id == nowPlayingId,
+                                onClick = { onPlaySong(song) },
+                            )
+                        }
+                    }
+
+                    isLoading ->
+                        item(key = "discover_ranked_loading") { DiscoverSkeleton() }
+
+                    else ->
+                        item(key = "discover_ranked_notice") {
+                            DiscoverNotice(
+                                message = shelfMessage,
+                                action = retryLabel,
+                                onAction = onRetry,
+                            )
+                        }
                 }
                 if (data.albums.isNotEmpty()) {
                     item(key = "discover_suggestions_albums_title") {
@@ -307,12 +344,28 @@ fun SearchDiscoverPage(
                 }
             }
 
-            else -> {
-                item(key = "discover_albums_title") {
-                    DiscoverSectionTitle(stringResource(R.string.albums))
-                }
-                item(key = "discover_albums") {
-                    AlbumGrid(albums = data.albums, onOpenAlbum = onOpenAlbum)
+            DiscoverTab.Albums -> {
+                when {
+                    data.albums.isNotEmpty() -> {
+                        item(key = "discover_albums_title") {
+                            DiscoverSectionTitle(stringResource(R.string.albums))
+                        }
+                        item(key = "discover_albums") {
+                            AlbumGrid(albums = data.albums, onOpenAlbum = onOpenAlbum)
+                        }
+                    }
+
+                    isLoading ->
+                        item(key = "discover_albums_loading") { DiscoverSkeleton() }
+
+                    else ->
+                        item(key = "discover_albums_notice") {
+                            DiscoverNotice(
+                                message = shelfMessage,
+                                action = retryLabel,
+                                onAction = onRetry,
+                            )
+                        }
                 }
             }
         }
@@ -802,9 +855,12 @@ private fun DiscoverSkeleton() {
     }
 }
 
-/** Shared error / empty state: one line of copy and the way out of it. */
+/**
+ * A shelf that has nothing to show yet: one line of copy and a compact retry
+ * pill, drawn in place of that shelf rather than over the whole page.
+ */
 @Composable
-private fun DiscoverMessage(
+private fun DiscoverNotice(
     message: String,
     action: String,
     onAction: () -> Unit,
@@ -813,20 +869,17 @@ private fun DiscoverMessage(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = GlossyDimens.ScreenPadding, vertical = 40.dp),
+                .padding(horizontal = GlossyDimens.ScreenPadding, vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
             text = message,
             style = MaterialTheme.typography.bodyMedium,
             color = GlossyPalette.TextSecondary,
+            textAlign = TextAlign.Center,
         )
-        Spacer(Modifier.height(16.dp))
-        GlossyPillButton(
-            text = action,
-            onClick = onAction,
-            modifier = Modifier.fillMaxWidth(),
-        )
+        Spacer(Modifier.height(12.dp))
+        GlossyPillButton(text = action, onClick = onAction)
     }
 }
 
