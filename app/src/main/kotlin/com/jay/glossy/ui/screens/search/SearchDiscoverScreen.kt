@@ -85,7 +85,7 @@ import com.jay.glossy.LocalNavController
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.R
-import com.jay.glossy.models.MediaMetadata
+import com.metrolist.models.MediaMetadata
 import com.jay.glossy.playback.queues.YouTubeQueue
 import com.jay.glossy.ui.component.GlossyPillButton
 import com.jay.glossy.ui.theme.GlossyDimens
