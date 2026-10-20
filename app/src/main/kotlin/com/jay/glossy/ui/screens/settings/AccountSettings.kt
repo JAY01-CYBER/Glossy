@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -388,20 +387,21 @@ fun AccountSettings(
 
         Spacer(Modifier.height(16.dp))
 
-        // The design keeps the two account actions below the preferences, as
-        // their own controls, rather than tucking a log-out pill into the
-        // account row where it competes with the row's own tap target.
-        AccountActionPill(
-            label = stringResource(
-                if (isLoggedIn) R.string.glossy_switch_account else R.string.login
-            ),
-            onClick = {
-                onClose()
-                navController.navigate(if (isLoggedIn) "account" else "login")
-            },
-        )
-
+        // Both actions belong to a signed-in account, and sit below the
+        // preferences as their own controls rather than tucked into the account
+        // row. Signed out there is exactly one way in — the hero card above —
+        // because a second Login button under it was the same action twice and
+        // read as if the sheet had not noticed the user was already being asked
+        // to sign in.
         if (isLoggedIn) {
+            AccountActionPill(
+                label = stringResource(R.string.glossy_switch_account),
+                onClick = {
+                    onClose()
+                    navController.navigate("account")
+                },
+            )
+
             SignOutRow(
                 label = stringResource(R.string.glossy_sign_out),
                 onClick = {
@@ -465,9 +465,9 @@ fun AccountSettings(
             }
         }
 
+        // The floating sheet's own bottom inset clears the gesture bar, so the
+        // content only needs its closing gap.
         Spacer(Modifier.height(24.dp))
-        // The sheet ends at the screen edge; its last row clears the gesture bar.
-        Spacer(Modifier.navigationBarsPadding())
     }
 }
 

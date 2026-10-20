@@ -559,7 +559,8 @@ fun BottomSheetPlayer(
     // repeating the same Queue / Lyrics / Repeat controls a second time.
     val actualPeekHeight =
         if (playerStyle.name == "WAVY" || playerStyle.name == "VINYL" ||
-            playerStyle.name == "CAPSULE" || playerStyle.name == "CINEMATIC"
+            playerStyle.name == "CAPSULE" || playerStyle.name == "CINEMATIC" ||
+            playerStyle.name == "GLASS_SHEET"
         ) {
             0.dp
         } else {
@@ -603,6 +604,7 @@ fun BottomSheetPlayer(
         playerStyle.name == "CAPSULE" ->
             if (playerBackground == PlayerBackgroundStyle.DEFAULT) capsuleGradient?.firstOrNull() else null
         playerStyle.name == "CINEMATIC" -> Color.Black
+        playerStyle.name == "GLASS_SHEET" -> Color.Black
         playerStyle.name == "APPLE_MUSIC" -> Color(0xFF121212)
         else -> null
     }
@@ -727,6 +729,16 @@ fun BottomSheetPlayer(
             queueOverlay()
         } else if (playerStyle.name == "CINEMATIC") {
             CinematicNowPlaying(
+                bottomSheetState = state,
+                position = { effectivePosition },
+                duration = duration,
+                onOpenQueue = { scope.launch { queueSheetState.expandSoft() } },
+                bottomInset = queueSheetState.collapsedBound,
+                modifier = Modifier.fillMaxSize(),
+            )
+            queueOverlay()
+        } else if (playerStyle.name == "GLASS_SHEET") {
+            GlassSheetNowPlaying(
                 bottomSheetState = state,
                 position = { effectivePosition },
                 duration = duration,

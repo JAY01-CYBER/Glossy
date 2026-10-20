@@ -99,4 +99,10 @@
     <!-- Listen Together — the shortcut on Home and its group in Settings -->
     <string name="glossy_listen_together_hint">Start a session and listen with friends</string>
     <string name="glossy_together_group">With friends</string>
+    <!-- Home greeting card: the ghosted brand note beside the listener's name -->
+    <string name="glossy_nightly">Glossy Nightly</string>
+    <!-- Glass sheet player: the metadata cells above the seek bar -->
+    <string name="glossy_glass_album">Album</string>
+    <string name="glossy_glass_artist">Artist</string>
+    <string name="glossy_glass_length">Length</string>
 </resources>

@@ -114,7 +114,13 @@ enum class PlayerStyle {
     CAPSULE,
 
     /** Full-bleed album artwork behind glass controls. */
-    CINEMATIC
+    CINEMATIC,
+
+    /**
+     * The playing artwork, blurred edge to edge, under one frosted sheet that
+     * carries the title, metadata, seek bar and transport.
+     */
+    GLASS_SHEET
 }
 
 val MiniPlayerStyleKey = stringPreferencesKey("miniPlayerStyle")
@@ -509,6 +515,9 @@ val StreamSourceWebCreatorKey = booleanPreferencesKey("streamSourceWebCreator")
 val StreamSourceAndroidCreatorKey = booleanPreferencesKey("streamSourceAndroidCreator")
 
 val EnableDynamicIconKey = booleanPreferencesKey("enableDynamicIcon")
+
+/** The chosen launcher icon, stored as an [com.jay.glossy.utils.AppIcon] name. */
+val AppIconKey = stringPreferencesKey("appIcon")
 
 val EnableDiscordRPCKey = booleanPreferencesKey("discordRPCEnable")
 val DiscordInfoDismissedKey = booleanPreferencesKey("discordInfoDismissed")

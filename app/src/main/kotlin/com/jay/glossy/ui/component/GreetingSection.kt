@@ -8,8 +8,10 @@
  *
  * The card is the whole header. The app's own top bar already draws the Glossy
  * wordmark and its actions, so this section adds no second brand row of its own:
- * no wordmark, no action pill, no ghosted app name, and no per-user controls
- * inside the card. It is the greeting and the name, nothing else.
+ * no wordmark, no action pill and no per-user controls inside the card. The one
+ * brand note it does carry is the ghosted "Glossy Nightly" set beside the name —
+ * a watermark on the greaseproof card, not a heading, so it sits at low opacity
+ * in the accent ink and is clipped by the card's rounded edge.
  *
  * Colours come from [GlossyPalette], so the card follows the skin: the rose
  * gradient of the design is the Materialistic theme's `primaryContainer` band,
@@ -20,6 +22,7 @@ package com.jay.glossy.ui.component
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -35,6 +38,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -106,16 +111,34 @@ fun GreetingSection(userName: String) {
                     overflow = TextOverflow.Ellipsis,
                 )
                 Spacer(Modifier.height(2.dp))
-                Text(
-                    text = firstName,
-                    fontFamily = OutfitFontFamily,
-                    fontSize = 27.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = (-0.6).sp,
-                    color = ink,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        text = firstName,
+                        fontFamily = OutfitFontFamily,
+                        fontSize = 27.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = (-0.6).sp,
+                        color = ink,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    // The watermark: set beside the name, on its baseline, and
+                    // allowed to run under the card's rounded edge instead of
+                    // wrapping. It is decoration only — nothing taps it.
+                    Text(
+                        text = stringResource(R.string.glossy_nightly),
+                        fontFamily = FontFamily.Serif,
+                        fontStyle = FontStyle.Italic,
+                        fontSize = 36.sp,
+                        fontWeight = FontWeight.Normal,
+                        letterSpacing = (-0.5).sp,
+                        color = ink.copy(alpha = 0.18f),
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Clip,
+                        modifier = Modifier.padding(start = 6.dp),
+                    )
+                }
             }
         }
     }
