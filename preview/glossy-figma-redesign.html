@@ -220,6 +220,39 @@
   .account .meta span{font-size:10.5px;color:var(--text-2)}
   .foot{text-align:center;font-size:10.5px;color:var(--text-3);padding:20px}
   .tag{font-size:11px;color:var(--text-3);margin-top:8px;line-height:1.5}
+
+  /* classic home feed */
+  .sec-eyebrow{
+    display:flex;align-items:center;gap:9px;padding:16px 20px 0;
+    font-size:9px;letter-spacing:1.5px;text-transform:uppercase;
+    color:var(--text-3);font-weight:600;
+  }
+  .sec-eyebrow::before{content:"";width:2px;height:12px;border-radius:2px;background:var(--accent)}
+  .sec-title{display:flex;align-items:baseline;justify-content:space-between;padding:6px 20px 10px}
+  .sec-title h4{font-size:19px;font-weight:600;letter-spacing:-.3px}
+  .sec-title span{font-size:11.5px;color:var(--text-2)}
+  .spot{
+    position:relative;margin:0 20px;height:190px;border-radius:22px;overflow:hidden;
+    background:radial-gradient(120% 90% at 68% 24%,#5c4550 0%,#241d24 55%,#15131a 100%);
+  }
+  .spot .scrim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.34),transparent 40%,rgba(0,0,0,.8))}
+  .spot .pill{position:absolute;top:14px;left:14px}
+  .spot .copy{position:absolute;left:16px;right:120px;bottom:16px}
+  .spot .copy h3{font-size:24px;line-height:1.12;font-weight:600;letter-spacing:-.5px;color:#fff}
+  .spot .copy p{color:rgba(255,255,255,.76);font-size:12px;margin-top:4px}
+  .playbtn{
+    position:absolute;right:14px;bottom:14px;height:36px;padding:0 15px;
+    border-radius:999px;background:#fff;color:#1b1418;
+    font-size:12px;font-weight:600;display:flex;align-items:center;gap:7px;
+  }
+  .dots{display:flex;justify-content:center;align-items:center;gap:5px;padding:12px 0 2px}
+  .dots i{width:5px;height:5px;border-radius:50%;background:#3a3b45}
+  .dots i.on{width:16px;height:5px;border-radius:3px;background:var(--accent)}
+  .row3{display:flex;gap:12px;padding:0 20px;overflow:hidden}
+  .album{width:92px;flex:none}
+  .album .cover{height:92px;border-radius:14px;background:linear-gradient(150deg,#3a2a34,#191a20 70%)}
+  .album h5{font-size:11.5px;font-weight:600;margin-top:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .album p{font-size:10px;color:var(--text-2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 </style>
 </head>
 <body>
@@ -227,6 +260,8 @@
   <h1>Glossy · the screens, after the design</h1>
   <p>
     Home, Mix, Library, Search, Settings and the Account sheet as they are drawn now.
+    Home keeps its classic feed — the mood chips, the Featured Spotlight carousel and the
+    new-release row — under the design's greeting card.
     The geometry, the type scale and the spacing follow the Figma frames, and so do
     the colours: <code>#101114</code> page, <code>#1B1D22</code> surfaces,
     <code>#24262C</code> mini player, <code>#34353C</code> borders,
@@ -258,35 +293,30 @@
         </div>
 
         <div class="chips">
-          <div class="chip on">Made for you</div>
           <div class="chip">Podcasts</div>
-          <div class="chip">Chill</div>
           <div class="chip">Romance</div>
+          <div class="chip">Relax</div>
+          <div class="chip">Feel good</div>
         </div>
 
-        <div class="hero">
+        <div class="sec-eyebrow">Handpicked for you</div>
+        <div class="sec-title"><h4>Featured Spotlight</h4><span>8 items</span></div>
+        <div class="spot">
           <div class="scrim"></div>
-          <div class="pill">✳ The daily edit</div>
+          <div class="pill">✳ Featured</div>
           <div class="copy">
-            <h3>Your night,<br>in full colour.</h3>
-            <p>After hours · Anuv Jain</p>
-            <div class="eyebrow2">Slow burns. Deep cuts.</div>
+            <h3>Paparazzi</h3>
+            <p>Lady Gaga</p>
           </div>
-          <div class="play">▶</div>
+          <div class="playbtn">▶ Play</div>
         </div>
+        <div class="dots"><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
 
-        <div class="section-head"><h4>Made for Chikku</h4><span>View mixes</span></div>
-        <div class="grid2">
-          <div class="mix">
-            <div class="cover"><div class="label">Made for you</div></div>
-            <h5>Replay Mix</h5><p>Ryanded · Vivek</p>
-          </div>
-          <div class="mix">
-            <div class="cover" style="background:linear-gradient(150deg,#4a3340,#191a20 70%)">
-              <div class="label">Made for you</div>
-            </div>
-            <h5>My Supermix</h5><p>All your worlds, together</p>
-          </div>
+        <div class="sec-title" style="padding-top:8px"><h4>New release albums</h4><span>See all</span></div>
+        <div class="row3">
+          <div class="album"><div class="cover"></div><h5>Paparazzi</h5><p>Lady Gaga</p></div>
+          <div class="album"><div class="cover" style="background:linear-gradient(150deg,#46313a,#191a20 70%)"></div><h5>Mallein Kathayin</h5><p>Sai Abhyankkar</p></div>
+          <div class="album"><div class="cover" style="background:linear-gradient(150deg,#3a3346,#191a20 70%)"></div><h5>Husn</h5><p>Anuv Jain</p></div>
         </div>
       </div>
       <div class="mini">
@@ -303,7 +333,7 @@
       </nav>
       <div class="home-indicator"></div>
     </div>
-    <div class="tag">Greeting eyebrow · glossy wordmark · Listen Together and avatar in the header · hero card · “Made for” shelf</div>
+    <div class="tag">Greeting eyebrow · glossy wordmark · Listen Together and avatar in the header · classic feed: chips, Featured Spotlight carousel, new-release row</div>
   </div>
 
   <!-- MIX -->
