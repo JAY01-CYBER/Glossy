@@ -142,12 +142,9 @@ import com.jay.glossy.constants.DesignStyle
 import com.jay.glossy.constants.QuickPicksStyle
 import com.jay.glossy.constants.QuickPicksStyleKey
 import com.jay.glossy.ui.component.GlossyAlbumCard
-import com.jay.glossy.ui.component.GlossyDailyHero
 import com.jay.glossy.ui.component.GlossyChipRow
 import com.jay.glossy.ui.component.GlossyCompactSongRow
-import com.jay.glossy.ui.component.GlossyMixCard
 import com.jay.glossy.ui.theme.GlossyDimens
-import com.jay.glossy.ui.theme.GlossyPalette
 import com.jay.glossy.constants.ShowFeaturedCarouselKey
 import com.jay.glossy.constants.SmallGridThumbnailHeight
 import com.jay.glossy.constants.ThumbnailCornerRadius
@@ -836,23 +833,9 @@ fun HomeScreen(
     val showFeaturedCarouselPref by rememberPreference(ShowFeaturedCarouselKey, defaultValue = true)
     val quickPicksStylePref by rememberEnumPreference(QuickPicksStyleKey, defaultValue = QuickPicksStyle.GRID)
 
-    // The redesign is the app's look now: it draws the compact "Quick picks"
-    // rows and the 96dp "Listen again" cards. Only the classic style keeps the
-    // old home, and nothing selects it.
-    val newDesign = ActiveDesignStyle != DesignStyle.CLASSIC
-
-    // The header signs the feed with the listener's name and the "Made for …"
-    // shelf names them again. Both resolve it from the same three sources in
-    // the same order, so the two lines can never disagree.
-    val guestNamePref by rememberPreference(stringPreferencesKey("guest_name"), "")
-    val namelessFallback = stringResource(R.string.glossy_you)
-    val accountNameValue = accountName.orEmpty()
-    val homeName =
-        when {
-            accountNameValue.isNotBlank() && !accountNameValue.equals("Guest", ignoreCase = true) -> accountNameValue
-            guestNamePref.isNotBlank() -> guestNamePref
-            else -> namelessFallback
-        }
+    // The new design always drew the compact "Quick picks" rows and the 96dp
+    // "Listen again" cards. It is pinned off now, so the classic home wins.
+    val newDesign = ActiveDesignStyle == DesignStyle.TEAL
 
     LaunchedEffect(Unit) { viewModel.loadHomeData() }
 
@@ -1020,13 +1003,6 @@ fun HomeScreen(
     LaunchedEffect(quickPicks) { quickPicksLazyGridState.scrollToItem(0) }
     LaunchedEffect(forgottenFavorites) { forgottenFavoritesLazyGridState.scrollToItem(0) }
 
-    // The design opens the feed with one editorial card, so the first of the
-    // daily-discover recommendations is lifted out of its section and drawn as
-    // the hero right under the header; the rest keep their own shelf below.
-    val discoverItems = dailyDiscover.orEmpty()
-    val heroDiscover = if (newDesign && selectedChip == null) discoverItems.firstOrNull() else null
-    val restDiscover = if (heroDiscover != null) discoverItems.drop(1) else discoverItems
-
     PullToRefreshBox(
         state = pullRefreshState,
         isRefreshing = isRefreshing,
@@ -1108,115 +1084,6 @@ fun HomeScreen(
                                 currentValue = selectedChip,
                                 onValueUpdate = { viewModel.toggleChip(it) },
                             )
-                        }
-                    }
-                }
-
-                // The editorial hero of the design: one recommendation given the
-                // whole width, opening the page the way the frames do — after the
-                // greeting and the chips, before the personal shelf.
-                if (heroDiscover != null) {
-                    item(key = "hero_editorial", contentType = "hero") {
-                        Box(
-                            modifier = Modifier
-                                .animateItem()
-                                .fillMaxWidth()
-                                .padding(horizontal = GlossyDimens.ScreenPadding),
-                        ) {
-                            GlossyDailyHero(
-                                item = heroDiscover,
-                                onClick = {
-                                    val song = heroDiscover.recommendation as? SongItem
-                                    val heroMetadata = song?.toMediaMetadata()
-                                    if (song != null && heroMetadata != null) {
-                                        playerConnection.playQueue(
-                                            if (autoRadioQueue) {
-                                                YouTubeQueue(
-                                                    song.endpoint ?: WatchEndpoint(videoId = song.id),
-                                                    heroMetadata,
-                                                )
-                                            } else {
-                                                ListQueue(title = song.title, items = listOf(song.toMediaItem()))
-                                            },
-                                        )
-                                    }
-                                },
-                                modifier = Modifier.fillMaxWidth().height(250.dp),
-                            )
-                        }
-                    }
-                }
-
-                // "Made for <name>": the two-across shelf from the design,
-                // built from the account playlists the home already loads. It
-                // sits under the header so the page opens on something
-                // personal instead of on the first of a long run of rows.
-                val madeForMixes = accountPlaylists.orEmpty().take(4)
-                if (madeForMixes.isNotEmpty()) {
-                    item(key = "made_for_title", contentType = "section_header") {
-                        Box(modifier = Modifier.animateItem()) {
-                            Row(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(
-                                            start = GlossyDimens.ScreenPadding,
-                                            end = GlossyDimens.ScreenPadding,
-                                            top = 18.dp,
-                                            bottom = 12.dp,
-                                        ),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.glossy_made_for, homeName),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = GlossyPalette.TextPrimary,
-                                    modifier = Modifier.weight(1f),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                                Text(
-                                    text = stringResource(R.string.glossy_view_mixes),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = GlossyPalette.TextSecondary,
-                                    modifier =
-                                        Modifier
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .clickable { navController.navigate("mix") }
-                                            .padding(horizontal = 4.dp, vertical = 2.dp),
-                                )
-                            }
-                        }
-                    }
-
-                    item(key = "made_for_grid", contentType = "made_for") {
-                        Column(
-                            modifier =
-                                Modifier
-                                    .animateItem()
-                                    .fillMaxWidth()
-                                    .padding(horizontal = GlossyDimens.ScreenPadding),
-                            verticalArrangement = Arrangement.spacedBy(14.dp),
-                        ) {
-                            madeForMixes.chunked(2).forEach { row ->
-                                Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                                    row.forEach { mix ->
-                                        GlossyMixCard(
-                                            title = mix.title,
-                                            subtitle = (mix as? PlaylistItem)?.author?.name,
-                                            seed = mix.id,
-                                            imageUrl = mix.thumbnail,
-                                            label = stringResource(R.string.glossy_made_for_label),
-                                            onClick = { navController.navigate("online_playlist/${mix.id}") },
-                                            modifier = Modifier.weight(1f),
-                                        )
-                                    }
-                                    if (row.size == 1) {
-                                        Spacer(Modifier.weight(1f))
-                                    }
-                                }
-                            }
                         }
                     }
                 }
@@ -1765,9 +1632,7 @@ fun HomeScreen(
 
                         HomeSection.QuickPicks -> {
                             quickPicks?.takeIf { it.isNotEmpty() }?.let { quickPicksList ->
-                                // The art-forward shelf is part of the redesign
-                                // and belongs to every palette it paints with.
-                                val materialistic = ActiveDesignStyle != DesignStyle.CLASSIC
+                                val materialistic = ActiveDesignStyle == DesignStyle.MATERIALISTIC
                                 item(key = "quick_picks_title", contentType = "section_header") {
                                     if (materialistic) {
                                         val quickPicksTitle = stringResource(R.string.quick_picks)
@@ -2105,7 +1970,7 @@ fun HomeScreen(
                         }
 
                         HomeSection.DailyDiscover -> {
-                            restDiscover.takeIf { it.isNotEmpty() }?.let { discoverList ->
+                            dailyDiscover?.takeIf { it.isNotEmpty() }?.let { discoverList ->
                                 item(key = "daily_discover_title", contentType = "section_header") {
                                     Box(modifier = Modifier.animateItem()) {
                                         NavigationTitle(
@@ -2134,8 +1999,8 @@ fun HomeScreen(
                                             modifier = Modifier.fillMaxWidth().height(320.dp),
                                         ) { i ->
                                             val item = discoverList[i]
-                                            GlossyDailyHero(
-                                                item = item,
+                                            DailyDiscoverCard(
+                                                dailyDiscover = item,
                                                 onClick = {
                                                     val song = item.recommendation as? SongItem
                                                     val mediaMetadata = song?.toMediaMetadata()
