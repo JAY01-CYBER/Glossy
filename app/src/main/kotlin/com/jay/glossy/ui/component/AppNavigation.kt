@@ -197,17 +197,16 @@ fun AppNavigationBar(
 }
 
 // ----------------------------------------------------
-// New design system: the floating pill bar
+// New design system: the frosted bar and its search orb
 // ----------------------------------------------------
 /**
- * The bar from the design: one floating pill holding the four destinations,
- * with the active one carried by a soft accent capsule. Search is a tab here
- * rather than a second bubble beside the bar, and a long press still opens
- * recognition.
+ * The bar from the design: a frosted pill holding Home, Mix and Library, the
+ * active tab carried by a solid capsule, and a round search orb floating beside
+ * it instead of a fourth tab wedged into the pill.
  *
- * The bar stays inside [com.jay.glossy.constants.NavigationBarHeight], so the
- * mini player, the sheet player and the window insets keep the geometry they
- * were tuned for; only the paint and the shape are new.
+ * The bar keeps [GlossyDimens.NavPillHeight] for its slot, so the mini player,
+ * the sheet player and the window insets keep the geometry they were tuned for;
+ * only the paint and the tabs/orb split are new.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -219,79 +218,119 @@ fun GlossyBottomNav(
     slimNav: Boolean = false,
     onSearchLongClick: (() -> Unit)? = null,
 ) {
-    val items = navigationItems.withSearchPill()
+    // The tab set the app passes in is Home, Mix and Library; Search is the
+    // orb beside the pill, never one of its tabs.
+    val searchItem = navigationItems.find { it == Screens.Search } ?: Screens.Search
+    val tabs = navigationItems.filter { it != Screens.Search }
     val pill = RoundedCornerShape(GlossyDimens.CornerPill)
-    val itemShape = RoundedCornerShape(20.dp)
+    val tabShape = RoundedCornerShape(GlossyDimens.CornerPill)
+
     // Captured before the draw phase: the palette reads are composition-only.
-    val container = GlossyPalette.MiniBar
-    val outline = GlossyPalette.Border
+    val glass = GlossyPalette.MiniBar
+    val rim = GlossyPalette.Border
+
+    val barHeight = if (slimNav) 56.dp else GlossyDimens.NavPillHeight
+    val pillHeight = if (slimNav) 50.dp else 62.dp
+    val orbSize = if (slimNav) 50.dp else 58.dp
 
     Row(
         modifier =
             modifier
                 .fillMaxWidth()
                 .padding(horizontal = 4.dp)
-                .height(if (slimNav) 56.dp else GlossyDimens.NavPillHeight)
-                // The design's bar carries a border *and* a soft shadow, so it
-                // reads as a control floating over the feed rather than a strip
-                // painted onto it.
-                .shadow(elevation = 12.dp, shape = pill, clip = false)
-                .clip(pill)
-                .background(container)
-                .border(GlossyDimens.Hairline, outline, pill)
-                .padding(horizontal = 6.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                .height(barHeight),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        items.forEach { screen ->
-            val selected = isRouteSelected(currentRoute, screen.route, navigationItems)
-            Column(
+        Row(
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .height(pillHeight)
+                    // The design's bar carries a shadow *and* a hairline, so it
+                    // reads as a control floating over the feed rather than a
+                    // strip painted onto it.
+                    .shadow(elevation = 12.dp, shape = pill, clip = false)
+                    .clip(pill)
+                    .background(glass)
+                    .border(GlossyDimens.Hairline, rim, pill)
+                    .padding(horizontal = 5.dp, vertical = 5.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            tabs.forEach { screen ->
+                val selected = isRouteSelected(currentRoute, screen.route, navigationItems)
+                Column(
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clip(tabShape)
+                            .then(
+                                if (selected) {
+                                    Modifier.background(GlossyPalette.AccentSoft)
+                                } else {
+                                    Modifier
+                                },
+                            )
+                            .clickable(onClick = { onItemClick(screen, selected) }),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Icon(
+                        painter = painterResource(
+                            if (selected) screen.iconIdActive else screen.iconIdInactive
+                        ),
+                        contentDescription = stringResource(screen.titleId),
+                        tint = if (selected) GlossyPalette.Accent else GlossyPalette.TextSecondary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = stringResource(screen.titleId),
+                        fontSize = 10.sp,
+                        lineHeight = 12.sp,
+                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                        color = if (selected) GlossyPalette.Accent else GlossyPalette.TextMuted,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+
+        if (tabs.isNotEmpty()) {
+            Spacer(Modifier.width(10.dp))
+
+            val isSelected = isRouteSelected(currentRoute, searchItem.route, navigationItems)
+            val currentIsSelected by rememberUpdatedState(isSelected)
+
+            Box(
                 modifier =
                     Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .clip(itemShape)
-                        .then(
-                            if (selected) Modifier.background(GlossyPalette.AccentSoft) else Modifier,
-                        )
+                        .size(orbSize)
+                        .shadow(elevation = 12.dp, shape = CircleShape, clip = false)
+                        .clip(CircleShape)
+                        .background(glass)
+                        .border(GlossyDimens.Hairline, rim, CircleShape)
+                        // A press opens search; holding it opens recognition.
                         .combinedClickable(
-                            onClick = { onItemClick(screen, selected) },
-                            onLongClick = if (screen == Screens.Search) onSearchLongClick else null,
+                            onClick = { onItemClick(searchItem, currentIsSelected) },
+                            onLongClick = onSearchLongClick,
                         ),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
+                contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     painter = painterResource(
-                        if (selected) screen.iconIdActive else screen.iconIdInactive
+                        if (isSelected) searchItem.iconIdActive else searchItem.iconIdInactive
                     ),
-                    contentDescription = stringResource(screen.titleId),
-                    tint = if (selected) GlossyPalette.Accent else GlossyPalette.TextSecondary,
-                    modifier = Modifier.size(20.dp),
-                )
-                Spacer(Modifier.height(3.dp))
-                Text(
-                    text = stringResource(screen.titleId),
-                    fontSize = 10.sp,
-                    lineHeight = 12.sp,
-                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-                    color = if (selected) GlossyPalette.Accent else GlossyPalette.TextMuted,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    contentDescription = stringResource(searchItem.titleId),
+                    tint = if (isSelected) GlossyPalette.Accent else GlossyPalette.TextSecondary,
+                    modifier = Modifier.size(22.dp),
                 )
             }
         }
     }
 }
-
-/**
- * The floating bar renders Search as a separate pill, not a tab, and the tab set
- * the app passes in ([Screens.MainScreens]) does not contain it. Appending it
- * here keeps the floating bar's own split (tabs vs. pill) working while the
- * standard bar keeps showing exactly the tabs it was given.
- */
-private fun List<Screens>.withSearchPill(): List<Screens> =
-    if (contains(Screens.Search)) this else this + Screens.Search
 
 // ----------------------------------------------------
 // Premium MD3 Liquid Navigation Bar (Squash & Stretch)
