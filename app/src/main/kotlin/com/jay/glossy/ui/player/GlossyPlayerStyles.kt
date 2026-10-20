@@ -127,7 +127,7 @@ import com.jay.glossy.constants.PlayerBackgroundStyleKey
 import com.jay.glossy.constants.ShowLyricsOnPlayerKey
 import com.jay.glossy.extensions.toggleRepeatMode
 import com.jay.glossy.listentogether.RoomRole
-import com.jay.glossy.models.MediaMetadata
+import com.metrolist.models.MediaMetadata
 import com.jay.glossy.playback.ExoDownloadService
 import com.jay.glossy.playback.PlayerConnection
 import com.jay.glossy.ui.component.BottomSheetState
