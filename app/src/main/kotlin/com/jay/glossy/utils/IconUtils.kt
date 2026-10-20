@@ -35,10 +35,10 @@ enum class AppIcon(
 
     companion object {
         /** The eight alternatives offered in Appearance settings. */
-        val picker: List<AppIcon> = entries.filter { it != CLASSIC }
+        val picker: List<AppIcon> = AppIcon.entries.filter { it != CLASSIC }
 
         fun fromName(name: String?): AppIcon =
-            entries.firstOrNull { it.name == name } ?: CLASSIC
+            AppIcon.entries.firstOrNull { it.name == name } ?: CLASSIC
     }
 }
 
