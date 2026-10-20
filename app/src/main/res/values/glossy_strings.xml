@@ -63,6 +63,15 @@
     <!-- Mix — the line under the grid -->
     <string name="glossy_mix_evolving">Always evolving with your listening.</string>
     <!-- Search — the landing page before a query is typed -->
+    <string name="glossy_search_discover">Discover something new.</string>
+    <string name="glossy_search_tab_explore">Explore</string>
+    <string name="glossy_search_tab_suggestions">Suggestions</string>
+    <string name="glossy_search_rank">#%1$d</string>
+    <string name="glossy_search_trending">Trending</string>
+    <string name="glossy_search_voice">Search with your voice</string>
+    <string name="glossy_search_retry">Try again</string>
+    <string name="glossy_search_error">Couldn’t load trending music.</string>
+    <string name="glossy_search_empty">Nothing is trending right now.</string>
     <string name="glossy_search_eyebrow">Follow your curiosity</string>
     <string name="glossy_search_title">Find your sound</string>
     <string name="glossy_search_shelf">Go somewhere new</string>

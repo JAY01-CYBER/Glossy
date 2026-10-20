@@ -11,7 +11,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -65,14 +64,12 @@ import com.metrolist.innertube.models.WatchEndpoint
 import com.metrolist.innertube.utils.YouTubeUrlParser
 import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalIsPlayerExpanded
-import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.constants.PauseSearchHistoryKey
 import com.jay.glossy.constants.SearchSource
 import com.jay.glossy.constants.SearchSourceKey
 import com.jay.glossy.db.entities.SearchHistory
 import com.jay.glossy.playback.queues.YouTubeQueue
-import com.jay.glossy.ui.component.GlossySearchLanding
 import com.jay.glossy.ui.component.HideOnScrollFAB
 import com.jay.glossy.ui.component.TiledListRows
 import com.jay.glossy.utils.SearchRoutes
@@ -102,12 +99,15 @@ fun SearchScreen(
     val scrollToTopCount by savedStateHandle.getStateFlow("scrollToTopCount", 0).collectAsStateWithLifecycle(initialValue = 0)
 
     var lastHandledCount by rememberSaveable { mutableIntStateOf(0) }
+    // The discovery page opens with its title, field and shelves visible, so the
+    // keyboard waits until a gesture asks for it — opening it here would cover
+    // the page the user came to look at.
     LaunchedEffect(Unit) {
         if (!isPlayerExpanded) {
             kotlinx.coroutines.delay(100)
             try {
-                focusRequester.requestFocus()
-                keyboardController?.show()
+                focusManager.clearFocus(force = true)
+                keyboardController?.hide()
             } catch (e: Exception) {
             }
         }
@@ -188,126 +188,130 @@ fun SearchScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
+            // The discovery page draws its own title and search field, so the
+            // toolbar only appears once there is a query to show in it.
+            if (query.text.isNotEmpty()) {
+                TopAppBar(
+                    title = {
                         Row(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(28.dp))
-                                .background(
-                                    if (pureBlack) {
-                                        MaterialTheme.colorScheme.surface
-                                    } else {
-                                        MaterialTheme.colorScheme.surfaceContainerHigh
-                                    },
-                                )
-                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Icon(
-                                painter = painterResource(R.drawable.search),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(20.dp),
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            BasicTextField(
-                            value = query,
-                            onValueChange = { query = it },
-                            modifier =
-                                Modifier
+                            Row(
+                                modifier = Modifier
                                     .weight(1f)
-                                    .focusRequester(focusRequester),
-                            textStyle =
-                                TextStyle(
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    fontSize = 16.sp,
-                                ),
-                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                            singleLine = true,
-                            decorationBox = { innerTextField ->
-                                if (query.text.isEmpty()) {
-                                    Text(
-                                        text =
-                                            stringResource(
+                                    .clip(RoundedCornerShape(28.dp))
+                                    .background(
+                                        if (pureBlack) {
+                                            MaterialTheme.colorScheme.surface
+                                        } else {
+                                            MaterialTheme.colorScheme.surfaceContainerHigh
+                                        },
+                                    )
+                                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.search),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                BasicTextField(
+                                value = query,
+                                onValueChange = { query = it },
+                                modifier =
+                                    Modifier
+                                        .weight(1f)
+                                        .focusRequester(focusRequester),
+                                textStyle =
+                                    TextStyle(
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        fontSize = 16.sp,
+                                    ),
+                                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                                singleLine = true,
+                                decorationBox = { innerTextField ->
+                                    if (query.text.isEmpty()) {
+                                        Text(
+                                            text =
+                                                stringResource(
+                                                    when (searchSource) {
+                                                        SearchSource.LOCAL -> R.string.search_library
+                                                        SearchSource.ONLINE -> R.string.search_yt_music
+                                                    },
+                                                ),
+                                            style =
+                                                TextStyle(
+                                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                                    fontSize = 16.sp,
+                                                ),
+                                        )
+                                    }
+                                    innerTextField()
+                                },
+                                keyboardOptions =
+                                    KeyboardOptions(
+                                        imeAction = ImeAction.Search,
+                                    ),
+                                keyboardActions =
+                                    KeyboardActions(
+                                        onSearch = { onSearch(query.text) },
+                                    ),
+                                )
+                            }
+
+                            Row {
+                                if (query.text.isNotEmpty()) {
+                                    IconButton(onClick = { query = TextFieldValue("") }) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.close),
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurface,
+                                        )
+                                    }
+                                }
+                                IconButton(
+                                    onClick = {
+                                        searchSource =
+                                            if (searchSource == SearchSource.ONLINE) {
+                                                SearchSource.LOCAL
+                                            } else {
+                                                SearchSource.ONLINE
+                                            }
+                                    },
+                                ) {
+                                    Icon(
+                                        painter =
+                                            painterResource(
                                                 when (searchSource) {
-                                                    SearchSource.LOCAL -> R.string.search_library
-                                                    SearchSource.ONLINE -> R.string.search_yt_music
+                                                    SearchSource.LOCAL -> R.drawable.library_music
+                                                    SearchSource.ONLINE -> R.drawable.language
                                                 },
                                             ),
-                                        style =
-                                            TextStyle(
-                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                                fontSize = 16.sp,
-                                            ),
-                                    )
-                                }
-                                innerTextField()
-                            },
-                            keyboardOptions =
-                                KeyboardOptions(
-                                    imeAction = ImeAction.Search,
-                                ),
-                            keyboardActions =
-                                KeyboardActions(
-                                    onSearch = { onSearch(query.text) },
-                                ),
-                            )
-                        }
-
-                        Row {
-                            if (query.text.isNotEmpty()) {
-                                IconButton(onClick = { query = TextFieldValue("") }) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.close),
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.onSurface,
                                     )
                                 }
                             }
-                            IconButton(
-                                onClick = {
-                                    searchSource =
-                                        if (searchSource == SearchSource.ONLINE) {
-                                            SearchSource.LOCAL
-                                        } else {
-                                            SearchSource.ONLINE
-                                        }
-                                },
-                            ) {
-                                Icon(
-                                    painter =
-                                        painterResource(
-                                            when (searchSource) {
-                                                SearchSource.LOCAL -> R.drawable.library_music
-                                                SearchSource.ONLINE -> R.drawable.language
-                                            },
-                                        ),
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurface,
-                                )
-                            }
                         }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(
-                            painter = painterResource(R.drawable.arrow_back),
-                            contentDescription = stringResource(R.string.dismiss),
-                            tint = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
-                },
-                colors =
-                    TopAppBarDefaults.topAppBarColors(
-                        containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer,
-                    ),
-            )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { navController.navigateUp() }) {
+                            Icon(
+                                painter = painterResource(R.drawable.arrow_back),
+                                contentDescription = stringResource(R.string.dismiss),
+                                tint = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                    },
+                    colors =
+                        TopAppBarDefaults.topAppBarColors(
+                            containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer,
+                        ),
+                )
+            }
         },
         containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.background,
     ) { paddingValues ->
@@ -322,10 +326,15 @@ fun SearchScreen(
             when {
                 // Nothing typed yet: the design's landing page, built from the
                 // mood shelf and the last few searches, takes the whole body.
-                query.text.isEmpty() -> GlossySearchLanding(
-                    onSearch = onSearchFromSuggestion,
-                    onSeeAll = { navController.navigate("history") },
-                )
+                query.text.isEmpty() ->
+                    SearchDiscoverRoute(
+                        query = query,
+                        onQueryChange = { query = it },
+                        focusRequester = focusRequester,
+                        onSearch = onSearchFromSuggestion,
+                        onVoiceSearch = { navController.navigate("recognition") },
+                        onSeeAllRecent = { navController.navigate("history") },
+                    )
 
                 searchSource == SearchSource.LOCAL -> {
                     TiledListRows {
@@ -350,11 +359,15 @@ fun SearchScreen(
                 }
             }
 
-            HideOnScrollFAB(
-                lazyListState = lazyListState,
-                icon = R.drawable.mic,
-                onClick = { navController.navigate("recognition") },
-            )
+            // The discovery page keeps the voice shortcut inside its field, so
+            // the floating one only belongs to the results states.
+            if (query.text.isNotEmpty()) {
+                HideOnScrollFAB(
+                    lazyListState = lazyListState,
+                    icon = R.drawable.mic,
+                    onClick = { navController.navigate("recognition") },
+                )
+            }
         }
     }
 

@@ -159,7 +159,7 @@ val DesignStyleKey = stringPreferencesKey("designStyle")
  * colour. [DesignStyle.TEAL] and [DesignStyle.CLASSIC] describe the earlier
  * looks and nothing selects them.
  */
-val ActiveDesignStyle = DesignStyle.FIGMA
+val ActiveDesignStyle = DesignStyle.MATERIALISTIC
 
 /** Nickname a guest picks on the welcome screen. */
 val GuestNameKey = stringPreferencesKey("guest_name")

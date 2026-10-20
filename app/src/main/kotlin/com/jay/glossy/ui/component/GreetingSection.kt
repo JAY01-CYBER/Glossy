@@ -62,7 +62,6 @@ import androidx.compose.ui.unit.sp
 import com.jay.glossy.R
 import com.jay.glossy.ui.theme.GlossyDimens
 import com.jay.glossy.ui.theme.GlossyPalette
-import com.jay.glossy.ui.theme.OutfitFontFamily
 import java.util.Calendar
 
 /** How far the wash reaches: strong in the corner, gone by the first section. */
@@ -186,19 +185,6 @@ fun GreetingSection(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Spacer(Modifier.height(6.dp))
-                // Under it the app signs its own name. The wordmark wears the
-                // display face instead of the body font, so the top of the feed
-                // reads as a brand line rather than a second heading.
-                Text(
-                    text = stringResource(R.string.glossy_home_wordmark),
-                    fontFamily = OutfitFontFamily,
-                    fontSize = 34.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = (-1.1).sp,
-                    color = textPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
             }
             // Listen Together sits in the header beside the listener's own
             // avatar, where the old top bar kept it — one tap from the top of
