@@ -10,6 +10,7 @@ import com.jay.glossy.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -72,6 +74,7 @@ import com.jay.glossy.constants.YtmSyncKey
 import com.jay.glossy.ui.component.DefaultDialog
 import com.jay.glossy.ui.component.InfoLabel
 import com.jay.glossy.ui.component.TextFieldDialog
+import com.jay.glossy.ui.theme.GlossyDimens
 import com.jay.glossy.utils.Updater
 import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.viewmodels.AccountSettingsViewModel
@@ -131,8 +134,12 @@ fun AccountSettings(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = stringResource(id = R.string.app_name),
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+                text = stringResource(R.string.glossy_your_account),
+                fontSize = 25.sp,
+                lineHeight = 30.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = (-0.4).sp,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier
                     .weight(1f)
                     .padding(start = 4.dp),
@@ -281,10 +288,9 @@ fun AccountSettings(
                 ?: accountChannelHandle.takeIf { it.isNotBlank() },
             accountImageUrl = accountImageUrl,
             loginLabel = stringResource(R.string.login),
-            onLogout = {
-                Timber.d("[LOGOUT] User clicked logout button, showing dialog")
-                showLogoutDialog = true
-            },
+            statusLabel = stringResource(
+                if (isLoggedIn) R.string.glossy_signed_in else R.string.glossy_sign_in
+            ),
             onClick = {
                 onClose()
                 if (isLoggedIn) {
@@ -295,9 +301,9 @@ fun AccountSettings(
             },
         )
 
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(20.dp))
 
-        SheetSectionLabel(stringResource(R.string.account))
+        SheetSectionLabel(stringResource(R.string.glossy_account_preferences))
 
         val tokenLabel = when {
             !isLoggedIn -> stringResource(R.string.advanced_login)
@@ -308,6 +314,7 @@ fun AccountSettings(
         SheetCard {
             SheetRow(
                 title = tokenLabel,
+                caption = stringResource(R.string.glossy_token_private),
                 icon = R.drawable.token,
                 showChevron = true,
                 onClick = {
@@ -321,6 +328,7 @@ fun AccountSettings(
 
             SheetRow(
                 title = stringResource(R.string.more_content),
+                caption = stringResource(R.string.glossy_more_content_caption),
                 icon = R.drawable.explore_outlined,
                 enabled = isLoggedIn,
                 // The whole row is the target, not just the switch: a 40dp
@@ -355,6 +363,7 @@ fun AccountSettings(
 
             SheetRow(
                 title = stringResource(R.string.yt_sync),
+                caption = stringResource(R.string.glossy_autosync_caption),
                 icon = R.drawable.sync,
                 enabled = isLoggedIn,
                 onClick = { onYtmSyncChange(!ytmSync) },
@@ -377,7 +386,32 @@ fun AccountSettings(
             )
         }
 
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(16.dp))
+
+        // The design keeps the two account actions below the preferences, as
+        // their own controls, rather than tucking a log-out pill into the
+        // account row where it competes with the row's own tap target.
+        AccountActionPill(
+            label = stringResource(
+                if (isLoggedIn) R.string.glossy_switch_account else R.string.login
+            ),
+            onClick = {
+                onClose()
+                navController.navigate(if (isLoggedIn) "account" else "login")
+            },
+        )
+
+        if (isLoggedIn) {
+            SignOutRow(
+                label = stringResource(R.string.glossy_sign_out),
+                onClick = {
+                    Timber.d("[LOGOUT] User clicked sign out, showing dialog")
+                    showLogoutDialog = true
+                },
+            )
+        }
+
+        Spacer(Modifier.height(20.dp))
 
         val updatePending =
             BuildConfig.UPDATER_AVAILABLE && latestVersionName != BuildConfig.VERSION_NAME
@@ -432,6 +466,8 @@ fun AccountSettings(
         }
 
         Spacer(Modifier.height(24.dp))
+        // The sheet ends at the screen edge; its last row clears the gesture bar.
+        Spacer(Modifier.navigationBarsPadding())
     }
 }
 
@@ -444,10 +480,10 @@ fun AccountSettings(
 private fun SheetSectionLabel(text: String) {
     Text(
         text = text.uppercase(),
-        color = MaterialTheme.colorScheme.primary,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         fontSize = 11.sp,
         fontWeight = FontWeight.Bold,
-        letterSpacing = 1.2.sp,
+        letterSpacing = 1.4.sp,
         modifier = Modifier.padding(start = 6.dp, bottom = 8.dp),
     )
 }
@@ -588,9 +624,9 @@ private fun SheetRow(
 
 /**
  * The account row, promoted to a header: avatar, name, the address the account
- * is signed in with, and the log-out affordance on the card instead of a button
- * competing with the row's own tap target. Signed out it becomes the sign-in
- * row it always effectively was.
+ * is signed in with, and a quiet signed-in chip. It carries no actions — the
+ * switch-account pill and sign-out sit below the preferences, where the design
+ * puts them, so the row has a single tap target.
  */
 @Composable
 private fun AccountHeroCard(
@@ -599,7 +635,7 @@ private fun AccountHeroCard(
     subtitle: String?,
     accountImageUrl: String?,
     loginLabel: String,
-    onLogout: () -> Unit,
+    statusLabel: String,
     onClick: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -621,20 +657,32 @@ private fun AccountHeroCard(
                 .background(scheme.surfaceContainerHighest),
             contentAlignment = Alignment.Center,
         ) {
-            if (isLoggedIn && accountImageUrl != null) {
-                AsyncImage(
-                    model = accountImageUrl,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            } else {
-                Icon(
-                    painter = painterResource(R.drawable.person),
-                    contentDescription = null,
-                    tint = scheme.onSurfaceVariant,
-                    modifier = Modifier.size(24.dp),
-                )
+            when {
+                isLoggedIn && accountImageUrl != null ->
+                    AsyncImage(
+                        model = accountImageUrl,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+
+                // Signed in without a picture: the initial carries the row, as
+                // in the design.
+                isLoggedIn ->
+                    Text(
+                        text = accountName.trim().firstOrNull()?.uppercase() ?: "",
+                        color = scheme.primary,
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+
+                else ->
+                    Icon(
+                        painter = painterResource(R.drawable.person),
+                        contentDescription = null,
+                        tint = scheme.onSurfaceVariant,
+                        modifier = Modifier.size(24.dp),
+                    )
             }
         }
 
@@ -661,30 +709,87 @@ private fun AccountHeroCard(
             }
         }
 
-        if (isLoggedIn) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(50))
-                    .background(scheme.surfaceContainerHighest)
-                    .clickable(onClick = onLogout)
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
-            ) {
-                Text(
-                    text = stringResource(R.string.action_logout),
-                    color = scheme.onSurface,
-                    fontSize = 12.5.sp,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-        }
-
-        Icon(
-            painter = painterResource(R.drawable.navigate_next),
-            contentDescription = null,
-            tint = scheme.onSurfaceVariant.copy(alpha = 0.7f),
+        // A status chip, not a control: the actions sit below the preferences.
+        Box(
             modifier = Modifier
-                .padding(start = 8.dp)
-                .size(18.dp),
+                .clip(RoundedCornerShape(50))
+                .background(scheme.surfaceContainerHighest)
+                .padding(horizontal = 11.dp, vertical = 6.dp),
+        ) {
+            Text(
+                text = statusLabel,
+                color = if (isLoggedIn) scheme.primary else scheme.onSurfaceVariant,
+                fontSize = 11.5.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+    }
+}
+
+/** The outlined, full-width switch-account control of the design. */
+@Composable
+private fun AccountActionPill(
+    label: String,
+    onClick: () -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(GlossyDimens.CornerPill)
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+                .clip(shape)
+                .border(1.dp, scheme.outlineVariant, shape)
+                .clickable(onClick = onClick),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.group_outlined),
+            contentDescription = null,
+            tint = scheme.onSurface,
+            modifier = Modifier.size(20.dp),
+        )
+        Spacer(Modifier.width(10.dp))
+        Text(
+            text = label,
+            color = scheme.onSurface,
+            fontSize = 14.5.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
+
+/** Sign out: a quiet text action under the pill, with its own exit glyph. */
+@Composable
+private fun SignOutRow(
+    label: String,
+    onClick: () -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+                .clip(RoundedCornerShape(GlossyDimens.CornerPill))
+                .clickable(onClick = onClick),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.logout),
+            contentDescription = null,
+            tint = scheme.onSurfaceVariant,
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = label,
+            color = scheme.onSurfaceVariant,
+            fontSize = 13.5.sp,
+            fontWeight = FontWeight.Medium,
         )
     }
 }

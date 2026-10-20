@@ -86,6 +86,16 @@
     <string name="glossy_search_mood_easy_sub">Room to slow down</string>
     <string name="glossy_search_mood_desi">Desi favourites</string>
     <string name="glossy_search_mood_desi_sub">Sounds like home</string>
+    <!-- Your account sheet -->
+    <string name="glossy_your_account">Your account</string>
+    <string name="glossy_signed_in">Signed in</string>
+    <string name="glossy_sign_in">Sign in</string>
+    <string name="glossy_account_preferences">Account preferences</string>
+    <string name="glossy_token_private">Your token stays private</string>
+    <string name="glossy_more_content_caption">Explore beyond your usual sound</string>
+    <string name="glossy_autosync_caption">Keep your library up to date</string>
+    <string name="glossy_switch_account">Switch account</string>
+    <string name="glossy_sign_out">Sign out</string>
     <!-- Listen Together — the shortcut on Home and its group in Settings -->
     <string name="glossy_listen_together_hint">Start a session and listen with friends</string>
     <string name="glossy_together_group">With friends</string>

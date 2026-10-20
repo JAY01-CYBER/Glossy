@@ -160,16 +160,18 @@ fun AccountSettingsDialog(
                             onTap = { onDismiss() }
                         )
                     },
-            contentAlignment = Alignment.TopCenter,
+            // The account sheet is a bottom sheet: it grows from the bottom
+            // edge, rounds only its top corners and leaves the feed dimmed
+            // behind it, as in the design.
+            contentAlignment = Alignment.BottomCenter,
         ) {
             Surface(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(top = 72.dp, start = 16.dp, end = 16.dp)
-                        .clip(RoundedCornerShape(28.dp)),
-                shape = MaterialTheme.shapes.large,
-                color = MaterialTheme.colorScheme.surface,
+                        .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)),
+                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
                 tonalElevation = 8.dp,
             ) {
                 AccountSettings(
