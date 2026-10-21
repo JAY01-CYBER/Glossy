@@ -10,7 +10,7 @@ package com.jay.glossy.ui.screens.search
 import com.jay.glossy.R
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateColorAsState
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
