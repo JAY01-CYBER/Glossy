@@ -13,9 +13,10 @@
  *
  * Optionally the card carries a loop of video behind that type — picked in
  * Settings › Appearance › Home Screen Layout. The clip is decoration: silent,
- * unclickable, faded to a third and finished with a scrim, so the greeting and
- * the name keep the contrast they have on the plain card. With Reduce animation
- * on, or the system's animations off, the plain card simply draws.
+ * unclickable, drawn at just over two thirds and finished with a light scrim, so
+ * the greeting and the name keep the contrast they have on the plain card. With
+ * Reduce animation on, or the system's animations off, the plain card simply
+ * draws.
  *
  * Colours come from [GlossyPalette], so the card follows the skin: the rose
  * gradient of the design is the Materialistic theme's `primaryContainer` band,
@@ -122,9 +123,9 @@ fun GreetingSection(userName: String) {
                 ),
         ) {
             if (greetingAnimation != GreetingAnimation.OFF && motionAllowed) {
-                // The clip is a mood, not a picture: a third of its brightness,
-                // then the card's own colour washed back over it so the type
-                // never has to compete with a bright frame.
+                // The clip is a mood, not a picture: it is drawn bright enough
+                // to read as motion, then the card's own colour is washed back
+                // over it so the type never has to compete with a bright frame.
                 GreetingVideoLoop(
                     animation = greetingAnimation,
                     modifier = Modifier
@@ -137,8 +138,8 @@ fun GreetingSection(userName: String) {
                         .background(
                             Brush.verticalGradient(
                                 listOf(
-                                    fill.copy(alpha = 0.52f),
-                                    fill.copy(alpha = 0.24f),
+                                    fill.copy(alpha = 0.45f),
+                                    fill.copy(alpha = 0.20f),
                                 ),
                             ),
                         ),
@@ -233,7 +234,7 @@ private fun GreetingVideoLoop(
                 // A still frame is shown by the gradient underneath if the clip
                 // has not decoded yet, so there is no black flash to cover up.
                 player = exoPlayer
-                alpha = 0.40f
+                alpha = 0.72f
             }
         },
     )

@@ -124,14 +124,6 @@ enum class MiniPlayerStyle {
     MODERN,
     GLOSSY_SPECIAL,
 
-    /**
-     * The floating bar from the reference recording: square artwork, the
-     * playhead as a squiggle under the title and the transport in a filled
-     * capsule. It keeps its full width and its own shape at every scroll
-     * position — it never folds away into a round artwork bubble.
-     */
-    APPLE_MUSIC,
-
     /** The teal design system's compact bar with a teal progress hairline. */
     STUDIO
 }
@@ -166,7 +158,7 @@ val ActiveDesignStyle = DesignStyle.MATERIALISTIC
  * What plays behind the home greeting card.
  *
  * The card is 104dp tall and carries two lines of type, so the clip is a mood,
- * not a subject: it is drawn at a low alpha under the gradient, loops silently
+ * not a subject: it is drawn at a high alpha under a light scrim, loops silently
  * and is never a control. [OFF] is the default and draws the plain card.
  */
 enum class GreetingAnimation {
