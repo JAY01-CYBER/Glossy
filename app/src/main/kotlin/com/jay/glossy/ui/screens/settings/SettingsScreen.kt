@@ -4,16 +4,17 @@
  *
  * Settings, on the same Material 3 Expressive surface as the screens behind it:
  * a plain top bar, the account card on top, the floating glass props of the key
- * art as a header, then grouped sections — Appearance, Playback, Storage — and
- * everything else the app can configure split into focused groups below them.
- * Nothing is dropped, it is just easier to find.
+ * art as a header, then grouped sections — Appearance, Playback & audio, Storage
+ * — and everything else the app can configure split into focused groups below
+ * them. Nothing is dropped, it is just easier to find.
  *
  * The groups are the shared [Material3SettingsGroup], so spacing, corner radii,
  * icon tiles and switches stay identical between this screen and every settings
- * screen it opens. Three of the four everyday groups are inlined here (rather
- * than behind their own screen) because they are the ones people actually flip
- * while listening. The full appearance screen (player style, mini player,
- * background blur, nav bar, quick picks…) lives behind the "Appearance" row.
+ * screen it opens. Every group here is a door, not a control: playback and audio
+ * are set once, on the "Player and audio" screen, so the same switch can no
+ * longer exist on two pages and drift apart. The full appearance screen (player
+ * style, mini player, background blur, nav bar, quick picks…) lives behind the
+ * "Appearance" row.
  */
 
 package com.jay.glossy.ui.screens.settings
@@ -36,7 +37,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -44,8 +44,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -77,13 +75,10 @@ import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.R
 import com.jay.glossy.constants.AccountNameKey
-import com.jay.glossy.constants.AudioNormalizationKey
 import com.jay.glossy.constants.CommunityChannel
 import com.jay.glossy.constants.DarkModeKey
-import com.jay.glossy.constants.DownloadOverWifiOnlyKey
 import com.jay.glossy.constants.InnerTubeCookieKey
 import com.jay.glossy.constants.SelectedThemeColorKey
-import com.jay.glossy.constants.SkipSilenceKey
 import com.jay.glossy.ui.component.GlossyBrandTile
 import com.jay.glossy.ui.component.GlossyEyebrow
 import com.jay.glossy.ui.component.GlossyInitialAvatar
@@ -150,18 +145,6 @@ fun SettingsScreen(
     val (selectedThemeColorInt) = rememberPreference(
         SelectedThemeColorKey,
         defaultValue = DefaultThemeColor.toArgb()
-    )
-    val (audioNormalization, onAudioNormalizationChange) = rememberPreference(
-        AudioNormalizationKey,
-        defaultValue = false
-    )
-    val (skipSilence, onSkipSilenceChange) = rememberPreference(
-        SkipSilenceKey,
-        defaultValue = false
-    )
-    val (downloadOverWifiOnly, onDownloadOverWifiOnlyChange) = rememberPreference(
-        DownloadOverWifiOnlyKey,
-        defaultValue = true
     )
     // ---- Cached music size ----------------------------------------------
     val playerConnection = LocalPlayerConnection.current
@@ -325,50 +308,12 @@ fun SettingsScreen(
                 )
             }
 
-            // ---- Playback -------------------------------------------------
-            item(key = "group_playback") {
-                Material3SettingsGroup(
-                    title = stringResource(R.string.menu_section_playback),
-                    items = listOf(
-                        toggleRow(
-                            icon = R.drawable.equalizer,
-                            title = stringResource(R.string.audio_normalization),
-                            checked = audioNormalization,
-                            onCheckedChange = onAudioNormalizationChange,
-                        ),
-                        toggleRow(
-                            icon = R.drawable.fast_forward,
-                            title = stringResource(R.string.skip_silence),
-                            checked = skipSilence,
-                            onCheckedChange = onSkipSilenceChange,
-                        ),
-                        toggleRow(
-                            icon = R.drawable.download,
-                            title = stringResource(R.string.glossy_download_wifi_only),
-                            subtitle = stringResource(R.string.glossy_download_wifi_only_desc),
-                            checked = downloadOverWifiOnly,
-                            onCheckedChange = onDownloadOverWifiOnlyChange,
-                        ),
-                    ),
-                )
-            }
-
-            // ---- Storage --------------------------------------------------
-            item(key = "group_storage") {
-                Material3SettingsGroup(
-                    title = stringResource(R.string.storage),
-                    items = listOf(
-                        navRow(
-                            icon = R.drawable.storage,
-                            title = stringResource(R.string.glossy_cached_music),
-                            subtitle = stringResource(R.string.glossy_used_amount, cachedLabel),
-                            onClick = { navController.navigate("settings/storage") },
-                        ),
-                    ),
-                )
-            }
-
             // ---- Playback & audio ----------------------------------------
+            // A door, not a copy. Normalisation, skip silence, crossfade and
+            // every other player knob live on that one screen; this page used
+            // to repeat two of them, which is how the two copies drifted. The
+            // Wi-Fi-only switch moved to Storage, next to the downloads it
+            // governs.
             item(key = "group_playback_audio") {
                 Material3SettingsGroup(
                     title = stringResource(R.string.glossy_section_playback_audio),
@@ -387,6 +332,21 @@ fun SettingsScreen(
                             icon = R.drawable.lyrics,
                             title = stringResource(R.string.ai_lyrics_translation),
                             onClick = { navController.navigate("settings/ai") },
+                        ),
+                    ),
+                )
+            }
+
+            // ---- Storage --------------------------------------------------
+            item(key = "group_storage") {
+                Material3SettingsGroup(
+                    title = stringResource(R.string.storage),
+                    items = listOf(
+                        navRow(
+                            icon = R.drawable.storage,
+                            title = stringResource(R.string.glossy_cached_music),
+                            subtitle = stringResource(R.string.glossy_used_amount, cachedLabel),
+                            onClick = { navController.navigate("settings/storage") },
                         ),
                     ),
                 )
@@ -627,43 +587,5 @@ private fun navRow(
         trailingContent = valueContent,
         showChevron = value == null,
         onClick = onClick,
-    )
-}
-
-/**
- * A settings row whose right-hand side is a switch. The whole row toggles, not
- * just the switch, and the switch carries the same check/cross thumb as the
- * rest of the settings screens.
- */
-@Composable
-private fun toggleRow(
-    icon: Int,
-    title: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    subtitle: String? = null,
-): Material3SettingsItem {
-    val description: (@Composable () -> Unit)? =
-        subtitle?.let { text -> { Text(text = text) } }
-    return Material3SettingsItem(
-        icon = painterResource(icon),
-        title = { Text(text = title) },
-        description = description,
-        trailingContent = {
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-                thumbContent = {
-                    Icon(
-                        painter = painterResource(
-                            if (checked) R.drawable.check else R.drawable.close
-                        ),
-                        contentDescription = null,
-                        modifier = Modifier.size(SwitchDefaults.IconSize),
-                    )
-                },
-            )
-        },
-        onClick = { onCheckedChange(!checked) },
     )
 }

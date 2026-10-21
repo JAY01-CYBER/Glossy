@@ -55,6 +55,7 @@ import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.R
+import com.jay.glossy.constants.DownloadOverWifiOnlyKey
 import com.jay.glossy.constants.EnableSongCacheKey
 import com.jay.glossy.constants.MaxCanvasCacheSizeKey
 import com.jay.glossy.constants.MaxImageCacheSizeKey
@@ -103,6 +104,12 @@ fun StorageSettings(
     val (smartTrimmer, onSmartTrimmerChange) = rememberPreference(
         key = SmartTrimmerKey,
         defaultValue = false
+    )
+    // Downloads are the one thing the Wi-Fi-only switch governs, so it lives
+    // here rather than next to the player preferences it used to sit with.
+    val (downloadOverWifiOnly, onDownloadOverWifiOnlyChange) = rememberPreference(
+        key = DownloadOverWifiOnlyKey,
+        defaultValue = true
     )
     val (maxImageCacheSize, onMaxImageCacheSizeChange) = rememberPreference(
         key = MaxImageCacheSizeKey,
@@ -441,6 +448,27 @@ fun StorageSettings(
                             description = {
                                 Text(text = Formatter.formatShortFileSize(context, downloadCacheSize))
                             },
+                        ),
+                        Material3SettingsItem(
+                            icon = painterResource(R.drawable.download),
+                            title = { Text(stringResource(R.string.glossy_download_wifi_only)) },
+                            description = { Text(stringResource(R.string.glossy_download_wifi_only_desc)) },
+                            trailingContent = {
+                                Switch(
+                                    checked = downloadOverWifiOnly,
+                                    onCheckedChange = onDownloadOverWifiOnlyChange,
+                                    thumbContent = {
+                                        Icon(
+                                            painter = painterResource(
+                                                id = if (downloadOverWifiOnly) R.drawable.check else R.drawable.close
+                                            ),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(SwitchDefaults.IconSize)
+                                        )
+                                    }
+                                )
+                            },
+                            onClick = { onDownloadOverWifiOnlyChange(!downloadOverWifiOnly) }
                         ),
                         Material3SettingsItem(
                             icon = painterResource(R.drawable.clear_all),
