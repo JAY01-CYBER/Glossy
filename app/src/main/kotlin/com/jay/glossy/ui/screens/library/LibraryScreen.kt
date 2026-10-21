@@ -185,13 +185,11 @@ fun LibraryScreen() {
 
             Spacer(Modifier.height(16.dp))
 
-            // Floating search pill with the Liked and Downloads shortcuts. It
-            // sits above the filters so every collection is one tap from it.
+            // Full-width library search field; Liked and Downloads remain
+            // available in the quick-access tiles above.
             GlossySearchDock(
                 hint = stringResource(R.string.search_library),
                 onSearchClick = { navController.navigate("search_input") },
-                onLikedClick = { navController.navigate("auto_playlist/liked") },
-                onDownloadsClick = { navController.navigate("auto_playlist/downloaded") },
             )
 
             Spacer(Modifier.height(14.dp))
