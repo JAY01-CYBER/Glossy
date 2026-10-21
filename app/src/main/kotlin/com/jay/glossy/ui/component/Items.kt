@@ -630,11 +630,11 @@ fun GridItem(
                 .fillMaxWidth()
                 .aspectRatio(thumbnailRatio)
                 .graphicsLayer {
+                    // Keep the artwork clipped to its shape without drawing
+                    // a large grey/rectangular shadow plate behind thumbnails.
                     shape = imageShape
                     clip = true
-                    shadowElevation = 16.dp.toPx()
-                    spotShadowColor = Color.Black
-                    ambientShadowColor = Color.Black
+                    shadowElevation = 0f
                 }
         ) {
             thumbnailContent()
