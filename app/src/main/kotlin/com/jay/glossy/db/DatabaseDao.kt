@@ -227,6 +227,17 @@ interface DatabaseDao {
     @Query("SELECT COUNT(1) FROM song WHERE liked")
     fun likedSongsCount(): Flow<Int>
 
+    // The library's virtual rows (Offline, Uploaded) print these instead of the
+    // hardcoded zero they used to show. Same WHERE clauses as the song lists
+    // they open, so the number on the row always matches the list behind it.
+    @Transaction
+    @Query("SELECT COUNT(1) FROM song WHERE isDownloaded = 1 AND (isEpisode = 0 OR isEpisode IS NULL)")
+    fun downloadedSongsCount(): Flow<Int>
+
+    @Transaction
+    @Query("SELECT COUNT(1) FROM song WHERE isUploaded = 1")
+    fun uploadedSongsCount(): Flow<Int>
+
     @Transaction
     @Query("SELECT song.* FROM song JOIN song_album_map ON song.id = song_album_map.songId WHERE song_album_map.albumId = :albumId")
     fun albumSongs(albumId: String): Flow<List<Song>>

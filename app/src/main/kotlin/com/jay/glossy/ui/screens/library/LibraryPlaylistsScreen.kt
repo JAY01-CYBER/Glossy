@@ -171,13 +171,21 @@ fun LibraryPlaylistsScreen(
 
     val topSize by viewModel.topValue.collectAsStateWithLifecycle(initialValue = 50)
 
+    // The virtual collections are not playlist rows, so they cannot inherit a
+    // count from the playlist query; each one reads the same song query its own
+    // screen runs. These were hardcoded to zero, which is why Liked said "0
+    // songs" however many were liked.
+    val likedCount by viewModel.likedCount.collectAsStateWithLifecycle()
+    val downloadedCount by viewModel.downloadedCount.collectAsStateWithLifecycle()
+    val uploadedCount by viewModel.uploadedCount.collectAsStateWithLifecycle()
+
     val likedPlaylist =
         Playlist(
             playlist = PlaylistEntity(
                 id = UUID.randomUUID().toString(),
                 name = stringResource(R.string.liked)
             ),
-            songCount = 0,
+            songCount = likedCount,
             songThumbnails = emptyList(),
         )
 
@@ -187,10 +195,12 @@ fun LibraryPlaylistsScreen(
                 id = UUID.randomUUID().toString(),
                 name = stringResource(R.string.offline)
             ),
-            songCount = 0,
+            songCount = downloadedCount,
             songThumbnails = emptyList(),
         )
 
+    // My Top is whatever YouTube returns, so there is no local number for it;
+    // its row prints no count at all rather than a zero that reads as empty.
     val topPlaylist =
         Playlist(
             playlist = PlaylistEntity(
@@ -207,10 +217,12 @@ fun LibraryPlaylistsScreen(
                 id = UUID.randomUUID().toString(),
                 name = stringResource(R.string.uploaded_playlist)
             ),
-            songCount = 0,
+            songCount = uploadedCount,
             songThumbnails = emptyList(),
         )
 
+    // Cache membership lives in the player's cache, not in the song table, so
+    // this one has no count either.
     val cachedPlaylist =
         Playlist(
             playlist = PlaylistEntity(
@@ -242,6 +254,12 @@ fun LibraryPlaylistsScreen(
         showTopPlaylists,
         showUploadedPlaylists,
         topSize,
+        // Without these the rows keep the counts they were built with and a
+        // newly liked song would not change the number until the screen is
+        // rebuilt.
+        likedCount,
+        downloadedCount,
+        uploadedCount,
     ) {
         buildList {
             if (showLikedPlaylist) {
@@ -509,17 +527,25 @@ fun LibraryPlaylistsScreen(
                         ) { item ->
                             val offline = item.route?.contains("download") == true ||
                                 item.route?.contains("cache") == true
+                            // Cached and My Top have no count this screen can
+                            // know, so they get an empty subtitle instead of the
+                            // "0 songs" fallback. The other three carry the
+                            // count their own screen would show.
+                            val subtitle = when {
+                                item.key == "cachedPlaylist" || item.key == "TopPlaylist" -> ""
+                                offline -> stringResource(
+                                    R.string.glossy_playlist_songs_offline,
+                                    item.playlist.songCount,
+                                )
+                                else -> stringResource(
+                                    R.string.glossy_playlist_songs,
+                                    item.playlist.songCount,
+                                )
+                            }
                             GlossyPlaylistListRow(
                                 playlist = item.playlist,
                                 route = item.route,
-                                subtitle = if (offline) {
-                                    stringResource(
-                                        R.string.glossy_playlist_songs_offline,
-                                        item.playlist.songCount,
-                                    )
-                                } else {
-                                    null
-                                },
+                                subtitle = subtitle,
                                 modifier = Modifier.animateItem(),
                             )
                         }

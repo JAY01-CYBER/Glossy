@@ -273,7 +273,7 @@ class LibraryPlaylistsViewModel
 @Inject
 constructor(
     @ApplicationContext context: Context,
-    database: MusicDatabase,
+    private val database: MusicDatabase,
     private val syncUtils: SyncUtils,
 ) : ViewModel() {
     private val _searchQuery = MutableStateFlow("")
@@ -307,6 +307,17 @@ constructor(
         context.dataStore.data
             .map { it[TopSize] ?: "50" }
             .distinctUntilChanged()
+
+    // The virtual collections are rows in the song table too, so their song
+    // counts come from the same queries the collections themselves run. They
+    // used to be hardcoded to zero, which made Liked read "0 songs" however
+    // many were liked.
+    val likedCount =
+        database.likedSongsCount().stateIn(viewModelScope, SharingStarted.Lazily, 0)
+    val downloadedCount =
+        database.downloadedSongsCount().stateIn(viewModelScope, SharingStarted.Lazily, 0)
+    val uploadedCount =
+        database.uploadedSongsCount().stateIn(viewModelScope, SharingStarted.Lazily, 0)
 }
 
 @HiltViewModel

@@ -185,13 +185,13 @@ fun LibraryScreen() {
 
             Spacer(Modifier.height(16.dp))
 
-            // Floating search pill with the Liked and Downloads shortcuts. It
-            // sits above the filters so every collection is one tap from it.
+            // Floating search pill, and just the pill: the quick tiles directly
+            // above already open Liked and Downloads, so the heart and download
+            // that used to sit beside it were a second and third way to reach
+            // the same two collections from the same thumb's reach.
             GlossySearchDock(
                 hint = stringResource(R.string.search_library),
                 onSearchClick = { navController.navigate("search_input") },
-                onLikedClick = { navController.navigate("auto_playlist/liked") },
-                onDownloadsClick = { navController.navigate("auto_playlist/downloaded") },
             )
 
             Spacer(Modifier.height(14.dp))
