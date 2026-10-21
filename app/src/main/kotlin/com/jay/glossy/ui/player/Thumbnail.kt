@@ -103,6 +103,7 @@ import com.jay.glossy.constants.ThumbnailCornerRadius
 import com.jay.glossy.constants.ThumbnailShadowKey
 import com.jay.glossy.listentogether.RoomRole
 import com.jay.glossy.ui.component.CastButton
+import com.jay.glossy.ui.utils.isYouTubeVideoStill
 import com.jay.glossy.utils.rememberEnumPreference
 import com.jay.glossy.utils.rememberPreference
 import kotlinx.coroutines.CoroutineScope
@@ -1202,7 +1203,17 @@ private fun ThumbnailImage(
                 .crossfade(true)
                 .build(),
             contentDescription = null,
-            contentScale = if (cropArtwork || playerStyleName == "VIVI_NEW") ContentScale.Crop else ContentScale.Fit,
+            // A video frame is 16:9 and this artwork slot is square, so fitting
+            // one left a band of surfaceVariant above and below the picture —
+            // the black padding a music video showed, with the frame no longer
+            // sitting flush inside the cover's corners. Frames always fill,
+            // exactly as the library tiles already draw them; the crop
+            // preference keeps deciding the case it was written for, which is
+            // square cover art.
+            contentScale =
+                if (cropArtwork || playerStyleName == "VIVI_NEW" || isYouTubeVideoStill(artworkUri))
+                    ContentScale.Crop
+                else ContentScale.Fit,
             modifier = Modifier.fillMaxSize()
         )
     }

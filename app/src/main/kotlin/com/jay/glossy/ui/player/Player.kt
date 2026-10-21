@@ -212,6 +212,7 @@ import com.jay.glossy.ui.theme.PlayerColorExtractor
 import com.jay.glossy.ui.theme.PlayerSliderColors
 import com.jay.glossy.ui.utils.ShowMediaInfo
 import com.jay.glossy.ui.utils.ShowOffsetDialog
+import com.jay.glossy.ui.utils.isYouTubeVideoStill
 import com.jay.glossy.utils.dataStore
 import com.jay.glossy.utils.makeTimeString
 import com.jay.glossy.utils.rememberEnumPreference
@@ -1002,7 +1003,13 @@ fun BottomSheetPlayer(
                                         AsyncImage(
                                             model = mediaMetadata.thumbnailUrl,
                                             contentDescription = null,
-                                            contentScale = if (cropAlbumArt) ContentScale.Crop else ContentScale.Fit,
+                                            // Same rule the full artwork uses: a 16:9
+                                            // frame fills this square slot instead of
+                                            // being letterboxed inside it.
+                                            contentScale =
+                                                if (cropAlbumArt || isYouTubeVideoStill(mediaMetadata.thumbnailUrl))
+                                                    ContentScale.Crop
+                                                else ContentScale.Fit,
                                             modifier = Modifier.size(56.dp).clip(RoundedCornerShape(ThumbnailCornerRadius)),
                                         )
                                     }
