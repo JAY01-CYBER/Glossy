@@ -319,70 +319,37 @@ fun GlossyIconAction(
 fun GlossySearchDock(
     hint: String,
     onSearchClick: () -> Unit,
-    onLikedClick: () -> Unit,
-    onDownloadsClick: () -> Unit,
     modifier: Modifier = Modifier,
-    likedLabel: String? = null,
-    downloadsLabel: String? = null,
 ) {
     val pillShape = RoundedCornerShape(GlossyDimens.CornerPill)
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = GlossyDimens.ScreenPadding),
+            .padding(horizontal = GlossyDimens.ScreenPadding)
+            .shadow(elevation = 6.dp, shape = pillShape, clip = false)
+            .clip(pillShape)
+            .background(GlossyPalette.Row)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = ripple(color = GlossyPalette.Accent),
+                onClick = onSearchClick,
+            )
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Row(
-            modifier = Modifier
-                .weight(1f)
-                .shadow(elevation = 6.dp, shape = pillShape, clip = false)
-                .clip(pillShape)
-                .background(GlossyPalette.Row)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = ripple(color = GlossyPalette.Accent),
-                    onClick = onSearchClick,
-                )
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.search),
-                contentDescription = null,
-                tint = GlossyPalette.TextSecondary,
-                modifier = Modifier.size(20.dp),
-            )
-            Spacer(Modifier.width(10.dp))
-            Text(
-                text = hint,
-                style = MaterialTheme.typography.bodyMedium,
-                color = GlossyPalette.TextMuted,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-
-        GlossyIconAction(
-            icon = R.drawable.favorite,
-            contentDescription = likedLabel ?: stringResource(R.string.liked),
-            tint = GlossyPalette.TextPrimary,
-            buttonSize = 48.dp,
-            iconSize = 22.dp,
-            background = GlossyPalette.Row,
-            elevation = 6.dp,
-            onClick = onLikedClick,
+        Icon(
+            painter = painterResource(R.drawable.search),
+            contentDescription = null,
+            tint = GlossyPalette.TextSecondary,
+            modifier = Modifier.size(20.dp),
         )
-
-        GlossyIconAction(
-            icon = R.drawable.download,
-            contentDescription = downloadsLabel ?: stringResource(R.string.downloaded_songs),
-            tint = GlossyPalette.TextPrimary,
-            buttonSize = 48.dp,
-            iconSize = 22.dp,
-            background = GlossyPalette.Row,
-            elevation = 6.dp,
-            onClick = onDownloadsClick,
+        Spacer(Modifier.width(10.dp))
+        Text(
+            text = hint,
+            style = MaterialTheme.typography.bodyMedium,
+            color = GlossyPalette.TextMuted,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
