@@ -665,6 +665,16 @@ class ListenTogetherClient
                 .pingInterval(60, TimeUnit.SECONDS) // Match server ping interval
                 .build()
 
+        /**
+         * Normalises whatever was pasted into the server field into an address the
+         * WebSocket client can open.
+         *
+         * A self-hosted server prints a full `ws://host:port/ws` URL, but people
+         * type `192.168.1.24:8080`, and the settings dialog stores the field
+         * verbatim. Without a scheme that address reached OkHttp as-is, which threw
+         * out of [connect] and left the caller waiting on a screen that could never
+         * finish — so the scheme is filled in here instead.
+         */
         private fun normalizeServerUrl(url: String): String {
             val trimmed = url.trim()
             if (trimmed.isEmpty()) return defaultServerUrl
@@ -734,14 +744,26 @@ class ListenTogetherClient
             _connectionState.value = ConnectionState.CONNECTING
             serverClock.reset()
             evaluateBackgroundDisconnectPolicy("connect")
-            log(LogLevel.INFO, "Connecting to server", getServerUrl())
+            val serverUrl = getServerUrl()
+            log(LogLevel.INFO, "Connecting to server", serverUrl)
 
             val request =
-                Request
-                    .Builder()
-                    .url(getServerUrl())
-                    .header("User-Agent", context.packageName)
-                    .build()
+                try {
+                    Request
+                        .Builder()
+                        .url(serverUrl)
+                        .header("User-Agent", context.packageName)
+                        .build()
+                } catch (e: IllegalArgumentException) {
+                    // An address OkHttp cannot parse (a typo, an unsupported scheme)
+                    // used to escape this method and leave the screen that asked for
+                    // the connection waiting forever. Report it as a connection
+                    // failure so the caller can show it and reset.
+                    _connectionState.value = ConnectionState.ERROR
+                    log(LogLevel.ERROR, "Invalid server URL", serverUrl)
+                    emitEvent(ListenTogetherEvent.ConnectionError(e.message ?: serverUrl))
+                    return
+                }
 
             webSocket =
                 client.newWebSocket(
@@ -1631,6 +1653,9 @@ class ListenTogetherClient
                             else -> {}
                         }
 
+                        // The server has answered, so the room-action watchdog must
+                        // not also fire its "no answer" error a few seconds later.
+                        clearRoomActionTimeout()
                         emitEvent(ListenTogetherEvent.ServerError(payload.code, payload.message))
                     }
 
