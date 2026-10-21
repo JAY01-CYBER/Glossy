@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+    The greeting card's video layer.
+
+    Deliberately a TextureView surface: a SurfaceView is composited by the
+    window rather than by the view hierarchy, so `View.alpha` on it does nothing
+    and the clip would sit at full strength behind the name. The card needs the
+    clip faded to a third, so the surface has to be a texture.
+-->
+<androidx.media3.ui.PlayerView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    app:resize_mode="zoom"
+    app:shutter_background_color="@android:color/transparent"
+    app:surface_type="texture_view"
+    app:use_controller="false" />

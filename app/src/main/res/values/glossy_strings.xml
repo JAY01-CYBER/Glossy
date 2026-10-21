@@ -48,11 +48,6 @@
     <string name="glossy_hero_eyebrow">The daily edit</string>
     <!-- Mix — the eyebrow above the title -->
     <string name="glossy_mix_eyebrow">Your sound, reimagined</string>
-    <!-- Settings › Appearance — which palette the redesign paints with -->
-    <string name="glossy_design_palette">Design palette</string>
-    <string name="glossy_design_palette_desc">The design\'s own charcoal and rose, or tones taken from your colour</string>
-    <string name="glossy_palette_after_dark">After dark</string>
-    <string name="glossy_palette_material_you">Material You</string>
     <!-- Mix — the page title, filters, featured card and empty state -->
     <string name="mix_for_you_title">Mix for you</string>
     <string name="glossy_mix_for_you">For you</string>
@@ -99,10 +94,4 @@
     <!-- Listen Together — the shortcut on Home and its group in Settings -->
     <string name="glossy_listen_together_hint">Start a session and listen with friends</string>
     <string name="glossy_together_group">With friends</string>
-    <!-- Home greeting card: the ghosted brand note beside the listener's name -->
-    <string name="glossy_nightly">Glossy Nightly</string>
-    <!-- Glass sheet player: the metadata cells above the seek bar -->
-    <string name="glossy_glass_album">Album</string>
-    <string name="glossy_glass_artist">Artist</string>
-    <string name="glossy_glass_length">Length</string>
 </resources>

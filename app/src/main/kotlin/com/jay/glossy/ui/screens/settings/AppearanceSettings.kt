@@ -85,6 +85,8 @@ import com.jay.glossy.constants.DensityScale
 import com.jay.glossy.constants.DensityScaleKey
 import com.jay.glossy.constants.DynamicThemeKey
 import com.jay.glossy.constants.AppIconKey
+import com.jay.glossy.constants.GreetingAnimation
+import com.jay.glossy.constants.GreetingAnimationKey
 import com.jay.glossy.constants.EnableHighRefreshRateKey
 import com.jay.glossy.constants.EnableLandscapeScalingKey
 import com.jay.glossy.constants.ExperimentalLyricsKey
@@ -190,6 +192,14 @@ fun AppearanceSettings(
     val iconContext = LocalContext.current
     val iconScope = rememberCoroutineScope()
     var showAppIconDialog by rememberSaveable { mutableStateOf(false) }
+
+    // Which clip loops behind the home greeting card. Kept here rather than in
+    // Home so the choice can be made while looking at its own description.
+    val (greetingAnimation, onGreetingAnimationChange) = rememberEnumPreference(
+        GreetingAnimationKey,
+        defaultValue = GreetingAnimation.OFF,
+    )
+    var showGreetingAnimationDialog by rememberSaveable { mutableStateOf(false) }
 
     val (enableHighRefreshRate, onEnableHighRefreshRateChange) =
         rememberPreference(
@@ -566,12 +576,31 @@ fun AppearanceSettings(
                     com.jay.glossy.constants.PlayerStyle.VINYL -> "Vinyl (Turntable)"
                     com.jay.glossy.constants.PlayerStyle.CAPSULE -> "Capsule (Maroon)"
                     com.jay.glossy.constants.PlayerStyle.CINEMATIC -> "Cinematic (Full-Bleed)"
-                    com.jay.glossy.constants.PlayerStyle.GLASS_SHEET -> "Glass Sheet (Blurred Cover)"
                 }
             },
         )
     }
     
+    if (showGreetingAnimationDialog) {
+        EnumDialog(
+            onDismiss = { showGreetingAnimationDialog = false },
+            onSelect = {
+                onGreetingAnimationChange(it)
+                showGreetingAnimationDialog = false
+            },
+            title = "Greeting section animation",
+            current = greetingAnimation,
+            values = GreetingAnimation.entries.toList(),
+            valueText = { greetingAnimationLabel(it) },
+            valueDescription = {
+                when (it) {
+                    GreetingAnimation.OFF -> "The plain card, no video"
+                    else -> "Loops behind the greeting and your name"
+                }
+            },
+        )
+    }
+
     if (showAppIconDialog) {
         EnumDialog(
             onDismiss = { showAppIconDialog = false },
@@ -1370,6 +1399,20 @@ fun AppearanceSettings(
                         )
                     },
                     onClick = { showQuickPicksStyleDialog = true }
+                ),
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.slow_motion_video),
+                    title = { Text("Greeting section animation") },
+                    description = {
+                        Text(
+                            when (greetingAnimation) {
+                                GreetingAnimation.OFF -> "Off — the plain card"
+                                GreetingAnimation.NEON_GLOW -> "Neon glow"
+                                GreetingAnimation.SUNSET_TRAIN -> "Sunset train"
+                            }
+                        )
+                    },
+                    onClick = { showGreetingAnimationDialog = true }
                 )
             )
         )
@@ -1667,7 +1710,6 @@ fun AppearanceSettings(
                                     com.jay.glossy.constants.PlayerStyle.VINYL -> "Vinyl (Turntable)"
                                     com.jay.glossy.constants.PlayerStyle.CAPSULE -> "Capsule (Maroon)"
                                     com.jay.glossy.constants.PlayerStyle.CINEMATIC -> "Cinematic (Full-Bleed)"
-                                    com.jay.glossy.constants.PlayerStyle.GLASS_SHEET -> "Glass Sheet (Blurred Cover)"
                                 }
                             )
                         },
@@ -2859,6 +2901,14 @@ private fun canvasHealthLabelResource(health: CanvasUrlHealth): Int =
         CanvasUrlHealth.PLAYABLE -> R.string.canvas_check_health_playable
         CanvasUrlHealth.UNPLAYABLE -> R.string.canvas_check_health_unplayable
         CanvasUrlHealth.UNKNOWN -> R.string.canvas_check_health_unknown
+    }
+
+/** How the greeting-animation picker names each clip. */
+private fun greetingAnimationLabel(animation: GreetingAnimation): String =
+    when (animation) {
+        GreetingAnimation.OFF -> "Off (plain card)"
+        GreetingAnimation.NEON_GLOW -> "Neon glow"
+        GreetingAnimation.SUNSET_TRAIN -> "Sunset train"
     }
 
 /**

@@ -114,13 +114,7 @@ enum class PlayerStyle {
     CAPSULE,
 
     /** Full-bleed album artwork behind glass controls. */
-    CINEMATIC,
-
-    /**
-     * The playing artwork, blurred edge to edge, under one frosted sheet that
-     * carries the title, metadata, seek bar and transport.
-     */
-    GLASS_SHEET
+    CINEMATIC
 }
 
 val MiniPlayerStyleKey = stringPreferencesKey("miniPlayerStyle")
@@ -143,8 +137,9 @@ enum class MiniPlayerStyle {
 }
 
 /**
- * Which palette the redesign paints with — a real, changeable choice, read by
- * the theme and written by Settings › Appearance › Design palette.
+ * Which palette the redesign paints with. Read by the theme only: the choice is
+ * no longer offered in Settings, but the value is kept so an existing install
+ * keeps painting with the palette it last stored.
  *
  * [FIGMA] is the design's own after-dark palette (charcoal surfaces, soft-rose
  * accent) and is what the app ships with. [MATERIALISTIC] is the tonal skin
@@ -166,6 +161,21 @@ val DesignStyleKey = stringPreferencesKey("designStyle")
  * looks and nothing selects them.
  */
 val ActiveDesignStyle = DesignStyle.MATERIALISTIC
+
+/**
+ * What plays behind the home greeting card.
+ *
+ * The card is 104dp tall and carries two lines of type, so the clip is a mood,
+ * not a subject: it is drawn at a low alpha under the gradient, loops silently
+ * and is never a control. [OFF] is the default and draws the plain card.
+ */
+enum class GreetingAnimation {
+    OFF,
+    NEON_GLOW,
+    SUNSET_TRAIN,
+}
+
+val GreetingAnimationKey = stringPreferencesKey("greetingAnimation")
 
 /** Nickname a guest picks on the welcome screen. */
 val GuestNameKey = stringPreferencesKey("guest_name")

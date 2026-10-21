@@ -8,10 +8,14 @@
  *
  * The card is the whole header. The app's own top bar already draws the Glossy
  * wordmark and its actions, so this section adds no second brand row of its own:
- * no wordmark, no action pill and no per-user controls inside the card. The one
- * brand note it does carry is the ghosted "Glossy Nightly" set beside the name —
- * a watermark on the greaseproof card, not a heading, so it sits at low opacity
- * in the accent ink and is clipped by the card's rounded edge.
+ * no wordmark, no action pill, no ghosted app name and no per-user controls
+ * inside the card. It is the greeting and the name, nothing else.
+ *
+ * Optionally the card carries a loop of video behind that type — picked in
+ * Settings › Appearance › Home Screen Layout. The clip is decoration: silent,
+ * unclickable, faded to a third and finished with a scrim, so the greeting and
+ * the name keep the contrast they have on the plain card. With Reduce animation
+ * on, or the system's animations off, the plain card simply draws.
  *
  * Colours come from [GlossyPalette], so the card follows the skin: the rose
  * gradient of the design is the Materialistic theme's `primaryContainer` band,
@@ -19,17 +23,19 @@
  */
 package com.jay.glossy.ui.component
 
+import android.view.LayoutInflater
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,23 +43,33 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.datasource.RawResourceDataSource
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
 import com.jay.glossy.R
+import com.jay.glossy.constants.GreetingAnimation
+import com.jay.glossy.constants.GreetingAnimationKey
 import com.jay.glossy.ui.theme.GlossyDimens
 import com.jay.glossy.ui.theme.GlossyPalette
 import com.jay.glossy.ui.theme.OutfitFontFamily
-import java.util.Calendar
+import com.jay.glossy.utils.rememberEnumPreference
 
 /** Home header: the greeting card, and nothing else. */
 @Composable
 fun GreetingSection(userName: String) {
-    val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+    val currentHour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
     val greeting = stringResource(
         when (currentHour) {
             in 5..11 -> R.string.glossy_good_morning
@@ -76,6 +92,14 @@ fun GreetingSection(userName: String) {
 
     val cardShape = RoundedCornerShape(22.dp)
 
+    val (greetingAnimation) = rememberEnumPreference(
+        GreetingAnimationKey,
+        defaultValue = GreetingAnimation.OFF,
+    )
+    // Reduce animation is a promise, not a suggestion: the clip is not composed
+    // at all when it is on, so the card keeps its still gradient.
+    val motionAllowed = rememberAmbientMotionEnabled()
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -97,6 +121,30 @@ fun GreetingSection(userName: String) {
                     ),
                 ),
         ) {
+            if (greetingAnimation != GreetingAnimation.OFF && motionAllowed) {
+                // The clip is a mood, not a picture: a third of its brightness,
+                // then the card's own colour washed back over it so the type
+                // never has to compete with a bright frame.
+                GreetingVideoLoop(
+                    animation = greetingAnimation,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(cardShape),
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    fill.copy(alpha = 0.52f),
+                                    fill.copy(alpha = 0.24f),
+                                ),
+                            ),
+                        ),
+                )
+            }
+
             Column(
                 modifier = Modifier
                     .align(Alignment.CenterStart)
@@ -111,35 +159,82 @@ fun GreetingSection(userName: String) {
                     overflow = TextOverflow.Ellipsis,
                 )
                 Spacer(Modifier.height(2.dp))
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Text(
-                        text = firstName,
-                        fontFamily = OutfitFontFamily,
-                        fontSize = 27.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = (-0.6).sp,
-                        color = ink,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    // The watermark: set beside the name, on its baseline, and
-                    // allowed to run under the card's rounded edge instead of
-                    // wrapping. It is decoration only — nothing taps it.
-                    Text(
-                        text = stringResource(R.string.glossy_nightly),
-                        fontFamily = FontFamily.Serif,
-                        fontStyle = FontStyle.Italic,
-                        fontSize = 36.sp,
-                        fontWeight = FontWeight.Normal,
-                        letterSpacing = (-0.5).sp,
-                        color = ink.copy(alpha = 0.18f),
-                        maxLines = 1,
-                        softWrap = false,
-                        overflow = TextOverflow.Clip,
-                        modifier = Modifier.padding(start = 6.dp),
-                    )
-                }
+                Text(
+                    text = firstName,
+                    fontFamily = OutfitFontFamily,
+                    fontSize = 27.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = (-0.6).sp,
+                    color = ink,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }
+}
+
+/**
+ * One muted, looping clip behind the greeting.
+ *
+ * The player lives as long as the card is composed: scrolled away, it is
+ * released, and started over when the card comes back. It also follows the
+ * window — a home screen left behind must not keep decoding frames — and it
+ * never touches audio.
+ */
+@Composable
+private fun GreetingVideoLoop(
+    animation: GreetingAnimation,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val rawRes = when (animation) {
+        GreetingAnimation.NEON_GLOW -> R.raw.greeting_neon
+        GreetingAnimation.SUNSET_TRAIN -> R.raw.greeting_sunset
+        GreetingAnimation.OFF -> return
+    }
+
+    val exoPlayer = remember(rawRes) {
+        ExoPlayer.Builder(context)
+            .build()
+            .apply {
+                setMediaItem(MediaItem.fromUri(RawResourceDataSource.buildRawResourceUri(rawRes)))
+                repeatMode = Player.REPEAT_MODE_ONE
+                volume = 0f
+                playWhenReady = true
+                prepare()
+            }
+    }
+
+    DisposableEffect(exoPlayer) {
+        onDispose { exoPlayer.release() }
+    }
+
+    DisposableEffect(lifecycleOwner, exoPlayer) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_START -> exoPlayer.playWhenReady = true
+                Lifecycle.Event.ON_STOP -> exoPlayer.playWhenReady = false
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    AndroidView(
+        modifier = modifier,
+        factory = { viewContext ->
+            (LayoutInflater.from(viewContext)
+                .inflate(R.layout.view_greeting_video, null) as PlayerView).apply {
+                useController = false
+                setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
+                // A still frame is shown by the gradient underneath if the clip
+                // has not decoded yet, so there is no black flash to cover up.
+                player = exoPlayer
+                alpha = 0.40f
+            }
+        },
+    )
 }

@@ -31,10 +31,11 @@ enum class AppIcon(
     BLOOM("com.jay.glossy.MainActivityBloom", "Bloom", R.mipmap.ic_launcher_bloom),
     MIDNIGHT("com.jay.glossy.MainActivityMidnight", "Midnight", R.mipmap.ic_launcher_midnight),
     SAND("com.jay.glossy.MainActivitySand", "Sand", R.mipmap.ic_launcher_sand),
+    NEON("com.jay.glossy.MainActivityNeon", "Neon", R.mipmap.ic_launcher_neon),
     ;
 
     companion object {
-        /** The eight alternatives offered in Appearance settings. */
+        /** The nine alternatives offered in Appearance settings. */
         val picker: List<AppIcon> = AppIcon.entries.filter { it != CLASSIC }
 
         fun fromName(name: String?): AppIcon =

@@ -79,10 +79,7 @@ import com.jay.glossy.R
 import com.jay.glossy.constants.AccountNameKey
 import com.jay.glossy.constants.AudioNormalizationKey
 import com.jay.glossy.constants.CommunityChannel
-import com.jay.glossy.constants.ActiveDesignStyle
 import com.jay.glossy.constants.DarkModeKey
-import com.jay.glossy.constants.DesignStyle
-import com.jay.glossy.constants.DesignStyleKey
 import com.jay.glossy.constants.DownloadOverWifiOnlyKey
 import com.jay.glossy.constants.InnerTubeCookieKey
 import com.jay.glossy.constants.SelectedThemeColorKey
@@ -166,14 +163,6 @@ fun SettingsScreen(
         DownloadOverWifiOnlyKey,
         defaultValue = true
     )
-    // Which palette the redesign paints with: the design's own tokens or the
-    // Materialistic skin. One preference, two owners of the same layout.
-    val (paletteName, onPaletteChange) = rememberPreference(
-        DesignStyleKey,
-        defaultValue = ActiveDesignStyle.name,
-    )
-    val materialisticPalette = paletteName == DesignStyle.MATERIALISTIC.name
-
     // ---- Cached music size ----------------------------------------------
     val playerConnection = LocalPlayerConnection.current
     var cachedBytes by remember { mutableLongStateOf(0L) }
@@ -309,27 +298,6 @@ fun SettingsScreen(
                             title = stringResource(R.string.color_palette),
                             value = paletteValue,
                             onClick = { navController.navigate("settings/appearance/theme") },
-                        ),
-                        navRow(
-                            icon = R.drawable.palette,
-                            title = stringResource(R.string.glossy_design_palette),
-                            subtitle = stringResource(R.string.glossy_design_palette_desc),
-                            value = stringResource(
-                                if (materialisticPalette) {
-                                    R.string.glossy_palette_material_you
-                                } else {
-                                    R.string.glossy_palette_after_dark
-                                }
-                            ),
-                            onClick = {
-                                onPaletteChange(
-                                    if (materialisticPalette) {
-                                        DesignStyle.FIGMA.name
-                                    } else {
-                                        DesignStyle.MATERIALISTIC.name
-                                    }
-                                )
-                            },
                         ),
                         navRow(
                             icon = R.drawable.translate,
