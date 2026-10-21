@@ -132,6 +132,15 @@ fun SearchDiscoverRoute(
         }
     }
 
+    // Charts and explore answer different questions: explore only fills the
+    // album shelf, so it can never stand in for the chart request. Gating both
+    // on "charts and explore are both missing" is what turned a failed chart
+    // load into "Nothing is trending right now", and what made Try again look
+    // dead — the retry did run, but neither the spinner nor the error was
+    // allowed to show.
+    val chartsMissing = chartsPage == null
+    val chartsErrorMessage = stringResource(R.string.glossy_search_error)
+
     SearchDiscoverPage(
         tab = tab,
         onTabChange = { tab = it },
@@ -144,8 +153,8 @@ fun SearchDiscoverRoute(
                     .take(8),
             )
         },
-        isLoading = isLoading && chartsPage == null && explorePage == null,
-        errorMessage = if (chartsPage == null && explorePage == null) error else null,
+        isLoading = isLoading && chartsMissing,
+        errorMessage = if (chartsMissing && error != null) chartsErrorMessage else null,
         recentSearches = remember(history) { history.take(3).map { it.query } },
         nowPlayingId = mediaMetadata?.id,
         onSearch = onSearch,

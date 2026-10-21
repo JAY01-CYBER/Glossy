@@ -32,15 +32,28 @@ class ChartsViewModel @Inject constructor() : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
-            
-            YouTube.getChartsPage()
-                .onSuccess { page ->
+
+            // The chart request comes back two ways that both look like "no
+            // trending": a failure, and a page whose section list parsed to
+            // nothing. Neither is worth a dead tab on the first try, so an
+            // empty answer is retried once before it is reported. An empty page
+            // is deliberately not stored, so reopening the search page tries
+            // again instead of pinning the empty result for the session.
+            var lastFailure: Throwable? = null
+            repeat(2) { attempt ->
+                if (attempt > 0) kotlinx.coroutines.delay(400)
+                val result = YouTube.getChartsPage()
+                val page = result.getOrNull()
+                if (page != null && page.sections.isNotEmpty()) {
                     _chartsPage.value = page
+                    _isLoading.value = false
+                    return@launch
                 }
-                .onFailure { e ->
-                    _error.value = "Failed to load charts: ${e.message}"
-                }
-            
+                lastFailure = result.exceptionOrNull()
+            }
+
+            _error.value =
+                "Failed to load charts: ${lastFailure?.message ?: "the response had no sections"}"
             _isLoading.value = false
         }
     }

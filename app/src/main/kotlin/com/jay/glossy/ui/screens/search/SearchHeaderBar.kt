@@ -11,7 +11,11 @@ import com.jay.glossy.R
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.expandVertically
@@ -85,9 +89,32 @@ internal fun SearchHeaderBar(
     onVoice: () -> Unit,
     onSearch: (String) -> Unit,
 ) {
-    val morph = tween<Dp>(durationMillis = 220)
-    val sizeMorph = tween<IntSize>(durationMillis = 220)
-    val fade = tween<Float>(durationMillis = 160)
+    // Padding, height and colour all ride springs: toggling search and then
+    // deleting the character again bends the curve from wherever it currently
+    // is instead of restarting a tween, which is what made the bar feel stiff
+    // when the state flipped twice in quick succession.
+    val morph =
+        spring<Dp>(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMediumLow,
+            visibilityThreshold = 0.5.dp,
+        )
+    val sizeMorph =
+        spring<IntSize>(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMediumLow,
+            visibilityThreshold = IntSize(1, 1),
+        )
+    val colorMorph =
+        spring<Color>(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMediumLow,
+            visibilityThreshold = Color(0.01f, 0.01f, 0.01f, 0.01f),
+        )
+    // Departures clear quickly and arrivals ease in, so the two halves of the
+    // cross-fade no longer sit on top of each other in the middle of the morph.
+    val fadeOutSpec = tween<Float>(durationMillis = 120, easing = FastOutSlowInEasing)
+    val fadeInSpec = tween<Float>(durationMillis = 200, easing = LinearOutSlowInEasing)
 
     val topPadding by animateDpAsState(if (active) 6.dp else 12.dp, morph, label = "searchHeaderTop")
     val bottomPadding by animateDpAsState(if (active) 8.dp else 18.dp, morph, label = "searchHeaderBottom")
@@ -101,7 +128,7 @@ internal fun SearchHeaderBar(
             } else {
                 MaterialTheme.colorScheme.background
             },
-        animationSpec = tween(220),
+        animationSpec = colorMorph,
         label = "searchHeaderContainer",
     )
     val fieldColor by animateColorAsState(
@@ -111,11 +138,22 @@ internal fun SearchHeaderBar(
             } else {
                 GlossyPalette.Chip
             },
-        animationSpec = tween(220),
+        animationSpec = colorMorph,
         label = "searchHeaderFieldColor",
     )
-    val fieldTextColor = if (active) MaterialTheme.colorScheme.onSurface else GlossyPalette.TextPrimary
-    val fieldHintColor = if (active) MaterialTheme.colorScheme.onSurfaceVariant else GlossyPalette.TextSecondary
+    // These two used to snap to the new palette on the first frame while the
+    // pill behind them was still cross-fading, which read as a flash; now they
+    // travel with the background instead of ahead of it.
+    val fieldTextColor by animateColorAsState(
+        targetValue = if (active) MaterialTheme.colorScheme.onSurface else GlossyPalette.TextPrimary,
+        animationSpec = colorMorph,
+        label = "searchHeaderTextColor",
+    )
+    val fieldHintColor by animateColorAsState(
+        targetValue = if (active) MaterialTheme.colorScheme.onSurfaceVariant else GlossyPalette.TextSecondary,
+        animationSpec = colorMorph,
+        label = "searchHeaderHintColor",
+    )
 
     Column(
         modifier =
@@ -127,8 +165,8 @@ internal fun SearchHeaderBar(
     ) {
         AnimatedVisibility(
             visible = !active,
-            enter = fadeIn(fade) + expandVertically(sizeMorph),
-            exit = fadeOut(fade) + shrinkVertically(sizeMorph),
+            enter = fadeIn(fadeInSpec) + expandVertically(sizeMorph),
+            exit = fadeOut(fadeOutSpec) + shrinkVertically(sizeMorph),
         ) {
             Column(modifier = Modifier.padding(horizontal = GlossyDimens.ScreenPadding)) {
                 Text(
@@ -153,8 +191,10 @@ internal fun SearchHeaderBar(
         ) {
             AnimatedVisibility(
                 visible = active,
-                enter = fadeIn(fade) + expandHorizontally(sizeMorph),
-                exit = fadeOut(fade) + shrinkHorizontally(sizeMorph),
+                // Anchored to the leading edge in both directions: the arrow
+                // holds still at the left and the space opens to its right.
+                enter = fadeIn(fadeInSpec) + expandHorizontally(sizeMorph, expandFrom = Alignment.Start),
+                exit = fadeOut(fadeOutSpec) + shrinkHorizontally(sizeMorph, shrinkTowards = Alignment.Start),
             ) {
                 IconButton(onClick = onBack, modifier = Modifier.size(44.dp)) {
                     Icon(
@@ -227,8 +267,8 @@ internal fun SearchHeaderBar(
                 // pill keeps its own shortcut only on the discovery page.
                 AnimatedVisibility(
                     visible = !active,
-                    enter = fadeIn(fade),
-                    exit = fadeOut(fade),
+                    enter = fadeIn(fadeInSpec),
+                    exit = fadeOut(fadeOutSpec),
                 ) {
                     IconButton(onClick = onVoice, modifier = Modifier.size(44.dp)) {
                         Icon(
@@ -243,8 +283,11 @@ internal fun SearchHeaderBar(
 
             AnimatedVisibility(
                 visible = active,
-                enter = fadeIn(fade) + expandHorizontally(sizeMorph),
-                exit = fadeOut(fade) + shrinkHorizontally(sizeMorph),
+                // Anchored to the trailing edge, matching the shrink: the
+                // clear button sits on the screen edge and the pill gives up
+                // width to its left, instead of the icons sliding across.
+                enter = fadeIn(fadeInSpec) + expandHorizontally(sizeMorph, expandFrom = Alignment.End),
+                exit = fadeOut(fadeOutSpec) + shrinkHorizontally(sizeMorph, shrinkTowards = Alignment.End),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onClear, modifier = Modifier.size(44.dp)) {
