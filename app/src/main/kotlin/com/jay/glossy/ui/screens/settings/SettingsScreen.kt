@@ -58,7 +58,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
@@ -77,20 +76,16 @@ import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.R
 import com.jay.glossy.constants.AccountNameKey
-import com.jay.glossy.constants.AudioNormalizationKey
 import com.jay.glossy.constants.CommunityChannel
 import com.jay.glossy.constants.DarkModeKey
 import com.jay.glossy.constants.DownloadOverWifiOnlyKey
 import com.jay.glossy.constants.InnerTubeCookieKey
-import com.jay.glossy.constants.SelectedThemeColorKey
-import com.jay.glossy.constants.SkipSilenceKey
 import com.jay.glossy.ui.component.GlossyBrandTile
 import com.jay.glossy.ui.component.GlossyEyebrow
 import com.jay.glossy.ui.component.GlossyInitialAvatar
 import com.jay.glossy.ui.component.IconButton
 import com.jay.glossy.ui.component.Material3SettingsGroup
 import com.jay.glossy.ui.component.Material3SettingsItem
-import com.jay.glossy.ui.theme.DefaultThemeColor
 import com.jay.glossy.ui.theme.GlossyDimens
 import com.jay.glossy.ui.theme.GlossyPalette
 import com.jay.glossy.ui.utils.backToMain
@@ -147,18 +142,6 @@ fun SettingsScreen(
 
     // ---- Preferences shown by the groups below ---------------------------
     val (darkMode) = rememberEnumPreference(DarkModeKey, DarkMode.AUTO)
-    val (selectedThemeColorInt) = rememberPreference(
-        SelectedThemeColorKey,
-        defaultValue = DefaultThemeColor.toArgb()
-    )
-    val (audioNormalization, onAudioNormalizationChange) = rememberPreference(
-        AudioNormalizationKey,
-        defaultValue = false
-    )
-    val (skipSilence, onSkipSilenceChange) = rememberPreference(
-        SkipSilenceKey,
-        defaultValue = false
-    )
     val (downloadOverWifiOnly, onDownloadOverWifiOnlyChange) = rememberPreference(
         DownloadOverWifiOnlyKey,
         defaultValue = true
@@ -188,11 +171,6 @@ fun SettingsScreen(
         DarkMode.OFF -> stringResource(R.string.glossy_theme_light)
         DarkMode.AUTO -> stringResource(R.string.glossy_theme_system)
     }
-
-    val paletteValue = PaletteColors.firstOrNull {
-        it.seedColor != androidx.compose.ui.graphics.Color.Transparent &&
-            it.seedColor.toArgb() == selectedThemeColorInt
-    }?.let { stringResource(it.nameRes) } ?: stringResource(R.string.glossy_teal)
 
     val openCommunityLink: (CommunityChannel) -> Unit = { channel ->
         runCatching { uriHandler.openUri(channel.url) }
@@ -295,12 +273,6 @@ fun SettingsScreen(
                             onClick = { navController.navigate("settings/appearance/theme") },
                         ),
                         navRow(
-                            icon = R.drawable.gradient,
-                            title = stringResource(R.string.color_palette),
-                            value = paletteValue,
-                            onClick = { navController.navigate("settings/appearance/theme") },
-                        ),
-                        navRow(
                             icon = R.drawable.translate,
                             title = stringResource(R.string.glossy_font),
                             onClick = { navController.navigate("settings/appearance/font") },
@@ -314,18 +286,6 @@ fun SettingsScreen(
                 Material3SettingsGroup(
                     title = stringResource(R.string.menu_section_playback),
                     items = listOf(
-                        toggleRow(
-                            icon = R.drawable.equalizer,
-                            title = stringResource(R.string.audio_normalization),
-                            checked = audioNormalization,
-                            onCheckedChange = onAudioNormalizationChange,
-                        ),
-                        toggleRow(
-                            icon = R.drawable.fast_forward,
-                            title = stringResource(R.string.skip_silence),
-                            checked = skipSilence,
-                            onCheckedChange = onSkipSilenceChange,
-                        ),
                         toggleRow(
                             icon = R.drawable.download,
                             title = stringResource(R.string.glossy_download_wifi_only),
