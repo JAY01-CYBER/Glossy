@@ -1083,8 +1083,16 @@ class MainActivity : ComponentActivity() {
                                     TopAppBar(
                                         title = {
                                             Row(verticalAlignment = Alignment.CenterVertically) {
+                                                // The new app mark, taken from the launcher icon's
+                                                // monochrome layer: it is white art on a
+                                                // transparent canvas, so the bar tints it exactly
+                                                // like it tinted the old glyph, and the mark in the
+                                                // bar can never drift from the icon on the home
+                                                // screen again. The canvas leaves the art at half
+                                                // its width, which is why the box is bigger than the
+                                                // mark it draws.
                                                 Icon(
-                                                    painter = painterResource(R.drawable.small_icon), 
+                                                    painter = painterResource(R.drawable.ic_launcher_monochrome),
                                                     contentDescription = null,
                                                     modifier = Modifier.size(52.dp),
                                                     tint = MaterialTheme.colorScheme.onSurface
