@@ -43,11 +43,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -61,19 +57,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -108,11 +99,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
  */
 @Composable
 fun SearchDiscoverRoute(
-    query: TextFieldValue,
-    onQueryChange: (TextFieldValue) -> Unit,
-    focusRequester: FocusRequester,
     onSearch: (String) -> Unit,
-    onVoiceSearch: () -> Unit,
     onSeeAllRecent: () -> Unit,
     modifier: Modifier = Modifier,
     chartsViewModel: ChartsViewModel = hiltViewModel(),
@@ -146,9 +133,6 @@ fun SearchDiscoverRoute(
     }
 
     SearchDiscoverPage(
-        query = query,
-        onQueryChange = onQueryChange,
-        focusRequester = focusRequester,
         tab = tab,
         onTabChange = { tab = it },
         data = remember(chartsPage, explorePage) {
@@ -165,7 +149,6 @@ fun SearchDiscoverRoute(
         recentSearches = remember(history) { history.take(3).map { it.query } },
         nowPlayingId = mediaMetadata?.id,
         onSearch = onSearch,
-        onVoiceSearch = onVoiceSearch,
         onSeeAllRecent = onSeeAllRecent,
         onPlaySong = { song ->
             playerConnection?.playQueue(
@@ -184,12 +167,11 @@ fun SearchDiscoverRoute(
     )
 }
 
-/** The page itself: header, tabs, then whichever shelf the tab selected. */
+/** The page itself: tabs, then whichever shelf the tab selected. The search
+ * field lives in the toolbar above it ([SearchHeaderBar]), so the page keeps no
+ * text state of its own. */
 @Composable
 fun SearchDiscoverPage(
-    query: TextFieldValue,
-    onQueryChange: (TextFieldValue) -> Unit,
-    focusRequester: FocusRequester,
     tab: DiscoverTab,
     onTabChange: (DiscoverTab) -> Unit,
     data: SearchDiscoverData,
@@ -198,7 +180,6 @@ fun SearchDiscoverPage(
     recentSearches: List<String>,
     nowPlayingId: String?,
     onSearch: (String) -> Unit,
-    onVoiceSearch: () -> Unit,
     onSeeAllRecent: () -> Unit,
     onPlaySong: (SongItem) -> Unit,
     onOpenAlbum: (AlbumItem) -> Unit,
@@ -223,16 +204,6 @@ fun SearchDiscoverPage(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(top = 12.dp, bottom = bottomInset + 28.dp),
     ) {
-        item(key = "discover_header") {
-            DiscoverHeader(
-                query = query,
-                onQueryChange = onQueryChange,
-                focusRequester = focusRequester,
-                onSearch = onSearch,
-                onVoiceSearch = onVoiceSearch,
-            )
-        }
-
         item(key = "discover_tabs") {
             Row(
                 modifier =
@@ -252,7 +223,7 @@ fun SearchDiscoverPage(
             }
         }
 
-        // The header and the tabs always draw, and so does everything the page
+        // The tabs always draw, and so does everything the page
         // can show without a network: the mood grid and the recent searches are
         // local. A slow, empty or failed chart response must never blank the
         // whole page — each shelf that needs it reports itself instead.
@@ -367,96 +338,6 @@ fun SearchDiscoverPage(
                             )
                         }
                 }
-            }
-        }
-    }
-}
-
-// ============================================================================
-// Header
-// ============================================================================
-
-/**
- * Title, search field and the voice shortcut. The field writes straight into
- * the screen's query, so typing here is the same as typing in the toolbar the
- * results state shows.
- */
-@Composable
-private fun DiscoverHeader(
-    query: TextFieldValue,
-    onQueryChange: (TextFieldValue) -> Unit,
-    focusRequester: FocusRequester,
-    onSearch: (String) -> Unit,
-    onVoiceSearch: () -> Unit,
-) {
-    Column(modifier = Modifier.padding(horizontal = GlossyDimens.ScreenPadding)) {
-        Text(
-            text = stringResource(R.string.glossy_search_discover),
-            fontSize = 27.sp,
-            lineHeight = 33.sp,
-            fontWeight = FontWeight.SemiBold,
-            letterSpacing = (-0.6).sp,
-            color = GlossyPalette.Accent,
-        )
-
-        Spacer(Modifier.height(20.dp))
-
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .clip(RoundedCornerShape(GlossyDimens.CornerPill))
-                    .background(GlossyPalette.Chip)
-                    .padding(start = 18.dp, end = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.search),
-                contentDescription = null,
-                tint = GlossyPalette.TextPrimary,
-                modifier = Modifier.size(22.dp),
-            )
-            Spacer(Modifier.width(12.dp))
-            BasicTextField(
-                value = query,
-                onValueChange = onQueryChange,
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .focusRequester(focusRequester),
-                textStyle =
-                    TextStyle(
-                        color = GlossyPalette.TextPrimary,
-                        fontSize = 16.sp,
-                    ),
-                cursorBrush = SolidColor(GlossyPalette.Accent),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { onSearch(query.text) }),
-                decorationBox = { innerTextField ->
-                    if (query.text.isEmpty()) {
-                        Text(
-                            text = stringResource(R.string.search_yt_music),
-                            fontSize = 16.sp,
-                            color = GlossyPalette.TextSecondary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                    innerTextField()
-                },
-            )
-            IconButton(
-                onClick = onVoiceSearch,
-                modifier = Modifier.size(44.dp),
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.mic),
-                    contentDescription = stringResource(R.string.glossy_search_voice),
-                    tint = GlossyPalette.TextPrimary,
-                    modifier = Modifier.size(22.dp),
-                )
             }
         }
     }
