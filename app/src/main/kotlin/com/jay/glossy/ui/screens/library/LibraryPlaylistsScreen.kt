@@ -11,9 +11,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -140,11 +138,6 @@ fun LibraryPlaylistsScreen(
 
     var viewType by rememberEnumPreference(PlaylistViewTypeKey, LibraryViewType.GRID)
 
-    LaunchedEffect(newDesign) {
-        if (newDesign && viewType != LibraryViewType.LIST) {
-            viewType = LibraryViewType.LIST
-        }
-    }
     val (sortType, onSortTypeChange) = rememberEnumPreference(
         PlaylistSortTypeKey,
         PlaylistSortType.CREATE_DATE
@@ -611,19 +604,9 @@ fun LibraryPlaylistsScreen(
             LibraryViewType.GRID -> {
                 LazyVerticalGrid(
                     state = lazyGridState,
-                    // Match ArchiveTune's playlist library: two balanced columns
-                    // with square artwork and consistent spacing on all devices.
+                    // Match the Home screen's two-card library carousel proportions.
                     columns = GridCells.Fixed(2),
-                    contentPadding = PaddingValues(
-                        start = 24.dp,
-                        end = 24.dp,
-                        top = 8.dp,
-                        bottom = LocalPlayerAwareWindowInsets.current.asPaddingValues()
-                            .calculateBottomPadding() + 24.dp,
-                    ),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
                 ) {
                     item(
                         key = "filter",
@@ -661,19 +644,12 @@ fun LibraryPlaylistsScreen(
                         contentType = { CONTENT_TYPE_PLAYLIST },
                     ) { item ->
                         if (item.autoPlaylist) {
-                            PlaylistGridItem(
+                            AutoPlaylistGridItem(
                                 playlist = item.playlist,
-                                autoPlaylist = true,
-                                fillMaxWidth = true,
-                                badges = {},
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .animateItem()
-                                    .combinedClickable(
-                                        onClick = {
-                                            item.route?.let(navController::navigate)
-                                        },
-                                    ),
+                                onClick = {
+                                    item.route?.let(navController::navigate)
+                                },
+                                modifier = Modifier.animateItem()
                             )
                         } else {
                             LibraryPlaylistGridItem(

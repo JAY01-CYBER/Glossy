@@ -316,9 +316,7 @@ fun LibraryArtistsScreen(
                 LazyVerticalGrid(
                     state = lazyGridState,
                     columns =
-                    GridCells.Adaptive(
-                        minSize = GridThumbnailHeight + if (gridItemSize == GridItemSize.BIG) 24.dp else (-24).dp,
-                    ),
+                    GridCells.Fixed(2),
                     contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
                 ) {
                     item(
