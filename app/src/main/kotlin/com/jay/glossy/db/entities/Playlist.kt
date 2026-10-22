@@ -39,25 +39,36 @@ data class Playlist(
         get() = null
     
     /**
-     * Prefer playlist artwork, but keep song artwork as a fallback. Some local
-     * playlists contain a stale/custom thumbnail URL; using that URL alone
-     * makes the whole card fall back to the generic music placeholder even
-     * when the playlist's songs have usable artwork.
+     * Build a clean collage from individual song artworks. A playlist thumbnail
+     * supplied by YouTube can already be a collage; placing that image inside
+     * another collage makes the same four artworks repeat. Prefer distinct song
+     * artwork and use the playlist thumbnail only when no song artwork exists.
      */
     val thumbnails: List<String>
-        get() = buildList {
-            playlist.thumbnailUrl
-                ?.trim()
-                ?.takeIf { it.isNotEmpty() }
-                ?.let(::add)
+        get() {
+            fun canonical(url: String): String = url
+                .trim()
+                .substringBefore("=w")
+                .substringBefore("=s")
+                .substringBefore("&size=")
 
-            songThumbnails
-                .asSequence()
+            // Use individual song artwork first: playlist thumbnail URLs can
+            // already contain a collage and nesting them repeats the same art.
+            val songArtwork = songThumbnails.asSequence()
                 .filterNotNull()
                 .map(String::trim)
                 .filter(String::isNotEmpty)
-                .forEach { thumbnail ->
-                    if (thumbnail !in this) add(thumbnail)
-                }
+                .distinctBy(::canonical)
+                .take(4)
+                .toList()
+
+            if (songArtwork.isNotEmpty()) return songArtwork
+
+            // If songs have no artwork at all, use the saved playlist artwork.
+            return listOfNotNull(playlist.thumbnailUrl?.trim()?.takeIf(String::isNotEmpty))
+                .distinctBy(::canonical)
+                .take(1)
         }
+
+
 }
