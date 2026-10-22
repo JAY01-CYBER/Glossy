@@ -36,9 +36,6 @@ import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
-import androidx.core.graphics.ColorUtils
-import androidx.palette.graphics.Palette
-import android.graphics.Color
 import androidx.datastore.preferences.core.Preferences
 import androidx.core.app.ServiceCompat
 import androidx.core.content.getSystemService
@@ -710,12 +707,8 @@ class MusicService :
                 ): MediaNotification {
                     val trackingCallback =
                         MediaNotification.Provider.Callback { notification ->
-                            // Artwork loads asynchronously, so this fires again
-                            // after the first post; tint every delivery or the
-                            // colour would vanish as soon as the cover arrives.
-                            val delivered = notification.withArtworkTint()
-                            latestMediaNotification = delivered.notification
-                            onNotificationChangedCallback.onNotificationChanged(delivered)
+                            latestMediaNotification = notification.notification
+                            onNotificationChangedCallback.onNotificationChanged(notification)
                         }
 
                     val mediaNotification =
@@ -726,13 +719,8 @@ class MusicService :
                             trackingCallback,
                         )
 
-                    // The system draws the media card itself, so the app cannot
-                    // change its layout — but the colour hint still travels with
-                    // the notification. Tinting from the loaded large icon keeps
-                    // the card in step with the artwork instead of a fixed grey.
-                    val result = mediaNotification.withArtworkTint()
-                    latestMediaNotification = result.notification
-                    return result
+                    latestMediaNotification = mediaNotification.notification
+                    return mediaNotification
                 }
 
                 override fun handleCustomCommand(
@@ -4305,41 +4293,6 @@ class MusicService :
             ),
         )
     }
-
-    /** The notification as it will be posted, with the artwork tint applied. */
-    private fun MediaNotification.withArtworkTint(): MediaNotification {
-        val tinted = tintFromArtwork(notification) ?: return this
-        return MediaNotification(notificationId, tinted)
-    }
-
-    /**
-     * Re-tints a media notification from the artwork it is already showing.
-     *
-     * The card itself belongs to the system on Android 13+, but a MediaStyle
-     * notification still carries colour: `setColorized(true)` lets it paint the
-     * background with that colour on the versions that honour it, and the tint
-     * keeps the card in step with the cover instead of a fixed grey. The colour
-     * is blended towards black so a pale cover cannot turn the notification
-     * into unreadable white-on-white.
-     *
-     * Returns null when there is no artwork yet or the builder cannot be
-     * recovered; the caller then keeps the notification Media3 produced.
-     */
-    private fun tintFromArtwork(notification: Notification): Notification? =
-        runCatching {
-            val artwork = notification.largeIcon?.bitmap ?: return@runCatching null
-            val palette = Palette.from(artwork).maximumColorCount(16).generate()
-            val swatch =
-                palette.mutedSwatch
-                    ?: palette.darkMutedSwatch
-                    ?: palette.dominantSwatch
-                    ?: return@runCatching null
-            val tint = ColorUtils.blendARGB(swatch.rgb, Color.BLACK, 0.45f)
-            NotificationCompat.Builder.recoverBuilder(this, notification)
-                .setColor(tint)
-                .setColorized(true)
-                .build()
-        }.getOrNull()
 
     private fun createFallbackForegroundNotification(): Notification {
         ensureForegroundChannelExists()
