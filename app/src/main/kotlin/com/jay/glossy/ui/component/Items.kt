@@ -2042,83 +2042,132 @@ fun PlaylistThumbnail(
     cacheKey: String? = null
 ) {
     val context = LocalContext.current
-    
-    when (thumbnails.size) {
-        0 -> Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size(size)
-                .clip(shape)
-                .background(MaterialTheme.colorScheme.surfaceContainer)
-        ) {
-            placeHolder()
-        }
-        1 -> {
-            val thumbUrl = thumbnails[0].resize((size.value * 3).toInt())
-            Box(
-                modifier = Modifier
-                    .size(size)
-                    .clip(shape)
-                    .background(MaterialTheme.colorScheme.surfaceContainer)
-            ) {
-                AsyncImage(
-                    model = remember(thumbUrl) {
-                        ImageRequest.Builder(context)
-                            .data(thumbUrl)
-                            .memoryCachePolicy(CachePolicy.ENABLED)
-                            .diskCachePolicy(CachePolicy.ENABLED)
-                            .networkCachePolicy(CachePolicy.ENABLED)
-                            .crossfade(true)
-                            .build()
-                    },
-                    contentDescription = null,
-                    // Playlists often carry 16:9 video thumbs in a square card. Fit
-                    // letterboxes (grey bands) while Crop can still bleed through
-                    // Coil placeholders during crossfade, so always crop and keep the
-                    // image strictly inside the rounded shape.
-                    contentScale = ContentScale.Crop,
-                    placeholder = painterResource(R.drawable.queue_music),
-                    error = painterResource(R.drawable.queue_music),
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(shape)
+    val artwork = remember(thumbnails) {
+        thumbnails.asSequence()
+            .filter { it.isNotBlank() }
+            .map(String::trim)
+            .distinct()
+            .take(4)
+            .toList()
+    }
+
+    Box(
+        modifier = Modifier
+            .size(size)
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+    ) {
+        when (artwork.size) {
+            0 -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                placeHolder()
+            }
+            1 -> PlaylistArtworkCell(
+                urls = artwork,
+                size = size,
+                modifier = Modifier.fillMaxSize(),
+                shape = shape,
+                context = context,
+            )
+            2 -> Row(Modifier.fillMaxSize()) {
+                artwork.forEach { url ->
+                    PlaylistArtworkCell(
+                        urls = listOf(url) + artwork.filterNot { it == url },
+                        size = size / 2,
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        shape = RoundedCornerShape(0.dp),
+                        context = context,
+                    )
+                }
+            }
+            3 -> Column(Modifier.fillMaxSize()) {
+                Row(Modifier.weight(1f).fillMaxWidth()) {
+                    artwork.take(2).forEach { url ->
+                        PlaylistArtworkCell(
+                            urls = listOf(url) + artwork.filterNot { it == url },
+                            size = size / 2,
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                            shape = RoundedCornerShape(0.dp),
+                            context = context,
+                        )
+                    }
+                }
+                PlaylistArtworkCell(
+                    urls = listOf(artwork[2]) + artwork.filterNot { it == artwork[2] },
+                    size = size / 2,
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    shape = RoundedCornerShape(0.dp),
+                    context = context,
                 )
             }
-        }
-        else -> Box(
-            modifier = Modifier
-                .size(size)
-                .clip(shape)
-        ) {
-            listOf(
-                Alignment.TopStart,
-                Alignment.TopEnd,
-                Alignment.BottomStart,
-                Alignment.BottomEnd
-            ).fastForEachIndexed { index, alignment ->
-                val thumbUrl = thumbnails.getOrNull(index)?.resize((size.value * 1.5).toInt())
-                AsyncImage(
-                    model = remember(thumbUrl) {
-                        ImageRequest.Builder(context)
-                            .data(thumbUrl)
-                            .memoryCachePolicy(CachePolicy.ENABLED)
-                            .diskCachePolicy(CachePolicy.ENABLED)
-                            .networkCachePolicy(CachePolicy.ENABLED)
-                            .crossfade(true)
-                            .build()
-                    },
-                    contentDescription = null,
-                    // Same story as the 1-thumb case above: always crop so no
-                    // letterbox or unclipped edges leak outside the card.
-                    contentScale = ContentScale.Crop,
-                    placeholder = painterResource(R.drawable.queue_music),
-                    error = painterResource(R.drawable.queue_music),
-                    modifier = Modifier
-                        .align(alignment)
-                        .size(size / 2)
-                        .clip(shape)
-                )
+            else -> Column(Modifier.fillMaxSize()) {
+                Row(Modifier.weight(1f).fillMaxWidth()) {
+                    artwork.take(2).forEach { url ->
+                        PlaylistArtworkCell(
+                            urls = listOf(url) + artwork.filterNot { it == url },
+                            size = size / 2,
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                            shape = RoundedCornerShape(0.dp),
+                            context = context,
+                        )
+                    }
+                }
+                Row(Modifier.weight(1f).fillMaxWidth()) {
+                    artwork.drop(2).take(2).forEach { url ->
+                        PlaylistArtworkCell(
+                            urls = listOf(url) + artwork.filterNot { it == url },
+                            size = size / 2,
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                            shape = RoundedCornerShape(0.dp),
+                            context = context,
+                        )
+                    }
+                }
             }
+        }
+    }
+}
+
+@Composable
+private fun PlaylistArtworkCell(
+    urls: List<String>,
+    size: Dp,
+    modifier: Modifier,
+    shape: Shape,
+    context: android.content.Context,
+) {
+    val candidates = remember(urls, size) {
+        urls.asSequence()
+            .filter(String::isNotBlank)
+            .distinct()
+            .map { it.resize((size.value * 2).toInt().coerceAtLeast(96)) }
+            .toList()
+    }
+    var candidateIndex by remember(candidates) { mutableIntStateOf(0) }
+    val url = candidates.getOrNull(candidateIndex)
+
+    Box(
+        modifier = modifier
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+    ) {
+        if (url != null) {
+            AsyncImage(
+                model = remember(url) {
+                    ImageRequest.Builder(context)
+                        .data(url)
+                        .memoryCachePolicy(CachePolicy.ENABLED)
+                        .diskCachePolicy(CachePolicy.ENABLED)
+                        .networkCachePolicy(CachePolicy.ENABLED)
+                        .crossfade(true)
+                        .build()
+                },
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+                onError = {
+                    if (candidateIndex < candidates.lastIndex) candidateIndex++
+                },
+            )
         }
     }
 }
