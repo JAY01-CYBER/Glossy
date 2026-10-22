@@ -46,28 +46,28 @@ data class Playlist(
      */
     val thumbnails: List<String>
         get() {
-            fun canonical(url: String): String = when {
-                url.contains("googleusercontent.com/") -> url.substringBefore("=w").substringBefore("=s")
-                url.contains("ggpht.com/") -> url.substringBefore("=s")
-                url.contains("ytimg.com/") -> url.substringBefore("?")
-                else -> url.substringBefore("?")
-            }
+            fun canonical(url: String): String = url
+                .trim()
+                .substringBefore("=w")
+                .substringBefore("=s")
+                .substringBefore("&size=")
 
+            // Use individual song artwork first: playlist thumbnail URLs can
+            // already contain a collage and nesting them repeats the same art.
             val songArtwork = songThumbnails.asSequence()
                 .filterNotNull()
                 .map(String::trim)
-                .filter { it.startsWith("https://") || it.startsWith("http://") }
+                .filter(String::isNotEmpty)
                 .distinctBy(::canonical)
                 .take(4)
                 .toList()
 
             if (songArtwork.isNotEmpty()) return songArtwork
 
-            // Local playlists may not have song artwork yet (e.g. metadata has
-            // not been fetched). Keep the saved playlist artwork as a fallback.
-            return listOfNotNull(playlist.thumbnailUrl?.trim()?.takeIf {
-                it.isNotEmpty() && (it.startsWith("https://") || it.startsWith("http://"))
-            }).distinctBy(::canonical).take(1)
+            // If songs have no artwork at all, use the saved playlist artwork.
+            return listOfNotNull(playlist.thumbnailUrl?.trim()?.takeIf(String::isNotEmpty))
+                .distinctBy(::canonical)
+                .take(1)
         }
 
 
