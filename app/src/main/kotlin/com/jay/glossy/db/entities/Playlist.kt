@@ -38,10 +38,26 @@ data class Playlist(
     override val thumbnailUrl: String?
         get() = null
     
+    /**
+     * Prefer playlist artwork, but keep song artwork as a fallback. Some local
+     * playlists contain a stale/custom thumbnail URL; using that URL alone
+     * makes the whole card fall back to the generic music placeholder even
+     * when the playlist's songs have usable artwork.
+     */
     val thumbnails: List<String>
-        get() {
-            return if (playlist.thumbnailUrl != null)
-                listOf(playlist.thumbnailUrl)
-            else songThumbnails.filterNotNull()
+        get() = buildList {
+            playlist.thumbnailUrl
+                ?.trim()
+                ?.takeIf { it.isNotEmpty() }
+                ?.let(::add)
+
+            songThumbnails
+                .asSequence()
+                .filterNotNull()
+                .map(String::trim)
+                .filter(String::isNotEmpty)
+                .forEach { thumbnail ->
+                    if (thumbnail !in this) add(thumbnail)
+                }
         }
 }
