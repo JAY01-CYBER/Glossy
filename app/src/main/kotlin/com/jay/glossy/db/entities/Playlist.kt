@@ -51,13 +51,14 @@ data class Playlist(
                 ?.takeIf { it.isNotEmpty() }
                 ?.let(::add)
 
-            songThumbnails
-                .asSequence()
+            songThumbnails.asSequence()
                 .filterNotNull()
                 .map(String::trim)
                 .filter(String::isNotEmpty)
+                .distinct()
                 .forEach { thumbnail ->
-                    if (thumbnail !in this) add(thumbnail)
+                    if (thumbnail !in this && size < 4) add(thumbnail)
                 }
-        }
+        }.take(4)
+
 }
