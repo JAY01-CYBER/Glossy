@@ -609,12 +609,19 @@ fun LibraryPlaylistsScreen(
             LibraryViewType.GRID -> {
                 LazyVerticalGrid(
                     state = lazyGridState,
-                    columns =
-                    GridCells.Adaptive(
-                        // Use smaller library playlist tiles, closer to the Home screen cards.
-                        minSize = if (gridItemSize == GridItemSize.BIG) 124.dp else 108.dp,
+                    // Match ArchiveTune's playlist library: two balanced columns
+                    // with square artwork and consistent spacing on all devices.
+                    columns = GridCells.Fixed(2),
+                    contentPadding = PaddingValues(
+                        start = 24.dp,
+                        end = 24.dp,
+                        top = 8.dp,
+                        bottom = LocalPlayerAwareWindowInsets.current.asPaddingValues()
+                            .calculateBottomPadding() + 24.dp,
                     ),
-                    contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxSize(),
                 ) {
                     item(
                         key = "filter",
@@ -652,12 +659,19 @@ fun LibraryPlaylistsScreen(
                         contentType = { CONTENT_TYPE_PLAYLIST },
                     ) { item ->
                         if (item.autoPlaylist) {
-                            AutoPlaylistGridItem(
+                            PlaylistGridItem(
                                 playlist = item.playlist,
-                                onClick = {
-                                    item.route?.let(navController::navigate)
-                                },
-                                modifier = Modifier.animateItem()
+                                autoPlaylist = true,
+                                fillMaxWidth = true,
+                                badges = {},
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .animateItem()
+                                    .combinedClickable(
+                                        onClick = {
+                                            item.route?.let(navController::navigate)
+                                        },
+                                    ),
                             )
                         } else {
                             LibraryPlaylistGridItem(
