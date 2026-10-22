@@ -2043,15 +2043,16 @@ fun PlaylistThumbnail(
 ) {
     val context = LocalContext.current
     val artwork = remember(thumbnails) {
-        fun canonical(url: String): String = when {
-            url.contains("googleusercontent.com/") -> url.substringBefore("=w").substringBefore("=s")
-            url.contains("ggpht.com/") -> url.substringBefore("=s")
-            url.contains("ytimg.com/") -> url.substringBefore("?")
-            else -> url.substringBefore("?")
-        }
+        fun canonical(url: String): String = url
+            .trim()
+            .substringBefore("=w")
+            .substringBefore("=s")
+            .substringBefore("&size=")
+
         thumbnails.asSequence()
             .map(String::trim)
-            .filter { it.isNotEmpty() && (it.startsWith("https://") || it.startsWith("http://")) }
+            .filter(String::isNotBlank)
+            // Different resolution variants of the same image count as one.
             .distinctBy(::canonical)
             .take(4)
             .toList()
@@ -2116,51 +2117,31 @@ private fun PlaylistArtworkCell(
     shape: Shape,
     context: android.content.Context,
 ) {
-    val resizedUrl = remember(url, size) {
-        url.resize((size.value * 2).toInt().coerceAtLeast(96))
-    }
-    var useOriginalUrl by remember(url, resizedUrl) { mutableStateOf(false) }
-    var imageFailed by remember(url, resizedUrl) { mutableStateOf(false) }
-    val requestUrl = if (useOriginalUrl) url else resizedUrl
+    // Keep the original source URL. Rewriting YouTube image URLs to a
+    // synthetic size can produce URLs that fail for some artwork variants;
+    // Coil can decode and downsample the original to the requested tile size.
+    val imageUrl = remember(url) { url.trim() }
 
     Box(
         modifier = modifier
             .clip(shape)
-            .background(MaterialTheme.colorScheme.surfaceContainer),
-        contentAlignment = Alignment.Center,
+            .background(MaterialTheme.colorScheme.surfaceContainer)
     ) {
-        if (!imageFailed) {
-            AsyncImage(
-                model = remember(requestUrl) {
-                    ImageRequest.Builder(context)
-                        .data(requestUrl)
-                        .memoryCachePolicy(CachePolicy.ENABLED)
-                        .diskCachePolicy(CachePolicy.ENABLED)
-                        .networkCachePolicy(CachePolicy.ENABLED)
-                        .crossfade(true)
-                        .build()
-                },
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-                onError = {
-                    // Some providers reject rewritten size parameters. Retry the
-                    // exact stored URL before giving up on this artwork cell.
-                    if (!useOriginalUrl && url != resizedUrl) {
-                        useOriginalUrl = true
-                    } else {
-                        imageFailed = true
-                    }
-                },
-            )
-        } else {
-            Icon(
-                painter = painterResource(R.drawable.playlist_play),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
-                modifier = Modifier.size((size.value * 0.30f).dp),
-            )
-        }
+        AsyncImage(
+            model = remember(imageUrl) {
+                ImageRequest.Builder(context)
+                    .data(imageUrl)
+                    .size((size.value * 2).toInt().coerceAtLeast(96))
+                    .memoryCachePolicy(CachePolicy.ENABLED)
+                    .diskCachePolicy(CachePolicy.ENABLED)
+                    .networkCachePolicy(CachePolicy.ENABLED)
+                    .crossfade(true)
+                    .build()
+            },
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+        )
     }
 }
 
