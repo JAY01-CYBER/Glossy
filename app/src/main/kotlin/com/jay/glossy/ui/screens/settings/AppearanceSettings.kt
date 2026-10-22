@@ -1408,6 +1408,11 @@ fun AppearanceSettings(
                                 GreetingAnimation.OFF -> "Off — the plain card"
                                 GreetingAnimation.NEON_GLOW -> "Neon glow"
                                 GreetingAnimation.SUNSET_TRAIN -> "Sunset train"
+                                GreetingAnimation.BOHO_HOME -> "Boho home"
+                                GreetingAnimation.PACKING_LIST -> "Packing list"
+                                GreetingAnimation.CAR_CARE -> "Car care"
+                                GreetingAnimation.HEMMING -> "Hemming tricks"
+                                GreetingAnimation.STREET_MARKET -> "Street market"
                             }
                         )
                     },
@@ -2907,6 +2912,11 @@ private fun greetingAnimationLabel(animation: GreetingAnimation): String =
         GreetingAnimation.OFF -> "Off (plain card)"
         GreetingAnimation.NEON_GLOW -> "Neon glow"
         GreetingAnimation.SUNSET_TRAIN -> "Sunset train"
+        GreetingAnimation.BOHO_HOME -> "Boho home"
+        GreetingAnimation.PACKING_LIST -> "Packing list"
+        GreetingAnimation.CAR_CARE -> "Car care"
+        GreetingAnimation.HEMMING -> "Hemming tricks"
+        GreetingAnimation.STREET_MARKET -> "Street market"
     }
 
 /**

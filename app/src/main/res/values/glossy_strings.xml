@@ -99,4 +99,21 @@
     <!-- Listen Together — the shortcut on Home and its group in Settings -->
     <string name="glossy_listen_together_hint">Start a session and listen with friends</string>
     <string name="glossy_together_group">With friends</string>
+    <!-- SponsorBlock — controller in the player, settings group under Settings → Playback -->
+    <string name="sponsor_block">SponsorBlock</string>
+    <string name="sponsor_block_desc">Skips sponsor reads, intros and outros that listeners have marked in the community database. Lookups use a hash of the video id, so the server never learns what you are watching.</string>
+    <string name="sponsor_block_categories">Categories to skip</string>
+    <!-- SponsorBlock — how much of the category list is currently skipped -->
+    <string name="sponsor_block_categories_summary">%1$d of %2$d categories</string>
+    <string name="sponsor_block_categories_none">Nothing selected — segments will play in full</string>
+    <string name="sponsor_block_categories_dialog_title">Skip these sections</string>
+    <string name="sponsor_block_category_music_off_topic">Non-music sections</string>
+    <string name="sponsor_block_category_sponsor">Sponsors</string>
+    <string name="sponsor_block_category_intro">Intros</string>
+    <string name="sponsor_block_category_outro">Outros</string>
+    <string name="sponsor_block_category_self_promotion">Self-promotion</string>
+    <string name="sponsor_block_category_preview">Previews</string>
+    <string name="sponsor_block_category_filler">Filler</string>
+    <string name="sponsor_block_category_interaction">Interaction reminders</string>
+    <string name="sponsor_block_category_hook">Hooks</string>
 </resources>

@@ -36,6 +36,9 @@ import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
+import androidx.core.graphics.ColorUtils
+import androidx.palette.graphics.Palette
+import android.graphics.Color
 import androidx.datastore.preferences.core.Preferences
 import androidx.core.app.ServiceCompat
 import androidx.core.content.getSystemService
@@ -307,6 +310,9 @@ class MusicService :
 
     @Inject
     lateinit var listenTogetherManager: com.jay.glossy.listentogether.ListenTogetherManager
+
+    @Inject
+    lateinit var sponsorBlockController: com.jay.glossy.sponsorblock.SponsorBlockPlaybackController
 
     private lateinit var audioManager: AudioManager
     private var audioFocusRequest: AudioFocusRequest? = null
@@ -704,19 +710,29 @@ class MusicService :
                 ): MediaNotification {
                     val trackingCallback =
                         MediaNotification.Provider.Callback { notification ->
-                            latestMediaNotification = notification.notification
-                            onNotificationChangedCallback.onNotificationChanged(notification)
+                            // Artwork loads asynchronously, so this fires again
+                            // after the first post; tint every delivery or the
+                            // colour would vanish as soon as the cover arrives.
+                            val delivered = notification.withArtworkTint()
+                            latestMediaNotification = delivered.notification
+                            onNotificationChangedCallback.onNotificationChanged(delivered)
                         }
 
-                    return defaultMediaNotificationProvider
-                        .createNotification(
+                    val mediaNotification =
+                        defaultMediaNotificationProvider.createNotification(
                             mediaSession,
                             mediaButtonPreferences,
                             actionFactory,
                             trackingCallback,
-                        ).also { mediaNotification ->
-                            latestMediaNotification = mediaNotification.notification
-                        }
+                        )
+
+                    // The system draws the media card itself, so the app cannot
+                    // change its layout — but the colour hint still travels with
+                    // the notification. Tinting from the loaded large icon keeps
+                    // the card in step with the artwork instead of a fixed grey.
+                    val result = mediaNotification.withArtworkTint()
+                    latestMediaNotification = result.notification
+                    return result
                 }
 
                 override fun handleCustomCommand(
@@ -731,6 +747,9 @@ class MusicService :
         )
         player = createExoPlayer(prefs = startupPrefs!!)
         player.addListener(this@MusicService)
+        // Lives with the player, not with a screen: the skip has to keep
+        // working while the phone is in a pocket.
+        sponsorBlockController.attach(player, scope)
 
         // Seed the system sound fx (equalizer/bass/virtualizer/output gain) with
         // startup prefs; they are applied to effects as soon as the audio session attaches.
@@ -765,6 +784,29 @@ class MusicService :
                         PendingIntent.FLAG_IMMUTABLE,
                     ),
                 ).setBitmapLoader(CoilBitmapLoader(this, scope))
+                // Android 13's media card fills slot 2 (back) and slot 3
+                // (forward) only when the session offers something for them.
+                // Reserving both slots here is what puts previous and next
+                // beside play/pause; without it the card can collapse to the
+                // lone play/pause button.
+                .setMediaButtonPreferences(
+                    listOf(
+                        CommandButton
+                            .Builder()
+                            .setSlots(CommandButton.SLOT_BACK)
+                            .setPlayerCommand(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
+                            .setIconResId(R.drawable.skip_previous)
+                            .setDisplayName(getString(R.string.previous))
+                            .build(),
+                        CommandButton
+                            .Builder()
+                            .setSlots(CommandButton.SLOT_FORWARD)
+                            .setPlayerCommand(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
+                            .setIconResId(R.drawable.skip_next)
+                            .setDisplayName(getString(R.string.next))
+                            .build(),
+                    ),
+                )
                 .build()
         player.repeatMode = startupPrefs!![RepeatModeKey] ?: REPEAT_MODE_OFF
 
@@ -1177,6 +1219,9 @@ class MusicService :
 
                 player = newPlayer
                 _playerFlow.value = newPlayer
+                // The old player was released above; the controller must watch
+                // the new one or the next song would play unskipped.
+                sponsorBlockController.attach(newPlayer, scope)
 
                 Timber.tag("MusicService").i("Player recreated with AudioTrackPlaybackParams: $useAudioTrackParams")
             }
@@ -4261,6 +4306,41 @@ class MusicService :
         )
     }
 
+    /** The notification as it will be posted, with the artwork tint applied. */
+    private fun MediaNotification.withArtworkTint(): MediaNotification {
+        val tinted = tintFromArtwork(notification) ?: return this
+        return MediaNotification(notificationId, tinted)
+    }
+
+    /**
+     * Re-tints a media notification from the artwork it is already showing.
+     *
+     * The card itself belongs to the system on Android 13+, but a MediaStyle
+     * notification still carries colour: `setColorized(true)` lets it paint the
+     * background with that colour on the versions that honour it, and the tint
+     * keeps the card in step with the cover instead of a fixed grey. The colour
+     * is blended towards black so a pale cover cannot turn the notification
+     * into unreadable white-on-white.
+     *
+     * Returns null when there is no artwork yet or the builder cannot be
+     * recovered; the caller then keeps the notification Media3 produced.
+     */
+    private fun tintFromArtwork(notification: Notification): Notification? =
+        runCatching {
+            val artwork = notification.largeIcon?.bitmap ?: return@runCatching null
+            val palette = Palette.from(artwork).maximumColorCount(16).generate()
+            val swatch =
+                palette.mutedSwatch
+                    ?: palette.darkMutedSwatch
+                    ?: palette.dominantSwatch
+                    ?: return@runCatching null
+            val tint = ColorUtils.blendARGB(swatch.rgb, Color.BLACK, 0.45f)
+            NotificationCompat.Builder.recoverBuilder(this, notification)
+                .setColor(tint)
+                .setColorized(true)
+                .build()
+        }.getOrNull()
+
     private fun createFallbackForegroundNotification(): Notification {
         ensureForegroundChannelExists()
         val pending =
@@ -4938,6 +5018,7 @@ class MusicService :
         player = nextPlayer
         _playerFlow.value = player
         secondaryPlayer = null
+        sponsorBlockController.attach(nextPlayer, scope)
 
         fadingPlayer?.repeatMode = Player.REPEAT_MODE_OFF
         fadingPlayer?.let {

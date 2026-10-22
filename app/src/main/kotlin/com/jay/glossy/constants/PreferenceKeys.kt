@@ -12,6 +12,7 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 
@@ -165,6 +166,15 @@ enum class GreetingAnimation {
     OFF,
     NEON_GLOW,
     SUNSET_TRAIN,
+
+    // Extra silent loop clips for the greeting card. Named for their subject
+    // rather than the file they came from, so the picker says what the card
+    // will show instead of which download it is.
+    BOHO_HOME,
+    PACKING_LIST,
+    CAR_CARE,
+    HEMMING,
+    STREET_MARKET,
 }
 
 val GreetingAnimationKey = stringPreferencesKey("greetingAnimation")
@@ -1148,6 +1158,24 @@ val CustomFontPathKey = stringPreferencesKey("custom_font_path")
 
 /** What the imported font is called on the picker, taken from the file's own name. */
 val CustomFontNameKey = stringPreferencesKey("custom_font_name")
+
+/**
+ * Whether SponsorBlock may skip community-marked sections of a video.
+ *
+ * Off on first run: it is the only player setting that changes what is heard
+ * rather than how it sounds, and it depends on a third-party database, so it is
+ * opt-in rather than something a fresh install does silently.
+ */
+val SponsorBlockEnabledKey = booleanPreferencesKey("sponsor_block_enabled")
+
+/**
+ * The SponsorBlock categories the listener wants skipped, stored by the API's
+ * own names (`sponsor`, `music_offtopic`, ...).
+ *
+ * Absent is meaningful — it means "every category", not "none" — so it is
+ * written on the first change rather than seeded at install.
+ */
+val SponsorBlockCategoriesKey = stringSetPreferencesKey("sponsor_block_categories")
 
 enum class AppFont(val value: String, val displayName: String, val description: String) {
     SYSTEM("system", "System Default", "Use the default system typeface."),

@@ -193,6 +193,11 @@ private fun GreetingVideoLoop(
     val rawRes = when (animation) {
         GreetingAnimation.NEON_GLOW -> R.raw.greeting_neon
         GreetingAnimation.SUNSET_TRAIN -> R.raw.greeting_sunset
+        GreetingAnimation.BOHO_HOME -> R.raw.greeting_boho
+        GreetingAnimation.PACKING_LIST -> R.raw.greeting_packing
+        GreetingAnimation.CAR_CARE -> R.raw.greeting_car_care
+        GreetingAnimation.HEMMING -> R.raw.greeting_hemming
+        GreetingAnimation.STREET_MARKET -> R.raw.greeting_market
         GreetingAnimation.OFF -> return
     }
 
