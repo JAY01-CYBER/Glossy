@@ -611,7 +611,8 @@ fun LibraryPlaylistsScreen(
                     state = lazyGridState,
                     columns =
                     GridCells.Adaptive(
-                        minSize = GridThumbnailHeight + if (gridItemSize == GridItemSize.BIG) 24.dp else (-24).dp,
+                        // Use smaller library playlist tiles, closer to the Home screen cards.
+                        minSize = if (gridItemSize == GridItemSize.BIG) 124.dp else 108.dp,
                     ),
                     contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
                 ) {
