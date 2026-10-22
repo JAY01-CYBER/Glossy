@@ -10,9 +10,11 @@ import com.jay.glossy.R
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import com.metrolist.innertube.models.PlaylistItem
@@ -244,56 +246,60 @@ fun LibraryPlaylistGridItem(
     modifier: Modifier = Modifier
 ) {
     val navController = LocalNavController.current
-    PlaylistGridItem(
-    playlist = playlist,
-    fillMaxWidth = true,
-    modifier = modifier
-        .fillMaxWidth()
-        .combinedClickable(
-            onClick = {
-                if (!playlist.playlist.isEditable && playlist.songCount == 0 && playlist.playlist.browseId != null)
-                    navController.navigate("online_playlist/${playlist.playlist.browseId}")
-                else
-                    navController.navigate("local_playlist/${playlist.id}")
-            },
-            onLongClick = {
-                menuState.show {
-                    if (playlist.playlist.isEditable || playlist.songCount != 0) {
-                        PlaylistMenu(
-                            playlist = playlist,
-                            coroutineScope = coroutineScope,
-                            onDismiss = menuState::dismiss
-                        )
-                    } else {
-                        playlist.playlist.browseId?.let { browseId ->
-                            YouTubePlaylistMenu(
-                                playlist = PlaylistItem(
-                                    id = browseId,
-                                    title = playlist.playlist.name,
-                                    author = null,
-                                    songCountText = null,
-                                    thumbnail = playlist.thumbnails.getOrNull(0) ?: "",
-                                    playEndpoint = WatchEndpoint(
-                                        playlistId = browseId,
-                                        params = playlist.playlist.playEndpointParams
-                                    ),
-                                    shuffleEndpoint = WatchEndpoint(
-                                        playlistId = browseId,
-                                        params = playlist.playlist.shuffleEndpointParams
-                                    ),
-                                    radioEndpoint = WatchEndpoint(
-                                        playlistId = "RDAMPL$browseId",
-                                        params = playlist.playlist.radioEndpointParams
-                                    ),
-                                    isEditable = false
-                                ),
+    Box(
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        PlaylistGridItem(
+            playlist = playlist,
+            // Use the same preference-based thumbnail width as Home's horizontal cards.
+            fillMaxWidth = false,
+            modifier = Modifier.combinedClickable(
+                onClick = {
+                    if (!playlist.playlist.isEditable && playlist.songCount == 0 && playlist.playlist.browseId != null)
+                        navController.navigate("online_playlist/${playlist.playlist.browseId}")
+                    else
+                        navController.navigate("local_playlist/${playlist.id}")
+                },
+                onLongClick = {
+                    menuState.show {
+                        if (playlist.playlist.isEditable || playlist.songCount != 0) {
+                            PlaylistMenu(
+                                playlist = playlist,
                                 coroutineScope = coroutineScope,
                                 onDismiss = menuState::dismiss
                             )
+                        } else {
+                            playlist.playlist.browseId?.let { browseId ->
+                                YouTubePlaylistMenu(
+                                    playlist = PlaylistItem(
+                                        id = browseId,
+                                        title = playlist.playlist.name,
+                                        author = null,
+                                        songCountText = null,
+                                        thumbnail = playlist.thumbnails.getOrNull(0) ?: "",
+                                        playEndpoint = WatchEndpoint(
+                                            playlistId = browseId,
+                                            params = playlist.playlist.playEndpointParams
+                                        ),
+                                        shuffleEndpoint = WatchEndpoint(
+                                            playlistId = browseId,
+                                            params = playlist.playlist.shuffleEndpointParams
+                                        ),
+                                        radioEndpoint = WatchEndpoint(
+                                            playlistId = "RDAMPL$browseId",
+                                            params = playlist.playlist.radioEndpointParams
+                                        ),
+                                        isEditable = false
+                                    ),
+                                    coroutineScope = coroutineScope,
+                                    onDismiss = menuState::dismiss
+                                )
+                            }
                         }
                     }
                 }
-            }
+            )
         )
-)
+    }
 }
