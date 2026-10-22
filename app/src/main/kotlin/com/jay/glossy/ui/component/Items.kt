@@ -2044,7 +2044,7 @@ fun PlaylistThumbnail(
     val context = LocalContext.current
     val artwork = remember(thumbnails) {
         thumbnails.asSequence()
-            .filter { it.isNotBlank() }
+            .filter(String::isNotBlank)
             .map(String::trim)
             .distinct()
             .take(4)
@@ -2058,67 +2058,42 @@ fun PlaylistThumbnail(
             .background(MaterialTheme.colorScheme.surfaceContainer)
     ) {
         when (artwork.size) {
-            0 -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                placeHolder()
-            }
+            0 -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { placeHolder() }
             1 -> PlaylistArtworkCell(
-                urls = artwork,
-                size = size,
-                modifier = Modifier.fillMaxSize(),
-                shape = shape,
-                context = context,
+                url = artwork[0], size = size, modifier = Modifier.fillMaxSize(),
+                shape = shape, context = context,
             )
             2 -> Row(Modifier.fillMaxSize()) {
                 artwork.forEach { url ->
                     PlaylistArtworkCell(
-                        urls = listOf(url) + artwork.filterNot { it == url },
-                        size = size / 2,
+                        url = url, size = size / 2,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
-                        shape = RoundedCornerShape(0.dp),
-                        context = context,
+                        shape = RoundedCornerShape(0.dp), context = context,
                     )
                 }
-            }
-            3 -> Column(Modifier.fillMaxSize()) {
-                Row(Modifier.weight(1f).fillMaxWidth()) {
-                    artwork.take(2).forEach { url ->
-                        PlaylistArtworkCell(
-                            urls = listOf(url) + artwork.filterNot { it == url },
-                            size = size / 2,
-                            modifier = Modifier.weight(1f).fillMaxHeight(),
-                            shape = RoundedCornerShape(0.dp),
-                            context = context,
-                        )
-                    }
-                }
-                PlaylistArtworkCell(
-                    urls = listOf(artwork[2]) + artwork.filterNot { it == artwork[2] },
-                    size = size / 2,
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                    shape = RoundedCornerShape(0.dp),
-                    context = context,
-                )
             }
             else -> Column(Modifier.fillMaxSize()) {
                 Row(Modifier.weight(1f).fillMaxWidth()) {
                     artwork.take(2).forEach { url ->
                         PlaylistArtworkCell(
-                            urls = listOf(url) + artwork.filterNot { it == url },
-                            size = size / 2,
+                            url = url, size = size / 2,
                             modifier = Modifier.weight(1f).fillMaxHeight(),
-                            shape = RoundedCornerShape(0.dp),
-                            context = context,
+                            shape = RoundedCornerShape(0.dp), context = context,
                         )
                     }
                 }
                 Row(Modifier.weight(1f).fillMaxWidth()) {
                     artwork.drop(2).take(2).forEach { url ->
                         PlaylistArtworkCell(
-                            urls = listOf(url) + artwork.filterNot { it == url },
-                            size = size / 2,
+                            url = url, size = size / 2,
                             modifier = Modifier.weight(1f).fillMaxHeight(),
-                            shape = RoundedCornerShape(0.dp),
-                            context = context,
+                            shape = RoundedCornerShape(0.dp), context = context,
+                        )
+                    }
+                    if (artwork.size == 3) {
+                        Box(
+                            Modifier.weight(1f).fillMaxHeight()
+                                .background(MaterialTheme.colorScheme.surfaceContainer)
                         )
                     }
                 }
@@ -2129,46 +2104,35 @@ fun PlaylistThumbnail(
 
 @Composable
 private fun PlaylistArtworkCell(
-    urls: List<String>,
+    url: String,
     size: Dp,
     modifier: Modifier,
     shape: Shape,
     context: android.content.Context,
 ) {
-    val candidates = remember(urls, size) {
-        urls.asSequence()
-            .filter(String::isNotBlank)
-            .distinct()
-            .map { it.resize((size.value * 2).toInt().coerceAtLeast(96)) }
-            .toList()
+    val imageUrl = remember(url, size) {
+        url.resize((size.value * 2).toInt().coerceAtLeast(96))
     }
-    var candidateIndex by remember(candidates) { mutableIntStateOf(0) }
-    val url = candidates.getOrNull(candidateIndex)
 
     Box(
         modifier = modifier
             .clip(shape)
             .background(MaterialTheme.colorScheme.surfaceContainer)
     ) {
-        if (url != null) {
-            AsyncImage(
-                model = remember(url) {
-                    ImageRequest.Builder(context)
-                        .data(url)
-                        .memoryCachePolicy(CachePolicy.ENABLED)
-                        .diskCachePolicy(CachePolicy.ENABLED)
-                        .networkCachePolicy(CachePolicy.ENABLED)
-                        .crossfade(true)
-                        .build()
-                },
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-                onError = {
-                    if (candidateIndex < candidates.lastIndex) candidateIndex++
-                },
-            )
-        }
+        AsyncImage(
+            model = remember(imageUrl) {
+                ImageRequest.Builder(context)
+                    .data(imageUrl)
+                    .memoryCachePolicy(CachePolicy.ENABLED)
+                    .diskCachePolicy(CachePolicy.ENABLED)
+                    .networkCachePolicy(CachePolicy.ENABLED)
+                    .crossfade(true)
+                    .build()
+            },
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+        )
     }
 }
 
