@@ -46,24 +46,28 @@ data class Playlist(
      */
     val thumbnails: List<String>
         get() {
-            fun canonical(url: String): String = if (
-                url.startsWith("https://lh3.googleusercontent.com/") ||
-                url.startsWith("https://yt3.googleusercontent.com/")
-            ) url.substringBefore("=w") else url.substringBefore("=s")
+            fun canonical(url: String): String = when {
+                url.contains("googleusercontent.com/") -> url.substringBefore("=w").substringBefore("=s")
+                url.contains("ggpht.com/") -> url.substringBefore("=s")
+                url.contains("ytimg.com/") -> url.substringBefore("?")
+                else -> url.substringBefore("?")
+            }
 
             val songArtwork = songThumbnails.asSequence()
                 .filterNotNull()
                 .map(String::trim)
-                .filter(String::isNotEmpty)
+                .filter { it.startsWith("https://") || it.startsWith("http://") }
                 .distinctBy(::canonical)
                 .take(4)
                 .toList()
 
             if (songArtwork.isNotEmpty()) return songArtwork
 
-            return listOfNotNull(playlist.thumbnailUrl?.trim()?.takeIf(String::isNotEmpty))
-                .distinctBy(::canonical)
-                .take(1)
+            // Local playlists may not have song artwork yet (e.g. metadata has
+            // not been fetched). Keep the saved playlist artwork as a fallback.
+            return listOfNotNull(playlist.thumbnailUrl?.trim()?.takeIf {
+                it.isNotEmpty() && (it.startsWith("https://") || it.startsWith("http://"))
+            }).distinctBy(::canonical).take(1)
         }
 
 
