@@ -12,11 +12,11 @@
  * inside the card. It is the greeting and the name, nothing else.
  *
  * Optionally the card carries a loop of video behind that type — picked in
- * Settings › Appearance › Home Screen Layout. The clip is decoration: silent,
- * unclickable, drawn at just over two thirds and finished with a light scrim, so
- * the greeting and the name keep the contrast they have on the plain card. With
- * Reduce animation on, or the system's animations off, the plain card simply
- * draws.
+ * Settings › Appearance › Home Screen Layout, where the slider beside it sets
+ * how strongly the clip shows (two thirds by default). The clip is decoration:
+ * silent, unclickable, and finished with a light scrim, so the greeting and the
+ * name keep the contrast they have on the plain card. With Reduce animation on,
+ * or the system's animations off, the plain card simply draws.
  *
  * Colours come from [GlossyPalette], so the card follows the skin: the rose
  * gradient of the design is the Materialistic theme's `primaryContainer` band,
@@ -60,12 +60,15 @@ import androidx.media3.datasource.RawResourceDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.jay.glossy.R
+import com.jay.glossy.constants.DefaultGreetingAnimationOpacity
 import com.jay.glossy.constants.GreetingAnimation
 import com.jay.glossy.constants.GreetingAnimationKey
+import com.jay.glossy.constants.GreetingAnimationOpacityKey
 import com.jay.glossy.ui.theme.GlossyDimens
 import com.jay.glossy.ui.theme.GlossyPalette
 import com.jay.glossy.ui.theme.OutfitFontFamily
 import com.jay.glossy.utils.rememberEnumPreference
+import com.jay.glossy.utils.rememberPreference
 
 /** Home header: the greeting card, and nothing else. */
 @Composable
@@ -96,6 +99,13 @@ fun GreetingSection(userName: String) {
     val (greetingAnimation) = rememberEnumPreference(
         GreetingAnimationKey,
         defaultValue = GreetingAnimation.OFF,
+    )
+    // The listener's own strength for the clip, chosen in Settings › Appearance.
+    // Applied to the video alone so the gradient, the wash and the type keep the
+    // contrast they were tuned for.
+    val (greetingOpacity) = rememberPreference(
+        GreetingAnimationOpacityKey,
+        defaultValue = DefaultGreetingAnimationOpacity,
     )
     // Reduce animation is a promise, not a suggestion: the clip is not composed
     // at all when it is on, so the card keeps its still gradient.
@@ -128,6 +138,7 @@ fun GreetingSection(userName: String) {
                 // over it so the type never has to compete with a bright frame.
                 GreetingVideoLoop(
                     animation = greetingAnimation,
+                    opacity = greetingOpacity,
                     modifier = Modifier
                         .fillMaxSize()
                         .clip(cardShape),
@@ -186,6 +197,7 @@ fun GreetingSection(userName: String) {
 @Composable
 private fun GreetingVideoLoop(
     animation: GreetingAnimation,
+    opacity: Float,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -194,8 +206,6 @@ private fun GreetingVideoLoop(
         GreetingAnimation.NEON_GLOW -> R.raw.greeting_neon
         GreetingAnimation.SUNSET_TRAIN -> R.raw.greeting_sunset
         GreetingAnimation.BOHO_HOME -> R.raw.greeting_boho
-        GreetingAnimation.PACKING_LIST -> R.raw.greeting_packing
-        GreetingAnimation.CAR_CARE -> R.raw.greeting_car_care
         GreetingAnimation.HEMMING -> R.raw.greeting_hemming
         GreetingAnimation.STREET_MARKET -> R.raw.greeting_market
         GreetingAnimation.OFF -> return
@@ -239,8 +249,10 @@ private fun GreetingVideoLoop(
                 // A still frame is shown by the gradient underneath if the clip
                 // has not decoded yet, so there is no black flash to cover up.
                 player = exoPlayer
-                alpha = 0.72f
             }
         },
+        // Set on every frame of the preference flow rather than once in the
+        // factory: dragging the slider has to move the clip immediately.
+        update = { view -> view.alpha = opacity.coerceIn(0.05f, 1f) },
     )
 }

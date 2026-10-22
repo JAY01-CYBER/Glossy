@@ -772,29 +772,6 @@ class MusicService :
                         PendingIntent.FLAG_IMMUTABLE,
                     ),
                 ).setBitmapLoader(CoilBitmapLoader(this, scope))
-                // Android 13's media card fills slot 2 (back) and slot 3
-                // (forward) only when the session offers something for them.
-                // Reserving both slots here is what puts previous and next
-                // beside play/pause; without it the card can collapse to the
-                // lone play/pause button.
-                .setMediaButtonPreferences(
-                    listOf(
-                        CommandButton
-                            .Builder()
-                            .setSlots(CommandButton.SLOT_BACK)
-                            .setPlayerCommand(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
-                            .setIconResId(R.drawable.skip_previous)
-                            .setDisplayName(getString(R.string.previous))
-                            .build(),
-                        CommandButton
-                            .Builder()
-                            .setSlots(CommandButton.SLOT_FORWARD)
-                            .setPlayerCommand(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
-                            .setIconResId(R.drawable.skip_next)
-                            .setDisplayName(getString(R.string.next))
-                            .build(),
-                    ),
-                )
                 .build()
         player.repeatMode = startupPrefs!![RepeatModeKey] ?: REPEAT_MODE_OFF
 

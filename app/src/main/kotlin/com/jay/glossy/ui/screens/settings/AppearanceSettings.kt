@@ -85,8 +85,10 @@ import com.jay.glossy.constants.DensityScale
 import com.jay.glossy.constants.DensityScaleKey
 import com.jay.glossy.constants.DynamicThemeKey
 import com.jay.glossy.constants.AppIconKey
+import com.jay.glossy.constants.DefaultGreetingAnimationOpacity
 import com.jay.glossy.constants.GreetingAnimation
 import com.jay.glossy.constants.GreetingAnimationKey
+import com.jay.glossy.constants.GreetingAnimationOpacityKey
 import com.jay.glossy.constants.EnableHighRefreshRateKey
 import com.jay.glossy.constants.EnableLandscapeScalingKey
 import com.jay.glossy.constants.ExperimentalLyricsKey
@@ -199,6 +201,14 @@ fun AppearanceSettings(
         GreetingAnimationKey,
         defaultValue = GreetingAnimation.OFF,
     )
+    // How strongly the chosen clip shows through the card's wash. Sits beside
+    // the clip picker because the two are one decision: which loop, and how
+    // loud it is behind the greeting.
+    val (greetingOpacity, onGreetingOpacityChange) =
+        rememberPreference(
+            GreetingAnimationOpacityKey,
+            defaultValue = DefaultGreetingAnimationOpacity,
+        )
     var showGreetingAnimationDialog by rememberSaveable { mutableStateOf(false) }
 
     val (enableHighRefreshRate, onEnableHighRefreshRateChange) =
@@ -1409,14 +1419,30 @@ fun AppearanceSettings(
                                 GreetingAnimation.NEON_GLOW -> "Neon glow"
                                 GreetingAnimation.SUNSET_TRAIN -> "Sunset train"
                                 GreetingAnimation.BOHO_HOME -> "Boho home"
-                                GreetingAnimation.PACKING_LIST -> "Packing list"
-                                GreetingAnimation.CAR_CARE -> "Car care"
                                 GreetingAnimation.HEMMING -> "Hemming tricks"
                                 GreetingAnimation.STREET_MARKET -> "Street market"
                             }
                         )
                     },
                     onClick = { showGreetingAnimationDialog = true }
+                ),
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.tune),
+                    title = { Text("Greeting animation opacity") },
+                    description = {
+                        Column {
+                            Text("${(greetingOpacity * 100).toInt()}%")
+                            Slider(
+                                value = greetingOpacity,
+                                onValueChange = onGreetingOpacityChange,
+                                valueRange = 0.1f..1f,
+                                enabled = greetingAnimation != GreetingAnimation.OFF,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                    },
+                    enabled = greetingAnimation != GreetingAnimation.OFF,
+                    onClick = null
                 )
             )
         )
@@ -2913,8 +2939,6 @@ private fun greetingAnimationLabel(animation: GreetingAnimation): String =
         GreetingAnimation.NEON_GLOW -> "Neon glow"
         GreetingAnimation.SUNSET_TRAIN -> "Sunset train"
         GreetingAnimation.BOHO_HOME -> "Boho home"
-        GreetingAnimation.PACKING_LIST -> "Packing list"
-        GreetingAnimation.CAR_CARE -> "Car care"
         GreetingAnimation.HEMMING -> "Hemming tricks"
         GreetingAnimation.STREET_MARKET -> "Street market"
     }

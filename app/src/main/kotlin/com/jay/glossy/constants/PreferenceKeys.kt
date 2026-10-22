@@ -171,13 +171,21 @@ enum class GreetingAnimation {
     // rather than the file they came from, so the picker says what the card
     // will show instead of which download it is.
     BOHO_HOME,
-    PACKING_LIST,
-    CAR_CARE,
     HEMMING,
     STREET_MARKET,
 }
 
 val GreetingAnimationKey = stringPreferencesKey("greetingAnimation")
+
+/**
+ * How far the greeting clip shows through the card's wash, 0.1..1.
+ *
+ * The clip is decoration, so the default sits well below full strength: the
+ * greeting and the listener's name stay the thing the eye lands on.
+ */
+val GreetingAnimationOpacityKey = floatPreferencesKey("greetingAnimationOpacity")
+
+const val DefaultGreetingAnimationOpacity = 0.72f
 
 /** Nickname a guest picks on the welcome screen. */
 val GuestNameKey = stringPreferencesKey("guest_name")
