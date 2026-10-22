@@ -639,7 +639,9 @@ fun OriginalLyrics(
             if (itemInfo != null) {
                 // Item is visible, animate directly to center without sudden jumps
                 val viewportHeight = lazyListState.layoutInfo.viewportEndOffset - lazyListState.layoutInfo.viewportStartOffset
-                val center = lazyListState.layoutInfo.viewportStartOffset + (viewportHeight / 2)
+                // Keep the active lyric slightly below the geometric center so it
+                // doesn't appear too high on screen above the player controls.
+                val center = lazyListState.layoutInfo.viewportStartOffset + (viewportHeight / 2) + (viewportHeight / 8)
                 val itemCenter = itemInfo.offset + itemInfo.size / 2
                 val offset = itemCenter - center
                 if (kotlin.math.abs(offset) > 10) {
