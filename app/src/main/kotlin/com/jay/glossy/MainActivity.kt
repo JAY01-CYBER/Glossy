@@ -813,11 +813,20 @@ class MainActivity : ComponentActivity() {
                         navigationItems.map { it.route }.toSet()
                     }
 
+                // Search is not one of the bar's tabs any more — it rides the bar
+                // as its own orb — so its route is no longer in
+                // [navigationItemRoutes]. It still belongs to the bar, though: the
+                // orb is what opens it, the bar draws it selected once you are
+                // there, and a restored back stack sitting on the search page used
+                // to leave the whole bar (orb included) off-screen with no route
+                // that could bring it back.
                 val shouldShowNavigationBar =
                     remember(currentRoute, navigationItemRoutes) {
                         val route = currentRoute
                         route != null &&
-                            (navigationItemRoutes.contains(route) || route.startsWith("search/"))
+                            (navigationItemRoutes.contains(route) ||
+                                route == Screens.Search.route ||
+                                route.startsWith("search/"))
                     }
 
                 // Routes that must render without the mini player, nav bar and rail.
@@ -867,6 +876,14 @@ class MainActivity : ComponentActivity() {
                         ?: remember { mutableStateOf(false) }
                 val playerReady by playerReadyState
                 val activePlayerConnection = if (playerReady) playerConnection else null
+
+                // Whether there is a player sheet to step aside for at all. The
+                // bar's translation reads this rather than the sheet's progress
+                // alone: with no connection nothing is drawn to drag back down, and
+                // a restored anchor left at the expanded position would park the
+                // bar, and the search orb with it, off-screen with nothing to
+                // close.
+                val hasPlayerSheet = activePlayerConnection != null
 
                 val playerAwareWindowInsets =
                     remember(
@@ -1326,7 +1343,12 @@ class MainActivity : ComponentActivity() {
                                                 .offset {
                                                     val navBarHeightPx = navigationBarHeight.toPx()
                                                     val totalHeightPx = navBarTotalHeight.toPx()
-                                                    val progress = playerBottomSheetState.progress.coerceIn(0f, 1f)
+                                                    val progress =
+                                                        if (hasPlayerSheet) {
+                                                            playerBottomSheetState.progress.coerceIn(0f, 1f)
+                                                        } else {
+                                                            0f
+                                                        }
 
                                                     val yOffset = if (navBarHeightPx == 0f) {
                                                         totalHeightPx
@@ -1339,7 +1361,12 @@ class MainActivity : ComponentActivity() {
                                                     androidx.compose.ui.unit.IntOffset(0, yOffset.roundToInt())
                                                 }
                                                 .graphicsLayer {
-                                                    val progress = playerBottomSheetState.progress.coerceIn(0f, 1f)
+                                                    val progress =
+                                                        if (hasPlayerSheet) {
+                                                            playerBottomSheetState.progress.coerceIn(0f, 1f)
+                                                        } else {
+                                                            0f
+                                                        }
                                                     alpha = if (useNewMiniPlayerDesign && !shouldShowNavigationBar) {
                                                         0f
                                                     } else {
@@ -1373,7 +1400,12 @@ class MainActivity : ComponentActivity() {
                                                     val yOffset = if (navBarHeightPx == 0f) {
                                                         totalHeightPx
                                                     } else {
-                                                        val progress = playerBottomSheetState.progress.coerceIn(0f, 1f)
+                                                        val progress =
+                                                            if (hasPlayerSheet) {
+                                                                playerBottomSheetState.progress.coerceIn(0f, 1f)
+                                                            } else {
+                                                                0f
+                                                            }
                                                         val slideOffset = totalHeightPx * progress
                                                         val hideOffset =
                                                             totalHeightPx * (1 - navBarHeightPx / NavigationBarHeight.toPx())
