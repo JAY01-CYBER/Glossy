@@ -191,7 +191,7 @@ import com.jay.glossy.db.entities.LyricsEntity
 import com.jay.glossy.extensions.metadata
 import com.jay.glossy.extensions.togglePlayPause
 import com.jay.glossy.extensions.toggleRepeatMode
-import com.jay.glossy.listentogether.RoomRole
+import com.chikku.glossy.listentogether.RoomRole
 import com.metrolist.models.MediaMetadata
 import com.jay.glossy.ui.component.BlurredArtworkBackdrop
 import com.jay.glossy.ui.component.BottomSheet

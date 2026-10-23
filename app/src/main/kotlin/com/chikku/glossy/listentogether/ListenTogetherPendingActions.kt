@@ -14,7 +14,7 @@
  * hosting a room again.
  */
 
-package com.jay.glossy.listentogether
+package com.chikku.glossy.listentogether
 
 import android.content.Context
 import com.jay.glossy.constants.ListenTogetherPendingActionsKey

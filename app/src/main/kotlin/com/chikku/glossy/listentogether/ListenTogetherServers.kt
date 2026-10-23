@@ -10,7 +10,7 @@
  * Ported from Echo Music's ListenTogetherServers (GPL-3.0).
  */
 
-package com.jay.glossy.listentogether
+package com.chikku.glossy.listentogether
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

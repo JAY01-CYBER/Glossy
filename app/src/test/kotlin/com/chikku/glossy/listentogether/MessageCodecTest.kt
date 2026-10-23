@@ -1,4 +1,4 @@
-package com.jay.glossy.listentogether
+package com.chikku.glossy.listentogether
 
 import com.jay.glossy.R
 

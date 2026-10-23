@@ -16,7 +16,7 @@ package com.jay.glossy.ui.utils
 
 import android.content.Context
 import com.jay.glossy.R
-import com.jay.glossy.listentogether.ErrorCodes
+import com.chikku.glossy.listentogether.ErrorCodes
 
 /**
  * Text for an error the server sent back, keyed by its code.

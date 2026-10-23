@@ -32,7 +32,7 @@ import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.extensions.metadata
 import com.jay.glossy.extensions.move
 import com.jay.glossy.extensions.toggleRepeatMode
-import com.jay.glossy.listentogether.RoomRole
+import com.chikku.glossy.listentogether.RoomRole
 import com.jay.glossy.ui.component.BottomSheetState
 import com.jay.glossy.ui.component.LocalBottomSheetPageState
 import com.jay.glossy.ui.component.LocalMenuState

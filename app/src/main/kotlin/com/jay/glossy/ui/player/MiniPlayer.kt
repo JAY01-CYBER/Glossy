@@ -155,7 +155,7 @@ import com.jay.glossy.constants.MiniPlayerStyleKey
 import com.jay.glossy.constants.MiniPlayerPlayingAnimation
 import com.jay.glossy.constants.MiniPlayerPlayingAnimationKey
 import com.jay.glossy.db.entities.ArtistEntity
-import com.jay.glossy.listentogether.ListenTogetherManager
+import com.chikku.glossy.listentogether.ListenTogetherManager
 import com.metrolist.models.MediaMetadata
 import com.jay.glossy.playback.CastConnectionHandler
 import com.jay.glossy.playback.PlayerConnection

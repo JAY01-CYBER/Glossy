@@ -49,7 +49,7 @@ import coil3.request.crossfade
 import com.jay.glossy.R
 import com.jay.glossy.LocalListenTogetherManager
 import com.jay.glossy.LocalPlayerConnection
-import com.jay.glossy.listentogether.RoomRole
+import com.chikku.glossy.listentogether.RoomRole
 import com.jay.glossy.ui.component.BottomSheetState
 import com.jay.glossy.ui.component.CastButton
 import com.jay.glossy.ui.component.LocalBottomSheetPageState

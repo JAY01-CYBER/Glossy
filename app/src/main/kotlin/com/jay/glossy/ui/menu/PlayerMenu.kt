@@ -101,9 +101,9 @@ import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.constants.ListItemHeight
 import com.jay.glossy.constants.ShowLyricsOnPlayerKey
 import com.jay.glossy.constants.VarispeedKey
-import com.jay.glossy.listentogether.ConnectionState
-import com.jay.glossy.listentogether.ListenTogetherEvent
-import com.jay.glossy.listentogether.ROOM_CODE_LENGTH
+import com.chikku.glossy.listentogether.ConnectionState
+import com.chikku.glossy.listentogether.ListenTogetherEvent
+import com.chikku.glossy.listentogether.ROOM_CODE_LENGTH
 import com.metrolist.models.MediaMetadata
 import com.jay.glossy.playback.ExoDownloadService
 import com.jay.glossy.db.entities.Song
@@ -178,8 +178,8 @@ fun PlayerMenu(
     var showAudioDeviceBottomSheet by rememberSaveable { mutableStateOf(false) }
 
     val listenTogetherManager = LocalListenTogetherManager.current
-    val listenTogetherRoleState = listenTogetherManager?.role?.collectAsStateWithLifecycle(initialValue = com.jay.glossy.listentogether.RoomRole.NONE)
-    val isListenTogetherGuest = listenTogetherRoleState?.value == com.jay.glossy.listentogether.RoomRole.GUEST
+    val listenTogetherRoleState = listenTogetherManager?.role?.collectAsStateWithLifecycle(initialValue = com.chikku.glossy.listentogether.RoomRole.NONE)
+    val isListenTogetherGuest = listenTogetherRoleState?.value == com.chikku.glossy.listentogether.RoomRole.GUEST
     
     val pendingSuggestions by listenTogetherManager?.pendingSuggestions?.collectAsStateWithLifecycle(initialValue = emptyList())
         ?: remember { mutableStateOf(emptyList()) }
