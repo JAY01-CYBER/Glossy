@@ -133,17 +133,16 @@ fun LibraryPlaylistsScreen(
     val coroutineScope = rememberCoroutineScope()
 
     // The redesign is the app's look now: the Library is a continuous list of
-    // artwork-led rows. Only the classic style keeps the stored grid/list
-    // preference, and nothing selects it.
+    // artwork-led rows, so that is the first-run layout. The grid the header
+    // button switches to is still remembered — the screen used to force itself
+    // back to the list on every visit, which is why picking the large tiles and
+    // coming back found them small again.
     val newDesign = ActiveDesignStyle != DesignStyle.CLASSIC
 
-    var viewType by rememberEnumPreference(PlaylistViewTypeKey, LibraryViewType.GRID)
-
-    LaunchedEffect(newDesign) {
-        if (newDesign && viewType != LibraryViewType.LIST) {
-            viewType = LibraryViewType.LIST
-        }
-    }
+    var viewType by rememberEnumPreference(
+        PlaylistViewTypeKey,
+        if (newDesign) LibraryViewType.LIST else LibraryViewType.GRID,
+    )
     val (sortType, onSortTypeChange) = rememberEnumPreference(
         PlaylistSortTypeKey,
         PlaylistSortType.CREATE_DATE

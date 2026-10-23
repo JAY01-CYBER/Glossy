@@ -5,6 +5,7 @@
 
 package com.jay.glossy.ui.screens
 
+import com.chikku.glossy.ui.screens.settings.LosslessSettings
 import com.jay.glossy.R
 
 import android.app.Activity
@@ -435,6 +436,10 @@ fun NavGraphBuilder.navigationBuilder(
 
     composable("settings/stream_sources") {
         StreamSourcesSettings(navController)
+    }
+
+    composable("settings/lossless") {
+        LosslessSettings(navController)
     }
 
     composable("settings/storage") {

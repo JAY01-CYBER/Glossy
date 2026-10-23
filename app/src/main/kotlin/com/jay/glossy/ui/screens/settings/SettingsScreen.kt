@@ -311,6 +311,11 @@ fun SettingsScreen(
                             onClick = { navController.navigate("settings/stream_sources") },
                         ),
                         navRow(
+                            icon = R.drawable.graphic_eq,
+                            title = "Lossless",
+                            onClick = { navController.navigate("settings/lossless") },
+                        ),
+                        navRow(
                             icon = R.drawable.lyrics,
                             title = stringResource(R.string.ai_lyrics_translation),
                             onClick = { navController.navigate("settings/ai") },

@@ -5,6 +5,10 @@
 
 package com.jay.glossy.ui.screens
 
+import com.chikku.glossy.ui.component.ListeningExperienceCard
+import com.chikku.glossy.ui.component.ListeningExperienceRail
+import com.chikku.glossy.ui.component.formatListeningSpan
+import com.chikku.glossy.ui.component.memberSinceLabel
 import com.jay.glossy.R
 
 import androidx.activity.compose.BackHandler
@@ -68,6 +72,7 @@ import com.metrolist.innertube.models.WatchEndpoint
 import com.metrolist.innertube.utils.parseCookieString
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.LocalPlayerConnection
+import com.jay.glossy.constants.AccountNameKey
 import com.jay.glossy.constants.CONTENT_TYPE_ARTIST
 import com.jay.glossy.constants.InnerTubeCookieKey
 import com.jay.glossy.constants.StatPeriod
@@ -175,6 +180,65 @@ fun StatsScreen(
             mostPlayedSongsStats.mapNotNull { statsSong -> songsById[statsSong.id] }
         }
     val mostPeriodPlaylists = listOfNotNull(weeklyMostPlaylist, monthlyMostPlaylist)
+
+    // The wallet cards at the top of the page: the period's four headline
+    // figures, built here rather than in the rail because only this screen
+    // knows the entities the figures come from.
+    val (accountName) = rememberPreference(AccountNameKey, "")
+    val listeningCards =
+        remember(mostPlayedSongsStats, mostPlayedArtists, mostPlayedAlbums, currentDate.year) {
+            val topSong = mostPlayedSongsStats.firstOrNull()
+            val topArtist = mostPlayedArtists.firstOrNull()
+            val topAlbum = mostPlayedAlbums.firstOrNull()
+            val totalPlays = mostPlayedSongsStats.sumOf { it.songCountListened }
+            val totalMinutes = mostPlayedSongsStats.sumOf { it.timeListened ?: 0L } / 60_000L
+            buildList<ListeningExperienceCard> {
+                if (topSong != null) {
+                    add(
+                        ListeningExperienceCard(
+                            label = "Minutes listened",
+                            value = totalMinutes.toString(),
+                            detail = "$totalPlays plays · ${currentDate.year}",
+                            artworkUrl = topSong.thumbnailUrl,
+                        ),
+                    )
+                    add(
+                        ListeningExperienceCard(
+                            label = "Top song",
+                            value = topSong.title,
+                            detail = topSong.artists.joinToString(", ") { it.name },
+                            artworkUrl = topSong.thumbnailUrl,
+                        ),
+                    )
+                }
+                topArtist?.let { artist ->
+                    add(
+                        ListeningExperienceCard(
+                            label = "Top artist",
+                            value = artist.artist.name,
+                            detail =
+                                "${formatListeningSpan(artist.timeListened?.toLong())} · " +
+                                    "${artist.songCount} plays",
+                            artworkUrl = artist.artist.thumbnailUrl,
+                        ),
+                    )
+                }
+                topAlbum?.let { album ->
+                    add(
+                        ListeningExperienceCard(
+                            label = "Top album",
+                            value = album.album.title,
+                            detail =
+                                joinByBullet(
+                                    album.artists.firstOrNull()?.name,
+                                    formatListeningSpan(album.timeListened),
+                                ),
+                            artworkUrl = album.album.thumbnailUrl,
+                        ),
+                    )
+                }
+            }
+        }
     val (innerTubeCookie) = rememberPreference(InnerTubeCookieKey, "")
     val isLoggedIn =
         remember(innerTubeCookie) {
@@ -390,6 +454,17 @@ fun StatsScreen(
                     currentValue = indexChips,
                     onValueUpdate = { viewModel.indexChips.value = it },
                 )
+            }
+
+            if (!isSearching && listeningCards.isNotEmpty()) {
+                item(key = "listening_experience") {
+                    ListeningExperienceRail(
+                        cards = listeningCards,
+                        holder = accountName,
+                        memberSince = memberSinceLabel(firstEvent?.event?.timestamp),
+                        modifier = Modifier.animateItem().padding(top = 4.dp, bottom = 12.dp),
+                    )
+                }
             }
 
             if (visibleStatsPlaylists.isNotEmpty() && !isSearching && sArtists.isEmpty()) {

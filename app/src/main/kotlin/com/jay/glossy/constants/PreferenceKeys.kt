@@ -443,6 +443,18 @@ enum class AudioQuality {
  */
 val ShowAudioFormatKey = booleanPreferencesKey("showAudioFormat")
 
+/**
+ * The lossless lane: the folder of FLAC/WAV files the listener picked, and
+ * whether the player should prefer those files over YouTube's lossy stream
+ * when both are the same song.
+ */
+val PreferLosslessKey = booleanPreferencesKey("preferLossless")
+val LosslessFolderKey = stringPreferencesKey("losslessFolder")
+val LosslessFolderNameKey = stringPreferencesKey("losslessFolderName")
+
+/** The scan's result as JSON, so the index survives a restart without a table. */
+val LosslessIndexKey = stringPreferencesKey("losslessIndex")
+
 val AudioOffload = booleanPreferencesKey("enableOffload")
 val AudioTrackPlaybackParamsKey = booleanPreferencesKey("audioTrackPlaybackParams")
 
