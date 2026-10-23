@@ -67,6 +67,9 @@ import com.jay.glossy.ui.screens.Screens
 import com.jay.glossy.ui.theme.GlossyDimens
 import com.jay.glossy.ui.theme.GlossyPalette
 import com.jay.glossy.utils.rememberPreference
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.hazeChild
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlin.math.roundToInt
@@ -181,7 +184,8 @@ fun AppNavigationBar(
     modifier: Modifier = Modifier,
     pureBlack: Boolean = false,
     slimNav: Boolean = false,
-    onSearchLongClick: (() -> Unit)? = null
+    onSearchLongClick: (() -> Unit)? = null,
+    hazeNav: HazeState? = null,
 ) {
     // One bar for the whole app: the floating pill of the design, painted with
     // whatever scheme the theme resolved. [pureBlack] is still accepted so the
@@ -193,12 +197,16 @@ fun AppNavigationBar(
         modifier = modifier,
         slimNav = slimNav,
         onSearchLongClick = onSearchLongClick,
+        hazeNav = hazeNav,
     )
 }
 
 // ----------------------------------------------------
 // New design system: the frosted bar and its search orb
 // ----------------------------------------------------
+/** How much of the wallpaper the navigation bar pulls through its frost. */
+private val NavBarBlurRadius = 24.dp
+
 /**
  * The bar from the design: a frosted pill holding Home, Mix and Library, the
  * active tab carried by a solid capsule, and a round search orb floating beside
@@ -217,6 +225,7 @@ fun GlossyBottomNav(
     modifier: Modifier = Modifier,
     slimNav: Boolean = false,
     onSearchLongClick: (() -> Unit)? = null,
+    hazeNav: HazeState? = null,
 ) {
     // The tab set the app passes in is Home, Mix and Library; Search is the
     // orb beside the pill, never one of its tabs.
@@ -228,6 +237,16 @@ fun GlossyBottomNav(
     // Captured before the draw phase: the palette reads are composition-only.
     val glass = GlossyPalette.MiniBar
     val rim = GlossyPalette.Border
+
+    // A real backdrop blur rather than another translucent colour: the pill and
+    // the orb sample whatever the app is drawing behind them, so the bar reads as
+    // frosted glass over the wallpaper. The glass colour is still painted on top
+    // of it, so the frost only deepens the surface instead of tinting it twice —
+    // and a build with no source (a caller that passes none) keeps the flat bar.
+    val frost = remember(hazeNav) {
+        HazeStyle(blurRadius = NavBarBlurRadius, noiseFactor = 0.03f)
+    }
+    val frosted = if (hazeNav != null) Modifier.hazeChild(hazeNav, frost) else Modifier
 
     val barHeight = if (slimNav) 56.dp else GlossyDimens.NavPillHeight
     val pillHeight = if (slimNav) 50.dp else 62.dp
@@ -251,6 +270,7 @@ fun GlossyBottomNav(
                     // strip painted onto it.
                     .shadow(elevation = 12.dp, shape = pill, clip = false)
                     .clip(pill)
+                    .then(frosted)
                     .background(glass)
                     .border(GlossyDimens.Hairline, rim, pill)
                     .padding(horizontal = 5.dp, vertical = 5.dp),
@@ -310,6 +330,7 @@ fun GlossyBottomNav(
                         .size(orbSize)
                         .shadow(elevation = 12.dp, shape = CircleShape, clip = false)
                         .clip(CircleShape)
+                        .then(frosted)
                         .background(glass)
                         .border(GlossyDimens.Hairline, rim, CircleShape)
                         // A press opens search; holding it opens recognition.

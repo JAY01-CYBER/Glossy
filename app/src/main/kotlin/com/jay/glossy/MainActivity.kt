@@ -235,6 +235,8 @@ import com.jay.glossy.viewmodels.HomeViewModel
 import com.jay.glossy.widget.PlaylistWidgetReceiver
 import com.valentinilk.shimmer.LocalShimmerTheme
 import dagger.hilt.android.AndroidEntryPoint
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.haze
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -273,7 +275,7 @@ class MainActivity : ComponentActivity() {
     lateinit var syncUtils: SyncUtils
 
     @Inject
-    lateinit var listenTogetherManager: com.jay.glossy.listentogether.ListenTogetherManager
+    lateinit var listenTogetherManager: com.chikku.glossy.listentogether.ListenTogetherManager
 
     private lateinit var navController: NavHostController
     private var pendingIntent: Intent? = null
@@ -682,10 +684,15 @@ class MainActivity : ComponentActivity() {
             }
 
             CompositionLocalProvider(LocalDensity provides scaledDensity) {
+            // The whole screen is the blur source for the navigation bar: the bar
+            // sits in the Scaffold's bottom slot, so the only thing it can frost is
+            // what the app paints behind that slot — the wallpaper and the surface.
+            val navBarHazeState = remember { HazeState() }
             BoxWithConstraints(
                 modifier =
                     Modifier
                         .fillMaxSize()
+                        .haze(navBarHazeState)
                         .background(if (pureBlack) Color.Black else MaterialTheme.colorScheme.surface),
             ) {
                 val (backgroundBlurOn) = rememberPreference(BackgroundBlurEnabledKey, defaultValue = true)
@@ -1349,6 +1356,7 @@ class MainActivity : ComponentActivity() {
                                         pureBlack = pureBlack,
                                         slimNav = slimNav,
                                         onSearchLongClick = onSearchLongClick,
+                                        hazeNav = navBarHazeState,
                                         modifier =
                                             Modifier
                                                 .align(Alignment.BottomCenter)
@@ -1896,6 +1904,6 @@ val LocalPlayerConnection = staticCompositionLocalOf<PlayerConnection?> { error(
 val LocalPlayerAwareWindowInsets = compositionLocalOf<WindowInsets> { error("No WindowInsets provided") }
 val LocalDownloadUtil = staticCompositionLocalOf<DownloadUtil> { error("No DownloadUtil provided") }
 val LocalSyncUtils = staticCompositionLocalOf<SyncUtils> { error("No SyncUtils provided") }
-val LocalListenTogetherManager = staticCompositionLocalOf<com.jay.glossy.listentogether.ListenTogetherManager?> { null }
+val LocalListenTogetherManager = staticCompositionLocalOf<com.chikku.glossy.listentogether.ListenTogetherManager?> { null }
 val LocalChangelogState = staticCompositionLocalOf<MutableState<Boolean>> { error("No LocalChangelogState provided") }
 val LocalIsPlayerExpanded = compositionLocalOf { false }
