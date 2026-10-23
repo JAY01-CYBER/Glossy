@@ -1418,9 +1418,9 @@ fun AppearanceSettings(
                                 GreetingAnimation.OFF -> "Off — the plain card"
                                 GreetingAnimation.NEON_GLOW -> "Neon glow"
                                 GreetingAnimation.SUNSET_TRAIN -> "Sunset train"
-                                GreetingAnimation.BOHO_HOME -> "Boho home"
-                                GreetingAnimation.HEMMING -> "Hemming tricks"
-                                GreetingAnimation.STREET_MARKET -> "Street market"
+                                GreetingAnimation.BOHO_HOME -> "Reddish tree"
+                                GreetingAnimation.HEMMING -> "Luffy"
+                                GreetingAnimation.STREET_MARKET -> "Sunset samurai"
                             }
                         )
                     },
@@ -2938,9 +2938,9 @@ private fun greetingAnimationLabel(animation: GreetingAnimation): String =
         GreetingAnimation.OFF -> "Off (plain card)"
         GreetingAnimation.NEON_GLOW -> "Neon glow"
         GreetingAnimation.SUNSET_TRAIN -> "Sunset train"
-        GreetingAnimation.BOHO_HOME -> "Boho home"
-        GreetingAnimation.HEMMING -> "Hemming tricks"
-        GreetingAnimation.STREET_MARKET -> "Street market"
+        GreetingAnimation.BOHO_HOME -> "Reddish tree"
+        GreetingAnimation.HEMMING -> "Luffy"
+        GreetingAnimation.STREET_MARKET -> "Sunset samurai"
     }
 
 /**
