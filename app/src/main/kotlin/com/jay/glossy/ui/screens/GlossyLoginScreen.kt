@@ -98,7 +98,6 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jay.glossy.R
-import com.jay.glossy.ui.component.seaGlassSurface
 import com.jay.glossy.ui.component.seaGlassSurfacesAvailable
 import dev.seaglass.compose.SeaGlassStageHost
 import kotlin.math.roundToInt
@@ -130,10 +129,11 @@ private val CardWhite = Color(0xFFFFFFFF)
  * Dark ink on a pale body is what keeps them readable: sea glass is a surface,
  * not a fill.
  */
-private val GoogleButton = Color(0xFFE3D5FF)
-private val OnGoogleButton = Color(0xFF3A1C7A)
-private val GuestButton = Color(0xFFD2E6FF)
-private val OnGuestButton = Color(0xFF10315B)
+private val GoogleButton = Color(0xFFFFFFFF)
+private val OnGoogleButton = Color(0xFF351064)
+private val GoogleButtonBorder = Color(0xFFD9C8F0)
+private val GuestButton = Color(0xFF54218A)
+private val OnGuestButton = Color(0xFFFFFFFF)
 private val CookieLink = Color(0xFF4A4358)
 
 /**
@@ -142,7 +142,7 @@ private val CookieLink = Color(0xFF4A4358)
  * surface lifting off the card rather than a stain beneath it.
  */
 private val GoogleShadow = Color(0xFF5B2FBF)
-private val GuestShadow = Color(0xFF2F5B9E)
+private val GuestShadow = Color(0xFF351064)
 
 /**
  * The two action pills as pastel sea glass rather than flat paint: the tint is
@@ -659,7 +659,7 @@ private fun LoginCard(
             LoginActionButton(
                 fill = GoogleButton,
                 shadowTint = GoogleShadow,
-                sheen = true,
+                borderColor = GoogleButtonBorder,
                 onClick = onGoogleClick,
             ) {
                 Icon(
@@ -735,6 +735,7 @@ private fun LoginActionButton(
     fill: Color,
     shadowTint: Color,
     onClick: () -> Unit,
+    borderColor: Color = Color.Transparent,
     sheen: Boolean = false,
     content: @Composable RowScope.() -> Unit,
 ) {
@@ -761,15 +762,9 @@ private fun LoginActionButton(
         label = "sheenSweep",
     )
 
-    // The sea-glass body replaces the flat fill outright: it paints its own
-    // tinted, frosted, rim-lit contour, so a fill underneath would only flatten
-    // it back out. Where the shader cannot run — a tooling preview, or a device
-    // below API 33 such as Android 10 — the same body is drawn rather than
-    // sampled, so the pill is glass there too instead of the flat fill it used
-    // to fall back to. The body itself comes from [seaGlassSurface], so the two
-    // pills here are cut from the same material as the rest of the app.
+    // These login actions use a true solid fill for reliable contrast across
+    // devices and previews; the rest of the screen keeps its glass treatment.
     val shape = RoundedCornerShape(percent = 50)
-    val surface = seaGlassSurface(fill = fill, shape = shape, cornerRadius = 26.dp)
 
     Box(
         modifier = Modifier
@@ -791,8 +786,9 @@ private fun LoginActionButton(
             )
             // Keeps the touch bounds on the pill's outline; the glass contour
             // is the same circle, so nothing the shader draws is cut off.
-            .clip(RoundedCornerShape(percent = 50))
-            .then(surface)
+            .clip(shape)
+            .background(fill, shape)
+            .border(1.dp, borderColor, shape)
             .clickable(
                 interactionSource = interactionSource,
                 // No ripple: the pill is the feedback.

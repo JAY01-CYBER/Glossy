@@ -326,38 +326,32 @@ fun GlossySearchDock(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = GlossyDimens.ScreenPadding),
+            .padding(horizontal = GlossyDimens.ScreenPadding)
+            .shadow(elevation = 6.dp, shape = pillShape, clip = false)
+            .clip(pillShape)
+            .background(GlossyPalette.Row)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = ripple(color = GlossyPalette.Accent),
+                onClick = onSearchClick,
+            )
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier
-                .weight(1f)
-                .shadow(elevation = 6.dp, shape = pillShape, clip = false)
-                .clip(pillShape)
-                .background(GlossyPalette.Row)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = ripple(color = GlossyPalette.Accent),
-                    onClick = onSearchClick,
-                )
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.search),
-                contentDescription = null,
-                tint = GlossyPalette.TextSecondary,
-                modifier = Modifier.size(20.dp),
-            )
-            Spacer(Modifier.width(10.dp))
-            Text(
-                text = hint,
-                style = MaterialTheme.typography.bodyMedium,
-                color = GlossyPalette.TextMuted,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
+        Icon(
+            painter = painterResource(R.drawable.search),
+            contentDescription = null,
+            tint = GlossyPalette.TextSecondary,
+            modifier = Modifier.size(20.dp),
+        )
+        Spacer(Modifier.width(10.dp))
+        Text(
+            text = hint,
+            style = MaterialTheme.typography.bodyMedium,
+            color = GlossyPalette.TextMuted,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

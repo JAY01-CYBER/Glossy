@@ -1,3 +1,48 @@
+---v0.0.5
+# 🎧 Glossy v0.0.5 — UI Refresh, New Player Styles & Canvas Controls
+
+We're back with **Glossy 0.0.5**, bringing a refreshed interface, new player customization options, enhanced Canvas controls, and more ways to personalize your listening experience. ✨
+
+### ✨ UI & Design Improvements
+* **Redesigned Login Screen:** A refreshed look for a better first impression.
+* **Redesigned Home Screen:** An updated layout for a more refined listening experience.
+* **Redesigned Profile Menu:** Improved the small menu that appears when tapping your profile.
+* **Redesigned Settings:** A refreshed settings interface for easier navigation.
+* **Improved Settings Button Placement:** Relocated the settings button for greater convenience.
+* **About Section Refinements:** Small visual and usability improvements.
+
+### 🎨 New Player Customization
+* **2 New Mini Player Animations:** More ways to customize the mini player's appearance.
+* **3 New Player Styles:**
+  * 🎬 **Cinematic**
+  * 💊 **Capsule**
+  * 💿 **Vinyl**
+* **Mini Lyrics Style Option:** Customize the appearance of mini lyrics.
+* **Mini Lyrics Animation Option:** Choose how mini lyrics animate.
+* **Thumbnail Shadows:** Enable or disable shadows behind thumbnails.
+
+### 🎞️ Canvas Enhancements
+* **Spotlight Canvas:** Enable or disable Canvas videos in the Home Screen's Spotlight section.
+* **Preload Canvas:** Control whether Canvas videos are preloaded.
+* **Load Canvas on Mobile Data:** Choose whether Canvas videos can load using mobile data.
+* **Canvas Check:** Check how Canvas videos are loading.
+* **Refresh Canvas:** Refresh Canvas playback when needed.
+
+### 🎵 Audio & Lyrics Improvements
+* **Spotify Lyrics:** Added Spotify Lyrics Engine.
+* **Show Audio Format:** Display the audio format of the currently playing track.
+* **Spatial Audio:** A new setting for spatial audio.
+* **Audio Output Selection:** Choose your preferred audio output device, such as your phone speaker or a connected Bluetooth device.
+
+### 📁 Storage
+* **Brand-New Storage Section:** A dedicated section in Settings for storage-related options, making storage management easier to access.
+
+### 💫 More Control. More Personalization. More Glossy.
+Thank you for supporting Glossy and helping our indie project grow. Every suggestion and every download motivates us to keep improving.
+Enjoy Glossy 0.0.5! ❤️🎧
+
+*— Team Glossy*
+
 ---v0.0.4
 # 🚀 Glossy v0.0.4 - Animated Canvas, Equalizer & UI Overhaul
 

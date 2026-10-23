@@ -639,7 +639,9 @@ fun OriginalLyrics(
             if (itemInfo != null) {
                 // Item is visible, animate directly to center without sudden jumps
                 val viewportHeight = lazyListState.layoutInfo.viewportEndOffset - lazyListState.layoutInfo.viewportStartOffset
-                val center = lazyListState.layoutInfo.viewportStartOffset + (viewportHeight / 2)
+                // Keep the active lyric slightly below the geometric center so it
+                // doesn't appear too high on screen above the player controls.
+                val center = lazyListState.layoutInfo.viewportStartOffset + (viewportHeight * 58 / 100)
                 val itemCenter = itemInfo.offset + itemInfo.size / 2
                 val offset = itemCenter - center
                 if (kotlin.math.abs(offset) > 10) {
@@ -834,19 +836,10 @@ fun OriginalLyrics(
         } else {
             LazyColumn(
                 state = lazyListState,
-                // Only the status bar, then straight into the first line.
-                //
-                // The top inset used to be a third of the viewport, which
-                // pushed the lyrics into the lower half of the screen and left
-                // a band of empty backdrop above them — at song start, before
-                // anything had scrolled, that band was most of what was on
-                // screen. The bottom inset stays: it is what lets the last
-                // lines be scrolled up under the controls instead of ending
-                // flush against them.
                 contentPadding =
                     WindowInsets.systemBars
                         .only(WindowInsetsSides.Top)
-                        .add(WindowInsets(bottom = maxHeight / 2))
+                        .add(WindowInsets(top = maxHeight / 3, bottom = maxHeight / 2))
                         .asPaddingValues(),
                 modifier =
                     Modifier

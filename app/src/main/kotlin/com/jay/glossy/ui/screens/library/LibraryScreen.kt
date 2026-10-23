@@ -35,7 +35,6 @@ import androidx.compose.ui.unit.dp
 import com.jay.glossy.LocalNavController
 import com.jay.glossy.constants.ChipSortTypeKey
 import com.jay.glossy.constants.LibraryFilter
-import com.jay.glossy.ui.component.CreatePlaylistDialog
 import com.jay.glossy.ui.component.GlossyChipRow
 import com.jay.glossy.ui.component.GlossyDashedTile
 import com.jay.glossy.ui.component.GlossyEyebrow
@@ -75,18 +74,7 @@ fun LibraryScreen() {
     val navController = LocalNavController.current
     var filterType by rememberEnumPreference(ChipSortTypeKey, LibraryFilter.PLAYLISTS)
 
-    var showCreatePlaylistDialog by rememberSaveable { mutableStateOf(false) }
     var showOverflowMenu by remember { mutableStateOf(false) }
-
-    if (showCreatePlaylistDialog) {
-        CreatePlaylistDialog(
-            onDismiss = { showCreatePlaylistDialog = false },
-            onPlaylistCreated = { playlistId ->
-                showCreatePlaylistDialog = false
-                navController.navigate("local_playlist/$playlistId")
-            }
-        )
-    }
 
     val filterContent = @Composable {
         Column(
@@ -213,11 +201,6 @@ fun LibraryScreen() {
                 onValueUpdate = { filterType = it },
             )
 
-            if (filterType == LibraryFilter.PLAYLISTS) {
-                NewPlaylistCard(onClick = { showCreatePlaylistDialog = true })
-            } else {
-                Spacer(Modifier.height(10.dp))
-            }
         }
     }
 
@@ -244,48 +227,6 @@ fun LibraryScreen() {
             LibraryFilter.SPOTIFY -> LibrarySpotifyPlaylistsScreen(
                 navController = navController,
                 filterContent = filterContent
-            )
-        }
-    }
-}
-
-/**
- * "Create a playlist" as a card with the dashed plus tile as its leading slot.
- * It used to be a floating tile over the list, which read as a stray button;
- * giving it a surface makes it the first item of the shelf instead.
- */
-@Composable
-private fun NewPlaylistCard(onClick: () -> Unit) {
-    val shape = RoundedCornerShape(18.dp)
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = GlossyDimens.ScreenPadding, vertical = 12.dp)
-            .clip(shape)
-            .background(MaterialTheme.colorScheme.surface)
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape)
-            .clickable(onClick = onClick)
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        GlossyDashedTile(
-            contentDescription = stringResource(R.string.glossy_new_playlist),
-            onClick = onClick,
-            size = 48.dp,
-            corner = 14.dp,
-        )
-        Spacer(Modifier.width(GlossyDimens.Related))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = stringResource(R.string.glossy_new_playlist),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = GlossyPalette.TextPrimary,
-            )
-            Text(
-                text = stringResource(R.string.glossy_new_playlist_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = GlossyPalette.TextMuted,
             )
         }
     }

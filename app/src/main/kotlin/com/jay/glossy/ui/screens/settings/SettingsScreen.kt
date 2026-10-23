@@ -56,7 +56,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
@@ -78,14 +77,12 @@ import com.jay.glossy.constants.AccountNameKey
 import com.jay.glossy.constants.CommunityChannel
 import com.jay.glossy.constants.DarkModeKey
 import com.jay.glossy.constants.InnerTubeCookieKey
-import com.jay.glossy.constants.SelectedThemeColorKey
 import com.jay.glossy.ui.component.GlossyBrandTile
 import com.jay.glossy.ui.component.GlossyEyebrow
 import com.jay.glossy.ui.component.GlossyInitialAvatar
 import com.jay.glossy.ui.component.IconButton
 import com.jay.glossy.ui.component.Material3SettingsGroup
 import com.jay.glossy.ui.component.Material3SettingsItem
-import com.jay.glossy.ui.theme.DefaultThemeColor
 import com.jay.glossy.ui.theme.GlossyDimens
 import com.jay.glossy.ui.theme.GlossyPalette
 import com.jay.glossy.ui.utils.backToMain
@@ -142,10 +139,6 @@ fun SettingsScreen(
 
     // ---- Preferences shown by the groups below ---------------------------
     val (darkMode) = rememberEnumPreference(DarkModeKey, DarkMode.AUTO)
-    val (selectedThemeColorInt) = rememberPreference(
-        SelectedThemeColorKey,
-        defaultValue = DefaultThemeColor.toArgb()
-    )
     // ---- Cached music size ----------------------------------------------
     val playerConnection = LocalPlayerConnection.current
     var cachedBytes by remember { mutableLongStateOf(0L) }
@@ -170,11 +163,6 @@ fun SettingsScreen(
         DarkMode.OFF -> stringResource(R.string.glossy_theme_light)
         DarkMode.AUTO -> stringResource(R.string.glossy_theme_system)
     }
-
-    val paletteValue = PaletteColors.firstOrNull {
-        it.seedColor != androidx.compose.ui.graphics.Color.Transparent &&
-            it.seedColor.toArgb() == selectedThemeColorInt
-    }?.let { stringResource(it.nameRes) } ?: stringResource(R.string.glossy_teal)
 
     val openCommunityLink: (CommunityChannel) -> Unit = { channel ->
         runCatching { uriHandler.openUri(channel.url) }
@@ -274,12 +262,6 @@ fun SettingsScreen(
                             icon = R.drawable.bedtime,
                             title = stringResource(R.string.theme),
                             value = themeValue,
-                            onClick = { navController.navigate("settings/appearance/theme") },
-                        ),
-                        navRow(
-                            icon = R.drawable.gradient,
-                            title = stringResource(R.string.color_palette),
-                            value = paletteValue,
                             onClick = { navController.navigate("settings/appearance/theme") },
                         ),
                         navRow(
