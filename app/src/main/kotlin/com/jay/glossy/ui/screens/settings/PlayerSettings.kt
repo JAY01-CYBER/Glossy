@@ -292,8 +292,18 @@ fun PlayerSettings(
                     AudioQuality.HIGH -> stringResource(R.string.audio_quality_high)
                     AudioQuality.VERY_HIGH -> stringResource(R.string.audio_quality_very_high)
                     AudioQuality.LOW -> stringResource(R.string.audio_quality_low)
+                    AudioQuality.LOSSLESS -> stringResource(R.string.audio_quality_lossless)
                 }
-            }
+            },
+            // The lossless tier is the one choice here whose name does not say
+            // what it will do when the source has no master, so it is spelled
+            // out under the label rather than left to the settings screen.
+            valueDescription = {
+                when (it) {
+                    AudioQuality.LOSSLESS -> stringResource(R.string.audio_quality_lossless_desc)
+                    else -> null
+                }
+            },
         )
     }
 
@@ -353,6 +363,7 @@ fun PlayerSettings(
                                 AudioQuality.HIGH -> stringResource(R.string.audio_quality_high)
                                 AudioQuality.VERY_HIGH -> stringResource(R.string.audio_quality_very_high)
                                 AudioQuality.LOW -> stringResource(R.string.audio_quality_low)
+                                AudioQuality.LOSSLESS -> stringResource(R.string.audio_quality_lossless)
                             }
                         )
                     },

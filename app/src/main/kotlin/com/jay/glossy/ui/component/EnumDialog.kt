@@ -31,7 +31,11 @@ fun <T> EnumDialog(
     current: T,
     values: List<T>,
     valueText: @Composable (T) -> String,
-    valueDescription: (@Composable (T) -> String)? = null,
+    /**
+     * A second line for a value that needs one. Null (or blank) leaves the row
+     * single-line, so only the values that really explain themselves pay for it.
+     */
+    valueDescription: (@Composable (T) -> String?)? = null,
     /**
      * Optional trailing slot for the value itself — used to show an animation
      * next to its own name so a choice can be made without leaving the dialog.
@@ -67,11 +71,14 @@ fun <T> EnumDialog(
                         text = valueText(value),
                     )
                     if (valueDescription != null) {
-                        Text(
-                            text = valueDescription(value),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        val description = valueDescription(value)
+                        if (!description.isNullOrBlank()) {
+                            Text(
+                                text = description,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
 

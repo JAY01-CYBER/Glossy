@@ -113,6 +113,9 @@ constructor(
                 )
             }.getOrThrow()
             val format = playbackData.format
+            // A master from the lossless source is what will be written to disk,
+            // so it is what the download's format row describes.
+            val lossless = playbackData.lossless
 
             val actualContentLength = format.contentLength ?: run {
                 var length: Long? = null
@@ -141,10 +144,11 @@ constructor(
                     FormatEntity(
                         id = mediaId,
                         itag = format.itag,
-                        mimeType = format.mimeType.split(";")[0],
-                        codecs = format.mimeType.split("codecs=")[1].removeSurrounding("\""),
-                        bitrate = format.bitrate,
-                        sampleRate = format.audioSampleRate,
+                        mimeType = lossless?.mimeType ?: format.mimeType.split(";")[0],
+                        codecs = lossless?.codec
+                            ?: format.mimeType.split("codecs=")[1].removeSurrounding("\""),
+                        bitrate = lossless?.bitrate?.takeIf { it > 0 } ?: format.bitrate,
+                        sampleRate = lossless?.sampleRateHz?.takeIf { it > 0 } ?: format.audioSampleRate,
                         contentLength = actualContentLength,
                         loudnessDb = playbackData.audioConfig?.loudnessDb,
                         perceptualLoudnessDb = playbackData.audioConfig?.perceptualLoudnessDb,
@@ -171,7 +175,10 @@ constructor(
             }
 
             val streamUrl = playbackData.streamUrl.let {
-                "${it}&range=0-${actualContentLength}"
+                // A lossless module may hand over a URL with no query string at
+                // all, so the range parameter takes whichever separator fits.
+                val separator = if ("?" in it) "&" else "?"
+                "$it${separator}range=0-${actualContentLength}"
             }
 
             songUrlCache[mediaId] = streamUrl to playbackData.streamExpiresInSeconds * 1000L

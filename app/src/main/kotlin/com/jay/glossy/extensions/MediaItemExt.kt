@@ -13,7 +13,6 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata.MEDIA_TYPE_MUSIC
 import com.metrolist.innertube.models.SongItem
 import com.jay.glossy.db.entities.Song
-import com.jay.glossy.lossless.LosslessLibrary
 import com.metrolist.models.MediaMetadata
 import com.metrolist.models.toMediaMetadata
 import com.jay.glossy.ui.utils.resize
@@ -23,13 +22,10 @@ val MediaItem.metadata: MediaMetadata?
 
 fun Song.toMediaItem() = MediaItem.Builder()
     .setMediaId(song.id)
-    // A file the listener owns wins over the stream, when it is the same song:
-    // the id still identifies it everywhere else in the app, only the URI the
-    // player opens changes.
-    .setUri(
-        LosslessLibrary.findFor(song.title, orderedArtists.map { it.name }, song.duration)?.uri
-            ?: song.id,
-    )
+    // The media id is the URI: the stream resolver turns it into a URL on play,
+    // and on the Lossless tier into a master from the lossless source before
+    // falling back to YouTube.
+    .setUri(song.id)
     .setCustomCacheKey(song.id)
     .setTag(toMediaMetadata())
     .setMediaMetadata(
@@ -53,9 +49,7 @@ fun Song.toMediaItem() = MediaItem.Builder()
 
 fun SongItem.toMediaItem() = MediaItem.Builder()
     .setMediaId(id)
-    // Same substitution as above: search, charts and artist pages build their
-    // queues from SongItem, and a song played from there is the same song.
-    .setUri(LosslessLibrary.findFor(title, artists.map { it.name }, duration ?: 0)?.uri ?: id)
+    .setUri(id)
     .setCustomCacheKey(id)
     .setTag(toMediaMetadata())
     .setMediaMetadata(
@@ -79,7 +73,7 @@ fun SongItem.toMediaItem() = MediaItem.Builder()
 
 fun MediaMetadata.toMediaItem() = MediaItem.Builder()
     .setMediaId(id)
-    .setUri(LosslessLibrary.findFor(title, artists.map { it.name }, duration)?.uri ?: id)
+    .setUri(id)
     .setCustomCacheKey(id)
     .setTag(this)
     .setMediaMetadata(

@@ -20,6 +20,9 @@
     <string name="listen_together_glossy_cloudflare">Glossy on Cloudflare</string>
     <!-- Audio quality tiers added beyond Auto / Low / High -->
     <string name="audio_quality_very_high">Very high (best bitrate)</string>
+    <!-- Audio quality — the lossless tier: a source module's FLAC/ALAC master, YouTube's best stream as fallback -->
+    <string name="audio_quality_lossless">Lossless</string>
+    <string name="audio_quality_lossless_desc">FLAC or ALAC from your lossless source; YouTube\'s best stream when it has nothing for the track</string>
     <!-- Queue — the header of the playback queue: its title, the line under it and the row actions -->
     <string name="playback_queue">Playback Queue</string>
     <string name="queue_playing_next">Playing next</string>

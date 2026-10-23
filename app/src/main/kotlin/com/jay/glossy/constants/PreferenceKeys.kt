@@ -429,6 +429,16 @@ enum class AudioQuality {
      * the highest bitrate available rather than the highest *reported* tier.
      */
     VERY_HIGH,
+
+    /**
+     * Lossless first, best stream second.
+     *
+     * Nothing YouTube serves is lossless, so this tier means "ask the lossless
+     * source module for a FLAC/ALAC master, and if it has nothing for this
+     * track fall back to the best audio YouTube has" — the same shape as
+     * BitChord's module source, without a folder for the listener to maintain.
+     */
+    LOSSLESS,
 }
 
 /**
@@ -444,16 +454,13 @@ enum class AudioQuality {
 val ShowAudioFormatKey = booleanPreferencesKey("showAudioFormat")
 
 /**
- * The lossless lane: the folder of FLAC/WAV files the listener picked, and
- * whether the player should prefer those files over YouTube's lossy stream
- * when both are the same song.
+ * The lossless lane's source: the endpoint of a module that answers with a
+ * FLAC/ALAC stream for a track (see `LosslessSource` for the contract).
+ *
+ * Blank is the normal state and means "YouTube's best audio" — the module is
+ * an upgrade, never a requirement, so choosing Lossless never breaks playback.
  */
-val PreferLosslessKey = booleanPreferencesKey("preferLossless")
-val LosslessFolderKey = stringPreferencesKey("losslessFolder")
-val LosslessFolderNameKey = stringPreferencesKey("losslessFolderName")
-
-/** The scan's result as JSON, so the index survives a restart without a table. */
-val LosslessIndexKey = stringPreferencesKey("losslessIndex")
+val LosslessSourceKey = stringPreferencesKey("losslessSource")
 
 val AudioOffload = booleanPreferencesKey("enableOffload")
 val AudioTrackPlaybackParamsKey = booleanPreferencesKey("audioTrackPlaybackParams")

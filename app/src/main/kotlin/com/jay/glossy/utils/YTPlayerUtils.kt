@@ -18,6 +18,8 @@ import com.metrolist.innertube.models.response.PlayerResponse
 import com.metrolist.innertube.strategy.ContentAwareFallbackStrategy
 import com.metrolist.innertube.strategy.ContentHints
 import com.jay.glossy.constants.AudioQuality
+import com.jay.glossy.lossless.LosslessSource
+import com.jay.glossy.lossless.LosslessStream
 import com.jay.glossy.utils.YTPlayerUtils.MAIN_CLIENT
 import com.jay.glossy.utils.YTPlayerUtils.validateStatus
 import com.jay.glossy.utils.cipher.CipherDeobfuscator
@@ -36,6 +38,9 @@ import timber.log.Timber
 object YTPlayerUtils {
     private const val logTag = "YTPlayerUtils"
     private const val TAG = "YTPlayerUtils"
+
+    /** [PlaybackData.streamClient] for a master that came from the lossless source. */
+    private const val LOSSLESS_CLIENT = "lossless-source"
 
     private val httpClient = OkHttpClient.Builder()
         .proxy(YouTube.proxy)
@@ -106,6 +111,12 @@ object YTPlayerUtils {
         val streamUrl: String,
         val streamExpiresInSeconds: Int,
         val streamClient: String = "unknown",
+        /**
+         * The FLAC/ALAC master the lossless source handed over, when there is
+         * one. Null is the normal case — YouTube's best stream is then what
+         * [streamUrl] points at.
+         */
+        val lossless: LosslessStream? = null,
     )
     /**
      * Custom player response intended to use for playback.
@@ -216,7 +227,8 @@ object YTPlayerUtils {
         // of them is remembered and used rather than the first client's answer.
         val preferHighestQuality =
             audioQuality == AudioQuality.HIGH ||
-                audioQuality == AudioQuality.VERY_HIGH
+                audioQuality == AudioQuality.VERY_HIGH ||
+                audioQuality == AudioQuality.LOSSLESS
 
         for ((clientIndex, client) in streamClients.withIndex()) {
             // reset for each client
@@ -513,14 +525,32 @@ object YTPlayerUtils {
         if (isUploadedTrack) {
             println("[PLAYBACK_DEBUG] SUCCESS: Got playback data for uploaded track - format=${format.mimeType}, streamUrl=${streamUrl.take(100)}...")
         }
+
+        // The lossless tier asks the source module before it settles for the
+        // stream. The YouTube answer above is still resolved first: it is the
+        // fallback when the module has no master, and it carries the loudness
+        // and tracking data the player needs either way.
+        val lossless =
+            if (audioQuality == AudioQuality.LOSSLESS) {
+                LosslessSource.resolve(
+                    videoId = videoId,
+                    title = videoDetails?.title,
+                    artist = videoDetails?.author,
+                    durationSeconds = videoDetails?.lengthSeconds?.toIntOrNull() ?: 0,
+                )
+            } else {
+                null
+            }
+
         PlaybackData(
             audioConfig,
             videoDetails,
             playbackTracking,
             format,
-            streamUrl,
+            lossless?.url ?: streamUrl,
             streamExpiresInSeconds,
-            streamClient = successClient ?: "unknown",
+            streamClient = if (lossless != null) LOSSLESS_CLIENT else successClient ?: "unknown",
+            lossless = lossless,
         )
     }.onFailure { e ->
         println("[PLAYBACK_DEBUG] EXCEPTION during playback for videoId=$videoId: ${e::class.simpleName}: ${e.message}")
@@ -584,13 +614,17 @@ object YTPlayerUtils {
                 )
             }
 
-            AudioQuality.VERY_HIGH -> {
+            AudioQuality.VERY_HIGH, AudioQuality.LOSSLESS -> {
                 // The best master the track offers, decided by bitrate rather
                 // than by YouTube's own quality label, which is not reliable
                 // enough to be the final word on which stream sounds best.
                 // Original (non auto-dubbed) audio is preferred when it is
                 // available, so a translated track is never chosen for its
                 // slightly higher number.
+                //
+                // LOSSLESS lands here too: this is its fallback when the source
+                // module has nothing, and the best YouTube stream is a better
+                // answer than silence.
                 audioCapableFormats.filter { it.isOriginal }.maxByOrNull { it.bitrate }
                     ?: audioCapableFormats.maxByOrNull { it.bitrate }
             }

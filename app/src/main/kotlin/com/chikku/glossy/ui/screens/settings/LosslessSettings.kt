@@ -1,14 +1,10 @@
 /**
- * Metrolist Project (C) 2026
+ * Glossy Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
 package com.chikku.glossy.ui.screens.settings
 
-import android.content.Intent
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -16,15 +12,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -32,89 +25,86 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.R
-import com.jay.glossy.constants.LosslessFolderKey
-import com.jay.glossy.constants.LosslessFolderNameKey
-import com.jay.glossy.constants.PreferLosslessKey
-import com.jay.glossy.lossless.LosslessLibrary
+import com.jay.glossy.constants.AudioQuality
+import com.jay.glossy.constants.AudioQualityKey
+import com.jay.glossy.constants.LosslessSourceKey
 import com.jay.glossy.lossless.LosslessOutput
+import com.jay.glossy.lossless.LosslessSource
 import com.jay.glossy.ui.component.IconButton
 import com.jay.glossy.ui.component.Material3SettingsGroup
 import com.jay.glossy.ui.component.Material3SettingsItem
+import com.jay.glossy.ui.component.TextFieldDialog
 import com.jay.glossy.ui.utils.backToMain
+import com.jay.glossy.utils.rememberEnumPreference
 import com.jay.glossy.utils.rememberPreference
-import kotlinx.coroutines.launch
 
 /**
  * Settings › Playback › Lossless.
  *
- * Three facts the screen has to keep straight: what has been indexed, which
- * files count as lossless, and whether the path those files take out of the
- * phone can carry them. The last one is read from the audio HAL rather than
- * assumed, because most listening happens over Bluetooth, where every sample
- * is re-encoded before it leaves the device.
+ * The lane works the way BitChord's does: a source module turns a track into a
+ * FLAC/ALAC master, and when it has nothing — or was never configured — the
+ * player keeps the best stream YouTube offered. There is nothing to point at a
+ * folder and nothing to keep in sync, which is the whole point: the lossless
+ * tier is a choice in Audio quality, not a library the listener has to build.
+ *
+ * The screen therefore has three things to say: which tier is selected, where
+ * masters come from, and whether the output path can carry them. The last one
+ * is read from the audio HAL rather than assumed, because most listening
+ * happens over Bluetooth, where every sample is re-encoded before it leaves the
+ * phone.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LosslessSettings(navController: NavController) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
 
-    val (preferLossless, onPreferLosslessChange) = rememberPreference(PreferLosslessKey, false)
-    val (folderUri, onFolderChange) = rememberPreference(LosslessFolderKey, "")
-    val (folderName, onFolderNameChange) = rememberPreference(LosslessFolderNameKey, "")
+    val (audioQuality, _) = rememberEnumPreference(AudioQualityKey, AudioQuality.AUTO)
+    val (source, onSourceChange) = rememberPreference(LosslessSourceKey, "")
 
-    val tracks by LosslessLibrary.tracks.collectAsStateWithLifecycle()
-    val scanning by LosslessLibrary.scanning.collectAsStateWithLifecycle()
-    val scanned by LosslessLibrary.progress.collectAsStateWithLifecycle()
-
+    var showSourceDialog by remember { mutableStateOf(false) }
     var report by remember { mutableStateOf(LosslessOutput.report(context)) }
-    var message by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(preferLossless) { LosslessLibrary.setEnabled(preferLossless) }
-    LaunchedEffect(Unit) {
-        LosslessLibrary.restore(context)
+    LaunchedEffect(source) {
+        LosslessSource.configure(source)
         report = LosslessOutput.report(context)
     }
 
-    val scanFolder: (Uri) -> Unit = { uri ->
-        scope.launch {
-            message = null
-            val count = LosslessLibrary.scan(context, uri)
-            message =
-                when {
-                    count < 0 -> "That folder could not be read, so the index is unchanged."
-                    count == 0 -> "No FLAC or WAV files found in that folder."
-                    else -> "Indexed $count files."
-                }
-            report = LosslessOutput.report(context)
+    val qualityLabel =
+        when (audioQuality) {
+            AudioQuality.AUTO -> stringResource(R.string.audio_quality_auto)
+            AudioQuality.LOW -> stringResource(R.string.audio_quality_low)
+            AudioQuality.HIGH -> stringResource(R.string.audio_quality_high)
+            AudioQuality.VERY_HIGH -> stringResource(R.string.audio_quality_very_high)
+            AudioQuality.LOSSLESS -> stringResource(R.string.audio_quality_lossless)
         }
-    }
 
-    val picker =
-        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
-            if (uri != null) {
-                runCatching {
-                    context.contentResolver.takePersistableUriPermission(
-                        uri,
-                        Intent.FLAG_GRANT_READ_URI_PERMISSION,
-                    )
-                }
-                val name = uri.lastPathSegment?.substringAfterLast(':')?.ifBlank { null } ?: "Selected folder"
-                onFolderChange(uri.toString())
-                onFolderNameChange(name)
-                scanFolder(uri)
-            }
-        }
+    if (showSourceDialog) {
+        TextFieldDialog(
+            title = { Text("Lossless source") },
+            icon = { Icon(painterResource(R.drawable.cloud), null) },
+            initialTextFieldValue = TextFieldValue(text = source),
+            keyboardType = KeyboardType.Uri,
+            // Blank is valid: it means "use YouTube's best stream".
+            isInputValid = { it.isBlank() || it.startsWith("http://") || it.startsWith("https://") },
+            onDone = { value ->
+                onSourceChange(value.trim())
+                LosslessSource.configure(value)
+                showSourceDialog = false
+            },
+            onDismiss = { showSourceDialog = false },
+        )
+    }
 
     Column(
         Modifier
@@ -140,9 +130,10 @@ fun LosslessSettings(navController: NavController) {
         )
         Text(
             text =
-                "YouTube streams are compressed, so the only lossless audio Glossy can play is a file " +
-                    "you already own. Point this at a folder of FLAC or WAV rips and the player will use " +
-                    "the file whenever it is the same song as the stream.",
+                "A FLAC or ALAC master, fetched through a source module. When the module has " +
+                    "nothing for a track, the player falls back to the best audio YouTube serves — " +
+                    "so choosing Lossless never leaves a song silent, and there is no folder to keep " +
+                    "in sync.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 8.dp),
@@ -151,70 +142,58 @@ fun LosslessSettings(navController: NavController) {
         Spacer(Modifier.height(18.dp))
 
         Material3SettingsGroup(
-            title = "Your files",
+            title = "Audio quality",
             items =
                 listOf(
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.graphic_eq),
-                        title = { Text("Prefer my lossless copy") },
-                        description = { Text("Play the file instead of YouTube's stream when both are the same song.") },
-                        trailingContent = {
-                            Switch(
-                                checked = preferLossless,
-                                onCheckedChange = onPreferLosslessChange,
-                                thumbContent = {
-                                    Icon(
-                                        painter = painterResource(
-                                            id = if (preferLossless) R.drawable.check else R.drawable.close,
-                                        ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize),
-                                    )
-                                },
-                            )
-                        },
-                        onClick = { onPreferLosslessChange(!preferLossless) },
-                    ),
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.storage),
-                        title = { Text("Lossless folder") },
-                        description = { Text(folderName.ifBlank { "No folder chosen" }) },
-                        showChevron = true,
-                        onClick = { picker.launch(null) },
-                    ),
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.sync),
-                        title = { Text(if (scanning) "Reading files…" else "Rescan folder") },
+                        title = { Text(stringResource(R.string.audio_quality)) },
                         description = {
                             Text(
                                 when {
-                                    scanning -> "$scanned files found so far"
-                                    tracks.isEmpty() -> "Nothing indexed yet"
-                                    else ->
-                                        "${tracks.size} files indexed · " +
-                                            tracks.map { it.badge }
-                                                .filter { it.isNotBlank() }
-                                                .distinct()
-                                                .take(3)
-                                                .joinToString(", ")
+                                    audioQuality != AudioQuality.LOSSLESS ->
+                                        "$qualityLabel · turn on Lossless for masters"
+                                    source.isNotBlank() -> "$qualityLabel · source first"
+                                    else -> "$qualityLabel · YouTube's best"
                                 },
                             )
                         },
-                        enabled = folderUri.isNotBlank() && !scanning,
-                        onClick = {
-                            folderUri.takeIf { it.isNotBlank() }?.let { scanFolder(Uri.parse(it)) }
+                        showChevron = true,
+                        onClick = { navController.navigate("settings/player") },
+                    ),
+                ),
+        )
+
+        Spacer(Modifier.height(27.dp))
+
+        Material3SettingsGroup(
+            title = "Source",
+            items =
+                listOf(
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.cloud),
+                        title = { Text("Lossless source") },
+                        description = {
+                            Text(
+                                if (source.isBlank()) {
+                                    "Not configured — Lossless uses YouTube's best stream (lossy)."
+                                } else {
+                                    val host = LosslessSource.host() ?: source
+                                    "$host · sends videoId, title, artist and duration; expects a FLAC/ALAC URL."
+                                },
+                            )
                         },
+                        showChevron = true,
+                        onClick = { showSourceDialog = true },
                     ),
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.close),
-                        title = { Text("Clear index") },
-                        description = { Text("Forget the files without revoking the folder.") },
-                        enabled = tracks.isNotEmpty() && !scanning,
+                        title = { Text("Clear source") },
+                        description = { Text("Fall back to YouTube's best audio.") },
+                        enabled = source.isNotBlank(),
                         onClick = {
-                            scope.launch {
-                                LosslessLibrary.forget(context)
-                                message = "Index cleared."
-                            }
+                            onSourceChange("")
+                            LosslessSource.configure(null)
                         },
                     ),
                 ),
@@ -234,14 +213,16 @@ fun LosslessSettings(navController: NavController) {
                 ),
         )
 
-        message?.let {
-            Text(
-                text = it,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 16.dp),
-            )
-        }
+        Text(
+            text =
+                "The module receives GET ?videoId=&title=&artist=&duration= (or {videoId}, " +
+                    "{title}, {artist}, {duration} placeholders in the URL) and answers " +
+                    "{\"url\": …, \"codec\": \"FLAC\", \"bitDepth\": 24, \"sampleRate\": 96000}. " +
+                    "Only the URL is required.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 16.dp),
+        )
 
         Spacer(Modifier.height(16.dp))
     }

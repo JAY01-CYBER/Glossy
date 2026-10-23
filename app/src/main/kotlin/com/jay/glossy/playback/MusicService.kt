@@ -109,7 +109,8 @@ import com.jay.glossy.constants.AndroidAutoTargetPlaylistKey
 import com.jay.glossy.constants.AudioNormalizationKey
 import com.jay.glossy.constants.AudioOffload
 import com.jay.glossy.constants.AudioQualityKey
-import com.jay.glossy.lossless.LosslessLibrary
+import com.jay.glossy.constants.LosslessSourceKey
+import com.jay.glossy.lossless.LosslessSource
 import com.jay.glossy.constants.CanvasOnMobileDataKey
 import com.jay.glossy.constants.CanvasPreloadKey
 import com.jay.glossy.constants.CanvasThumbnailAnimationKey
@@ -688,16 +689,14 @@ class MusicService :
         // This consolidates ~15 main-thread-blocking DataStore reads into 1.
         startupPrefs =
             runBlocking(Dispatchers.IO) {
-                dataStore.data.first().also {
-                    // The listener's own lossless files, restored from the same
-                    // snapshot and before anything can rebuild a queue: the
-                    // queue builder asks this index whether a stream should be
-                    // a file instead, and an index that arrives a moment later
-                    // would leave the first songs streaming for no visible
-                    // reason. A failure here simply means streams.
-                    LosslessLibrary.restore(this@MusicService, it)
-                }
+                dataStore.data.first()
             }
+
+        // The lossless source is configured from the same snapshot, before the
+        // first stream is resolved: the resolver asks it for a master on every
+        // track while the tier is Lossless, and an endpoint read a moment later
+        // would leave the first songs streaming for no visible reason.
+        startupPrefs?.let { LosslessSource.configure(it[LosslessSourceKey]) }
 
         // 3. Connect the processor to the service
         // handled in createExoPlayer
@@ -3518,10 +3517,10 @@ class MusicService :
             return
         }
 
-        // A lossless file that has gone since the index was built — deleted, or
-        // its folder unmounted — is not going to appear on a retry. The same
-        // media id still names the stream, so the item is rebuilt from it in
-        // place and the song keeps playing instead of being skipped.
+        // A local file that has gone — deleted, or its card unmounted — is not
+        // going to appear on a retry. The same media id still names the stream,
+        // so the item is rebuilt from it in place and the song keeps playing
+        // instead of being skipped.
         val current = player.currentMediaItem
         val index = player.currentMediaItemIndex
         if (current != null &&
@@ -4020,6 +4019,7 @@ class MusicService :
                 }
             run {
                 val format = nonNullPlayback.format
+                val lossless = nonNullPlayback.lossless
                 val loudnessDb = nonNullPlayback.audioConfig?.loudnessDb
                 val perceptualLoudnessDb = nonNullPlayback.audioConfig?.perceptualLoudnessDb
 
@@ -4035,11 +4035,15 @@ class MusicService :
                         FormatEntity(
                             id = mediaId,
                             itag = format.itag,
-                            mimeType = format.mimeType.split(";")[0],
-                            codecs = format.mimeType.split("codecs=")[1].removeSurrounding("\""),
-                            bitrate = format.bitrate,
-                            sampleRate = format.audioSampleRate,
-                            contentLength = format.contentLength!!,
+                            // A master from the lossless source is what is really
+                            // being fetched, so it is what the badge names; the
+                            // YouTube format is only the fallback it replaced.
+                            mimeType = lossless?.mimeType ?: format.mimeType.split(";")[0],
+                            codecs = lossless?.codec
+                                ?: format.mimeType.split("codecs=")[1].removeSurrounding("\""),
+                            bitrate = lossless?.bitrate?.takeIf { it > 0 } ?: format.bitrate,
+                            sampleRate = lossless?.sampleRateHz?.takeIf { it > 0 } ?: format.audioSampleRate,
+                            contentLength = format.contentLength ?: 0L,
                             loudnessDb = loudnessDb,
                             perceptualLoudnessDb = perceptualLoudnessDb,
                             playbackUrl = nonNullPlayback.playbackTracking?.videostatsPlaybackUrl?.baseUrl,
