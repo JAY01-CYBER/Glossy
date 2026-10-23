@@ -244,7 +244,7 @@ fun GlossyBottomNav(
     // of it, so the frost only deepens the surface instead of tinting it twice —
     // and a build with no source (a caller that passes none) keeps the flat bar.
     val frost = remember(hazeNav) {
-        HazeStyle(blurRadius = NavBarBlurRadius, noiseFactor = 0.03f)
+        HazeStyle(tints = emptyList(), blurRadius = NavBarBlurRadius, noiseFactor = 0.03f)
     }
     val frosted = if (hazeNav != null) Modifier.hazeChild(hazeNav, frost) else Modifier
 

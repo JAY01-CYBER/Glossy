@@ -27,7 +27,7 @@ fun Song.toMediaItem() = MediaItem.Builder()
     // the id still identifies it everywhere else in the app, only the URI the
     // player opens changes.
     .setUri(
-        LosslessLibrary.findFor(song.title, orderedArtists.map { it.name }, song.song.duration)?.uri
+        LosslessLibrary.findFor(song.title, orderedArtists.map { it.name }, song.duration)?.uri
             ?: song.id,
     )
     .setCustomCacheKey(song.id)

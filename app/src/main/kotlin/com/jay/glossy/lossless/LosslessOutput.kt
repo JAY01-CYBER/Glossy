@@ -6,11 +6,8 @@
 package com.jay.glossy.lossless
 
 import android.content.Context
-import android.media.AudioAttributes
 import android.media.AudioDeviceInfo
-import android.media.AudioFormat
 import android.media.AudioManager
-import android.os.Build
 
 /**
  * What the phone is plugged into, and whether that path can carry a lossless
@@ -19,9 +16,9 @@ import android.os.Build
  * The point is not to grade the listener's gear but to stop the app claiming
  * something it cannot deliver: a 24/96 FLAC played to Bluetooth earbuds is
  * lossless only as far as the phone's encoder, and an honest settings row is
- * worth more than a "Hi-Res" badge. The direct-path query is Android 13's own
- * (`AudioManager.getDirectPlaybackSupport`), so the answer comes from the
- * audio HAL rather than from a guess about the device.
+ * worth more than a "Hi-Res" badge. The rate question is put to the audio
+ * service itself (`PROPERTY_OUTPUT_SAMPLE_RATE`), so the answer comes from the
+ * device rather than from a guess about it.
  */
 object LosslessOutput {
     data class Report(
@@ -29,7 +26,7 @@ object LosslessOutput {
         val route: String,
         /** Whether that route can carry the samples through unmangled. */
         val carriesLossless: Boolean,
-        /** True/false where Android 13+ can answer, null below that. */
+        /** True/false where the output rate can be read, null where it cannot. */
         val directSupported: Boolean?,
         /** One sentence a listener can act on. */
         val note: String,
@@ -61,7 +58,7 @@ object LosslessOutput {
                 direct == false ->
                     "No direct path is reported: Android's mixer will resample to its own rate, usually 48 kHz."
                 else ->
-                    "Direct-path reporting needs Android 13 or newer; below that the mixer decides."
+                    "The output rate could not be read, so the mixer's own rate decides."
             }
 
         return Report(route = route, carriesLossless = carries, directSupported = direct, note = note)
@@ -82,24 +79,17 @@ object LosslessOutput {
         }
     }
 
-    private fun directSupport(manager: AudioManager): Boolean? {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return null
-        val format =
-            AudioFormat.Builder()
-                .setEncoding(AudioFormat.ENCODING_PCM_24BIT_PACKED)
-                .setSampleRate(96_000)
-                .setChannelMask(AudioFormat.CHANNEL_OUT_STEREO)
-                .build()
-        val attributes =
-            AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_MEDIA)
-                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                .build()
-        // A bitfield of the direct forms this format gets, so zero —
-        // DIRECT_PLAYBACK_NOT_SUPPORTED — is the only "no" answer.
-        val modes = manager.getDirectPlaybackSupport(format, attributes)
-        return modes != AudioManager.DIRECT_PLAYBACK_NOT_SUPPORTED
-    }
+    /**
+     * Whether the output is already running at the lossless lane's own rate.
+     *
+     * The public SDK exposes the device's native output rate, not a per-format
+     * direct-path bitmask, so the honest question it can answer is the rate one:
+     * 24/96 only escapes the mixer where the output already runs at 96 kHz.
+     */
+    private fun directSupport(manager: AudioManager): Boolean? =
+        manager.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE)
+            ?.toIntOrNull()
+            ?.let { it >= 96_000 }
 
     // Device types as plain ints: the newer ones (eARC, BLE, dock analog) are
     // compile-time constants that older phones simply never report, and naming
