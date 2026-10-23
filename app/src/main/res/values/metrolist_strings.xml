@@ -1207,4 +1207,11 @@
     <string name="canvas_check_verdict_empty">nothing</string>
     <string name="canvas_check_verdict_failed">lookup failed</string>
     <string name="canvas_check_verdict_dead_url">will not play</string>
+    <string name="sync_playlist_after_create_title">Sync to YouTube Music?</string>
+    <string name="sync_playlist_after_create_message">Playlist “%1$s” was created locally. Would you like to create a matching playlist in YouTube Music too?</string>
+    <string name="sync_playlist_after_create_failed">Could not sync playlist to YouTube Music. Your local playlist is still available.</string>
+    <string name="not_now">Not now</string>
+    <string name="sync_existing_playlist_message">Create a YouTube Music copy of “%1$s” and add its %2$d songs? This creates a new remote playlist.</string>
+    <string name="sync_existing_playlist_success">Playlist synced to YouTube Music.</string>
+    <string name="sync_existing_playlist_failed">Could not sync playlist: %1$s</string>
 </resources>

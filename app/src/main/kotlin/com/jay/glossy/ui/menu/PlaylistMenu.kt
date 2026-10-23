@@ -57,6 +57,9 @@ import com.jay.glossy.db.entities.PlaylistSong
 import com.jay.glossy.db.entities.Song
 import com.jay.glossy.db.entities.SpeedDialItem
 import com.jay.glossy.extensions.toMediaItem
+import com.jay.glossy.extensions.isSyncEnabled
+import com.jay.glossy.constants.InnerTubeCookieKey
+import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.playback.ExoDownloadService
 import com.jay.glossy.playback.queues.ListQueue
 import com.jay.glossy.playback.queues.YouTubeQueue
@@ -118,6 +121,10 @@ fun PlaylistMenu(
     val isPinned by database.speedDialDao.isPinned(playlist.id).collectAsStateWithLifecycle(initialValue = false)
 
     var showExportDialog by remember { mutableStateOf(false) }
+    var showSyncPlaylistDialog by remember { mutableStateOf(false) }
+    var isSyncingPlaylist by remember { mutableStateOf(false) }
+    val innerTubeCookie by rememberPreference(InnerTubeCookieKey, "")
+    val isSignedInToYouTube = innerTubeCookie.isNotEmpty()
 
     LaunchedEffect(songs) {
         if (songs.isEmpty()) return@LaunchedEffect
@@ -140,6 +147,61 @@ fun PlaylistMenu(
 
     var showEditDialog by remember {
         mutableStateOf(false)
+    }
+
+    if (showSyncPlaylistDialog) {
+        DefaultDialog(
+            onDismiss = { if (!isSyncingPlaylist) showSyncPlaylistDialog = false },
+            content = {
+                Text(
+                    text = stringResource(R.string.sync_existing_playlist_message, playlist.playlist.name, songs.size),
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(horizontal = 18.dp),
+                )
+            },
+            buttons = {
+                TextButton(onClick = { showSyncPlaylistDialog = false }) {
+                    Text(text = stringResource(android.R.string.cancel))
+                }
+                TextButton(
+                    enabled = !isSyncingPlaylist && songs.isNotEmpty(),
+                    onClick = {
+                        isSyncingPlaylist = true
+                        coroutineScope.launch(Dispatchers.IO) {
+                            val result = runCatching {
+                                check(context.isSyncEnabled()) { context.getString(R.string.sync_disabled) }
+                                check(isSignedInToYouTube) { context.getString(R.string.not_logged_in_youtube) }
+                                val browseId = YouTube.createPlaylist(playlist.playlist.name)
+                                songs.forEach { song -> YouTube.addToPlaylist(browseId, song.id).getOrThrow() }
+                                database.query {
+                                    update(playlist.playlist.copy(browseId = browseId, isAutoSync = true, lastUpdateTime = LocalDateTime.now()))
+                                }
+                            }
+                            withContext(Dispatchers.Main) {
+                                isSyncingPlaylist = false
+                                showSyncPlaylistDialog = false
+                                result.onSuccess {
+                                    Toast.makeText(context, R.string.sync_existing_playlist_success, Toast.LENGTH_LONG).show()
+                                    onDismiss()
+                                }.onFailure { error ->
+                                    Toast.makeText(
+                                        context,
+                                        context.getString(R.string.sync_existing_playlist_failed, error.message ?: ""),
+                                        Toast.LENGTH_LONG,
+                                    ).show()
+                                }
+                            }
+                        }
+                    },
+                ) {
+                    if (isSyncingPlaylist) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    } else {
+                        Text(text = stringResource(R.string.sync_playlist))
+                    }
+                }
+            },
+        )
     }
 
     if (showEditDialog) {
@@ -402,6 +464,27 @@ fun PlaylistMenu(
             Material3MenuGroup(
                 items =
                     buildList {
+                        if (!isGuest && editable && playlist.playlist.browseId == null && !playlist.playlist.isLocal) {
+                            add(
+                                Material3MenuItemData(
+                                    title = { Text(text = stringResource(R.string.sync_playlist)) },
+                                    description = { Text(text = stringResource(R.string.sync_playlist_desc)) },
+                                    icon = {
+                                        Icon(
+                                            painter = painterResource(R.drawable.sync),
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    onClick = {
+                                        if (!isSignedInToYouTube) {
+                                            Toast.makeText(context, R.string.not_logged_in_youtube, Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            showSyncPlaylistDialog = true
+                                        }
+                                    },
+                                ),
+                            )
+                        }
                         if (!isGuest) {
                             playlist.playlist.browseId?.let { browseId ->
                                 add(
