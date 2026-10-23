@@ -641,7 +641,7 @@ fun OriginalLyrics(
                 val viewportHeight = lazyListState.layoutInfo.viewportEndOffset - lazyListState.layoutInfo.viewportStartOffset
                 // Keep the active lyric slightly below the geometric center so it
                 // doesn't appear too high on screen above the player controls.
-                val center = lazyListState.layoutInfo.viewportStartOffset + (viewportHeight / 2)
+                val center = lazyListState.layoutInfo.viewportStartOffset + (viewportHeight * 58 / 100)
                 val itemCenter = itemInfo.offset + itemInfo.size / 2
                 val offset = itemCenter - center
                 if (kotlin.math.abs(offset) > 10) {
