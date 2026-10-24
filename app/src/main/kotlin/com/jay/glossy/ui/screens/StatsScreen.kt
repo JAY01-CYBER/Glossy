@@ -6,7 +6,7 @@
 package com.jay.glossy.ui.screens
 
 import com.chikku.glossy.ui.component.ListeningExperienceCard
-import com.chikku.glossy.ui.component.ListeningExperienceRail
+import com.chikku.glossy.ui.component.ListeningExperienceStack
 import com.chikku.glossy.ui.component.formatListeningSpan
 import com.chikku.glossy.ui.component.memberSinceLabel
 import com.jay.glossy.R
@@ -458,7 +458,7 @@ fun StatsScreen(
 
             if (!isSearching && listeningCards.isNotEmpty()) {
                 item(key = "listening_experience") {
-                    ListeningExperienceRail(
+                    ListeningExperienceStack(
                         cards = listeningCards,
                         holder = accountName,
                         memberSince = memberSinceLabel(firstEvent?.event?.timestamp),
