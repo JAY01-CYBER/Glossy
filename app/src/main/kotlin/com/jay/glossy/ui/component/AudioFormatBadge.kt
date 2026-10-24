@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.jay.glossy.db.entities.FormatEntity
+import java.util.Locale
 
 /**
  * Names the stream that is actually being fetched, as one short line: the
@@ -61,12 +62,32 @@ fun AudioFormatBadge(
  * words without drawing the chip.
  */
 fun audioFormatSummary(format: FormatEntity): String = buildString {
+    val lossless = isLossless(format)
     append(containerName(format.mimeType))
-    codecName(format.codecs).takeIf { it.isNotEmpty() }?.let { append(" · ").append(it) }
-    if (format.bitrate > 0) {
+    // A lossless master names itself once: "FLAC · FLAC" would repeat the same
+    // word, and the number worth printing for it is the rate it runs at rather
+    // than a bitrate that only restates it.
+    if (!lossless) {
+        codecName(format.codecs).takeIf { it.isNotEmpty() }?.let { append(" · ").append(it) }
+    }
+    if (lossless) {
+        format.sampleRate?.takeIf { it > 0 }?.let {
+            append(" · ").append(String.format(Locale.ROOT, "%.1f kHz", it / 1000f))
+        }
+    } else if (format.bitrate > 0) {
         append(" · ").append(format.bitrate / 1000).append(" kbps")
     }
 }
+
+/**
+ * Whether the row describes a master from the lossless source rather than one
+ * of YouTube's streams. The MIME type is the primary answer; the codec string
+ * covers a module that reported itself in either field.
+ */
+private fun isLossless(format: FormatEntity): Boolean =
+    listOf(format.mimeType, format.codecs).any { value ->
+        value.contains("flac", ignoreCase = true) || value.contains("alac", ignoreCase = true)
+    }
 
 /**
  * YouTube serves the same audio in either a WebM (Opus) or an MP4 (AAC)
@@ -75,6 +96,8 @@ fun audioFormatSummary(format: FormatEntity): String = buildString {
  * MIME type spells it.
  */
 private fun containerName(mimeType: String): String = when {
+    mimeType.contains("flac", ignoreCase = true) -> "FLAC"
+    mimeType.contains("wav", ignoreCase = true) -> "WAV"
     mimeType.contains("webm", ignoreCase = true) -> "WebM"
     mimeType.contains("mp4", ignoreCase = true) -> "M4A"
     mimeType.contains("mpeg", ignoreCase = true) -> "MP3"

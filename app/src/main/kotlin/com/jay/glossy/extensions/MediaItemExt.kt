@@ -22,6 +22,9 @@ val MediaItem.metadata: MediaMetadata?
 
 fun Song.toMediaItem() = MediaItem.Builder()
     .setMediaId(song.id)
+    // The media id is the URI: the stream resolver turns it into a URL on play,
+    // and on the Lossless tier into a master from the lossless source before
+    // falling back to YouTube.
     .setUri(song.id)
     .setCustomCacheKey(song.id)
     .setTag(toMediaMetadata())

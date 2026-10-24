@@ -60,7 +60,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -171,12 +170,13 @@ fun <T> GlossyChipRow(
     currentValue: T?,
     onValueUpdate: (T) -> Unit,
     modifier: Modifier = Modifier,
+    contentPadding: Dp = GlossyDimens.ScreenPadding,
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
-            .padding(horizontal = GlossyDimens.ScreenPadding),
+            .padding(horizontal = contentPadding),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -308,12 +308,13 @@ fun GlossyIconAction(
 }
 
 /**
- * The library's floating dock: a raised search pill with the two collections
- * people reach for most — Liked and Downloads — beside it.
+ * The library's floating dock: one raised search pill, full width.
  *
  * The pill carries its own shadow and fill so it reads as a control hovering
- * over the list rather than as the first row of it; the buttons reuse
- * [GlossyIconAction]'s filled form so all three sit on the same plane.
+ * over the list rather than as the first row of it. Liked and Downloads used to
+ * sit beside it as [GlossyIconAction]s, which put a third and fourth way to open
+ * the same two collections within one thumb of the quick tiles above them; the
+ * tiles are the copy that stayed.
  */
 @Composable
 fun GlossySearchDock(

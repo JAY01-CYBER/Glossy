@@ -122,7 +122,6 @@ import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.WatchEndpoint
 import com.metrolist.innertube.models.YTItem
 import com.metrolist.innertube.utils.completed
-import com.metrolist.innertube.utils.parseCookieString
 import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalPlayerAwareWindowInsets
@@ -131,7 +130,6 @@ import com.jay.glossy.constants.AutoRadioQueueKey
 import com.jay.glossy.constants.GridItemSize
 import com.jay.glossy.constants.GridItemsSizeKey
 import com.jay.glossy.constants.GridThumbnailHeight
-import com.jay.glossy.constants.InnerTubeCookieKey
 import com.jay.glossy.constants.ListItemHeight
 import com.jay.glossy.constants.ListThumbnailSize
 import com.jay.glossy.constants.QuickPickCaptionHeight
@@ -825,8 +823,6 @@ fun HomeScreen(
     val forgottenFavoritesLazyGridState = rememberLazyGridState()
 
     val accountName by viewModel.accountName.collectAsStateWithLifecycle()
-    val accountImageUrl by viewModel.accountImageUrl.collectAsStateWithLifecycle()
-    val innerTubeCookie by rememberPreference(InnerTubeCookieKey, "")
     val autoRadioQueue by rememberPreference(AutoRadioQueueKey, defaultValue = true)
     val quickPickShapePref by rememberEnumPreference(QuickPickShapeKey, QuickPickShape.DEFAULT)
 
@@ -842,9 +838,6 @@ fun HomeScreen(
     val shouldShowWrappedCard by viewModel.showWrappedCard.collectAsStateWithLifecycle()
     val wrappedState by viewModel.wrappedManager.state.collectAsStateWithLifecycle()
     val isWrappedDataReady = wrappedState.isDataReady
-
-    val isLoggedIn = remember(innerTubeCookie) { "SAPISID" in parseCookieString(innerTubeCookie) }
-    val url = if (isLoggedIn) accountImageUrl else null
 
     val scope = rememberCoroutineScope()
     var randomizeJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
@@ -1061,6 +1054,9 @@ fun HomeScreen(
                         else -> "Guest"
                     }
                     Box(modifier = Modifier.animateItem()) {
+                        // The card is the greeting and the name only: the top
+                        // bar above it already carries the account and Listen
+                        // Together actions.
                         GreetingSection(userName = finalName)
                     }
                 }

@@ -4,7 +4,10 @@ package com.jay.glossy.ui.component
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
@@ -55,14 +58,18 @@ import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.jay.glossy.constants.ActiveDesignStyle
-import com.jay.glossy.constants.DesignStyle
+import androidx.compose.ui.unit.sp
 import com.jay.glossy.constants.UseFloatingNavBarKey
 import com.jay.glossy.ui.screens.Screens
+import com.jay.glossy.ui.theme.GlossyDimens
 import com.jay.glossy.ui.theme.GlossyPalette
 import com.jay.glossy.utils.rememberPreference
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.hazeChild
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlin.math.roundToInt
@@ -177,103 +184,174 @@ fun AppNavigationBar(
     modifier: Modifier = Modifier,
     pureBlack: Boolean = false,
     slimNav: Boolean = false,
-    onSearchLongClick: (() -> Unit)? = null
+    onSearchLongClick: (() -> Unit)? = null,
+    hazeNav: HazeState? = null,
 ) {
-    val (useFloatingNavBar) = rememberPreference(UseFloatingNavBarKey, defaultValue = true)
-    // Pinned to the classic look: the redesigned bar is no longer selectable.
-    val newDesign = ActiveDesignStyle == DesignStyle.TEAL
-
-    if (newDesign) {
-        GlossyBottomNav(
-            navigationItems = navigationItems,
-            currentRoute = currentRoute,
-            onItemClick = onItemClick,
-            modifier = modifier
-        )
-    } else if (useFloatingNavBar) {
-        FloatingAppNavigationBar(
-            // The floating bar draws Search as its own pill beside the tab pill
-            // rather than as a tab, so the list it is handed (the tab set,
-            // which has no Search in it) is not enough on its own — without
-            // this the lookup came back empty and the pill never appeared.
-            navigationItems = navigationItems.withSearchPill(),
-            currentRoute = currentRoute,
-            onItemClick = onItemClick,
-            modifier = modifier,
-            pureBlack = pureBlack,
-            slimNav = slimNav,
-            onSearchLongClick = onSearchLongClick
-        )
-    } else {
-        StandardAppNavigationBar(
-            navigationItems = navigationItems,
-            currentRoute = currentRoute,
-            onItemClick = onItemClick,
-            modifier = modifier,
-            pureBlack = pureBlack,
-            slimNav = slimNav,
-            onSearchLongClick = onSearchLongClick
-        )
-    }
+    // One bar for the whole app: the floating pill of the design, painted with
+    // whatever scheme the theme resolved. [pureBlack] is still accepted so the
+    // callers keep compiling; the bar reads its colours from the palette.
+    GlossyBottomNav(
+        navigationItems = navigationItems,
+        currentRoute = currentRoute,
+        onItemClick = onItemClick,
+        modifier = modifier,
+        slimNav = slimNav,
+        onSearchLongClick = onSearchLongClick,
+        hazeNav = hazeNav,
+    )
 }
 
 // ----------------------------------------------------
-// New design system: flat four-item bar
+// New design system: the frosted bar and its search orb
 // ----------------------------------------------------
+/** How much of the wallpaper the navigation bar pulls through its frost. */
+private val NavBarBlurRadius = 24.dp
+
+/**
+ * The bar from the design: a frosted pill holding Home, Mix and Library, the
+ * active tab carried by a solid capsule, and a round search orb floating beside
+ * it instead of a fourth tab wedged into the pill.
+ *
+ * The bar keeps [GlossyDimens.NavPillHeight] for its slot, so the mini player,
+ * the sheet player and the window insets keep the geometry they were tuned for;
+ * only the paint and the tabs/orb split are new.
+ */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun GlossyBottomNav(
     navigationItems: List<Screens>,
     currentRoute: String?,
     onItemClick: (Screens, Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    slimNav: Boolean = false,
+    onSearchLongClick: (() -> Unit)? = null,
+    hazeNav: HazeState? = null,
 ) {
+    // The tab set the app passes in is Home, Mix and Library; Search is the
+    // orb beside the pill, never one of its tabs.
+    val searchItem = navigationItems.find { it == Screens.Search } ?: Screens.Search
+    val tabs = navigationItems.filter { it != Screens.Search }
+    val pill = RoundedCornerShape(GlossyDimens.CornerPill)
+    val tabShape = RoundedCornerShape(GlossyDimens.CornerPill)
+
+    // Captured before the draw phase: the palette reads are composition-only.
+    val glass = GlossyPalette.MiniBar
+    val rim = GlossyPalette.Border
+
+    // A real backdrop blur rather than another translucent colour: the pill and
+    // the orb sample whatever the app is drawing behind them, so the bar reads as
+    // frosted glass over the wallpaper. The glass colour is still painted on top
+    // of it, so the frost only deepens the surface instead of tinting it twice —
+    // and a build with no source (a caller that passes none) keeps the flat bar.
+    val frost = remember(hazeNav) {
+        HazeStyle(tints = emptyList(), blurRadius = NavBarBlurRadius, noiseFactor = 0.03f)
+    }
+    val frosted = if (hazeNav != null) Modifier.hazeChild(hazeNav, frost) else Modifier
+
+    val barHeight = if (slimNav) 56.dp else GlossyDimens.NavPillHeight
+    val pillHeight = if (slimNav) 50.dp else 62.dp
+    val orbSize = if (slimNav) 50.dp else 58.dp
+
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(GlossyPalette.Page)
-            .padding(horizontal = 8.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp)
+                .height(barHeight),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        navigationItems.forEach { screen ->
-            val selected = isRouteSelected(currentRoute, screen.route, navigationItems)
-            Column(
-                modifier = Modifier
+        Row(
+            modifier =
+                Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable { onItemClick(screen, selected) }
-                    .padding(vertical = 6.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(3.dp),
+                    .height(pillHeight)
+                    // The design's bar carries a shadow *and* a hairline, so it
+                    // reads as a control floating over the feed rather than a
+                    // strip painted onto it.
+                    .shadow(elevation = 12.dp, shape = pill, clip = false)
+                    .clip(pill)
+                    .then(frosted)
+                    .background(glass)
+                    .border(GlossyDimens.Hairline, rim, pill)
+                    .padding(horizontal = 5.dp, vertical = 5.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            tabs.forEach { screen ->
+                val selected = isRouteSelected(currentRoute, screen.route, navigationItems)
+                Column(
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clip(tabShape)
+                            .then(
+                                if (selected) {
+                                    Modifier.background(GlossyPalette.AccentSoft)
+                                } else {
+                                    Modifier
+                                },
+                            )
+                            .clickable(onClick = { onItemClick(screen, selected) }),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Icon(
+                        painter = painterResource(
+                            if (selected) screen.iconIdActive else screen.iconIdInactive
+                        ),
+                        contentDescription = stringResource(screen.titleId),
+                        tint = if (selected) GlossyPalette.Accent else GlossyPalette.TextSecondary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = stringResource(screen.titleId),
+                        fontSize = 10.sp,
+                        lineHeight = 12.sp,
+                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                        color = if (selected) GlossyPalette.Accent else GlossyPalette.TextMuted,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+
+        if (tabs.isNotEmpty()) {
+            Spacer(Modifier.width(10.dp))
+
+            val isSelected = isRouteSelected(currentRoute, searchItem.route, navigationItems)
+            val currentIsSelected by rememberUpdatedState(isSelected)
+
+            Box(
+                modifier =
+                    Modifier
+                        .size(orbSize)
+                        .shadow(elevation = 12.dp, shape = CircleShape, clip = false)
+                        .clip(CircleShape)
+                        .then(frosted)
+                        .background(glass)
+                        .border(GlossyDimens.Hairline, rim, CircleShape)
+                        // A press opens search; holding it opens recognition.
+                        .combinedClickable(
+                            onClick = { onItemClick(searchItem, currentIsSelected) },
+                            onLongClick = onSearchLongClick,
+                        ),
+                contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     painter = painterResource(
-                        if (selected) screen.iconIdActive else screen.iconIdInactive
+                        if (isSelected) searchItem.iconIdActive else searchItem.iconIdInactive
                     ),
-                    contentDescription = stringResource(screen.titleId),
-                    tint = if (selected) GlossyPalette.Accent else GlossyPalette.TextSecondary,
+                    contentDescription = stringResource(searchItem.titleId),
+                    tint = if (isSelected) GlossyPalette.Accent else GlossyPalette.TextSecondary,
                     modifier = Modifier.size(22.dp),
-                )
-                Text(
-                    text = stringResource(screen.titleId),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (selected) GlossyPalette.Accent else GlossyPalette.TextSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
     }
 }
-
-/**
- * The floating bar renders Search as a separate pill, not a tab, and the tab set
- * the app passes in ([Screens.MainScreens]) does not contain it. Appending it
- * here keeps the floating bar's own split (tabs vs. pill) working while the
- * standard bar keeps showing exactly the tabs it was given.
- */
-private fun List<Screens>.withSearchPill(): List<Screens> =
-    if (contains(Screens.Search)) this else this + Screens.Search
 
 // ----------------------------------------------------
 // Premium MD3 Liquid Navigation Bar (Squash & Stretch)

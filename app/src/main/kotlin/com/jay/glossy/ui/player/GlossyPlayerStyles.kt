@@ -21,6 +21,7 @@
 package com.jay.glossy.ui.player
 
 import android.content.Intent
+import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -74,7 +75,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.CornerRadius
@@ -93,6 +93,7 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -120,7 +121,8 @@ import com.jay.glossy.constants.PlayerBackgroundStyle
 import com.jay.glossy.constants.PlayerBackgroundStyleKey
 import com.jay.glossy.constants.ShowLyricsOnPlayerKey
 import com.jay.glossy.extensions.toggleRepeatMode
-import com.jay.glossy.listentogether.RoomRole
+import com.chikku.glossy.listentogether.RoomRole
+import com.metrolist.models.MediaMetadata
 import com.jay.glossy.playback.ExoDownloadService
 import com.jay.glossy.playback.PlayerConnection
 import com.jay.glossy.ui.component.BottomSheetState
@@ -1710,6 +1712,8 @@ private fun StyleMenuButton(
     rim: Color? = null,
     buttonSize: Dp = 44.dp,
     iconSize: Dp = 24.dp,
+    /** Horizontal dots on the glass sheet, where the menu sits in the title row. */
+    icon: Int = R.drawable.more_vert,
 ) {
     val menuState = LocalMenuState.current
     val bottomSheetPageState = LocalBottomSheetPageState.current
@@ -1718,7 +1722,7 @@ private fun StyleMenuButton(
         ?: remember { mutableStateOf(null) }
 
     StyleIconButton(
-        icon = R.drawable.more_vert,
+        icon = icon,
         tint = tint,
         container = container,
         rim = rim,

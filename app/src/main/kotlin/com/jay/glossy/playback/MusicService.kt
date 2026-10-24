@@ -78,8 +78,13 @@ import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.MediaCodecAudioRenderer
 import androidx.media3.exoplayer.audio.SilenceSkippingAudioProcessor
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
+import androidx.media3.exoplayer.drm.DrmSessionManagerProvider
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
+import androidx.media3.exoplayer.source.MediaSource
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.exoplayer.source.ShuffleOrder.DefaultShuffleOrder
+import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.ExtractorsFactory
 import androidx.media3.extractor.mkv.MatroskaExtractor
 import androidx.media3.extractor.mp4.FragmentedMp4Extractor
@@ -104,6 +109,8 @@ import com.jay.glossy.constants.AndroidAutoTargetPlaylistKey
 import com.jay.glossy.constants.AudioNormalizationKey
 import com.jay.glossy.constants.AudioOffload
 import com.jay.glossy.constants.AudioQualityKey
+import com.jay.glossy.constants.LosslessSourceKey
+import com.jay.glossy.lossless.LosslessSource
 import com.jay.glossy.constants.CanvasOnMobileDataKey
 import com.jay.glossy.constants.CanvasPreloadKey
 import com.jay.glossy.constants.CanvasThumbnailAnimationKey
@@ -306,7 +313,10 @@ class MusicService :
     lateinit var widgetManager: MetrolistWidgetManager
 
     @Inject
-    lateinit var listenTogetherManager: com.jay.glossy.listentogether.ListenTogetherManager
+    lateinit var listenTogetherManager: com.chikku.glossy.listentogether.ListenTogetherManager
+
+    @Inject
+    lateinit var sponsorBlockController: com.jay.glossy.sponsorblock.SponsorBlockPlaybackController
 
     private lateinit var audioManager: AudioManager
     private var audioFocusRequest: AudioFocusRequest? = null
@@ -677,7 +687,16 @@ class MusicService :
         // Read ALL startup preferences in one shot so that subsequent code
         // never calls dataStore.get() (which does runBlocking internally).
         // This consolidates ~15 main-thread-blocking DataStore reads into 1.
-        startupPrefs = runBlocking(Dispatchers.IO) { dataStore.data.first() }
+        startupPrefs =
+            runBlocking(Dispatchers.IO) {
+                dataStore.data.first()
+            }
+
+        // The lossless source is configured from the same snapshot, before the
+        // first stream is resolved: the resolver asks it for a master on every
+        // track while the tier is Lossless, and an endpoint read a moment later
+        // would leave the first songs streaming for no visible reason.
+        startupPrefs?.let { LosslessSource.configure(it[LosslessSourceKey]) }
 
         // 3. Connect the processor to the service
         // handled in createExoPlayer
@@ -708,15 +727,16 @@ class MusicService :
                             onNotificationChangedCallback.onNotificationChanged(notification)
                         }
 
-                    return defaultMediaNotificationProvider
-                        .createNotification(
+                    val mediaNotification =
+                        defaultMediaNotificationProvider.createNotification(
                             mediaSession,
                             mediaButtonPreferences,
                             actionFactory,
                             trackingCallback,
-                        ).also { mediaNotification ->
-                            latestMediaNotification = mediaNotification.notification
-                        }
+                        )
+
+                    latestMediaNotification = mediaNotification.notification
+                    return mediaNotification
                 }
 
                 override fun handleCustomCommand(
@@ -731,6 +751,9 @@ class MusicService :
         )
         player = createExoPlayer(prefs = startupPrefs!!)
         player.addListener(this@MusicService)
+        // Lives with the player, not with a screen: the skip has to keep
+        // working while the phone is in a pocket.
+        sponsorBlockController.attach(player, scope)
 
         // Seed the system sound fx (equalizer/bass/virtualizer/output gain) with
         // startup prefs; they are applied to effects as soon as the audio session attaches.
@@ -1177,6 +1200,9 @@ class MusicService :
 
                 player = newPlayer
                 _playerFlow.value = newPlayer
+                // The old player was released above; the controller must watch
+                // the new one or the next song would play unskipped.
+                sponsorBlockController.attach(newPlayer, scope)
 
                 Timber.tag("MusicService").i("Player recreated with AudioTrackPlaybackParams: $useAudioTrackParams")
             }
@@ -3491,6 +3517,27 @@ class MusicService :
             return
         }
 
+        // A local file that has gone — deleted, or its card unmounted — is not
+        // going to appear on a retry. The same media id still names the stream,
+        // so the item is rebuilt from it in place and the song keeps playing
+        // instead of being skipped.
+        val current = player.currentMediaItem
+        val index = player.currentMediaItemIndex
+        if (current != null &&
+            current.localConfiguration?.uri?.scheme == "content" &&
+            index != C.INDEX_UNSET
+        ) {
+            val position = player.currentPosition
+            player.replaceMediaItem(
+                index,
+                current.buildUpon().setUri(mediaId).setCustomCacheKey(mediaId).build(),
+            )
+            player.seekTo(index, position)
+            player.prepare()
+            Timber.tag(TAG).i("Lossless file for $mediaId is gone; continuing from the stream")
+            return
+        }
+
         incrementRetryCount(mediaId)
 
         retryJob?.cancel()
@@ -3972,6 +4019,7 @@ class MusicService :
                 }
             run {
                 val format = nonNullPlayback.format
+                val lossless = nonNullPlayback.lossless
                 val loudnessDb = nonNullPlayback.audioConfig?.loudnessDb
                 val perceptualLoudnessDb = nonNullPlayback.audioConfig?.perceptualLoudnessDb
 
@@ -3987,11 +4035,15 @@ class MusicService :
                         FormatEntity(
                             id = mediaId,
                             itag = format.itag,
-                            mimeType = format.mimeType.split(";")[0],
-                            codecs = format.mimeType.split("codecs=")[1].removeSurrounding("\""),
-                            bitrate = format.bitrate,
-                            sampleRate = format.audioSampleRate,
-                            contentLength = format.contentLength!!,
+                            // A master from the lossless source is what is really
+                            // being fetched, so it is what the badge names; the
+                            // YouTube format is only the fallback it replaced.
+                            mimeType = lossless?.mimeType ?: format.mimeType.split(";")[0],
+                            codecs = lossless?.codec
+                                ?: format.mimeType.split("codecs=")[1].removeSurrounding("\""),
+                            bitrate = lossless?.bitrate?.takeIf { it > 0 } ?: format.bitrate,
+                            sampleRate = lossless?.sampleRateHz?.takeIf { it > 0 } ?: format.audioSampleRate,
+                            contentLength = format.contentLength ?: 0L,
                             loudnessDb = loudnessDb,
                             perceptualLoudnessDb = perceptualLoudnessDb,
                             playbackUrl = nonNullPlayback.playbackTracking?.videostatsPlaybackUrl?.baseUrl,
@@ -4019,13 +4071,46 @@ class MusicService :
         }
     }
 
-    private fun createMediaSourceFactory() =
-        DefaultMediaSourceFactory(
-            createDataSourceFactory(),
-            ExtractorsFactory {
-                arrayOf(MatroskaExtractor(), FragmentedMp4Extractor(), Mp4Extractor())
-            },
-        )
+    /**
+     * Two factories, picked per item: the stream path with its cache, resolver
+     * and three extractors, and a plain file path for a content:// URI with the
+     * whole default extractor set — FLAC and WAV live there.
+     */
+    private fun createMediaSourceFactory(): MediaSource.Factory {
+        val stream =
+            DefaultMediaSourceFactory(
+                createDataSourceFactory(),
+                ExtractorsFactory {
+                    arrayOf(MatroskaExtractor(), FragmentedMp4Extractor(), Mp4Extractor())
+                },
+            )
+        // Device files need none of the stream machinery: no cache (a content
+        // URI is already local, and copying it into the player cache would
+        // duplicate what the listener owns) and no URL resolver.
+        val files =
+            ProgressiveMediaSource.Factory(
+                DefaultDataSource.Factory(this),
+                DefaultExtractorsFactory(),
+            )
+        return object : MediaSource.Factory {
+            override fun setDrmSessionManagerProvider(
+                drmSessionManagerProvider: DrmSessionManagerProvider,
+            ): MediaSource.Factory = apply { stream.setDrmSessionManagerProvider(drmSessionManagerProvider) }
+
+            override fun setLoadErrorHandlingPolicy(
+                loadErrorHandlingPolicy: LoadErrorHandlingPolicy,
+            ): MediaSource.Factory = apply { stream.setLoadErrorHandlingPolicy(loadErrorHandlingPolicy) }
+
+            override fun getSupportedTypes(): IntArray = stream.supportedTypes
+
+            override fun createMediaSource(mediaItem: MediaItem): MediaSource =
+                if (mediaItem.localConfiguration?.uri?.scheme == "content") {
+                    files.createMediaSource(mediaItem)
+                } else {
+                    stream.createMediaSource(mediaItem)
+                }
+        }
+    }
 
     private fun createRenderersFactory(
         normalizationProcessor: VolumeNormalizationAudioProcessor,
@@ -4938,6 +5023,7 @@ class MusicService :
         player = nextPlayer
         _playerFlow.value = player
         secondaryPlayer = null
+        sponsorBlockController.attach(nextPlayer, scope)
 
         fadingPlayer?.repeatMode = Player.REPEAT_MODE_OFF
         fadingPlayer?.let {

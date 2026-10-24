@@ -20,8 +20,8 @@ import androidx.media3.datasource.cache.SimpleCache
 import com.jay.glossy.constants.MaxSongCacheSizeKey
 import com.jay.glossy.db.InternalDatabase
 import com.jay.glossy.db.MusicDatabase
-import com.jay.glossy.listentogether.ListenTogetherClient
-import com.jay.glossy.listentogether.ListenTogetherManager
+import com.chikku.glossy.listentogether.ListenTogetherClient
+import com.chikku.glossy.listentogether.ListenTogetherManager
 import com.jay.glossy.utils.dataStore
 import com.jay.glossy.utils.get
 import dagger.Module

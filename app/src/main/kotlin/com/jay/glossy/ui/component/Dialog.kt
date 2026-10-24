@@ -12,6 +12,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
@@ -21,7 +22,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
@@ -151,7 +154,7 @@ fun AccountSettingsDialog(
                 dismissOnClickOutside = true,
             ),
     ) {
-        Box(
+        BoxWithConstraints(
             modifier =
                 Modifier
                     .fillMaxSize()
@@ -160,16 +163,29 @@ fun AccountSettingsDialog(
                             onTap = { onDismiss() }
                         )
                     },
-            contentAlignment = Alignment.TopCenter,
+            // The account sheet floats at the bottom of the app rather than
+            // replacing it: every corner is rounded and it keeps a gap to the
+            // screen edge, so the tab bar and the feed stay visible behind it
+            // the way a sheet over the app should.
+            contentAlignment = Alignment.BottomCenter,
         ) {
+            val sheetShape = RoundedCornerShape(28.dp)
             Surface(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(top = 72.dp, start = 16.dp, end = 16.dp)
-                        .clip(RoundedCornerShape(28.dp)),
-                shape = MaterialTheme.shapes.large,
-                color = MaterialTheme.colorScheme.surface,
+                        .padding(horizontal = 8.dp)
+                        .padding(bottom = 8.dp)
+                        // Clear of the gesture bar when the window draws under
+                        // the system bars; a no-op where it does not.
+                        .navigationBarsPadding()
+                        // Tall content scrolls (the sheet owns a vertical
+                        // scroll); capping the height is what keeps it a sheet
+                        // instead of growing into a full screen.
+                        .heightIn(max = maxHeight * 0.92f)
+                        .clip(sheetShape),
+                shape = sheetShape,
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
                 tonalElevation = 8.dp,
             ) {
                 AccountSettings(

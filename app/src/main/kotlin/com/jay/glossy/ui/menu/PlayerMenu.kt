@@ -101,9 +101,9 @@ import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.constants.ListItemHeight
 import com.jay.glossy.constants.ShowLyricsOnPlayerKey
 import com.jay.glossy.constants.VarispeedKey
-import com.jay.glossy.listentogether.ConnectionState
-import com.jay.glossy.listentogether.ListenTogetherEvent
-import com.jay.glossy.listentogether.ROOM_CODE_LENGTH
+import com.chikku.glossy.listentogether.ConnectionState
+import com.chikku.glossy.listentogether.ListenTogetherEvent
+import com.chikku.glossy.listentogether.ROOM_CODE_LENGTH
 import com.metrolist.models.MediaMetadata
 import com.jay.glossy.playback.ExoDownloadService
 import com.jay.glossy.db.entities.Song
@@ -115,6 +115,8 @@ import com.jay.glossy.ui.component.Material3MenuItemData
 import com.jay.glossy.ui.component.NewAction
 import com.jay.glossy.ui.component.NewActionGrid
 import com.jay.glossy.ui.player.SleepTimerPrompt
+import com.jay.glossy.ui.utils.listenTogetherConnectionErrorText
+import com.jay.glossy.ui.utils.listenTogetherServerErrorText
 import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.jayaudioutils.AudioDeviceBottomSheet
 import com.jay.glossy.jayaudioutils.getConnectedBluetoothDeviceName
@@ -176,8 +178,8 @@ fun PlayerMenu(
     var showAudioDeviceBottomSheet by rememberSaveable { mutableStateOf(false) }
 
     val listenTogetherManager = LocalListenTogetherManager.current
-    val listenTogetherRoleState = listenTogetherManager?.role?.collectAsStateWithLifecycle(initialValue = com.jay.glossy.listentogether.RoomRole.NONE)
-    val isListenTogetherGuest = listenTogetherRoleState?.value == com.jay.glossy.listentogether.RoomRole.GUEST
+    val listenTogetherRoleState = listenTogetherManager?.role?.collectAsStateWithLifecycle(initialValue = com.chikku.glossy.listentogether.RoomRole.NONE)
+    val isListenTogetherGuest = listenTogetherRoleState?.value == com.chikku.glossy.listentogether.RoomRole.GUEST
     
     val pendingSuggestions by listenTogetherManager?.pendingSuggestions?.collectAsStateWithLifecycle(initialValue = emptyList())
         ?: remember { mutableStateOf(emptyList()) }
@@ -1360,6 +1362,19 @@ fun ListenTogetherDialog(
                     val clip = android.content.ClipData.newPlainText("ListenTogetherRoom", event.roomCode)
                     clipboard.setPrimaryClip(clip)
                 }
+                // Same as the Listen Together screen: a rejected or unreachable
+                // server has to clear the pending state and say why, instead of
+                // leaving the sheet on a spinner for a room that never arrives.
+                is ListenTogetherEvent.ServerError -> {
+                    isCreatingRoom = false
+                    isJoiningRoom = false
+                    joinErrorMessage = listenTogetherServerErrorText(context, event.code, event.message)
+                }
+                is ListenTogetherEvent.ConnectionError -> {
+                    isCreatingRoom = false
+                    isJoiningRoom = false
+                    joinErrorMessage = listenTogetherConnectionErrorText(context)
+                }
                 else -> { }
             }
         }
@@ -1750,6 +1765,14 @@ fun ListenTogetherDialog(
                             colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary, unfocusedBorderColor = MaterialTheme.colorScheme.outline, focusedLabelColor = MaterialTheme.colorScheme.primary),
                             modifier = Modifier.fillMaxWidth(),
                         )
+
+                        if (isCreatingRoom) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
+                                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(text = stringResource(R.string.creating_room), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
+                            }
+                        }
 
                         if (isJoiningRoom) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {

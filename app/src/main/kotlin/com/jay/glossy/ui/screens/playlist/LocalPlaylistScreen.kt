@@ -109,6 +109,7 @@ import androidx.compose.ui.util.fastForEachIndexed
 import androidx.compose.ui.util.fastForEachReversed
 import androidx.compose.ui.util.fastSumBy
 import androidx.core.content.FileProvider
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -131,7 +132,6 @@ import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.LocalSyncUtils
 import com.jay.glossy.constants.DarkModeKey
-import com.jay.glossy.constants.PlaylistEditLockKey
 import com.jay.glossy.constants.PlaylistSongSortDescendingKey
 import com.jay.glossy.constants.PlaylistSongSortType
 import com.jay.glossy.constants.PlaylistSongSortTypeKey
@@ -195,7 +195,15 @@ fun LocalPlaylistScreen(
     val playlistLength = remember(songs) { songs.fastSumBy { it.song.song.duration } }
     val (sortType, onSortTypeChange) = rememberEnumPreference(PlaylistSongSortTypeKey, PlaylistSongSortType.CUSTOM)
     val (sortDescending, onSortDescendingChange) = rememberPreference(PlaylistSongSortDescendingKey, true)
-    var locked by rememberPreference(PlaylistEditLockKey, defaultValue = true)
+    // The lock belongs to this playlist, not to the app. One shared preference
+    // meant unlocking a single playlist also unlocked every other one — the
+    // reorder handles and swipe-to-remove appeared everywhere. Keying it by id
+    // keeps the choice with the playlist it was made on and still remembers it
+    // across visits.
+    val editLockKey = remember(viewModel.playlistId) {
+        booleanPreferencesKey("playlistEditLock_${viewModel.playlistId}")
+    }
+    var locked by rememberPreference(editLockKey, defaultValue = true)
 
     val syncUtils = LocalSyncUtils.current
     val snackbarHostState = remember { SnackbarHostState() }

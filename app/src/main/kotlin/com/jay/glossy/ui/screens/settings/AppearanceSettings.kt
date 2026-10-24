@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -35,6 +36,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -51,13 +53,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.core.content.edit
+import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.jay.glossy.LocalPlayerAwareWindowInsets
@@ -79,7 +84,11 @@ import com.jay.glossy.constants.DefaultOpenTabKey
 import com.jay.glossy.constants.DensityScale
 import com.jay.glossy.constants.DensityScaleKey
 import com.jay.glossy.constants.DynamicThemeKey
-import com.jay.glossy.constants.EnableDynamicIconKey
+import com.jay.glossy.constants.AppIconKey
+import com.jay.glossy.constants.DefaultGreetingAnimationOpacity
+import com.jay.glossy.constants.GreetingAnimation
+import com.jay.glossy.constants.GreetingAnimationKey
+import com.jay.glossy.constants.GreetingAnimationOpacityKey
 import com.jay.glossy.constants.EnableHighRefreshRateKey
 import com.jay.glossy.constants.EnableLandscapeScalingKey
 import com.jay.glossy.constants.ExperimentalLyricsKey
@@ -155,6 +164,7 @@ import com.jay.glossy.ui.player.CanvasUrlHealth
 import com.jay.glossy.ui.theme.DefaultThemeColor
 import com.jay.glossy.ui.theme.PlayerSliderColors
 import com.jay.glossy.ui.utils.backToMain
+import com.jay.glossy.utils.AppIcon
 import com.jay.glossy.utils.IconUtils
 import com.jay.glossy.utils.rememberEnumPreference
 import com.jay.glossy.utils.rememberPreference
@@ -174,16 +184,33 @@ fun AppearanceSettings(
             DynamicThemeKey,
             defaultValue = true,
         )
-    val (enableDynamicIcon, onEnableDynamicIconPrefChange) =
-        rememberPreference(
-            EnableDynamicIconKey,
-            defaultValue = true,
-        )
+    // The launcher icon is a component switch, not a theme value: the choice is
+    // stored so the picker can show what is selected, but the icon itself is
+    // applied to the package manager and only takes hold after a restart.
+    val (appIcon, onAppIconChange) = rememberEnumPreference(
+        AppIconKey,
+        defaultValue = AppIcon.CLASSIC,
+    )
     val iconContext = LocalContext.current
-    val onEnableDynamicIconChange: (Boolean) -> Unit = { newValue ->
-        onEnableDynamicIconPrefChange(newValue)
-        IconUtils.setIcon(iconContext, newValue)
-    }
+    val iconScope = rememberCoroutineScope()
+    var showAppIconDialog by rememberSaveable { mutableStateOf(false) }
+
+    // Which clip loops behind the home greeting card. Kept here rather than in
+    // Home so the choice can be made while looking at its own description.
+    val (greetingAnimation, onGreetingAnimationChange) = rememberEnumPreference(
+        GreetingAnimationKey,
+        defaultValue = GreetingAnimation.OFF,
+    )
+    // How strongly the chosen clip shows through the card's wash. Sits beside
+    // the clip picker because the two are one decision: which loop, and how
+    // loud it is behind the greeting.
+    val (greetingOpacity, onGreetingOpacityChange) =
+        rememberPreference(
+            GreetingAnimationOpacityKey,
+            defaultValue = DefaultGreetingAnimationOpacity,
+        )
+    var showGreetingAnimationDialog by rememberSaveable { mutableStateOf(false) }
+
     val (enableHighRefreshRate, onEnableHighRefreshRateChange) =
         rememberPreference(
             EnableHighRefreshRateKey,
@@ -564,6 +591,62 @@ fun AppearanceSettings(
         )
     }
     
+    if (showGreetingAnimationDialog) {
+        EnumDialog(
+            onDismiss = { showGreetingAnimationDialog = false },
+            onSelect = {
+                onGreetingAnimationChange(it)
+                showGreetingAnimationDialog = false
+            },
+            title = "Greeting section animation",
+            current = greetingAnimation,
+            values = GreetingAnimation.entries.toList(),
+            valueText = { greetingAnimationLabel(it) },
+            valueDescription = {
+                when (it) {
+                    GreetingAnimation.OFF -> "The plain card, no video"
+                    else -> "Loops behind the greeting and your name"
+                }
+            },
+        )
+    }
+
+    if (showAppIconDialog) {
+        EnumDialog(
+            onDismiss = { showAppIconDialog = false },
+            onSelect = { chosen ->
+                showAppIconDialog = false
+                if (chosen != appIcon) {
+                    onAppIconChange(chosen)
+                    IconUtils.setIcon(iconContext, chosen)
+                    // The launcher reads the alias at bind time, so the new icon
+                    // only appears on the home screen after the app restarts.
+                    iconScope.launch {
+                        val result =
+                            snackbarHostState.showSnackbar(
+                                message = "Icon changed. Restart to see it on your home screen.",
+                                actionLabel = "Restart",
+                            )
+                        if (result == SnackbarResult.ActionPerformed) {
+                            val launchIntent =
+                                iconContext.packageManager
+                                    .getLaunchIntentForPackage(iconContext.packageName)
+                            launchIntent?.component?.let { component ->
+                                activity.startActivity(Intent.makeRestartActivityTask(component))
+                                Runtime.getRuntime().exit(0)
+                            }
+                        }
+                    }
+                }
+            },
+            title = "App icon",
+            current = appIcon,
+            values = AppIcon.picker,
+            valueText = { it.label },
+            valuePreview = { AppIconPreview(icon = it) },
+        )
+    }
+
     if (showMiniPlayerPlayingAnimationDialog) {
         EnumDialog(
             onDismiss = { showMiniPlayerPlayingAnimationDialog = false },
@@ -599,7 +682,6 @@ fun AppearanceSettings(
                     MiniPlayerStyle.LEGACY -> "Legacy (Old Style)"
                     MiniPlayerStyle.MODERN -> "Modern (Default)"
                     MiniPlayerStyle.GLOSSY_SPECIAL -> "Glossy Special Edition"
-                                    MiniPlayerStyle.APPLE_MUSIC -> "Apple Music"
                     MiniPlayerStyle.STUDIO -> "Studio"
                 }
             },
@@ -1326,6 +1408,41 @@ fun AppearanceSettings(
                         )
                     },
                     onClick = { showQuickPicksStyleDialog = true }
+                ),
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.slow_motion_video),
+                    title = { Text("Greeting section animation") },
+                    description = {
+                        Text(
+                            when (greetingAnimation) {
+                                GreetingAnimation.OFF -> "Off — the plain card"
+                                GreetingAnimation.NEON_GLOW -> "Neon glow"
+                                GreetingAnimation.SUNSET_TRAIN -> "Sunset train"
+                                GreetingAnimation.BOHO_HOME -> "Reddish tree"
+                                GreetingAnimation.HEMMING -> "Luffy"
+                                GreetingAnimation.STREET_MARKET -> "Sunset samurai"
+                            }
+                        )
+                    },
+                    onClick = { showGreetingAnimationDialog = true }
+                ),
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.tune),
+                    title = { Text("Greeting animation opacity") },
+                    description = {
+                        Column {
+                            Text("${(greetingOpacity * 100).toInt()}%")
+                            Slider(
+                                value = greetingOpacity,
+                                onValueChange = onGreetingOpacityChange,
+                                valueRange = 0.1f..1f,
+                                enabled = greetingAnimation != GreetingAnimation.OFF,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                    },
+                    enabled = greetingAnimation != GreetingAnimation.OFF,
+                    onClick = null
                 )
             )
         )
@@ -1481,25 +1598,9 @@ fun AppearanceSettings(
                     add(
                         Material3SettingsItem(
                             icon = painterResource(R.drawable.palette),
-                            title = { Text(stringResource(R.string.enable_dynamic_icon)) },
-                            description = { Text(stringResource(R.string.enable_dynamic_icon_desc)) },
-                            trailingContent = {
-                                Switch(
-                                    checked = enableDynamicIcon,
-                                    onCheckedChange = onEnableDynamicIconChange,
-                                    thumbContent = {
-                                        Icon(
-                                            painter =
-                                                painterResource(
-                                                    id = if (enableDynamicIcon) R.drawable.check else R.drawable.close,
-                                                ),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(SwitchDefaults.IconSize),
-                                        )
-                                    },
-                                )
-                            },
-                            onClick = { onEnableDynamicIconChange(!enableDynamicIcon) },
+                            title = { Text("App icon") },
+                            description = { Text(appIcon.label) },
+                            onClick = { showAppIconDialog = true },
                         ),
                     )
                     add(
@@ -1551,7 +1652,6 @@ fun AppearanceSettings(
                                     MiniPlayerStyle.LEGACY -> "Legacy (Old Style)"
                                     MiniPlayerStyle.MODERN -> "Modern (Default)"
                                     MiniPlayerStyle.GLOSSY_SPECIAL -> "Glossy Special Edition"
-                                    MiniPlayerStyle.APPLE_MUSIC -> "Apple Music"
                                     MiniPlayerStyle.STUDIO -> "Studio"
                                 }
                             )
@@ -2831,3 +2931,38 @@ private fun canvasHealthLabelResource(health: CanvasUrlHealth): Int =
         CanvasUrlHealth.UNPLAYABLE -> R.string.canvas_check_health_unplayable
         CanvasUrlHealth.UNKNOWN -> R.string.canvas_check_health_unknown
     }
+
+/** How the greeting-animation picker names each clip. */
+private fun greetingAnimationLabel(animation: GreetingAnimation): String =
+    when (animation) {
+        GreetingAnimation.OFF -> "Off (plain card)"
+        GreetingAnimation.NEON_GLOW -> "Neon glow"
+        GreetingAnimation.SUNSET_TRAIN -> "Sunset train"
+        GreetingAnimation.BOHO_HOME -> "Reddish tree"
+        GreetingAnimation.HEMMING -> "Luffy"
+        GreetingAnimation.STREET_MARKET -> "Sunset samurai"
+    }
+
+/**
+ * The icon picker's row preview. Launcher icons are adaptives on API 26+, which
+ * Compose cannot paint straight from a resource id, so each one is rasterised
+ * once per dialog and drawn as a rounded tile.
+ */
+@Composable
+private fun AppIconPreview(icon: AppIcon) {
+    val context = LocalContext.current
+    val bitmap = remember(icon) {
+        ContextCompat.getDrawable(context, icon.previewRes)
+            ?.toBitmap(width = 72, height = 72)
+            ?.asImageBitmap()
+    }
+    if (bitmap != null) {
+        Image(
+            bitmap = bitmap,
+            contentDescription = null,
+            modifier = Modifier
+                .size(32.dp)
+                .clip(RoundedCornerShape(9.dp)),
+        )
+    }
+}

@@ -235,6 +235,8 @@ import com.jay.glossy.viewmodels.HomeViewModel
 import com.jay.glossy.widget.PlaylistWidgetReceiver
 import com.valentinilk.shimmer.LocalShimmerTheme
 import dagger.hilt.android.AndroidEntryPoint
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.haze
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -273,7 +275,7 @@ class MainActivity : ComponentActivity() {
     lateinit var syncUtils: SyncUtils
 
     @Inject
-    lateinit var listenTogetherManager: com.jay.glossy.listentogether.ListenTogetherManager
+    lateinit var listenTogetherManager: com.chikku.glossy.listentogether.ListenTogetherManager
 
     private lateinit var navController: NavHostController
     private var pendingIntent: Intent? = null
@@ -682,10 +684,15 @@ class MainActivity : ComponentActivity() {
             }
 
             CompositionLocalProvider(LocalDensity provides scaledDensity) {
+            // The whole screen is the blur source for the navigation bar: the bar
+            // sits in the Scaffold's bottom slot, so the only thing it can frost is
+            // what the app paints behind that slot — the wallpaper and the surface.
+            val navBarHazeState = remember { HazeState() }
             BoxWithConstraints(
                 modifier =
                     Modifier
                         .fillMaxSize()
+                        .haze(navBarHazeState)
                         .background(if (pureBlack) Color.Black else MaterialTheme.colorScheme.surface),
             ) {
                 val (backgroundBlurOn) = rememberPreference(BackgroundBlurEnabledKey, defaultValue = true)
@@ -806,11 +813,20 @@ class MainActivity : ComponentActivity() {
                         navigationItems.map { it.route }.toSet()
                     }
 
+                // Search is not one of the bar's tabs any more — it rides the bar
+                // as its own orb — so its route is no longer in
+                // [navigationItemRoutes]. It still belongs to the bar, though: the
+                // orb is what opens it, the bar draws it selected once you are
+                // there, and a restored back stack sitting on the search page used
+                // to leave the whole bar (orb included) off-screen with no route
+                // that could bring it back.
                 val shouldShowNavigationBar =
                     remember(currentRoute, navigationItemRoutes) {
                         val route = currentRoute
                         route != null &&
-                            (navigationItemRoutes.contains(route) || route.startsWith("search/"))
+                            (navigationItemRoutes.contains(route) ||
+                                route == Screens.Search.route ||
+                                route.startsWith("search/"))
                     }
 
                 // Routes that must render without the mini player, nav bar and rail.
@@ -860,6 +876,14 @@ class MainActivity : ComponentActivity() {
                         ?: remember { mutableStateOf(false) }
                 val playerReady by playerReadyState
                 val activePlayerConnection = if (playerReady) playerConnection else null
+
+                // Whether there is a player sheet to step aside for at all. The
+                // bar's translation reads this rather than the sheet's progress
+                // alone: with no connection nothing is drawn to drag back down, and
+                // a restored anchor left at the expanded position would park the
+                // bar, and the search orb with it, off-screen with nothing to
+                // close.
+                val hasPlayerSheet = activePlayerConnection != null
 
                 val playerAwareWindowInsets =
                     remember(
@@ -1083,8 +1107,16 @@ class MainActivity : ComponentActivity() {
                                     TopAppBar(
                                         title = {
                                             Row(verticalAlignment = Alignment.CenterVertically) {
+                                                // The new app mark, taken from the launcher icon's
+                                                // monochrome layer: it is white art on a
+                                                // transparent canvas, so the bar tints it exactly
+                                                // like it tinted the old glyph, and the mark in the
+                                                // bar can never drift from the icon on the home
+                                                // screen again. The canvas leaves the art at half
+                                                // its width, which is why the box is bigger than the
+                                                // mark it draws.
                                                 Icon(
-                                                    painter = painterResource(R.drawable.small_icon), 
+                                                    painter = painterResource(R.drawable.ic_launcher_monochrome),
                                                     contentDescription = null,
                                                     modifier = Modifier.size(52.dp),
                                                     tint = MaterialTheme.colorScheme.onSurface
@@ -1311,7 +1343,12 @@ class MainActivity : ComponentActivity() {
                                                 .offset {
                                                     val navBarHeightPx = navigationBarHeight.toPx()
                                                     val totalHeightPx = navBarTotalHeight.toPx()
-                                                    val progress = playerBottomSheetState.progress.coerceIn(0f, 1f)
+                                                    val progress =
+                                                        if (hasPlayerSheet) {
+                                                            playerBottomSheetState.progress.coerceIn(0f, 1f)
+                                                        } else {
+                                                            0f
+                                                        }
 
                                                     val yOffset = if (navBarHeightPx == 0f) {
                                                         totalHeightPx
@@ -1324,7 +1361,12 @@ class MainActivity : ComponentActivity() {
                                                     androidx.compose.ui.unit.IntOffset(0, yOffset.roundToInt())
                                                 }
                                                 .graphicsLayer {
-                                                    val progress = playerBottomSheetState.progress.coerceIn(0f, 1f)
+                                                    val progress =
+                                                        if (hasPlayerSheet) {
+                                                            playerBottomSheetState.progress.coerceIn(0f, 1f)
+                                                        } else {
+                                                            0f
+                                                        }
                                                     alpha = if (useNewMiniPlayerDesign && !shouldShowNavigationBar) {
                                                         0f
                                                     } else {
@@ -1341,6 +1383,7 @@ class MainActivity : ComponentActivity() {
                                         pureBlack = pureBlack,
                                         slimNav = slimNav,
                                         onSearchLongClick = onSearchLongClick,
+                                        hazeNav = navBarHazeState,
                                         modifier =
                                             Modifier
                                                 .align(Alignment.BottomCenter)
@@ -1357,7 +1400,12 @@ class MainActivity : ComponentActivity() {
                                                     val yOffset = if (navBarHeightPx == 0f) {
                                                         totalHeightPx
                                                     } else {
-                                                        val progress = playerBottomSheetState.progress.coerceIn(0f, 1f)
+                                                        val progress =
+                                                            if (hasPlayerSheet) {
+                                                                playerBottomSheetState.progress.coerceIn(0f, 1f)
+                                                            } else {
+                                                                0f
+                                                            }
                                                         val slideOffset = totalHeightPx * progress
                                                         val hideOffset =
                                                             totalHeightPx * (1 - navBarHeightPx / NavigationBarHeight.toPx())
@@ -1888,6 +1936,6 @@ val LocalPlayerConnection = staticCompositionLocalOf<PlayerConnection?> { error(
 val LocalPlayerAwareWindowInsets = compositionLocalOf<WindowInsets> { error("No WindowInsets provided") }
 val LocalDownloadUtil = staticCompositionLocalOf<DownloadUtil> { error("No DownloadUtil provided") }
 val LocalSyncUtils = staticCompositionLocalOf<SyncUtils> { error("No SyncUtils provided") }
-val LocalListenTogetherManager = staticCompositionLocalOf<com.jay.glossy.listentogether.ListenTogetherManager?> { null }
+val LocalListenTogetherManager = staticCompositionLocalOf<com.chikku.glossy.listentogether.ListenTogetherManager?> { null }
 val LocalChangelogState = staticCompositionLocalOf<MutableState<Boolean>> { error("No LocalChangelogState provided") }
 val LocalIsPlayerExpanded = compositionLocalOf { false }

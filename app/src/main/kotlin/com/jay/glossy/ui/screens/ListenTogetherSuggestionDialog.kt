@@ -19,7 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jay.glossy.R
-import com.jay.glossy.listentogether.ListenTogetherManager
+import com.chikku.glossy.listentogether.ListenTogetherManager
 
 @Composable
 fun ListenTogetherSuggestionDialog(

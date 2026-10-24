@@ -5,11 +5,14 @@
  * The design system used by the redesigned screens (Home, Library, Settings,
  * Login, Player, Mini player).
  *
- * The palette has a dark and a light variant and follows the app theme, so the
- * redesigned screens are near-black on dark mode and near-white on light mode.
- * Components must read through [GlossyPalette] instead of hardcoding their own
- * copies, so the whole app stays on one spec. The teal accent and the category
- * colours used for album-art / avatar placeholders are shared by both.
+ * [Figma] is the design's own palette — deep charcoal surfaces with the soft
+ * rose accent — and is the one the redesigned screens paint with. [Dark] and
+ * [Light] are the earlier near-black / teal and light variants, kept for the
+ * code paths that still describe them; [PureBlack] is [Figma] pushed to true
+ * black for AMOLED screens. Components must read through [GlossyPalette]
+ * instead of hardcoding their own copies, so the whole app stays on one spec.
+ * The category colours used for album-art / avatar placeholders are shared by
+ * all of them.
  *
  * Typography is clamped to at most SemiBold(600): the design calls for clean
  * geometric type with no heavy 700+ weights.
@@ -24,15 +27,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 /**
  * One set of design-system tokens.
  *
- * [Dark] is the original near-black palette, [Light] is its light-mode
- * counterpart and [PureBlack] is [Dark] pushed to true black for AMOLED
- * screens. The accent is deliberately identical in both so the app keeps its
+ * [Figma] is the design's palette (charcoal #101114, rose #EDB8C3). [Dark] is
+ * the earlier near-black/teal palette, [Light] its light-mode counterpart and
+ * [PureBlack] is [Figma] pushed to true black for AMOLED screens. The accent
+ * is deliberately identical across the dark variants so the app keeps its
  * identity whichever mode the user runs.
  */
 data class GlossyColors(
@@ -73,6 +78,32 @@ data class GlossyColors(
     val onHeaderBand: Color,
 ) {
     companion object {
+        /**
+         * The design's palette, taken straight from its tokens: page and player
+         * #101114, nav and rows #1B1D22, mini player #24262C, borders #34353C,
+         * text #F6F2F3 / #A1A0AA, accent #EDB8C3, selected surface #382B33.
+         * Nothing here is derived from the user's seed colour: the brief is a
+         * fixed after-dark look, not a tonal one.
+         */
+        val Figma = GlossyColors(
+            page = Color(0xFF101114),
+            player = Color(0xFF101114),
+            row = Color(0xFF1B1D22),
+            miniBar = Color(0xFF24262C),
+            chip = Color(0xFF1B1D22),
+            chipOutline = Color(0xFF34353C),
+            border = Color(0xFF34353C),
+            accent = Color(0xFFEDB8C3),
+            onAccent = Color(0xFF2A1520),
+            textPrimary = Color(0xFFF6F2F3),
+            textSecondary = Color(0xFFA1A0AA),
+            textLow = Color(0xFF6F6E77),
+            textMuted = Color(0xFF55545C),
+            accentSoft = Color(0xFF382B33),
+            headerBand = Color.Transparent,
+            onHeaderBand = Color(0xFFEDB8C3),
+        )
+
         val Dark = GlossyColors(
             page = Color(0xFF121212),
             player = Color(0xFF141212),
@@ -111,14 +142,14 @@ data class GlossyColors(
             onHeaderBand = Color(0xFF1D9E75),
         )
 
-        val PureBlack = Dark.copy(
+        val PureBlack = Figma.copy(
             page = Color.Black,
             player = Color.Black,
-            row = Color(0xFF0C0C0C),
-            miniBar = Color(0xFF0C0C0C),
-            chip = Color(0xFF171717),
-            chipOutline = Color(0xFF242424),
-            border = Color(0xFF242424),
+            row = Color(0xFF121316),
+            miniBar = Color(0xFF15161A),
+            chip = Color(0xFF121316),
+            chipOutline = Color(0xFF2A2B31),
+            border = Color(0xFF2A2B31),
         )
     }
 }
@@ -282,16 +313,21 @@ object GlossyOnboardingPalette {
     val TileFill = Color(0x0F000000)
 }
 
-/** Album-art / avatar placeholder colours, cycled by item id. */
+/**
+ * Album-art / avatar placeholder colours, cycled by item id. Deep and
+ * desaturated on purpose: they stand in for a sleeve on the charcoal page, so
+ * the shelf keeps its rhythm without a single bright tile breaking the
+ * after-dark look.
+ */
 val GlossyCategorySwatches = listOf(
-    Color(0xFF5DCAA5),
-    Color(0xFFD4537E),
-    Color(0xFF7F77DD),
-    Color(0xFFEF9F27),
-    Color(0xFFF0997B),
-    Color(0xFF85B7EB),
-    Color(0xFF97C459),
-    Color(0xFFF09595),
+    Color(0xFF7A4E5A),
+    Color(0xFF4E5A66),
+    Color(0xFF6A5570),
+    Color(0xFF6E5B45),
+    Color(0xFF755443),
+    Color(0xFF475C63),
+    Color(0xFF58624A),
+    Color(0xFF6B4F56),
 )
 
 /**
@@ -311,99 +347,73 @@ fun glossySwatchFor(seed: String?): Color {
 
 /** Colour of the text/icon that reads well on top of [glossySwatchFor]. */
 fun glossyOnSwatchFor(color: Color): Color =
-    if (color == GlossyCategorySwatches[3] || color == GlossyCategorySwatches[6]) {
-        Color(0xFF232323)
-    } else {
-        Color(0xFF1A1A1A)
-    }
+    if (color.luminance() > 0.45f) Color(0xFF1A1A1A) else Color(0xFFF6F2F3)
 
 /**
- * The dark tokens under the same member names as [GlossyPalette], for the
- * non-composable code that cannot read the theme-aware façade.
+ * Material 3 colour scheme built from a [GlossyColors] set. Every role used by
+ * the app's Material components is mapped so nothing falls back to the default
+ * purple baseline scheme. Defaults to the design palette; [Theme] passes the
+ * set the current design style resolved.
  */
-private object DarkPaletteTokens {
-    val Page = GlossyColors.Dark.page
-    val Player = GlossyColors.Dark.player
-    val Row = GlossyColors.Dark.row
-    val MiniBar = GlossyColors.Dark.miniBar
-    val Chip = GlossyColors.Dark.chip
-    val Border = GlossyColors.Dark.border
-    val Accent = GlossyColors.Dark.accent
-    val OnAccent = GlossyColors.Dark.onAccent
-    val TextPrimary = GlossyColors.Dark.textPrimary
-    val TextSecondary = GlossyColors.Dark.textSecondary
-    val TextLow = GlossyColors.Dark.textLow
-    val TextMuted = GlossyColors.Dark.textMuted
-    val AccentSoft = GlossyColors.Dark.accentSoft
-}
-
-/**
- * Material 3 colour scheme built from [GlossyPalette]. Every role used by the
- * app's Material components is mapped so nothing falls back to the default
- * purple baseline scheme.
- */
-fun glossyDarkColorScheme(): ColorScheme {
-    // Not a composable, so it cannot read the theme-aware [GlossyPalette]: it
-    // always builds the dark teal scheme, hence the shadowed name below.
-    val GlossyPalette = DarkPaletteTokens
+fun glossyDarkColorScheme(colors: GlossyColors = GlossyColors.Figma): ColorScheme {
     return darkColorScheme(
-    primary = GlossyPalette.Accent,
-    onPrimary = GlossyPalette.OnAccent,
-    primaryContainer = GlossyPalette.Accent,
-    onPrimaryContainer = GlossyPalette.OnAccent,
-    inversePrimary = GlossyPalette.Accent,
+    primary = colors.accent,
+    onPrimary = colors.onAccent,
+    primaryContainer = colors.accentSoft,
+    onPrimaryContainer = colors.accent,
+    inversePrimary = colors.accent,
 
-    secondary = GlossyPalette.TextSecondary,
-    onSecondary = Color(0xFF1B1B1B),
-    secondaryContainer = GlossyPalette.Chip,
-    onSecondaryContainer = GlossyPalette.TextPrimary,
+    secondary = colors.textSecondary,
+    onSecondary = colors.page,
+    secondaryContainer = colors.chip,
+    onSecondaryContainer = colors.textPrimary,
 
-    tertiary = GlossyPalette.Accent,
-    onTertiary = GlossyPalette.OnAccent,
-    tertiaryContainer = GlossyPalette.Chip,
-    onTertiaryContainer = GlossyPalette.TextPrimary,
+    tertiary = colors.accent,
+    onTertiary = colors.onAccent,
+    tertiaryContainer = colors.chip,
+    onTertiaryContainer = colors.textPrimary,
 
-    background = GlossyPalette.Page,
-    onBackground = GlossyPalette.TextPrimary,
+    background = colors.page,
+    onBackground = colors.textPrimary,
 
-    surface = GlossyPalette.Row,
-    onSurface = GlossyPalette.TextPrimary,
-    surfaceVariant = GlossyPalette.Chip,
-    onSurfaceVariant = GlossyPalette.TextSecondary,
-    surfaceTint = GlossyPalette.Accent,
+    surface = colors.row,
+    onSurface = colors.textPrimary,
+    surfaceVariant = colors.chip,
+    onSurfaceVariant = colors.textSecondary,
+    surfaceTint = colors.accent,
 
-    surfaceBright = GlossyPalette.MiniBar,
-    surfaceDim = GlossyPalette.Page,
-    surfaceContainerLowest = GlossyPalette.Page,
-    surfaceContainerLow = GlossyPalette.Row,
-    surfaceContainer = GlossyPalette.MiniBar,
-    surfaceContainerHigh = GlossyPalette.Chip,
-    surfaceContainerHighest = GlossyPalette.Border,
+    surfaceBright = colors.miniBar,
+    surfaceDim = colors.page,
+    surfaceContainerLowest = colors.page,
+    surfaceContainerLow = colors.row,
+    surfaceContainer = colors.miniBar,
+    surfaceContainerHigh = colors.chip,
+    surfaceContainerHighest = colors.border,
 
-    inverseSurface = GlossyPalette.TextPrimary,
-    inverseOnSurface = GlossyPalette.Page,
+    inverseSurface = colors.textPrimary,
+    inverseOnSurface = colors.page,
 
     error = Color(0xFFF09595),
     onError = Color(0xFF2A0E0E),
     errorContainer = Color(0xFF5C2B2B),
     onErrorContainer = Color(0xFFF1F1F1),
 
-    outline = GlossyPalette.TextLow,
-    outlineVariant = GlossyPalette.Border,
+    outline = colors.textLow,
+    outlineVariant = colors.border,
     scrim = Color(0xFF000000),
 
-    primaryFixed = GlossyPalette.Accent,
-    primaryFixedDim = GlossyPalette.Accent,
-    onPrimaryFixed = GlossyPalette.OnAccent,
-    onPrimaryFixedVariant = GlossyPalette.OnAccent,
-    secondaryFixed = GlossyPalette.Chip,
-    secondaryFixedDim = GlossyPalette.Chip,
-    onSecondaryFixed = GlossyPalette.TextPrimary,
-    onSecondaryFixedVariant = GlossyPalette.TextSecondary,
-    tertiaryFixed = GlossyPalette.Chip,
-    tertiaryFixedDim = GlossyPalette.Chip,
-    onTertiaryFixed = GlossyPalette.TextPrimary,
-    onTertiaryFixedVariant = GlossyPalette.TextSecondary,
+    primaryFixed = colors.accent,
+    primaryFixedDim = colors.accent,
+    onPrimaryFixed = colors.onAccent,
+    onPrimaryFixedVariant = colors.onAccent,
+    secondaryFixed = colors.chip,
+    secondaryFixedDim = colors.chip,
+    onSecondaryFixed = colors.textPrimary,
+    onSecondaryFixedVariant = colors.textSecondary,
+    tertiaryFixed = colors.chip,
+    tertiaryFixedDim = colors.chip,
+    onTertiaryFixed = colors.textPrimary,
+    onTertiaryFixedVariant = colors.textSecondary,
 )
 }
 
@@ -448,6 +458,18 @@ object GlossyDimens {
 
     /** Corner radius for cards. */
     val CornerCard = 16.dp
+
+    /** Corner radius of the home's editorial hero, per the design. */
+    val CornerHero = 24.dp
+
+    /** Corner radius of the floating mini player. */
+    val CornerMiniPlayer = 18.dp
+
+    /** Height of the mini player, excluding its surrounding gap. */
+    val MiniPlayerHeight = 60.dp
+
+    /** Height of the floating navigation pill. */
+    val NavPillHeight = 70.dp
 
     /** Fully rounded pills. */
     val CornerPill = 999.dp

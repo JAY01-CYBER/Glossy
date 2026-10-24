@@ -5,6 +5,11 @@
     <string name="credits_ui_design_styling">UI Design and Styling</string>
     <!-- Credits / About Screen — caption over a helper credited at the foot of a lead developer's card -->
     <string name="credits_supported_by">Supported by</string>
+    <!-- Listen Together — the room server refused to open a room because its
+         host allowlist does not include this client -->
+    <string name="listen_together_host_not_allowed">This server is not accepting new rooms. Pick a different server under Settings → Integrations → Listen Together, or host your own.</string>
+    <!-- Listen Together — the client gave up trying to reach the room server -->
+    <string name="listen_together_connection_failed">Could not reach the room server. Check the server URL under Settings → Integrations → Listen Together.</string>
     <!-- Appearance — "Reduce animation" row -->
     <string name="reduce_animation_title">Reduce animation</string>
     <string name="reduce_animation_desc">Hide the mini player bars and floating music notes; everything else — the header wash, the glow, the artwork — stays still instead of moving</string>
@@ -15,6 +20,9 @@
     <string name="listen_together_glossy_cloudflare">Glossy on Cloudflare</string>
     <!-- Audio quality tiers added beyond Auto / Low / High -->
     <string name="audio_quality_very_high">Very high (best bitrate)</string>
+    <!-- Audio quality — the lossless tier: a source module's FLAC/ALAC master, YouTube's best stream as fallback -->
+    <string name="audio_quality_lossless">Lossless</string>
+    <string name="audio_quality_lossless_desc">FLAC or ALAC from your lossless source; YouTube\'s best stream when it has nothing for the track</string>
     <!-- Queue — the header of the playback queue: its title, the line under it and the row actions -->
     <string name="playback_queue">Playback Queue</string>
     <string name="queue_playing_next">Playing next</string>
@@ -34,4 +42,81 @@
     <!-- Player menu — forces a fresh animated-canvas lookup for the current song -->
     <string name="refresh_canvas">Refresh canvas</string>
     <string name="refresh_canvas_desc">Look for this song\'s animated artwork again, ignoring every cached answer</string>
+    <!-- Home — the brand wordmark that signs the top of the feed -->
+    <string name="glossy_home_wordmark">glossy</string>
+    <!-- Home — the personal shelf of mixes, named after the listener; %1$s is their name -->
+    <string name="glossy_made_for">Made for %1$s</string>
+    <!-- Home — the label over a mix card's cover -->
+    <string name="glossy_made_for_label">Made for you</string>
+    <!-- Home — the shortcut at the end of the "Made for …" title row -->
+    <string name="glossy_view_mixes">View mixes</string>
+    <!-- Home — used when the app has no name for the listener yet -->
+    <string name="glossy_you">you</string>
+    <!-- Home — the eyebrow on the opening card -->
+    <string name="glossy_hero_eyebrow">The daily edit</string>
+    <!-- Mix — the eyebrow above the title -->
+    <string name="glossy_mix_eyebrow">Your sound, reimagined</string>
+    <!-- Mix — the page title, filters, featured card and empty state -->
+    <string name="mix_for_you_title">Mix for you</string>
+    <string name="glossy_mix_for_you">For you</string>
+    <string name="glossy_mix_favourites">Favourites</string>
+    <string name="glossy_mix_discover">Discover</string>
+    <string name="glossy_mix_featured">Featured</string>
+    <string name="glossy_mix_empty">Play a few songs and your mixes will appear here.</string>
+    <!-- Mix — the line under the grid -->
+    <string name="glossy_mix_evolving">Always evolving with your listening.</string>
+    <!-- Search — the landing page before a query is typed -->
+    <string name="glossy_search_discover">Discover something new.</string>
+    <string name="glossy_search_tab_explore">Explore</string>
+    <string name="glossy_search_tab_suggestions">Suggestions</string>
+    <string name="glossy_search_rank">#%1$d</string>
+    <string name="glossy_search_trending">Trending</string>
+    <string name="glossy_search_voice">Search with your voice</string>
+    <string name="glossy_search_retry">Try again</string>
+    <string name="glossy_search_error">Couldn’t load trending music.</string>
+    <string name="glossy_search_empty">Nothing is trending right now.</string>
+    <string name="glossy_search_eyebrow">Follow your curiosity</string>
+    <string name="glossy_search_title">Find your sound</string>
+    <string name="glossy_search_shelf">Go somewhere new</string>
+    <string name="glossy_search_recent">In the moment</string>
+    <string name="glossy_search_see_all">See all</string>
+    <string name="glossy_search_recent_caption">Recent search</string>
+    <string name="glossy_search_mood_indie">Indie &amp; soul</string>
+    <string name="glossy_search_mood_indie_sub">A little closer to the feeling</string>
+    <string name="glossy_search_mood_after_dark">After dark</string>
+    <string name="glossy_search_mood_after_dark_sub">For the hours that are yours</string>
+    <string name="glossy_search_mood_easy">Easy listening</string>
+    <string name="glossy_search_mood_easy_sub">Room to slow down</string>
+    <string name="glossy_search_mood_desi">Desi favourites</string>
+    <string name="glossy_search_mood_desi_sub">Sounds like home</string>
+    <!-- Your account sheet -->
+    <string name="glossy_your_account">Your account</string>
+    <string name="glossy_signed_in">Signed in</string>
+    <string name="glossy_sign_in">Sign in</string>
+    <string name="glossy_account_preferences">Account preferences</string>
+    <string name="glossy_token_private">Your token stays private</string>
+    <string name="glossy_more_content_caption">Explore beyond your usual sound</string>
+    <string name="glossy_autosync_caption">Keep your library up to date</string>
+    <string name="glossy_switch_account">Switch account</string>
+    <string name="glossy_sign_out">Sign out</string>
+    <!-- Listen Together — the shortcut on Home and its group in Settings -->
+    <string name="glossy_listen_together_hint">Start a session and listen with friends</string>
+    <string name="glossy_together_group">With friends</string>
+    <!-- SponsorBlock — controller in the player, settings group under Settings → Playback -->
+    <string name="sponsor_block">SponsorBlock</string>
+    <string name="sponsor_block_desc">Skips sponsor reads, intros and outros that listeners have marked in the community database. Lookups use a hash of the video id, so the server never learns what you are watching.</string>
+    <string name="sponsor_block_categories">Categories to skip</string>
+    <!-- SponsorBlock — how much of the category list is currently skipped -->
+    <string name="sponsor_block_categories_summary">%1$d of %2$d categories</string>
+    <string name="sponsor_block_categories_none">Nothing selected — segments will play in full</string>
+    <string name="sponsor_block_categories_dialog_title">Skip these sections</string>
+    <string name="sponsor_block_category_music_off_topic">Non-music sections</string>
+    <string name="sponsor_block_category_sponsor">Sponsors</string>
+    <string name="sponsor_block_category_intro">Intros</string>
+    <string name="sponsor_block_category_outro">Outros</string>
+    <string name="sponsor_block_category_self_promotion">Self-promotion</string>
+    <string name="sponsor_block_category_preview">Previews</string>
+    <string name="sponsor_block_category_filler">Filler</string>
+    <string name="sponsor_block_category_interaction">Interaction reminders</string>
+    <string name="sponsor_block_category_hook">Hooks</string>
 </resources>

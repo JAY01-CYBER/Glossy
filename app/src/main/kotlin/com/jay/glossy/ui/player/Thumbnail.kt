@@ -64,6 +64,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -81,6 +82,7 @@ import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import coil3.compose.AsyncImage
 import coil3.request.CachePolicy
@@ -101,8 +103,9 @@ import com.jay.glossy.constants.SeekExtraSeconds
 import com.jay.glossy.constants.SwipeThumbnailKey
 import com.jay.glossy.constants.ThumbnailCornerRadius
 import com.jay.glossy.constants.ThumbnailShadowKey
-import com.jay.glossy.listentogether.RoomRole
+import com.chikku.glossy.listentogether.RoomRole
 import com.jay.glossy.ui.component.CastButton
+import com.jay.glossy.ui.utils.isYouTubeVideoStill
 import com.jay.glossy.utils.rememberEnumPreference
 import com.jay.glossy.utils.rememberPreference
 import kotlinx.coroutines.CoroutineScope
@@ -484,6 +487,22 @@ fun Thumbnail(
     var showSeekEffect by remember { mutableStateOf(false) }
     var seekDirection by remember { mutableStateOf("") }
 
+    // The service retries a failed load on its own backoff and most errors
+    // recover. Showing the error screen the instant one is reported is what
+    // made a hiccup look like a dead player, and swapping the whole player
+    // content out for it is what produced the flicker on a song change. The
+    // error is only shown once it has outlived a retry, and it clears as soon
+    // as playback recovers.
+    var settledError by remember { mutableStateOf<PlaybackException?>(null) }
+    LaunchedEffect(error) {
+        if (error == null) {
+            settledError = null
+        } else {
+            delay(ERROR_SETTLE_MS)
+            settledError = error
+        }
+    }
+
     Box(
         modifier = modifier
             .graphicsLayer {
@@ -491,14 +510,14 @@ fun Thumbnail(
             }
     ) {
         AnimatedVisibility(
-            visible = error != null,
+            visible = settledError != null,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier
                 .padding(32.dp)
                 .align(Alignment.Center),
         ) {
-            error?.let { playbackError ->
+            settledError?.let { playbackError ->
                 PlaybackError(
                     error = playbackError,
                     retry = playerConnection.player::prepare,
@@ -507,7 +526,7 @@ fun Thumbnail(
         }
 
         AnimatedVisibility(
-            visible = error == null,
+            visible = settledError == null,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier
@@ -770,6 +789,13 @@ fun Thumbnail(
         }
     }
 }
+
+/**
+ * How long an error has to last before it is drawn. The service retries a failed
+ * load on its own backoff, so anything shorter turns a recovery into a visible
+ * failure.
+ */
+private const val ERROR_SETTLE_MS = 2_000L
 
 /**
  * How many times a canvas lookup is attempted while the surface stays on
@@ -1184,6 +1210,13 @@ private fun ThumbnailImage(
             ?.replace(Regex("=s\\d+.*"), "=s1080-l90-rj")
     }
 
+    // Coil draws nothing while a new request loads unless it is handed a
+    // placeholder, so every song change emptied this slot for the length of a
+    // download and the surfaceVariant underneath showed through as a flash.
+    // Keeping the last loaded cover as the placeholder lets the next one
+    // crossfade over it instead of out of an empty box.
+    var lastArtwork by remember { mutableStateOf<Painter?>(null) }
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -1201,8 +1234,20 @@ private fun ThumbnailImage(
                 .networkCachePolicy(CachePolicy.ENABLED)
                 .crossfade(true)
                 .build(),
+            placeholder = lastArtwork,
+            onSuccess = { state -> lastArtwork = state.painter },
             contentDescription = null,
-            contentScale = if (cropArtwork || playerStyleName == "VIVI_NEW") ContentScale.Crop else ContentScale.Fit,
+            // A video frame is 16:9 and this artwork slot is square, so fitting
+            // one left a band of surfaceVariant above and below the picture —
+            // the black padding a music video showed, with the frame no longer
+            // sitting flush inside the cover's corners. Frames always fill,
+            // exactly as the library tiles already draw them; the crop
+            // preference keeps deciding the case it was written for, which is
+            // square cover art.
+            contentScale =
+                if (cropArtwork || playerStyleName == "VIVI_NEW" || isYouTubeVideoStill(artworkUri))
+                    ContentScale.Crop
+                else ContentScale.Fit,
             modifier = Modifier.fillMaxSize()
         )
     }

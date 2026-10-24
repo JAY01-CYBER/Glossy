@@ -1950,7 +1950,11 @@ fun LocalThumbnail(
                     .build()
             },
             contentDescription = null,
-            contentScale = if (cropAlbumArt) ContentScale.Crop else ContentScale.Fit,
+            // A video frame is 16:9; fitting it into this square slot left the
+            // background showing above and below it. Frames fill, covers keep
+            // obeying the crop preference.
+            contentScale =
+                if (cropAlbumArt || isYouTubeVideoStill(thumbnailUrl)) ContentScale.Crop else ContentScale.Fit,
             modifier = Modifier.fillMaxSize()
         )
 

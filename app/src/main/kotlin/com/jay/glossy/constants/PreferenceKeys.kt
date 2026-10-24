@@ -12,6 +12,7 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 
@@ -124,39 +125,67 @@ enum class MiniPlayerStyle {
     MODERN,
     GLOSSY_SPECIAL,
 
-    /**
-     * The floating bar from the reference recording: square artwork, the
-     * playhead as a squiggle under the title, the transport in a filled
-     * capsule, and — once the list underneath is scrolled — the whole bar
-     * folding away into the round artwork bubble.
-     */
-    APPLE_MUSIC,
-
     /** The teal design system's compact bar with a teal progress hairline. */
     STUDIO
 }
 
 /**
- * Which visual language the app paints itself with.
+ * Which palette the redesign paints with. Read by the theme only: the choice is
+ * no longer offered in Settings, but the value is kept so an existing install
+ * keeps painting with the palette it last stored.
  *
- * [TEAL] is the dark design system with the fixed palette, and [CLASSIC] is
- * the previous Material You look. Only dark mode is themed: light mode keeps
- * the Material You scheme in both cases.
+ * [FIGMA] is the design's own after-dark palette (charcoal surfaces, soft-rose
+ * accent) and is what the app ships with. [MATERIALISTIC] is the tonal skin
+ * that repaints every surface from the listener's seed colour. Both draw the
+ * same layout; only the paint differs. [TEAL] and [CLASSIC] describe the
+ * retired looks and are accepted but never offered.
  */
 val DesignStyleKey = stringPreferencesKey("designStyle")
 
 /**
- * The look the app actually paints with.
+ * The look the app actually draws with.
  *
- * The app runs the Materialistic skin: the redesigned screens keep their
- * layout, but every colour comes from the Material 3 scheme — tonal surfaces,
- * the primary role as the accent, a `primaryContainer` home header — so the
- * whole app repaints from the seed colour and follows Material You on
- * Android 12+. The classic near-black/teal palette and the teal design are
- * still described by [DesignStyle] so those code paths keep compiling, but
- * nothing selects them.
+ * The redesign is one layout painted two ways: [ActiveDesignStyle] says the app
+ * draws the design's screens, and [DesignStyleKey] below says which palette
+ * paints them — [DesignStyle.FIGMA] for the design's own charcoal/rose tokens
+ * (the default, so the app looks exactly like the frames) or
+ * [DesignStyle.MATERIALISTIC] for the tonal skin that repaints from the seed
+ * colour. [DesignStyle.TEAL] and [DesignStyle.CLASSIC] describe the earlier
+ * looks and nothing selects them.
  */
 val ActiveDesignStyle = DesignStyle.MATERIALISTIC
+
+/**
+ * What plays behind the home greeting card.
+ *
+ * The card is 104dp tall and carries two lines of type, so the clip is a mood,
+ * not a subject: it is drawn at a high alpha under a light scrim, loops silently
+ * and is never a control. [OFF] is the default and draws the plain card.
+ */
+enum class GreetingAnimation {
+    OFF,
+    NEON_GLOW,
+    SUNSET_TRAIN,
+
+    // Extra silent loop clips for the greeting card. Named for their subject
+    // rather than the file they came from, so the picker says what the card
+    // will show instead of which download it is.
+    BOHO_HOME,
+    HEMMING,
+    STREET_MARKET,
+}
+
+val GreetingAnimationKey = stringPreferencesKey("greetingAnimation")
+
+/**
+ * How far the greeting clip shows through the card's wash, 0.1..1.
+ *
+ * The clip is decoration, so the default sits well below full strength: the
+ * greeting and the listener's name stay the thing the eye lands on.
+ */
+val GreetingAnimationOpacityKey = floatPreferencesKey("greetingAnimationOpacity")
+
+const val DefaultGreetingAnimationOpacity = 0.72f
 
 /** Nickname a guest picks on the welcome screen. */
 val GuestNameKey = stringPreferencesKey("guest_name")
@@ -183,6 +212,9 @@ val DynamicColorEnabledKey = booleanPreferencesKey("dynamicColorEnabled")
 val DownloadOverWifiOnlyKey = booleanPreferencesKey("downloadOverWifiOnly")
 
 enum class DesignStyle {
+    /** The design's fixed after-dark palette: charcoal with the rose accent. */
+    FIGMA,
+
     /** The hand-tuned dark design with the fixed teal palette. */
     TEAL,
 
@@ -397,6 +429,16 @@ enum class AudioQuality {
      * the highest bitrate available rather than the highest *reported* tier.
      */
     VERY_HIGH,
+
+    /**
+     * Lossless first, best stream second.
+     *
+     * Nothing YouTube serves is lossless, so this tier means "ask the lossless
+     * source module for a FLAC/ALAC master, and if it has nothing for this
+     * track fall back to the best audio YouTube has" — the same shape as
+     * BitChord's module source, without a folder for the listener to maintain.
+     */
+    LOSSLESS,
 }
 
 /**
@@ -410,6 +452,15 @@ enum class AudioQuality {
  * landed.
  */
 val ShowAudioFormatKey = booleanPreferencesKey("showAudioFormat")
+
+/**
+ * The lossless lane's source: the endpoint of a module that answers with a
+ * FLAC/ALAC stream for a track (see `LosslessSource` for the contract).
+ *
+ * Blank is the normal state and means "YouTube's best audio" — the module is
+ * an upgrade, never a requirement, so choosing Lossless never breaks playback.
+ */
+val LosslessSourceKey = stringPreferencesKey("losslessSource")
 
 val AudioOffload = booleanPreferencesKey("enableOffload")
 val AudioTrackPlaybackParamsKey = booleanPreferencesKey("audioTrackPlaybackParams")
@@ -503,6 +554,9 @@ val StreamSourceWebCreatorKey = booleanPreferencesKey("streamSourceWebCreator")
 val StreamSourceAndroidCreatorKey = booleanPreferencesKey("streamSourceAndroidCreator")
 
 val EnableDynamicIconKey = booleanPreferencesKey("enableDynamicIcon")
+
+/** The chosen launcher icon, stored as an [com.jay.glossy.utils.AppIcon] name. */
+val AppIconKey = stringPreferencesKey("appIcon")
 
 val EnableDiscordRPCKey = booleanPreferencesKey("discordRPCEnable")
 val DiscordInfoDismissedKey = booleanPreferencesKey("discordInfoDismissed")
@@ -1131,6 +1185,24 @@ val CustomFontPathKey = stringPreferencesKey("custom_font_path")
 
 /** What the imported font is called on the picker, taken from the file's own name. */
 val CustomFontNameKey = stringPreferencesKey("custom_font_name")
+
+/**
+ * Whether SponsorBlock may skip community-marked sections of a video.
+ *
+ * Off on first run: it is the only player setting that changes what is heard
+ * rather than how it sounds, and it depends on a third-party database, so it is
+ * opt-in rather than something a fresh install does silently.
+ */
+val SponsorBlockEnabledKey = booleanPreferencesKey("sponsor_block_enabled")
+
+/**
+ * The SponsorBlock categories the listener wants skipped, stored by the API's
+ * own names (`sponsor`, `music_offtopic`, ...).
+ *
+ * Absent is meaningful — it means "every category", not "none" — so it is
+ * written on the first change rather than seeded at install.
+ */
+val SponsorBlockCategoriesKey = stringSetPreferencesKey("sponsor_block_categories")
 
 enum class AppFont(val value: String, val displayName: String, val description: String) {
     SYSTEM("system", "System Default", "Use the default system typeface."),

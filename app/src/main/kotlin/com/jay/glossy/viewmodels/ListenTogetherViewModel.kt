@@ -8,7 +8,7 @@ package com.jay.glossy.viewmodels
 import com.jay.glossy.R
 
 import androidx.lifecycle.ViewModel
-import com.jay.glossy.listentogether.ListenTogetherManager
+import com.chikku.glossy.listentogether.ListenTogetherManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 

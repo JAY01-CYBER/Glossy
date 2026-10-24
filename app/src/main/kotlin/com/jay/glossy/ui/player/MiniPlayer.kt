@@ -67,7 +67,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -151,14 +150,12 @@ import com.jay.glossy.constants.SwipeSensitivityKey
 import com.jay.glossy.constants.SwipeThumbnailKey
 import com.jay.glossy.constants.ThumbnailCornerRadius
 import com.jay.glossy.constants.ThumbnailShadowKey
-import com.jay.glossy.constants.ActiveDesignStyle
-import com.jay.glossy.constants.DesignStyle
 import com.jay.glossy.constants.MiniPlayerStyle
 import com.jay.glossy.constants.MiniPlayerStyleKey
 import com.jay.glossy.constants.MiniPlayerPlayingAnimation
 import com.jay.glossy.constants.MiniPlayerPlayingAnimationKey
 import com.jay.glossy.db.entities.ArtistEntity
-import com.jay.glossy.listentogether.ListenTogetherManager
+import com.chikku.glossy.listentogether.ListenTogetherManager
 import com.metrolist.models.MediaMetadata
 import com.jay.glossy.playback.CastConnectionHandler
 import com.jay.glossy.playback.PlayerConnection
@@ -178,6 +175,7 @@ import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.component.ArtworkNotesOverlay
 import com.jay.glossy.ui.component.NowPlayingAnimationIndicator
 import com.jay.glossy.ui.component.rememberAmbientMotionEnabled
+import com.jay.glossy.ui.theme.GlossyDimens
 import com.jay.glossy.ui.theme.GlossyPalette
 import com.jay.glossy.ui.menu.AddToPlaylistDialog
 
@@ -201,33 +199,22 @@ fun MiniPlayer(
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {},
 ) {
-    val miniPlayerStylePreference by rememberEnumPreference(
-        MiniPlayerStyleKey,
-        defaultValue = MiniPlayerStyle.MODERN
-    )
+    // Read as the raw string so "never touched" and "picked the default" are
+    // not the same thing: unset falls back to the design's bar, a saved choice
+    // always wins.
+    val (storedMiniPlayerStyle) = rememberPreference(MiniPlayerStyleKey, defaultValue = "")
 
-    // The design style is pinned to classic, so the stored mini player style
-    // always wins. While the new design was selectable it forced Studio.
-    val miniPlayerStyle = if (ActiveDesignStyle == DesignStyle.TEAL) {
-        MiniPlayerStyle.STUDIO
-    } else {
-        miniPlayerStylePreference
+    // The style the listener picked is the style they get — every entry in
+    // Settings › Appearance › Mini player style still works. The design's own
+    // bar is only what an unset preference falls back to, so the redesign ships
+    // with the bar of the design without pinning anybody to it.
+    val miniPlayerStyle = remember(storedMiniPlayerStyle) {
+        MiniPlayerStyle.entries.firstOrNull { it.name == storedMiniPlayerStyle }
+            ?: MiniPlayerStyle.STUDIO
     }
     val pureBlack by rememberPreference(PureBlackMiniPlayerKey, defaultValue = false)
 
     val progressState = remember { ProgressState(positionState, durationState) }
-
-    // The Apple Music bar draws its own row rather than a shape the wrapper
-    // hands it, so it is its own composable. It no longer closes down into the
-    // round artwork bubble while scrolling, and neither does any other style.
-    if (miniPlayerStyle == MiniPlayerStyle.APPLE_MUSIC) {
-        AppleMusicMiniPlayer(
-            progressState = progressState,
-            modifier = modifier,
-            onClick = onClick,
-        )
-        return
-    }
 
     // The bar keeps its full width for as long as it is on screen. It used to
     // give up its width from the far end and round itself off as it went,
@@ -274,8 +261,6 @@ fun MiniPlayer(
                     onClick = onClick,
                 )
             }
-            // Drawn above, but the enum still has to be covered here.
-            MiniPlayerStyle.APPLE_MUSIC -> Unit
         }
     }
 }
@@ -366,7 +351,7 @@ private fun GlossyBarMiniPlayer(
                 .fillMaxWidth()
                 .fillMaxHeight()
                 .offset { IntOffset(offsetX().roundToInt(), 0) }
-                .clip(RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(GlossyDimens.CornerMiniPlayer))
                 .background(containerColor)
                 .clickable(onClick = onClick),
         ) {
@@ -1113,199 +1098,6 @@ private fun GlossySpecialEditionMiniPlayer(
                             modifier = Modifier.size(28.dp)
                         )
                     }
-                }
-            }
-        }
-    }
-}
-
-// ============================================================================
-// APPLE MUSIC PILL — the floating bar from the reference recording
-// ============================================================================
-
-/**
- * The Apple Music bar: one floating bar, the artwork at its left, the song over
- * a squiggle playhead, and the transport at the right.
- *
- * Its layout follows the reference recording, but its surface does not: it used
- * to paint a translucent white-to-black glass gradient inside a white hairline
- * border, which read as the sea-glass look and drifted away from every other
- * bar in the app. It is now Material 3 like its neighbours — a tonal
- * `surfaceContainer`, scheme ink and a single primary accent on the playhead
- * and the play button — so the shape is the only thing that stays specific to
- * this style.
- *
- * The bar keeps its full width and its own shape at all times: it used to fold
- * away into the artwork bubble as the list underneath was scrolled, and that
- * folded bubble is gone.
- *
- * A new style rather than a change to the Special Edition pill: that one is a
- * look people have already picked, and this one has to be a choice of its own.
- */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun AppleMusicMiniPlayer(
-    progressState: ProgressState,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit = {},
-) {
-    val playerConnection = LocalPlayerConnection.current ?: return
-    val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
-    val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
-    val canSkipNext by playerConnection.canSkipNext.collectAsStateWithLifecycle()
-    val haptic = LocalHapticFeedback.current
-
-    // The bar reads the same background setting as every other style — Blur,
-    // Gradient, Glow, Transparent and Pure black were ignored here before, so
-    // this bar alone kept one look whatever the setting said. Its *plain*
-    // option is the scheme's own surface, which is what makes it Material 3
-    // instead of a fixed glass gradient.
-    val miniPlayerBackground by rememberEnumPreference(
-        MiniPlayerBackgroundStyleKey,
-        defaultValue = MiniPlayerBackgroundStyle.DEFAULT,
-    )
-    val pureBlack by rememberPreference(PureBlackMiniPlayerKey, defaultValue = false)
-    val (gradientColors, onGradientColorsChange) = remember { mutableStateOf<List<Color>>(emptyList()) }
-    MiniPlayerColorExtractor(
-        mediaMetadata = mediaMetadata,
-        miniPlayerBackground = miniPlayerBackground,
-        onGradientColorsChange = onGradientColorsChange,
-    )
-
-    // Every artwork-derived background is dark, so the bar switches to white
-    // content over it, exactly as the other styles do. Only the plain surface
-    // keeps the scheme's ink.
-    val darkBackground = when (miniPlayerBackground) {
-        MiniPlayerBackgroundStyle.DEFAULT -> pureBlack
-        else -> true
-    }
-    val containerColor = when (miniPlayerBackground) {
-        MiniPlayerBackgroundStyle.DEFAULT ->
-            if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
-        MiniPlayerBackgroundStyle.TRANSPARENT -> Color.Black.copy(alpha = 0.25f)
-        MiniPlayerBackgroundStyle.PURE_BLACK -> Color.Black
-        else -> Color.Transparent
-    }
-    val onContainerColor = if (darkBackground) Color.White else MaterialTheme.colorScheme.onSurface
-    val onContainerVariantColor =
-        if (darkBackground) Color.White.copy(alpha = 0.75f) else MaterialTheme.colorScheme.onSurfaceVariant
-    val accentColor = if (darkBackground) Color.White else MaterialTheme.colorScheme.primary
-    val onAccentColor = if (darkBackground) Color(0xFF15121F) else MaterialTheme.colorScheme.onPrimary
-    val outlineColor =
-        if (darkBackground) Color.White.copy(alpha = 0.16f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-
-    // One fixed shape at one fixed width. Scrolling the list underneath used to
-    // close the bar down into a round artwork bubble; the bar now stays exactly
-    // as it is drawn, whatever the list under it is doing.
-    val shape = RoundedCornerShape(32.dp)
-
-    Box(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .height(64.dp)
-                .clip(shape)
-                .background(containerColor)
-                .border(1.dp, outlineColor, shape)
-                .clickable(onClick = onClick),
-    ) {
-        // Whichever artwork style is selected is painted by the shared painter
-        // the other bars use, so all four styles behave the same here.
-        MiniPlayerStyleBackground(
-            style = miniPlayerBackground,
-            colors = gradientColors,
-            artworkUrl = mediaMetadata?.thumbnailUrl,
-            modifier = Modifier.matchParentSize(),
-        )
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
-        ) {
-            GlossyThumb(
-                seed = mediaMetadata?.id,
-                size = 48.dp,
-                corner = 12.dp,
-                imageUrl = mediaMetadata?.thumbnailUrl,
-            )
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Column(
-                    verticalArrangement = Arrangement.Center,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Text(
-                        text = mediaMetadata?.title ?: "",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = onContainerColor,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Text(
-                        text = mediaMetadata?.artists?.joinToArtistString(", ") { it.name }.orEmpty(),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = onContainerVariantColor,
-                        fontSize = 11.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    // The playhead is the squiggle: what has played is the
-                    // wave, what is left stays a flat line of the same
-                    // weight, which is what the recording shows under the
-                    // title rather than a hairline under the whole bar.
-                    LinearWavyProgressIndicator(
-                        progress = { progressState.progress },
-                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                        color = accentColor,
-                        trackColor = accentColor.copy(alpha = 0.24f),
-                        wavelength = 16.dp,
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                // The filled primary circle is the Material 3 playback affordance,
-                // and it is the one saturated thing on the bar.
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier =
-                        Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(accentColor)
-                            .clickable {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                playerConnection.togglePlayPause()
-                            },
-                ) {
-                    Icon(
-                        painter = painterResource(if (isPlaying) R.drawable.pause else R.drawable.play),
-                        contentDescription = if (isPlaying) "Pause" else "Play",
-                        tint = onAccentColor,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-
-                IconButton(
-                    enabled = canSkipNext,
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        playerConnection.seekToNext()
-                    },
-                    modifier = Modifier.size(42.dp),
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.skip_next),
-                        contentDescription = "Next",
-                        tint = onContainerColor.copy(alpha = if (canSkipNext) 1f else 0.4f),
-                        modifier = Modifier.size(22.dp),
-                    )
                 }
             }
         }

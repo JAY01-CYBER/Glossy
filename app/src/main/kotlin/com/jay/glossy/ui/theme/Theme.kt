@@ -33,6 +33,7 @@ import com.jay.glossy.constants.ActiveDesignStyle
 import com.jay.glossy.constants.AppFont
 import com.jay.glossy.constants.CustomFontPathKey
 import com.jay.glossy.constants.DesignStyle
+import com.jay.glossy.constants.DesignStyleKey
 import com.jay.glossy.constants.SelectedFontKey
 import com.jay.glossy.utils.rememberPreference
 
@@ -57,29 +58,47 @@ fun MetrolistTheme(
         appFontFamily(AppFont.fromValue(selectedFontValue), customFontPath)
     }
 
-    // The new design is dark-only: in light mode we keep the Material You
-    // scheme so the app still has a proper light look. The design style is
-    // pinned to classic — see [ActiveDesignStyle].
-    val useNewDesign = ActiveDesignStyle == DesignStyle.TEAL && darkTheme
+    // The design is dark-only: in light mode we keep the Material You scheme so
+    // the app still has a proper light look. The style is pinned — see
+    // [ActiveDesignStyle].
+    val useNewDesign = ActiveDesignStyle != DesignStyle.CLASSIC && darkTheme
 
     val typography = remember(brandFont, useNewDesign) {
         val base = getTypography(brandFont = brandFont, plainFont = brandFont)
         if (useNewDesign) glossTypography(base) else base
     }
 
-    // Dynamic colour (Material You wallpaper sampling) was removed: it only ever
-    // applied to the classic look, which the design style no longer uses, and a
-    // wallpaper palette fought the seed colour every other surface is built
-    // from. The scheme now always comes from the chosen seed colour.
+    // The scheme the user's seed colour produces. Only the classic look and the
+    // tonal skin paint with it now; the design styles pin their own colours.
+    val seedScheme = rememberDynamicColorScheme(
+        seedColor = themeColor,
+        isDark = darkTheme,
+        specVersion = ColorSpec.SpecVersion.SPEC_2025,
+        style = PaletteStyle.Expressive
+    )
+
+    // The redesigned surfaces read these tokens instead of hardcoded colours.
+    // Which set they read is the listener's choice — the design's own
+    // charcoal/rose tokens by default, or the Materialistic skin that derives
+    // every role from the seed scheme (and Material You on Android 12+).
+    // [ActiveDesignStyle] only decides which layout is drawn, never the paint.
+    val (paletteName) = rememberPreference(DesignStyleKey, defaultValue = ActiveDesignStyle.name)
+    val materialistic = remember(paletteName) { paletteName == DesignStyle.MATERIALISTIC.name }
+    val designColors =
+        if (ActiveDesignStyle == DesignStyle.FIGMA) GlossyColors.Figma else GlossyColors.Dark
+    val glossyColors = when {
+        materialistic -> materialisticColors(seedScheme)
+        !darkTheme -> GlossyColors.Light
+        pureBlack -> GlossyColors.PureBlack
+        else -> designColors
+    }
+
+    // A design style pins its own scheme; the classic look and light mode keep
+    // the user's seed colour.
     val baseColorScheme = when {
-        useNewDesign -> glossyDarkColorScheme()
-        else ->
-            rememberDynamicColorScheme(
-                seedColor = themeColor,
-                isDark = darkTheme,
-                specVersion = ColorSpec.SpecVersion.SPEC_2025,
-                style = PaletteStyle.Expressive
-            )
+        materialistic -> seedScheme
+        useNewDesign -> glossyDarkColorScheme(glossyColors)
+        else -> seedScheme
     }
 
     val colorScheme = remember(baseColorScheme, pureBlack, darkTheme) {
@@ -88,19 +107,6 @@ fun MetrolistTheme(
         } else {
             baseColorScheme
         }
-    }
-
-    // The redesigned surfaces (Settings and the Glossy components it is built
-    // from) read these tokens instead of hardcoded colours, so they follow the
-    // theme: near-black in dark mode, near-white in light mode. Under the
-    // Materialistic style they are derived from the Material 3 scheme instead,
-    // so every screen repaints tonally from the seed colour.
-    val materialistic = ActiveDesignStyle == DesignStyle.MATERIALISTIC
-    val glossyColors = when {
-        materialistic -> materialisticColors(colorScheme)
-        !darkTheme -> GlossyColors.Light
-        pureBlack -> GlossyColors.PureBlack
-        else -> GlossyColors.Dark
     }
 
     CompositionLocalProvider(LocalGlossyColors provides glossyColors) {

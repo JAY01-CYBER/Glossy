@@ -173,8 +173,10 @@ fun LibraryScreen() {
 
             Spacer(Modifier.height(16.dp))
 
-            // Full-width library search field; Liked and Downloads remain
-            // available in the quick-access tiles above.
+            // Floating search pill, and just the pill: the quick tiles directly
+            // above already open Liked and Downloads, so the heart and download
+            // that used to sit beside it were a second and third way to reach
+            // the same two collections from the same thumb's reach.
             GlossySearchDock(
                 hint = stringResource(R.string.search_library),
                 onSearchClick = { navController.navigate("search_input") },

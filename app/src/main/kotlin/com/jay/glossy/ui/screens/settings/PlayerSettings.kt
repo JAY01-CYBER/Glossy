@@ -7,28 +7,36 @@ package com.jay.glossy.ui.screens.settings
 
 import com.jay.glossy.R
 
+import androidx.annotation.StringRes
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
@@ -71,8 +79,11 @@ import com.jay.glossy.constants.SkipSilenceKey
 import com.jay.glossy.constants.MaxSpatialAudioWidth
 import com.jay.glossy.constants.SpatialAudioKey
 import com.jay.glossy.constants.SpatialAudioWidthKey
+import com.jay.glossy.constants.SponsorBlockCategoriesKey
+import com.jay.glossy.constants.SponsorBlockEnabledKey
 import com.jay.glossy.constants.StopMusicOnTaskClearKey
 import com.jay.glossy.constants.VarispeedKey
+import com.jay.glossy.sponsorblock.SponsorBlockCategory
 import com.jay.glossy.ui.component.DefaultDialog
 import com.jay.glossy.ui.component.EnumDialog
 import com.jay.glossy.ui.component.IconButton
@@ -244,6 +255,19 @@ fun PlayerSettings(
         defaultValue = 30f
     )
 
+    // SponsorBlock is opt-in, so "off" is the default the switch reads until
+    // the listener turns it on. The category set is stored by API name and
+    // defaults to every kind, matching what the database can mark.
+    val (sponsorBlockEnabled, onSponsorBlockEnabledChange) = rememberPreference(
+        SponsorBlockEnabledKey,
+        defaultValue = false,
+    )
+    val (sponsorBlockCategories, onSponsorBlockCategoriesChange) = rememberPreference(
+        SponsorBlockCategoriesKey,
+        defaultValue = DefaultSponsorBlockCategories,
+    )
+    var showSponsorBlockCategoryDialog by remember { mutableStateOf(false) }
+
     var showAudioQualityDialog by remember {
         mutableStateOf(false)
     }
@@ -268,8 +292,18 @@ fun PlayerSettings(
                     AudioQuality.HIGH -> stringResource(R.string.audio_quality_high)
                     AudioQuality.VERY_HIGH -> stringResource(R.string.audio_quality_very_high)
                     AudioQuality.LOW -> stringResource(R.string.audio_quality_low)
+                    AudioQuality.LOSSLESS -> stringResource(R.string.audio_quality_lossless)
                 }
-            }
+            },
+            // The lossless tier is the one choice here whose name does not say
+            // what it will do when the source has no master, so it is spelled
+            // out under the label rather than left to the settings screen.
+            valueDescription = {
+                when (it) {
+                    AudioQuality.LOSSLESS -> stringResource(R.string.audio_quality_lossless_desc)
+                    else -> null
+                }
+            },
         )
     }
 
@@ -284,6 +318,17 @@ fun PlayerSettings(
             current = loudnessLevel,
             values = LoudnessLevel.values().toList(),
             valueText = { getLoudnessLevelLabel(it) }
+        )
+    }
+
+    if (showSponsorBlockCategoryDialog) {
+        SponsorBlockCategoryDialog(
+            selected = sponsorBlockCategories,
+            onDismiss = { showSponsorBlockCategoryDialog = false },
+            onConfirm = { categories ->
+                onSponsorBlockCategoriesChange(categories)
+                showSponsorBlockCategoryDialog = false
+            },
         )
     }
 
@@ -318,6 +363,7 @@ fun PlayerSettings(
                                 AudioQuality.HIGH -> stringResource(R.string.audio_quality_high)
                                 AudioQuality.VERY_HIGH -> stringResource(R.string.audio_quality_very_high)
                                 AudioQuality.LOW -> stringResource(R.string.audio_quality_low)
+                                AudioQuality.LOSSLESS -> stringResource(R.string.audio_quality_lossless)
                             }
                         )
                     },
@@ -642,6 +688,64 @@ fun PlayerSettings(
                     },
                     onClick = { onSeekExtraSeconds(!seekExtraSeconds) }
                 ))
+            }
+        )
+
+        Spacer(modifier = Modifier.height(27.dp))
+
+        // How much of the category list is actually skipped, counted in the
+        // same vocabulary the dialog shows. Stored values that no longer name a
+        // category (an API rename) are not counted rather than shown as
+        // selected and then silently ignored by the lookup.
+        val sponsorBlockSelectedCount =
+            sponsorBlockCategories.count { value ->
+                SponsorBlockCategory.entries.any { it.apiValue == value }
+            }
+
+        Material3SettingsGroup(
+            title = stringResource(R.string.sponsor_block),
+            items = buildList {
+                add(Material3SettingsItem(
+                    icon = painterResource(R.drawable.skip_next),
+                    title = { Text(stringResource(R.string.sponsor_block)) },
+                    description = { Text(stringResource(R.string.sponsor_block_desc)) },
+                    trailingContent = {
+                        Switch(
+                            checked = sponsorBlockEnabled,
+                            onCheckedChange = onSponsorBlockEnabledChange,
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (sponsorBlockEnabled) R.drawable.check else R.drawable.close
+                                    ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                )
+                            }
+                        )
+                    },
+                    onClick = { onSponsorBlockEnabledChange(!sponsorBlockEnabled) }
+                ))
+                if (sponsorBlockEnabled) {
+                    add(Material3SettingsItem(
+                        icon = painterResource(R.drawable.tune),
+                        title = { Text(stringResource(R.string.sponsor_block_categories)) },
+                        description = {
+                            Text(
+                                if (sponsorBlockSelectedCount == 0) {
+                                    stringResource(R.string.sponsor_block_categories_none)
+                                } else {
+                                    stringResource(
+                                        R.string.sponsor_block_categories_summary,
+                                        sponsorBlockSelectedCount,
+                                        SponsorBlockCategory.entries.size,
+                                    )
+                                }
+                            )
+                        },
+                        onClick = { showSponsorBlockCategoryDialog = true }
+                    ))
+                }
             }
         )
 
@@ -1181,4 +1285,91 @@ fun PlayerSettings(
             }
         }
     )
+}
+
+/**
+ * Every category, as the API spells them.
+ *
+ * A fresh install skips all of them; the preference stays absent until the
+ * listener changes the selection, which is what tells the repository the
+ * difference between "has not chosen" and "chose nothing".
+ */
+private val DefaultSponsorBlockCategories: Set<String> =
+    SponsorBlockCategory.entries.mapTo(linkedSetOf(), SponsorBlockCategory::apiValue)
+
+/**
+ * The category picker.
+ *
+ * Choices are held in a draft and written only on Save, so backing out of the
+ * dialog leaves the previous selection exactly as it was — the sheet is a
+ * decision, not a running list of toggles.
+ */
+@Composable
+private fun SponsorBlockCategoryDialog(
+    selected: Set<String>,
+    onDismiss: () -> Unit,
+    onConfirm: (Set<String>) -> Unit,
+) {
+    var draft by remember(selected) { mutableStateOf(selected) }
+
+    DefaultDialog(
+        onDismiss = onDismiss,
+        title = { Text(stringResource(R.string.sponsor_block_categories_dialog_title)) },
+        buttons = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(android.R.string.cancel))
+            }
+            TextButton(onClick = { onConfirm(draft) }) {
+                Text(stringResource(android.R.string.ok))
+            }
+        },
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 420.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            SponsorBlockCategory.entries.forEach { category ->
+                val checked = category.apiValue in draft
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            draft =
+                                if (checked) draft - category.apiValue
+                                else draft + category.apiValue
+                        }
+                        .padding(vertical = 2.dp)
+                ) {
+                    Checkbox(
+                        checked = checked,
+                        onCheckedChange = { isChecked ->
+                            draft =
+                                if (isChecked) draft + category.apiValue
+                                else draft - category.apiValue
+                        }
+                    )
+                    Text(
+                        text = stringResource(category.labelRes()),
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@StringRes
+private fun SponsorBlockCategory.labelRes(): Int = when (this) {
+    SponsorBlockCategory.MUSIC_OFF_TOPIC -> R.string.sponsor_block_category_music_off_topic
+    SponsorBlockCategory.SPONSOR -> R.string.sponsor_block_category_sponsor
+    SponsorBlockCategory.INTRO -> R.string.sponsor_block_category_intro
+    SponsorBlockCategory.OUTRO -> R.string.sponsor_block_category_outro
+    SponsorBlockCategory.SELF_PROMOTION -> R.string.sponsor_block_category_self_promotion
+    SponsorBlockCategory.PREVIEW -> R.string.sponsor_block_category_preview
+    SponsorBlockCategory.FILLER -> R.string.sponsor_block_category_filler
+    SponsorBlockCategory.INTERACTION -> R.string.sponsor_block_category_interaction
+    SponsorBlockCategory.HOOK -> R.string.sponsor_block_category_hook
 }

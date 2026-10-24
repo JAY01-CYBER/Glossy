@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Glossy · Discover something new</title>
+<style>
+  :root{
+    --page:#fdf2f0;
+    --row:#fbe9e7;
+    --field:#f6dedc;
+    --accent:#94434f;
+    --on-accent:#ffffff;
+    --text:#3b2a2d;
+    --text-2:#7c5a60;
+    --nav:#efdad7;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:#241417;
+    color:#f3e9ea;
+    font-family:ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    padding:34px 26px 60px;
+    -webkit-font-smoothing:antialiased;
+  }
+  header.page-head{max-width:1240px;margin:0 auto 24px}
+  header.page-head h1{font-size:22px;font-weight:600;letter-spacing:-.3px}
+  header.page-head p{color:#b39a9e;font-size:13px;margin-top:6px;max-width:840px;line-height:1.55}
+  .rail{display:flex;gap:26px;flex-wrap:wrap;justify-content:center;max-width:1240px;margin:0 auto}
+  .device{width:372px}
+  .device .label{
+    font-size:11px;letter-spacing:1.5px;text-transform:uppercase;
+    color:#b39a9e;margin-bottom:10px;
+  }
+  .phone{
+    position:relative;width:372px;height:806px;background:var(--page);
+    border-radius:34px;overflow:hidden;border:1px solid #e7cfcb;
+    box-shadow:0 24px 60px rgba(0,0,0,.5);
+    display:flex;flex-direction:column;color:var(--text);
+  }
+  .statusbar{
+    display:flex;justify-content:space-between;align-items:center;
+    font-size:11px;font-weight:600;color:#4a3438;padding:11px 20px 0;
+  }
+  .statusbar .glyphs{letter-spacing:2px;font-size:10px;color:#4a3438}
+  .body{flex:1;overflow:hidden;position:relative;padding:0 20px}
+  h2.title{font-size:26px;line-height:1.16;font-weight:600;letter-spacing:-.6px;color:var(--accent);margin-top:14px}
+  .searchbar{
+    display:flex;align-items:center;gap:12px;height:56px;border-radius:28px;
+    background:var(--field);padding:0 8px 0 18px;margin-top:18px;
+  }
+  .searchbar .ph{flex:1;font-size:16px;color:#6d5157}
+  .searchbar .ico{width:22px;height:22px;flex:none;opacity:.85}
+  .searchbar .mic{width:44px;height:44px;flex:none;display:flex;align-items:center;justify-content:center}
+  .chips{display:flex;gap:10px;margin-top:16px;overflow:hidden}
+  .chip{
+    display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 16px;
+    border-radius:22px;background:var(--field);color:var(--text-2);
+    font-size:13.5px;font-weight:600;white-space:nowrap;
+  }
+  .chip .dot{width:14px;height:14px;border-radius:50%;border:2px solid currentColor;opacity:.85}
+  .chip .star{font-size:13px;line-height:1}
+  .chip.on{background:var(--accent);color:var(--on-accent)}
+  .section{display:flex;align-items:center;justify-content:space-between;margin:22px 0 10px}
+  .section h3{font-size:18px;font-weight:600;letter-spacing:-.2px;color:var(--text)}
+  .section span{font-size:12px;color:var(--text-2)}
+  .moods{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .mood{
+    position:relative;height:118px;border-radius:16px;overflow:hidden;
+    display:flex;flex-direction:column;justify-content:flex-end;padding:14px;color:#fff;
+  }
+  .mood h4{font-size:16px;font-weight:600;letter-spacing:-.1px}
+  .mood p{font-size:11.5px;line-height:1.25;color:rgba(255,255,255,.8);margin-top:3px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .m-indie{background:linear-gradient(160deg,#37937f,#1f6555)}
+  .m-dark{background:linear-gradient(160deg,#859744,#5d7029)}
+  .m-easy{background:linear-gradient(160deg,#5578be,#37558f)}
+  .m-desi{background:linear-gradient(160deg,#a93e62,#752845)}
+  /* ranked rows */
+  .rows{display:flex;flex-direction:column;gap:5px}
+  .rrow{
+    display:flex;align-items:center;gap:14px;background:var(--row);
+    border-radius:14px;padding:14px 16px;
+  }
+  .rrow .txt{flex:1;min-width:0}
+  .rrow .t{font-size:16.5px;font-weight:600;letter-spacing:-.15px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rrow .a{font-size:13px;color:var(--text-2);margin-top:3px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rrow .rank{font-size:11.5px;font-weight:600;color:var(--accent);margin-top:6px}
+  .art{width:56px;height:56px;border-radius:8px;flex:none;overflow:hidden}
+  /* album shelf */
+  .shelf{display:flex;gap:14px;overflow:hidden}
+  .card{width:132px;flex:none}
+  .card .art-lg{width:132px;height:132px;border-radius:16px}
+  .card .ct{font-size:13px;font-weight:600;margin-top:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .card .ca{font-size:11.5px;color:var(--text-2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* album grid */
+  .agrid{display:grid;grid-template-columns:1fr 1fr;gap:16px 14px}
+  .agrid .art-lg{width:100%;aspect-ratio:1;height:auto;border-radius:16px}
+  .agrid .ct{font-size:13.5px;font-weight:600;margin-top:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .agrid .ca{font-size:11.5px;color:var(--text-2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* floating nav of the app shell */
+  .nav{
+    position:absolute;left:16px;right:16px;bottom:12px;height:64px;border-radius:32px;
+    background:var(--nav);display:flex;align-items:center;justify-content:space-around;
+    box-shadow:0 10px 26px rgba(80,40,45,.18);border:1px solid #e5cac6;
+  }
+  .nav .item{width:52px;height:52px;border-radius:26px;display:flex;align-items:center;justify-content:center;
+    color:#6d5157}
+  .nav .item.on{background:#f6dedc;color:var(--accent)}
+  .nav .dot3{letter-spacing:1px;font-size:16px;color:#6d5157}
+  .ico{display:inline-block}
+  .ico svg{display:block}
+  .fade{position:absolute;left:0;right:0;bottom:0;height:110px;
+    background:linear-gradient(180deg,rgba(253,242,240,0),rgba(253,242,240,.96) 62%);pointer-events:none}
+  .sw{background:linear-gradient(150deg,#5c3f4a,#2f2029)}
+  .sw2{background:linear-gradient(150deg,#8b6a3f,#3a2a1e)}
+  .sw3{background:linear-gradient(150deg,#4a5f7e,#232c3c)}
+  .sw4{background:linear-gradient(150deg,#6a4257,#2c1d27)}
+  .sw5{background:linear-gradient(150deg,#3f6d64,#1e332f)}
+  .sw6{background:linear-gradient(150deg,#7a4b3a,#33211a)}
+  .caption{font-size:11.5px;color:#8b6f74;margin-top:14px;line-height:1.5}
+</style>
+</head>
+<body>
+<header class="page-head">
+  <h1>Search · "Discover something new."</h1>
+  <p>The light Material You (Materialistic) rendering of the new Search landing, matching the two references: Explore with the mood shelves, and Suggestions with the ranked chart rows. Everything here is drawn by <code>SearchDiscoverPage</code>; the data comes from the charts view model, the artwork is real thumbnail URLs, and the ranks are <code>chartPosition</code>.</p>
+</header>
+
+<div class="rail">
+
+  <!-- ============================ EXPLORE ============================ -->
+  <div class="device">
+    <div class="label">Explore</div>
+    <div class="phone">
+      <div class="statusbar"><span>7:38 &nbsp;▶</span><span class="glyphs">VoLTE &nbsp;▮ 87%</span></div>
+      <div class="body">
+        <h2 class="title">Discover something new.</h2>
+
+        <div class="searchbar">
+          <span class="ico">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3b2a2d" stroke-width="1.8" stroke-linecap="round">
+              <circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/>
+            </svg>
+          </span>
+          <span class="ph">Search YouTube Music...</span>
+          <span class="mic">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b2a2d" stroke-width="1.7" stroke-linecap="round">
+              <rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/>
+            </svg>
+          </span>
+        </div>
+
+        <div class="chips">
+          <span class="chip on">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z" fill="currentColor" stroke="none"/>
+            </svg>
+            Explore
+          </span>
+          <span class="chip">
+            <span class="star">★</span> Suggestions
+          </span>
+          <span class="chip"><span class="dot" style="border-radius:50%"></span> Albums</span>
+        </div>
+
+        <div class="section"><h3>Go somewhere new</h3></div>
+        <div class="moods">
+          <div class="mood m-indie"><h4>Indie &amp; soul</h4><p>A little closer to the feeling</p></div>
+          <div class="mood m-dark"><h4>After dark</h4><p>For the hours that are yours</p></div>
+          <div class="mood m-easy"><h4>Easy listening</h4><p>Room to slow down</p></div>
+          <div class="mood m-desi"><h4>Desi favourites</h4><p>Sounds like home</p></div>
+        </div>
+
+        <div class="section"><h3>In the moment</h3><span>See all</span></div>
+        <div class="rows">
+          <div class="rrow">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c5a60" stroke-width="1.7" stroke-linecap="round">
+              <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>
+            </svg>
+            <div class="txt"><div class="t">shubh</div><div class="a">Recent search</div></div>
+          </div>
+        </div>
+
+        <div class="section"><h3>Trending</h3></div>
+        <div class="shelf">
+          <div class="card"><div class="art-lg sw2"></div><div class="ct">Jailer 2</div><div class="ca">Anirudh Ravichander</div></div>
+          <div class="card"><div class="art-lg sw4"></div><div class="ct">Moonlight</div><div class="ca">Karan Aujla</div></div>
+        </div>
+
+        <div class="fade"></div>
+        <div class="nav">
+          <span class="item">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1z"/></svg>
+          </span>
+          <span class="item on">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>
+          </span>
+          <span class="item">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>
+          </span>
+          <span class="item"><span class="dot3">⋮</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================== SUGGESTIONS ========================== -->
+  <div class="device">
+    <div class="label">Suggestions</div>
+    <div class="phone">
+      <div class="statusbar"><span>7:38 &nbsp;▶</span><span class="glyphs">VoLTE &nbsp;▮ 87%</span></div>
+      <div class="body">
+        <h2 class="title">Discover something new.</h2>
+
+        <div class="searchbar">
+          <span class="ico">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3b2a2d" stroke-width="1.8" stroke-linecap="round">
+              <circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/>
+            </svg>
+          </span>
+          <span class="ph">Search YouTube Music...</span>
+          <span class="mic">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b2a2d" stroke-width="1.7" stroke-linecap="round">
+              <rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/>
+            </svg>
+          </span>
+        </div>
+
+        <div class="chips">
+          <span class="chip">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z" fill="currentColor" stroke="none"/>
+            </svg>
+            Explore
+          </span>
+          <span class="chip on"><span class="star">★</span> Suggestions</span>
+          <span class="chip"><span class="dot" style="border-radius:50%"></span> Albums</span>
+        </div>
+
+        <div class="section"><h3>Trending</h3></div>
+        <div class="rows">
+          <div class="rrow"><div class="txt"><div class="t">Ashke</div><div class="a">Karan Aujla &amp; MXRCI</div><div class="rank">#1</div></div><div class="art sw2"></div></div>
+          <div class="rrow"><div class="txt"><div class="t">One Sun One Moon (From "Jailer 2")</div><div class="a">Anirudh Ravichander, Super Subu, M.S K…</div><div class="rank">#2</div></div><div class="art sw"></div></div>
+          <div class="rrow"><div class="txt"><div class="t">One Name</div><div class="a">Anirudh Ravichander &amp; Super Subu</div><div class="rank">#3</div></div><div class="art sw4"></div></div>
+          <div class="rrow"><div class="txt"><div class="t">Straight Up</div><div class="a">Karan Aujla &amp; MXRCI</div><div class="rank">#4</div></div><div class="art sw2"></div></div>
+          <div class="rrow"><div class="txt"><div class="t">Ala Bolelo (From "Jailer 2")</div><div class="a">Anirudh Ravichander &amp; Arunraja Kamaraj</div><div class="rank">#5</div></div><div class="art sw3"></div></div>
+        </div>
+
+        <div class="section"><h3>Albums</h3></div>
+        <div class="shelf">
+          <div class="card"><div class="art-lg sw6"></div><div class="ct">Jailer 2</div><div class="ca">Anirudh Ravichander</div></div>
+          <div class="card"><div class="art-lg sw5"></div><div class="ct">Moonlight</div><div class="ca">Karan Aujla</div></div>
+        </div>
+
+        <div class="fade"></div>
+        <div class="nav">
+          <span class="item">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1z"/></svg>
+          </span>
+          <span class="item on">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>
+          </span>
+          <span class="item">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>
+          </span>
+          <span class="item"><span class="dot3">⋮</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================= ALBUMS ============================= -->
+  <div class="device">
+    <div class="label">Albums</div>
+    <div class="phone">
+      <div class="statusbar"><span>7:38 &nbsp;▶</span><span class="glyphs">VoLTE &nbsp;▮ 87%</span></div>
+      <div class="body">
+        <h2 class="title">Discover something new.</h2>
+
+        <div class="searchbar">
+          <span class="ico">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3b2a2d" stroke-width="1.8" stroke-linecap="round">
+              <circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/>
+            </svg>
+          </span>
+          <span class="ph">Search YouTube Music...</span>
+          <span class="mic">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b2a2d" stroke-width="1.7" stroke-linecap="round">
+              <rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/>
+            </svg>
+          </span>
+        </div>
+
+        <div class="chips">
+          <span class="chip">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z" fill="currentColor" stroke="none"/>
+            </svg>
+            Explore
+          </span>
+          <span class="chip"><span class="star">★</span> Suggestions</span>
+          <span class="chip on"><span class="dot" style="border-radius:50%"></span> Albums</span>
+        </div>
+
+        <div class="section"><h3>Albums</h3></div>
+        <div class="agrid">
+          <div><div class="art-lg sw6"></div><div class="ct">Jailer 2</div><div class="ca">Anirudh Ravichander</div></div>
+          <div><div class="art-lg sw5"></div><div class="ct">Moonlight</div><div class="ca">Karan Aujla</div></div>
+          <div><div class="art-lg sw2"></div><div class="ct">Making Memories</div><div class="ca">Karan Aujla</div></div>
+          <div><div class="art-lg sw3"></div><div class="ct">Vikram</div><div class="ca">Anirudh Ravichander</div></div>
+          <div><div class="art-lg sw4"></div><div class="ct">Glory</div><div class="ca">Diljit Dosanjh</div></div>
+          <div><div class="art-lg sw"></div><div class="ct">Animal</div><div class="ca">Various Artists</div></div>
+        </div>
+
+        <div class="fade"></div>
+        <div class="nav">
+          <span class="item">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1z"/></svg>
+          </span>
+          <span class="item on">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>
+          </span>
+          <span class="item">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>
+          </span>
+          <span class="item"><span class="dot3">⋮</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
