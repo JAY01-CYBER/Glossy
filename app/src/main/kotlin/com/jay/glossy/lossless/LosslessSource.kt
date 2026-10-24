@@ -9,6 +9,9 @@ import com.jay.glossy.BuildConfig
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -102,6 +105,27 @@ private const val LOSSLESS_DEFAULT_EXPIRY_SECONDS = 600
  * the stream it already resolved.
  */
 object LosslessSource {
+    /**
+     * What the source said the last time it was asked.
+     *
+     * Choosing Lossless and being served a master, and choosing Lossless and
+     * silently landing on Opus, look identical from the player — the stream
+     * either plays or it does not. This is the missing half of that story, kept
+     * for the Lossless screen so a fallback can be explained instead of only
+     * being heard.
+     */
+    data class Check(
+        /** The track it was asked about, so the note is about a song and not the app. */
+        val track: String,
+        /** `FLAC · 24-bit · 96.0 kHz`, `The source answered 404` … */
+        val outcome: String,
+    )
+
+    private val _lastCheck = MutableStateFlow<Check?>(null)
+
+    /** The most recent answer, or null before the lossless tier has been used. */
+    val lastCheck: StateFlow<Check?> = _lastCheck.asStateFlow()
+
     private val json = Json {
         ignoreUnknownKeys = true
         isLenient = true
@@ -175,12 +199,27 @@ object LosslessSource {
         durationSeconds: Int,
     ): LosslessStream? =
         withContext(Dispatchers.IO) {
-            val base = moduleUrl ?: return@withContext null
-            cached(videoId)?.let { return@withContext it }
+            val track = title?.takeIf { it.isNotBlank() } ?: videoId
+            val base = moduleUrl
+            if (base == null) {
+                // Not an error: this is the shipped shape of the tier until a
+                // source is configured. Say so, so "Lossless" is never read as
+                // a promise the stream did not keep.
+                record(track, "No source configured")
+                return@withContext null
+            }
+            cached(videoId)?.let {
+                record(track, "${it.badge} (cached)")
+                return@withContext it
+            }
 
             val endpoint =
                 endpointFor(base, videoId, title, artist, durationSeconds)
-                    ?: return@withContext null
+                    ?: run {
+                        record(track, "The source URL is not valid")
+                        return@withContext null
+                    }
+            var failure: String? = null
             val stream =
                 runCatching {
                     client.newCall(Request.Builder().url(endpoint).header("Accept", "application/json").build())
@@ -188,19 +227,31 @@ object LosslessSource {
                         .use { response ->
                             if (!response.isSuccessful) {
                                 Timber.tag(TAG).d("Lossless source answered ${response.code} for $videoId")
+                                failure = "The source answered ${response.code}"
                                 return@use null
                             }
                             parse(response.body?.string().orEmpty())
                         }
                 }
-                    .onFailure { Timber.tag(TAG).w(it, "Lossless source failed for $videoId") }
+                    .onFailure {
+                        Timber.tag(TAG).w(it, "Lossless source failed for $videoId")
+                        failure = "The source could not be reached"
+                    }
                     .getOrNull()
-                    ?: return@withContext null
+            if (stream == null) {
+                record(track, failure ?: "The source had no master for this track")
+                return@withContext null
+            }
 
             remember(videoId, stream)
+            record(track, stream.badge)
             Timber.tag(TAG).d("Lossless master for $videoId: ${stream.badge}")
             stream
         }
+
+    private fun record(track: String, outcome: String) {
+        _lastCheck.value = Check(track, outcome)
+    }
 
     private fun cached(videoId: String): LosslessStream? =
         synchronized(cache) {

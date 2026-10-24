@@ -22,6 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -82,6 +83,11 @@ fun LosslessSettings(navController: NavController) {
 
     val builtInHost = LosslessSource.builtInHost()
     val usingBuiltIn = builtInHost != null && source.isBlank()
+    // The last thing the source said. A lossy stream under the Lossless tier is
+    // otherwise indistinguishable from a slow start, so the screen names it and
+    // the badge no longer has to carry the whole explanation.
+    val lastCheck by LosslessSource.lastCheck.collectAsState()
+    val fallingBack = audioQuality == AudioQuality.LOSSLESS && source.isBlank() && builtInHost == null
 
     val qualityLabel =
         when (audioQuality) {
@@ -148,6 +154,37 @@ fun LosslessSettings(navController: NavController) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 8.dp),
         )
+
+        if (fallingBack || lastCheck != null) {
+            Spacer(Modifier.height(18.dp))
+
+            Material3SettingsGroup(
+                title = "Status",
+                items =
+                    buildList {
+                        if (fallingBack) {
+                            add(
+                                Material3SettingsItem(
+                                    icon = painterResource(R.drawable.info),
+                                    title = { Text(stringResource(R.string.lossless_fallback_title)) },
+                                    description = { Text(stringResource(R.string.lossless_fallback_desc)) },
+                                    showChevron = true,
+                                    onClick = { showSourceDialog = true },
+                                ),
+                            )
+                        }
+                        lastCheck?.let { check ->
+                            add(
+                                Material3SettingsItem(
+                                    icon = painterResource(R.drawable.graphic_eq),
+                                    title = { Text(stringResource(R.string.lossless_last_check_title)) },
+                                    description = { Text("${check.track} \u2192 ${check.outcome}") },
+                                ),
+                            )
+                        }
+                    },
+            )
+        }
 
         Spacer(Modifier.height(18.dp))
 
