@@ -301,6 +301,12 @@ fun PlayerSettings(
             valueDescription = {
                 when (it) {
                     AudioQuality.LOSSLESS -> stringResource(R.string.audio_quality_lossless_desc)
+                    // "Very high" asks YouTube for the best stream it will give
+                    // this account, and that ceiling is set by the account, not
+                    // by the app: about 160 kbps Opus without Music Premium,
+                    // 256 kbps Opus (itag 774) with it. Naming that here stops
+                    // the tier from looking like it capped the bitrate itself.
+                    AudioQuality.VERY_HIGH -> stringResource(R.string.audio_quality_very_high_desc)
                     else -> null
                 }
             },

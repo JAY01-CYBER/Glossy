@@ -434,9 +434,9 @@ enum class AudioQuality {
      * Lossless first, best stream second.
      *
      * Nothing YouTube serves is lossless, so this tier means "ask the lossless
-     * source module for a FLAC/ALAC master, and if it has nothing for this
-     * track fall back to the best audio YouTube has" — the same shape as
-     * BitChord's module source, without a folder for the listener to maintain.
+     * source for a FLAC/ALAC master, and if it has nothing for this track fall
+     * back to the best audio YouTube has". A build can carry that source, so
+     * the tier needs no setup; a saved URL overrides it.
      */
     LOSSLESS,
 }
@@ -454,11 +454,12 @@ enum class AudioQuality {
 val ShowAudioFormatKey = booleanPreferencesKey("showAudioFormat")
 
 /**
- * The lossless lane's source: the endpoint of a module that answers with a
- * FLAC/ALAC stream for a track (see `LosslessSource` for the contract).
+ * The lossless lane's saved override: the endpoint of a source that answers
+ * with a FLAC/ALAC stream for a track (see `LosslessSource` for the contract).
  *
- * Blank is the normal state and means "YouTube's best audio" — the module is
- * an upgrade, never a requirement, so choosing Lossless never breaks playback.
+ * Blank is the normal state: the build's built-in endpoint is used when it has
+ * one, and YouTube's best audio otherwise. The source is an upgrade, never a
+ * requirement, so choosing Lossless never breaks playback.
  */
 val LosslessSourceKey = stringPreferencesKey("losslessSource")
 

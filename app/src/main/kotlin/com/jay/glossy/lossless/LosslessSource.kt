@@ -5,9 +5,13 @@
 
 package com.jay.glossy.lossless
 
+import com.jay.glossy.BuildConfig
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -59,20 +63,23 @@ data class LosslessStream(
 private const val LOSSLESS_DEFAULT_EXPIRY_SECONDS = 600
 
 /**
- * The lossless lane's source, in the shape BitChord uses: a module the listener
- * points the app at, which turns a track into a FLAC/ALAC stream.
+ * The lossless lane's source, in the shape BitChord uses: an endpoint that
+ * turns a track into a FLAC/ALAC stream.
  *
- * YouTube tops out at a lossy Opus master, so a real lossless copy has to come
- * from somewhere the app cannot host itself. There is deliberately no folder to
- * scan and no index to keep: the module is asked per track, its answer is cached
- * until the URL expires, and when it has nothing — or is not configured at all —
+ * A build can carry one (`LOSSLESS_SOURCE_URL`), so the listener never has to
+ * configure anything; a URL saved in settings overrides it. YouTube tops out at
+ * a lossy Opus master, so a real lossless copy has to come from somewhere the
+ * app cannot host itself. There is deliberately no folder to scan and no index
+ * to keep: the source is asked per track, its answer is cached until the URL
+ * expires, and when it has nothing — or the build carries none —
  * `AudioQuality.LOSSLESS` falls back to YouTube's best audio, so choosing the
  * tier can never leave a song silent.
  *
  * ## The contract
  *
- * The configured URL is either an endpoint that accepts query parameters, or a
- * template containing `{videoId}`, `{title}`, `{artist}` and/or `{duration}`.
+ * The URL — whether the build supplied it or a listener saved one — is either an
+ * endpoint that accepts query parameters, or a template containing `{videoId}`,
+ * `{title}`, `{artist}` and/or `{duration}`.
  * Query form:
  *
  * ```
@@ -98,6 +105,27 @@ private const val LOSSLESS_DEFAULT_EXPIRY_SECONDS = 600
  * the stream it already resolved.
  */
 object LosslessSource {
+    /**
+     * What the source said the last time it was asked.
+     *
+     * Choosing Lossless and being served a master, and choosing Lossless and
+     * silently landing on Opus, look identical from the player — the stream
+     * either plays or it does not. This is the missing half of that story, kept
+     * for the Lossless screen so a fallback can be explained instead of only
+     * being heard.
+     */
+    data class Check(
+        /** The track it was asked about, so the note is about a song and not the app. */
+        val track: String,
+        /** `FLAC · 24-bit · 96.0 kHz`, `The source answered 404` … */
+        val outcome: String,
+    )
+
+    private val _lastCheck = MutableStateFlow<Check?>(null)
+
+    /** The most recent answer, or null before the lossless tier has been used. */
+    val lastCheck: StateFlow<Check?> = _lastCheck.asStateFlow()
+
     private val json = Json {
         ignoreUnknownKeys = true
         isLenient = true
@@ -109,9 +137,25 @@ object LosslessSource {
             .readTimeout(8, TimeUnit.SECONDS)
             .build()
 
-    /** The module's endpoint, or null when the lane should use YouTube. */
+    /**
+     * The endpoint the build carries, so choosing Lossless needs no setup.
+     *
+     * Supplied by `local.properties` or the build environment, never by the
+     * source tree: an endpoint is deployment detail, not a library the listener
+     * or the repository should have to maintain. Null leaves the lane on
+     * YouTube's best stream until a listener saves an override.
+     */
+    private val builtInUrl: String? =
+        BuildConfig.LOSSLESS_SOURCE_URL
+            .trim()
+            .takeIf {
+                it.startsWith("http://", ignoreCase = true) ||
+                    it.startsWith("https://", ignoreCase = true)
+            }
+
+    /** The source in use: the build's endpoint until a saved URL overrides it. */
     @Volatile
-    private var moduleUrl: String? = null
+    private var moduleUrl: String? = builtInUrl
 
     /** Bounded so a long queue cannot grow it without limit. */
     private val cache = LinkedHashMap<String, Entry>()
@@ -125,14 +169,22 @@ object LosslessSource {
      * the old one are dropped rather than replayed against the new endpoint.
      */
     fun configure(url: String?) {
-        val next = url?.trim()?.takeIf { it.isNotEmpty() }
+        // Blank or malformed means "no override", not "no lossless": the
+        // build's endpoint takes over whenever it has one.
+        val override = url?.trim()?.takeIf {
+            it.startsWith("http://", ignoreCase = true) || it.startsWith("https://", ignoreCase = true)
+        }
+        val next = override ?: builtInUrl
         if (next == moduleUrl) return
         moduleUrl = next
         synchronized(cache) { cache.clear() }
     }
 
-    /** The host to name in settings, so the URL itself need not be shown. */
-    fun host(): String? = moduleUrl?.toHttpUrlOrNull()?.host
+    /** The host to name in settings, so a URL need not be shown. */
+    fun hostOf(url: String): String? = url.trim().toHttpUrlOrNull()?.host
+
+    /** The build's endpoint host, or null when listeners must supply their own. */
+    fun builtInHost(): String? = builtInUrl?.let(::hostOf)
 
     /**
      * The master for a track, or null when there is none.
@@ -147,12 +199,27 @@ object LosslessSource {
         durationSeconds: Int,
     ): LosslessStream? =
         withContext(Dispatchers.IO) {
-            val base = moduleUrl ?: return@withContext null
-            cached(videoId)?.let { return@withContext it }
+            val track = title?.takeIf { it.isNotBlank() } ?: videoId
+            val base = moduleUrl
+            if (base == null) {
+                // Not an error: this is the shipped shape of the tier until a
+                // source is configured. Say so, so "Lossless" is never read as
+                // a promise the stream did not keep.
+                record(track, "No source configured")
+                return@withContext null
+            }
+            cached(videoId)?.let {
+                record(track, "${it.badge} (cached)")
+                return@withContext it
+            }
 
             val endpoint =
                 endpointFor(base, videoId, title, artist, durationSeconds)
-                    ?: return@withContext null
+                    ?: run {
+                        record(track, "The source URL is not valid")
+                        return@withContext null
+                    }
+            var failure: String? = null
             val stream =
                 runCatching {
                     client.newCall(Request.Builder().url(endpoint).header("Accept", "application/json").build())
@@ -160,19 +227,31 @@ object LosslessSource {
                         .use { response ->
                             if (!response.isSuccessful) {
                                 Timber.tag(TAG).d("Lossless source answered ${response.code} for $videoId")
+                                failure = "The source answered ${response.code}"
                                 return@use null
                             }
                             parse(response.body?.string().orEmpty())
                         }
                 }
-                    .onFailure { Timber.tag(TAG).w(it, "Lossless source failed for $videoId") }
+                    .onFailure {
+                        Timber.tag(TAG).w(it, "Lossless source failed for $videoId")
+                        failure = "The source could not be reached"
+                    }
                     .getOrNull()
-                    ?: return@withContext null
+            if (stream == null) {
+                record(track, failure ?: "The source had no master for this track")
+                return@withContext null
+            }
 
             remember(videoId, stream)
+            record(track, stream.badge)
             Timber.tag(TAG).d("Lossless master for $videoId: ${stream.badge}")
             stream
         }
+
+    private fun record(track: String, outcome: String) {
+        _lastCheck.value = Check(track, outcome)
+    }
 
     private fun cached(videoId: String): LosslessStream? =
         synchronized(cache) {

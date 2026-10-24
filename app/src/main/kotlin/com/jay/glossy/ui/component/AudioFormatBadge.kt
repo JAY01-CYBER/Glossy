@@ -31,18 +31,25 @@ import java.util.Locale
  *
  * Renders nothing at all without a format: before the first stream is resolved
  * there is no honest answer to give, and an empty chip would only be noise.
+ *
+ * [requestedLossless] is the tier the listener chose, not the stream that
+ * arrived. When it is true and the stream is still lossy — the source has no
+ * master for this track, or no source is configured at all — the chip says so
+ * (`WebM · Opus · 136 kbps · no FLAC`) instead of leaving Lossless to look like
+ * it did something it did not.
  */
 @Composable
 fun AudioFormatBadge(
     format: FormatEntity?,
     modifier: Modifier = Modifier,
+    requestedLossless: Boolean = false,
     containerColor: Color = MaterialTheme.colorScheme.secondaryContainer,
     contentColor: Color = MaterialTheme.colorScheme.onSecondaryContainer,
 ) {
     if (format == null) return
 
     Text(
-        text = audioFormatSummary(format),
+        text = audioFormatSummary(format, requestedLossless),
         style = MaterialTheme.typography.labelSmall,
         fontWeight = FontWeight.SemiBold,
         color = contentColor,
@@ -61,7 +68,10 @@ fun AudioFormatBadge(
  * the composable so the player menu and any future queue row can print the same
  * words without drawing the chip.
  */
-fun audioFormatSummary(format: FormatEntity): String = buildString {
+fun audioFormatSummary(
+    format: FormatEntity,
+    requestedLossless: Boolean = false,
+): String = buildString {
     val lossless = isLossless(format)
     append(containerName(format.mimeType))
     // A lossless master names itself once: "FLAC · FLAC" would repeat the same
@@ -77,6 +87,10 @@ fun audioFormatSummary(format: FormatEntity): String = buildString {
     } else if (format.bitrate > 0) {
         append(" · ").append(format.bitrate / 1000).append(" kbps")
     }
+    // Lossless was asked for and a lossy stream is what is playing. Naming the
+    // gap is the only useful thing the chip can say about it here; the reason
+    // (no source / no master) lives on the Lossless settings screen.
+    if (!lossless && requestedLossless) append(" · no FLAC")
 }
 
 /**

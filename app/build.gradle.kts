@@ -115,6 +115,20 @@ android {
 
         buildConfigField("String", "LASTFM_API_KEY", "\"$lastFmKey\"")
         buildConfigField("String", "LASTFM_SECRET", "\"$lastFmSecret\"")
+
+        // A release build can carry the lossless endpoint, so choosing the
+        // Lossless tier needs no setup. Kept out of git the same way as the
+        // Last.fm keys: local.properties locally, an environment variable in
+        // CI. Blank keeps the tier on YouTube's best stream until a listener
+        // saves an override.
+        val losslessSourceUrl =
+            (localProperties.getProperty("LOSSLESS_SOURCE_URL") ?: System.getenv("LOSSLESS_SOURCE_URL"))
+                .orEmpty()
+                .trim()
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+        buildConfigField("String", "LOSSLESS_SOURCE_URL", "\"$losslessSourceUrl\"")
+
         buildConfigField("String", "ARCHITECTURE", "\"universal\"")
         buildConfigField("Long", "DISCORD_APP_ID", "1447278780795064401L")
 

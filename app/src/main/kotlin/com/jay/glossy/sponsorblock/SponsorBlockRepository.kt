@@ -30,6 +30,7 @@ import kotlin.math.max
 import kotlin.math.roundToLong
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -118,33 +119,24 @@ class SponsorBlockRepository
          * The segments of [videoId] the listener asked to skip, in playback
          * order and with overlapping entries merged so one skip can cover both.
          *
-         * Returns an empty list — never throws — when the lookup is not worth
-         * making or the API is unreachable. Skipping is an optimisation on top
-         * of playback, so a failed lookup must leave the song playing untouched.
+         * Never throws. `null` means the question was never answered — the API
+         * was unreachable or still failing when the retry gave up — which is not
+         * the same as "this video has nothing to skip": only a real answer is
+         * cached, so a caller that gets `null` may ask again and a failed
+         * lookup can never be remembered as an empty one.
+         *
+         * Skipping is an optimisation on top of playback, so nothing in here is
+         * allowed to interrupt the song.
          */
         suspend fun getSegments(
             videoId: String,
             settings: SponsorBlockSettings,
-        ): List<SponsorBlockSegment> {
-            if (
-                !YOUTUBE_VIDEO_ID.matches(videoId) ||
-                !settings.enabled ||
-                settings.categories.isEmpty()
-            ) {
-                return emptyList()
-            }
+        ): List<SponsorBlockSegment>? {
+            if (!isLookupWorthwhile(videoId, settings)) return emptyList()
 
             val orderedCategories =
                 SponsorBlockCategory.entries.filter(settings.categories::contains)
-            val segments =
-                try {
-                    fetchSegments(videoId, orderedCategories)
-                } catch (cancellation: CancellationException) {
-                    throw cancellation
-                } catch (throwable: Throwable) {
-                    Timber.tag(TAG).w(throwable, "SponsorBlock lookup failed for $videoId")
-                    return emptyList()
-                }
+            val segments = fetchWithRetry(videoId, orderedCategories) ?: return null
 
             val selected =
                 segments
@@ -166,10 +158,85 @@ class SponsorBlockRepository
             return mergedSegments
         }
 
+        /**
+         * Asks for the segments of songs that have not started yet.
+         *
+         * A queued track begins the instant the one before it ends, so a lookup
+         * that only starts then is racing the very segment it means to skip: a
+         * sponsor read from 0:00 is usually over before the answer lands, which
+         * is why the same song skipped correctly when it was replayed from the
+         * cache a moment later. Asking while the previous song still plays costs
+         * one request per song and removes that race entirely.
+         *
+         * Best effort by design: a song that cannot be answered now is simply not
+         * cached, and the next call for it asks again.
+         */
+        suspend fun prefetchSegments(
+            videoIds: Collection<String>,
+            settings: SponsorBlockSettings,
+        ) {
+            if (!settings.enabled || settings.categories.isEmpty()) return
+
+            val orderedCategories =
+                SponsorBlockCategory.entries.filter(settings.categories::contains)
+            val categoryValues = orderedCategories.map(SponsorBlockCategory::apiValue)
+
+            videoIds.forEach { videoId ->
+                if (!YOUTUBE_VIDEO_ID.matches(videoId)) return@forEach
+                val requestKey = SponsorBlockRequestKey(videoId, categoryValues)
+                if (getCached(requestKey) != null) return@forEach
+                try {
+                    fetchWithRetry(videoId, orderedCategories)
+                } catch (cancellation: CancellationException) {
+                    throw cancellation
+                } catch (throwable: Throwable) {
+                    Timber.tag(TAG).w(throwable, "SponsorBlock prefetch failed for $videoId")
+                }
+            }
+        }
+
+        private fun isLookupWorthwhile(
+            videoId: String,
+            settings: SponsorBlockSettings,
+        ): Boolean =
+            YOUTUBE_VIDEO_ID.matches(videoId) &&
+                settings.enabled &&
+                settings.categories.isNotEmpty()
+
+        /**
+         * One lookup, retried once when the failure looks transient.
+         *
+         * The API rate-limits and occasionally drops requests, and a song only
+         * gets one chance at a skip: a single timeout used to mean the whole
+         * sponsor read played. The wait between attempts is short and bounded so
+         * a dead connection cannot hold the skip for long.
+         */
+        private suspend fun fetchWithRetry(
+            videoId: String,
+            categories: List<SponsorBlockCategory>,
+        ): List<SponsorBlockRawSegment>? {
+            repeat(LOOKUP_ATTEMPTS) { attemptIndex ->
+                val segments =
+                    try {
+                        fetchSegments(videoId, categories)
+                    } catch (cancellation: CancellationException) {
+                        throw cancellation
+                    } catch (throwable: Throwable) {
+                        Timber.tag(TAG).w(throwable, "SponsorBlock lookup failed for $videoId")
+                        null
+                    }
+                if (segments != null) return segments
+                if (attemptIndex < LOOKUP_ATTEMPTS - 1) {
+                    delay(RETRY_DELAY_MILLIS * (attemptIndex + 1))
+                }
+            }
+            return null
+        }
+
         private suspend fun fetchSegments(
             videoId: String,
             categories: List<SponsorBlockCategory>,
-        ): List<SponsorBlockRawSegment> =
+        ): List<SponsorBlockRawSegment>? =
             withContext(Dispatchers.IO) {
                 val categoryValues = categories.map(SponsorBlockCategory::apiValue)
                 val requestKey = SponsorBlockRequestKey(videoId, categoryValues)
@@ -202,10 +269,14 @@ class SponsorBlockRepository
                                     )
                                 }
                         else -> {
+                            // Rate limited, server trouble, or anything else:
+                            // nothing was answered, so nothing is cached and the
+                            // retry — or the next request for this song — can
+                            // still get a real answer.
                             Timber
                                 .tag(TAG)
                                 .w("SponsorBlock answered ${response.status.value} for $videoId")
-                            emptyList()
+                            return@withContext null
                         }
                     }
 
@@ -294,6 +365,8 @@ class SponsorBlockRepository
             const val TAG = "SponsorBlock"
             const val REQUEST_TIMEOUT_MILLIS = 10_000L
             const val CONNECT_TIMEOUT_MILLIS = 8_000L
+            const val LOOKUP_ATTEMPTS = 2
+            const val RETRY_DELAY_MILLIS = 500L
             const val MAX_CACHE_ENTRIES = 64
             const val HASH_PREFIX_LENGTH = 4
             const val SKIP_ACTION_TYPES_JSON = "[\"skip\"]"

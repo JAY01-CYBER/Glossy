@@ -89,7 +89,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -801,13 +800,13 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                val currentRoute by remember {
-                    derivedStateOf { navBackStackEntry?.destination?.route }
-                }
+                // Read the entry's own route. Wrapping the read in
+                // remember/derivedStateOf bought nothing here and only added a
+                // layer that could hold an older value than the entry it came
+                // from — and the bar's whole visibility hangs on this route.
+                val currentRoute = navBackStackEntry?.destination?.route
 
-                val inSearchScreen by remember {
-                    derivedStateOf { currentRoute?.startsWith("search/") == true }
-                }
+                val inSearchScreen = currentRoute?.startsWith("search/") == true
                 val navigationItemRoutes =
                     remember(navigationItems) {
                         navigationItems.map { it.route }.toSet()
@@ -821,13 +820,10 @@ class MainActivity : ComponentActivity() {
                 // to leave the whole bar (orb included) off-screen with no route
                 // that could bring it back.
                 val shouldShowNavigationBar =
-                    remember(currentRoute, navigationItemRoutes) {
-                        val route = currentRoute
-                        route != null &&
-                            (navigationItemRoutes.contains(route) ||
-                                route == Screens.Search.route ||
-                                route.startsWith("search/"))
-                    }
+                    currentRoute != null &&
+                        (navigationItemRoutes.contains(currentRoute) ||
+                            currentRoute == Screens.Search.route ||
+                            currentRoute.startsWith("search/"))
 
                 // Routes that must render without the mini player, nav bar and rail.
                 // A cold start has no route at all for a moment while the welcome
@@ -1350,14 +1346,20 @@ class MainActivity : ComponentActivity() {
                                                             0f
                                                         }
 
-                                                    val yOffset = if (navBarHeightPx == 0f) {
-                                                        totalHeightPx
-                                                    } else {
-                                                        val slideOffset = totalHeightPx * progress
-                                                        val hideOffset =
+                                                    // Only the route may hide the bar, never the
+                                                    // height animation alone: a zero value there is
+                                                    // also what a cancelled or not-yet-started
+                                                    // animation looks like, and reading it as
+                                                    // "hidden" parked the whole bar, orb included,
+                                                    // below the screen on a tab.
+                                                    val slideOffset = totalHeightPx * progress
+                                                    val hideOffset =
+                                                        if (shouldShowNavigationBar) {
+                                                            0f
+                                                        } else {
                                                             totalHeightPx * (1 - navBarHeightPx / NavigationBarHeight.toPx())
-                                                        slideOffset + hideOffset
-                                                    }
+                                                        }
+                                                    val yOffset = slideOffset + hideOffset
                                                     androidx.compose.ui.unit.IntOffset(0, yOffset.roundToInt())
                                                 }
                                                 .graphicsLayer {
@@ -1397,20 +1399,23 @@ class MainActivity : ComponentActivity() {
                                                     val navBarHeightPx = navigationBarHeight.toPx()
                                                     val totalHeightPx = navBarTotalHeight.toPx()
 
-                                                    val yOffset = if (navBarHeightPx == 0f) {
-                                                        totalHeightPx
-                                                    } else {
-                                                        val progress =
-                                                            if (hasPlayerSheet) {
-                                                                playerBottomSheetState.progress.coerceIn(0f, 1f)
-                                                            } else {
-                                                                0f
-                                                            }
-                                                        val slideOffset = totalHeightPx * progress
-                                                        val hideOffset =
+                                                    val progress =
+                                                        if (hasPlayerSheet) {
+                                                            playerBottomSheetState.progress.coerceIn(0f, 1f)
+                                                        } else {
+                                                            0f
+                                                        }
+                                                    // Same rule as the fade behind it: a route that
+                                                    // wants the bar gets it, whatever the height
+                                                    // animation currently reads.
+                                                    val slideOffset = totalHeightPx * progress
+                                                    val hideOffset =
+                                                        if (shouldShowNavigationBar) {
+                                                            0f
+                                                        } else {
                                                             totalHeightPx * (1 - navBarHeightPx / NavigationBarHeight.toPx())
-                                                        slideOffset + hideOffset
-                                                    }
+                                                        }
+                                                    val yOffset = slideOffset + hideOffset
                                                     androidx.compose.ui.unit.IntOffset(0, yOffset.roundToInt())
                                                 },
                                     )
