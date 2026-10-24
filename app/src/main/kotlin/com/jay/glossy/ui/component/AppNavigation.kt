@@ -68,8 +68,6 @@ import com.jay.glossy.ui.theme.GlossyDimens
 import com.jay.glossy.ui.theme.GlossyPalette
 import com.jay.glossy.utils.rememberPreference
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.hazeChild
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlin.math.roundToInt
@@ -238,20 +236,10 @@ fun GlossyBottomNav(
     val glass = GlossyPalette.MiniBar
     val rim = GlossyPalette.Border
 
-    // A real backdrop blur rather than another translucent colour: the pill and
-    // the orb sample whatever the app is drawing behind them, so the bar reads as
-    // frosted glass over the wallpaper. The glass colour is still painted on top
-    // of it, so the frost only deepens the surface instead of tinting it twice —
-    // and a build with no source (a caller that passes none) keeps the flat bar.
-    val frost = remember(hazeNav, glass) {
-        HazeStyle(
-            backgroundColor = glass,
-            tints = emptyList(),
-            blurRadius = NavBarBlurRadius,
-            noiseFactor = 0.03f,
-        )
-    }
-    val frosted = if (hazeNav != null) Modifier.hazeChild(hazeNav, frost) else Modifier
+    // Keep the navigation bar on its solid palette surface for now. Haze 1.1.1
+    // can throw at draw time when a HazeChild has no backgroundColor configured;
+    // bypass the child blur node so the app can launch reliably on affected devices.
+    // The existing bar background below still paints the intended MiniBar color.
 
     val barHeight = if (slimNav) 56.dp else GlossyDimens.NavPillHeight
     val pillHeight = if (slimNav) 50.dp else 62.dp
@@ -275,7 +263,6 @@ fun GlossyBottomNav(
                     // strip painted onto it.
                     .shadow(elevation = 12.dp, shape = pill, clip = false)
                     .clip(pill)
-                    .then(frosted)
                     .background(glass)
                     .border(GlossyDimens.Hairline, rim, pill)
                     .padding(horizontal = 5.dp, vertical = 5.dp),
@@ -335,8 +322,7 @@ fun GlossyBottomNav(
                         .size(orbSize)
                         .shadow(elevation = 12.dp, shape = CircleShape, clip = false)
                         .clip(CircleShape)
-                        .then(frosted)
-                        .background(glass)
+                            .background(glass)
                         .border(GlossyDimens.Hairline, rim, CircleShape)
                         // A press opens search; holding it opens recognition.
                         .combinedClickable(
