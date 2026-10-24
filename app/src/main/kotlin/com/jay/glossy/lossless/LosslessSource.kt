@@ -5,6 +5,7 @@
 
 package com.jay.glossy.lossless
 
+import com.jay.glossy.BuildConfig
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
@@ -59,20 +60,23 @@ data class LosslessStream(
 private const val LOSSLESS_DEFAULT_EXPIRY_SECONDS = 600
 
 /**
- * The lossless lane's source, in the shape BitChord uses: a module the listener
- * points the app at, which turns a track into a FLAC/ALAC stream.
+ * The lossless lane's source, in the shape BitChord uses: an endpoint that
+ * turns a track into a FLAC/ALAC stream.
  *
- * YouTube tops out at a lossy Opus master, so a real lossless copy has to come
- * from somewhere the app cannot host itself. There is deliberately no folder to
- * scan and no index to keep: the module is asked per track, its answer is cached
- * until the URL expires, and when it has nothing — or is not configured at all —
+ * A build can carry one (`LOSSLESS_SOURCE_URL`), so the listener never has to
+ * configure anything; a URL saved in settings overrides it. YouTube tops out at
+ * a lossy Opus master, so a real lossless copy has to come from somewhere the
+ * app cannot host itself. There is deliberately no folder to scan and no index
+ * to keep: the source is asked per track, its answer is cached until the URL
+ * expires, and when it has nothing — or the build carries none —
  * `AudioQuality.LOSSLESS` falls back to YouTube's best audio, so choosing the
  * tier can never leave a song silent.
  *
  * ## The contract
  *
- * The configured URL is either an endpoint that accepts query parameters, or a
- * template containing `{videoId}`, `{title}`, `{artist}` and/or `{duration}`.
+ * The URL — whether the build supplied it or a listener saved one — is either an
+ * endpoint that accepts query parameters, or a template containing `{videoId}`,
+ * `{title}`, `{artist}` and/or `{duration}`.
  * Query form:
  *
  * ```
@@ -109,9 +113,25 @@ object LosslessSource {
             .readTimeout(8, TimeUnit.SECONDS)
             .build()
 
-    /** The module's endpoint, or null when the lane should use YouTube. */
+    /**
+     * The endpoint the build carries, so choosing Lossless needs no setup.
+     *
+     * Supplied by `local.properties` or the build environment, never by the
+     * source tree: an endpoint is deployment detail, not a library the listener
+     * or the repository should have to maintain. Null leaves the lane on
+     * YouTube's best stream until a listener saves an override.
+     */
+    private val builtInUrl: String? =
+        BuildConfig.LOSSLESS_SOURCE_URL
+            .trim()
+            .takeIf {
+                it.startsWith("http://", ignoreCase = true) ||
+                    it.startsWith("https://", ignoreCase = true)
+            }
+
+    /** The source in use: the build's endpoint until a saved URL overrides it. */
     @Volatile
-    private var moduleUrl: String? = null
+    private var moduleUrl: String? = builtInUrl
 
     /** Bounded so a long queue cannot grow it without limit. */
     private val cache = LinkedHashMap<String, Entry>()
@@ -125,14 +145,22 @@ object LosslessSource {
      * the old one are dropped rather than replayed against the new endpoint.
      */
     fun configure(url: String?) {
-        val next = url?.trim()?.takeIf { it.isNotEmpty() }
+        // Blank or malformed means "no override", not "no lossless": the
+        // build's endpoint takes over whenever it has one.
+        val override = url?.trim()?.takeIf {
+            it.startsWith("http://", ignoreCase = true) || it.startsWith("https://", ignoreCase = true)
+        }
+        val next = override ?: builtInUrl
         if (next == moduleUrl) return
         moduleUrl = next
         synchronized(cache) { cache.clear() }
     }
 
-    /** The host to name in settings, so the URL itself need not be shown. */
-    fun host(): String? = moduleUrl?.toHttpUrlOrNull()?.host
+    /** The host to name in settings, so a URL need not be shown. */
+    fun hostOf(url: String): String? = url.trim().toHttpUrlOrNull()?.host
+
+    /** The build's endpoint host, or null when listeners must supply their own. */
+    fun builtInHost(): String? = builtInUrl?.let(::hostOf)
 
     /**
      * The master for a track, or null when there is none.

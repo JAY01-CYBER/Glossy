@@ -52,10 +52,10 @@ import com.jay.glossy.utils.rememberPreference
 /**
  * Settings › Playback › Lossless.
  *
- * The lane works the way BitChord's does: a source module turns a track into a
- * FLAC/ALAC master, and when it has nothing — or was never configured — the
- * player keeps the best stream YouTube offered. There is nothing to point at a
- * folder and nothing to keep in sync, which is the whole point: the lossless
+ * The lane works the way BitChord's does: a source turns a track into a
+ * FLAC/ALAC master, and when it has nothing — or the build carries none — the
+ * player keeps the best stream YouTube offered. A build can carry its endpoint,
+ * so there is no folder to point at and nothing to keep in sync: the lossless
  * tier is a choice in Audio quality, not a library the listener has to build.
  *
  * The screen therefore has three things to say: which tier is selected, where
@@ -80,6 +80,9 @@ fun LosslessSettings(navController: NavController) {
         report = LosslessOutput.report(context)
     }
 
+    val builtInHost = LosslessSource.builtInHost()
+    val usingBuiltIn = builtInHost != null && source.isBlank()
+
     val qualityLabel =
         when (audioQuality) {
             AudioQuality.AUTO -> stringResource(R.string.audio_quality_auto)
@@ -95,7 +98,8 @@ fun LosslessSettings(navController: NavController) {
             icon = { Icon(painterResource(R.drawable.cloud), null) },
             initialTextFieldValue = TextFieldValue(text = source),
             keyboardType = KeyboardType.Uri,
-            // Blank is valid: it means "use YouTube's best stream".
+            // Blank is valid: it means "no override" — the build's endpoint
+            // when it carries one, YouTube's best stream otherwise.
             isInputValid = { it.isBlank() || it.startsWith("http://") || it.startsWith("https://") },
             onDone = { value ->
                 onSourceChange(value.trim())
@@ -130,10 +134,16 @@ fun LosslessSettings(navController: NavController) {
         )
         Text(
             text =
-                "A FLAC or ALAC master, fetched through a source module. When the module has " +
-                    "nothing for a track, the player falls back to the best audio YouTube serves — " +
-                    "so choosing Lossless never leaves a song silent, and there is no folder to keep " +
-                    "in sync.",
+                if (usingBuiltIn) {
+                    "A FLAC or ALAC master, fetched through the built-in source. When it has " +
+                        "nothing for a track, the player falls back to the best audio YouTube serves — " +
+                        "so choosing Lossless never leaves a song silent, and there is nothing to set up."
+                } else {
+                    "A FLAC or ALAC master, fetched through a source module. When the module has " +
+                        "nothing for a track, the player falls back to the best audio YouTube serves — " +
+                        "so choosing Lossless never leaves a song silent, and there is no folder to keep " +
+                        "in sync."
+                },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 8.dp),
@@ -154,6 +164,7 @@ fun LosslessSettings(navController: NavController) {
                                     audioQuality != AudioQuality.LOSSLESS ->
                                         "$qualityLabel · turn on Lossless for masters"
                                     source.isNotBlank() -> "$qualityLabel · source first"
+                                    usingBuiltIn -> "$qualityLabel · built-in source"
                                     else -> "$qualityLabel · YouTube's best"
                                 },
                             )
@@ -175,11 +186,15 @@ fun LosslessSettings(navController: NavController) {
                         title = { Text("Lossless source") },
                         description = {
                             Text(
-                                if (source.isBlank()) {
-                                    "Not configured — Lossless uses YouTube's best stream (lossy)."
-                                } else {
-                                    val host = LosslessSource.host() ?: source
-                                    "$host · sends videoId, title, artist and duration; expects a FLAC/ALAC URL."
+                                when {
+                                    source.isNotBlank() -> {
+                                        val host = LosslessSource.hostOf(source) ?: source
+                                        "$host · sends videoId, title, artist and duration; expects a FLAC/ALAC URL."
+                                    }
+                                    builtInHost != null ->
+                                        "Built in · $builtInHost · nothing to configure; a URL here overrides it."
+                                    else ->
+                                        "Not configured — Lossless uses YouTube's best stream (lossy)."
                                 },
                             )
                         },
@@ -189,7 +204,15 @@ fun LosslessSettings(navController: NavController) {
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.close),
                         title = { Text("Clear source") },
-                        description = { Text("Fall back to YouTube's best audio.") },
+                        description = {
+                            Text(
+                                if (builtInHost != null) {
+                                    "Use the built-in source."
+                                } else {
+                                    "Fall back to YouTube's best audio."
+                                },
+                            )
+                        },
                         enabled = source.isNotBlank(),
                         onClick = {
                             onSourceChange("")
