@@ -28,7 +28,6 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -168,7 +167,6 @@ import com.jay.glossy.constants.ListenTogetherUsernameKey
 import com.jay.glossy.constants.LyricsProviderOrderKey
 import com.jay.glossy.constants.MiniPlayerBottomSpacing
 import com.jay.glossy.constants.MiniPlayerHeight
-import com.jay.glossy.constants.NavigationBarAnimationSpec
 import com.jay.glossy.constants.NavigationBarHeight
 import com.jay.glossy.constants.PauseListenHistoryKey
 import com.jay.glossy.constants.PauseSearchHistoryKey
@@ -683,25 +681,42 @@ class MainActivity : ComponentActivity() {
             }
 
             CompositionLocalProvider(LocalDensity provides scaledDensity) {
-            // The whole screen is the blur source for the navigation bar: the bar
-            // sits in the Scaffold's bottom slot, so the only thing it can frost is
-            // what the app paints behind that slot — the wallpaper and the surface.
+            // The backdrop is the blur source for the navigation bar — never the
+            // whole screen. Haze throws when a hazeChild sits inside the subtree
+            // of its haze source ("Layout nodes using Modifier.haze and
+            // Modifier.hazeChild can not be descendants of each other"), and the
+            // bar lives in the Scaffold, so a source on this outer Box put the
+            // bar inside it and crashed every draw. The wallpaper layer is a
+            // *sibling* of the Scaffold and is what the bar actually has behind
+            // it, which is precisely what it should frost.
             val navBarHazeState = remember { HazeState() }
+            val navBarBaseColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surface
             BoxWithConstraints(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .haze(navBarHazeState)
-                        .background(if (pureBlack) Color.Black else MaterialTheme.colorScheme.surface),
+                        .background(navBarBaseColor),
             ) {
                 val (backgroundBlurOn) = rememberPreference(BackgroundBlurEnabledKey, defaultValue = true)
 
-                if (backgroundBlurOn) {
-                    BackgroundBlurBackdrop(
-                        modifier = Modifier.matchParentSize(),
-                        pureBlack = pureBlack,
-                        playerConnection = playerConnectionSnapshot,
-                    )
+                Box(
+                    modifier =
+                        Modifier
+                            .matchParentSize()
+                            .haze(navBarHazeState),
+                ) {
+                    // Always painted, so the source is never an empty layer the
+                    // bar would sample as transparent: with the artwork backdrop
+                    // switched off the base colour alone still fills it.
+                    Box(Modifier.matchParentSize().background(navBarBaseColor))
+
+                    if (backgroundBlurOn) {
+                        BackgroundBlurBackdrop(
+                            modifier = Modifier.matchParentSize(),
+                            pureBlack = pureBlack,
+                            playerConnection = playerConnectionSnapshot,
+                        )
+                    }
                 }
 
                 val density = LocalDensity.current
@@ -804,7 +819,15 @@ class MainActivity : ComponentActivity() {
                 // remember/derivedStateOf bought nothing here and only added a
                 // layer that could hold an older value than the entry it came
                 // from — and the bar's whole visibility hangs on this route.
-                val currentRoute = navBackStackEntry?.destination?.route
+                // The controller's own destination is the fallback for the frame
+                // after a restore, when the entry state has not caught up yet.
+                // Without it the bar is composed as "no route" for a frame and
+                // the sheet and mini player keep that geometry (no bar room),
+                // which is the "mini player in the bar's slot" state that showed
+                // up after returning from background playback.
+                val currentRoute =
+                    navBackStackEntry?.destination?.route
+                        ?: navController.currentDestination?.route
 
                 val inSearchScreen = currentRoute?.startsWith("search/") == true
                 val navigationItemRoutes =
@@ -848,12 +871,6 @@ class MainActivity : ComponentActivity() {
                         0.dp
                     }
 
-                val navigationBarHeight by animateDpAsState(
-                    targetValue = if (shouldShowNavigationBar && !showRail) NavigationBarHeight else 0.dp,
-                    animationSpec = NavigationBarAnimationSpec,
-                    label = "navBarHeight",
-                )
-
                 val playerBottomSheetState =
                     rememberBottomSheetState(
                         dismissedBound = 0.dp,
@@ -880,6 +897,23 @@ class MainActivity : ComponentActivity() {
                 // bar, and the search orb with it, off-screen with nothing to
                 // close.
                 val hasPlayerSheet = activePlayerConnection != null
+
+                // One source for every offset and fade that follows, read in the
+                // layout/draw phase so a sheet drag only invalidates those, never
+                // the whole scaffold. A dismissing sheet reads below its collapsed
+                // bound, and an absent or not-yet-measured one can read a
+                // non-finite progress; both used to leave the bar's layer
+                // transparent long after the sheet was back down. Nothing but a
+                // live, settled sheet moves the bar now.
+                val sheetProgress: () -> Float = {
+                    if (hasPlayerSheet && !playerBottomSheetState.isDismissed) {
+                        playerBottomSheetState.progress
+                            .coerceIn(0f, 1f)
+                            .takeIf { it.isFinite() } ?: 0f
+                    } else {
+                        0f
+                    }
+                }
 
                 val playerAwareWindowInsets =
                     remember(
@@ -1337,43 +1371,34 @@ class MainActivity : ComponentActivity() {
                                                 .align(Alignment.BottomCenter)
                                                 .height(if (useFloatingNavBar) bottomInsetDp + 90.dp else bottomInsetDp)
                                                 .offset {
-                                                    val navBarHeightPx = navigationBarHeight.toPx()
                                                     val totalHeightPx = navBarTotalHeight.toPx()
-                                                    val progress =
-                                                        if (hasPlayerSheet) {
-                                                            playerBottomSheetState.progress.coerceIn(0f, 1f)
-                                                        } else {
-                                                            0f
-                                                        }
-
-                                                    // Only the route may hide the bar, never the
-                                                    // height animation alone: a zero value there is
-                                                    // also what a cancelled or not-yet-started
-                                                    // animation looks like, and reading it as
-                                                    // "hidden" parked the whole bar, orb included,
-                                                    // below the screen on a tab.
-                                                    val slideOffset = totalHeightPx * progress
+                                                    // Only the route may hide the bar, never a
+                                                    // height animation: a zero value there is also
+                                                    // what a cancelled or not-yet-started one looks
+                                                    // like, and reading it as "hidden" parked the
+                                                    // whole bar, orb included, below the screen on
+                                                    // a tab.
+                                                    val slideOffset = totalHeightPx * sheetProgress()
                                                     val hideOffset =
                                                         if (shouldShowNavigationBar) {
                                                             0f
                                                         } else {
-                                                            totalHeightPx * (1 - navBarHeightPx / NavigationBarHeight.toPx())
+                                                            totalHeightPx
                                                         }
                                                     val yOffset = slideOffset + hideOffset
                                                     androidx.compose.ui.unit.IntOffset(0, yOffset.roundToInt())
                                                 }
                                                 .graphicsLayer {
-                                                    val progress =
-                                                        if (hasPlayerSheet) {
-                                                            playerBottomSheetState.progress.coerceIn(0f, 1f)
+                                                    // A route that owns the bar always keeps some
+                                                    // alpha: the sheet may fade it while the player
+                                                    // opens, but a tab can never be fully
+                                                    // transparent, whatever the sheet state says.
+                                                    alpha =
+                                                        if (shouldShowNavigationBar) {
+                                                            1f - sheetProgress()
                                                         } else {
                                                             0f
                                                         }
-                                                    alpha = if (useNewMiniPlayerDesign && !shouldShowNavigationBar) {
-                                                        0f
-                                                    } else {
-                                                        1f - progress
-                                                    }
                                                 }
                                                 .background(if (useFloatingNavBar) fadeBrush else solidBrush)
                                     )
@@ -1396,24 +1421,20 @@ class MainActivity : ComponentActivity() {
                                                     else Modifier.height(bottomInset + navPadding).clip(RectangleShape)
                                                 )
                                                 .offset {
-                                                    val navBarHeightPx = navigationBarHeight.toPx()
                                                     val totalHeightPx = navBarTotalHeight.toPx()
 
-                                                    val progress =
-                                                        if (hasPlayerSheet) {
-                                                            playerBottomSheetState.progress.coerceIn(0f, 1f)
-                                                        } else {
-                                                            0f
-                                                        }
-                                                    // Same rule as the fade behind it: a route that
-                                                    // wants the bar gets it, whatever the height
-                                                    // animation currently reads.
-                                                    val slideOffset = totalHeightPx * progress
+                                                    // The route alone decides the resting place: a
+                                                    // tab is always at zero, anything else always a
+                                                    // full height below the window. The height
+                                                    // animation is not consulted at all, so a
+                                                    // cancelled or not-yet-started one cannot park
+                                                    // the bar off-screen on a tab.
+                                                    val slideOffset = totalHeightPx * sheetProgress()
                                                     val hideOffset =
                                                         if (shouldShowNavigationBar) {
                                                             0f
                                                         } else {
-                                                            totalHeightPx * (1 - navBarHeightPx / NavigationBarHeight.toPx())
+                                                            totalHeightPx
                                                         }
                                                     val yOffset = slideOffset + hideOffset
                                                     androidx.compose.ui.unit.IntOffset(0, yOffset.roundToInt())
@@ -1438,12 +1459,11 @@ class MainActivity : ComponentActivity() {
                                             .align(Alignment.BottomCenter)
                                             .height(bottomInsetDp)
                                             .graphicsLayer {
-                                                val progress = playerBottomSheetState.progress.coerceIn(0f, 1f)
                                                 alpha =
                                                     if ((useNewMiniPlayerDesign && !shouldShowNavigationBar) || useFloatingNavBar) {
                                                         0f
                                                     } else {
-                                                        1f - progress
+                                                        1f - sheetProgress()
                                                     }
                                             }.background(baseBg),
                                 )
