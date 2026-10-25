@@ -243,8 +243,19 @@ fun GlossyBottomNav(
     // frosted glass over the wallpaper. The glass colour is still painted on top
     // of it, so the frost only deepens the surface instead of tinting it twice —
     // and a build with no source (a caller that passes none) keeps the flat bar.
-    val frost = remember(hazeNav) {
-        HazeStyle(tints = emptyList(), blurRadius = NavBarBlurRadius, noiseFactor = 0.03f)
+    //
+    // [HazeStyle.backgroundColor] is not optional: Haze fills the effect layer
+    // with it before blurring the backdrop into that layer, and throws
+    // "backgroundColor not specified. Please provide a color." on every draw when
+    // it resolves to Color.Unspecified (the default). It sits *under* the blurred
+    // backdrop, so the glass painted above the frost is what you actually see.
+    val frost = remember(hazeNav, glass) {
+        HazeStyle(
+            backgroundColor = glass,
+            tints = emptyList(),
+            blurRadius = NavBarBlurRadius,
+            noiseFactor = 0.03f,
+        )
     }
     val frosted = if (hazeNav != null) Modifier.hazeChild(hazeNav, frost) else Modifier
 
