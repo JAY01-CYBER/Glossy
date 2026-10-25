@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Playlist screen — the small type label that sits above the playlist name -->
+    <string name="playlist">Playlist</string>
     <!-- Credits / About Screen — lead developer role titles -->
     <string name="credits_main_head">Main Head Of The Project</string>
     <string name="credits_ui_design_styling">UI Design and Styling</string>
