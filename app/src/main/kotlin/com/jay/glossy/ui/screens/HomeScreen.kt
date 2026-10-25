@@ -2534,6 +2534,11 @@ fun HomeScreen(
 
             HideOnScrollFAB(
                 visible = allLocalItems.isNotEmpty() || allYtItems.isNotEmpty(),
+                // The feed runs almost edge to edge, so a settled stack sat on top
+                // of the Spotlight card's Play pill and the section's "Play all" —
+                // it now belongs to the gesture: it appears while the list is
+                // moving upwards and leaves as soon as the feed comes to rest.
+                hideWhenIdle = true,
                 lazyListState = lazylistState,
                 icon = R.drawable.shuffle,
                 onClick = {

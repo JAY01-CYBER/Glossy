@@ -46,10 +46,18 @@ fun BoxScope.HideOnScrollFAB(
     @DrawableRes icon: Int,
     onClick: () -> Unit,
     onRecognitionClick: (() -> Unit)? = null,
+    hideWhenIdle: Boolean = false,
 ) {
     val isScrollingUp = lazyListState.isScrollingUp()
-    val isFabVisible by remember(visible, isScrollingUp) {
-        derivedStateOf { visible && isScrollingUp }
+    val isFabVisible by remember(visible, isScrollingUp, hideWhenIdle) {
+        derivedStateOf {
+            // A list that is not moving still reports "scrolling up" — no delta
+            // has arrived since the last one, so the comparison leans upwards —
+            // which parked the stack over whatever sat in the corner and hid the
+            // card button underneath it. [hideWhenIdle] makes the stack exist
+            // only while a gesture or fling is actually moving the list up.
+            visible && isScrollingUp && (!hideWhenIdle || lazyListState.isScrollInProgress)
+        }
     }
 
     AnimatedVisibility(
@@ -102,10 +110,18 @@ fun BoxScope.HideOnScrollFAB(
     @DrawableRes icon: Int,
     onClick: () -> Unit,
     onRecognitionClick: (() -> Unit)? = null,
+    hideWhenIdle: Boolean = false,
 ) {
     val isScrollingUp = lazyListState.isScrollingUp()
-    val isFabVisible by remember(visible, isScrollingUp) {
-        derivedStateOf { visible && isScrollingUp }
+    val isFabVisible by remember(visible, isScrollingUp, hideWhenIdle) {
+        derivedStateOf {
+            // A list that is not moving still reports "scrolling up" — no delta
+            // has arrived since the last one, so the comparison leans upwards —
+            // which parked the stack over whatever sat in the corner and hid the
+            // card button underneath it. [hideWhenIdle] makes the stack exist
+            // only while a gesture or fling is actually moving the list up.
+            visible && isScrollingUp && (!hideWhenIdle || lazyListState.isScrollInProgress)
+        }
     }
 
     AnimatedVisibility(
@@ -158,10 +174,15 @@ fun BoxScope.HideOnScrollFAB(
     @DrawableRes icon: Int,
     onClick: () -> Unit,
     onRecognitionClick: (() -> Unit)? = null,
+    hideWhenIdle: Boolean = false,
 ) {
     val isScrollingUp = scrollState.isScrollingUp()
-    val isFabVisible by remember(visible, isScrollingUp) {
-        derivedStateOf { visible && isScrollingUp }
+    val isFabVisible by remember(visible, isScrollingUp, hideWhenIdle) {
+        derivedStateOf {
+            // See the LazyListState overload: a settled scroll still reports
+            // "up", so [hideWhenIdle] also requires movement.
+            visible && isScrollingUp && (!hideWhenIdle || scrollState.isScrollInProgress)
+        }
     }
 
     AnimatedVisibility(
