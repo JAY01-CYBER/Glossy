@@ -5,6 +5,12 @@
 
 package com.chikku.glossy.ui.component
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,20 +27,22 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -43,10 +51,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImage
-import com.jay.glossy.ui.component.GlossyDiscGlyph
+import com.jay.glossy.R
 import com.jay.glossy.ui.theme.GlossyDimens
-import com.jay.glossy.ui.theme.GlossyPalette
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -60,9 +66,10 @@ import java.util.Locale
  * one fact on the front, a name at the foot so it is obviously yours, and a
  * shape — 85.6 × 54mm, 1.586:1 — that does most of the recognising on its own.
  *
- * The background is the artwork the card is about, blurred past recognition and
- * darkened towards the foot, so no two listeners' cards look alike and each one
- * is lit by the record it describes.
+ * The background is the card's own gradient, mixed from the fact it carries:
+ * warm for time, violet for a song, teal for an artist, amber for an album.
+ * Artwork would put a thumbnail of the song behind the numbers, which is the
+ * one thing these cards are not — they are about the listening, not the cover.
  */
 data class ListeningExperienceCard(
     /** What the figure is, uppercase in the picker: "Top artist". */
@@ -71,11 +78,15 @@ data class ListeningExperienceCard(
     val value: String,
     /** The supporting line, already formatted: "46 min · 11 plays". */
     val detail: String?,
-    /** Artwork that lights the card, or null for the card's own colour. */
-    val artworkUrl: String?,
 )
 
-/** The four cards in a row, one per headline figure. */
+/**
+ * The four cards in a row, one per headline figure.
+ *
+ * A sideways rail rather than a stack: the cards are one story read left to
+ * right, and the next one peeking in says there is more without spending a
+ * screen of height on it.
+ */
 @Composable
 fun ListeningExperienceRail(
     cards: List<ListeningExperienceCard>,
@@ -111,6 +122,7 @@ private fun ListeningExperienceCardFace(
     memberSince: String?,
     modifier: Modifier = Modifier,
 ) {
+    val palette = remember(card.label) { paletteFor(card.label) }
     Box(
         modifier =
             modifier
@@ -118,10 +130,14 @@ private fun ListeningExperienceCardFace(
                 .shadow(elevation = 16.dp, shape = CardShape, clip = false)
                 .clip(CardShape),
     ) {
-        CardBackdrop(artworkUrl = card.artworkUrl)
+        CardWash(palette = palette)
         // Deepened towards the foot, where the pale embossed lines are, so they
-        // never land on whichever bright patch of artwork drifted under them.
+        // never land on whichever bright patch of the gradient drifted under them.
         Box(Modifier.fillMaxSize().background(CardScrim))
+        // A wide diagonal wash and a slow breathing glow, which is what makes
+        // the flat gradient read as lit glass rather than as a coloured box.
+        Box(Modifier.fillMaxSize().background(CardSheen))
+        CardGlow(accent = palette.accent)
 
         Column(Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 16.dp)) {
             // What the card is on the left, whose it is on the right — the two
@@ -137,7 +153,15 @@ private fun ListeningExperienceCardFace(
                     modifier = Modifier.weight(1f),
                 )
                 Spacer(Modifier.width(10.dp))
-                GlossyDiscGlyph(color = Color.White, modifier = Modifier.size(20.dp))
+                // The Glossy mark, not a generic disc: the notification icon is
+                // already the one-colour form of the brand, so the card borrows
+                // it rather than shipping a second copy of the curves.
+                Icon(
+                    painter = painterResource(R.drawable.small_icon),
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(30.dp),
+                )
             }
 
             Spacer(Modifier.weight(1f))
@@ -200,32 +224,62 @@ private fun ListeningExperienceCardFace(
     }
 }
 
+/** The card's colour: a three-stop diagonal, lit from the top-left. */
+@Composable
+private fun CardWash(palette: CardPalette) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Brush.linearGradient(colors = palette.stops)),
+    )
+}
+
 /**
- * The artwork behind the card, blurred past recognition.
+ * The card's slow light: a broad highlight in the card's own accent, plus a
+ * vignette that keeps the corners from competing with the type.
  *
- * Scaled up as well as blurred, because a blur pulls colour in from outside the
- * bounds and would otherwise leave a pale rim on all four edges. Below Android
- * 12 the blur is a no-op, which is why the scrim over it is strong enough to
- * carry the type on its own.
+ * The alpha is animated rather than the colours, so the effect is one draw per
+ * frame and costs nothing as the rail scrolls.
  */
 @Composable
-private fun CardBackdrop(artworkUrl: String?) {
-    if (artworkUrl.isNullOrBlank()) {
-        Box(Modifier.fillMaxSize().background(GlossyPalette.Row))
-        return
-    }
-    AsyncImage(
-        model = artworkUrl,
-        contentDescription = null,
-        contentScale = ContentScale.Crop,
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .graphicsLayer {
-                    scaleX = 1.35f
-                    scaleY = 1.35f
-                }
-                .blur(32.dp),
+private fun CardGlow(accent: Color) {
+    val transition = rememberInfiniteTransition(label = "listening-card-glow")
+    val glow by
+        transition.animateFloat(
+            initialValue = 0.05f,
+            targetValue = 0.14f,
+            animationSpec =
+                infiniteRepeatable(
+                    animation = tween(durationMillis = 5_600, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+            label = "glow-alpha",
+        )
+    Box(
+        Modifier
+            .fillMaxSize()
+            .drawBehind {
+                drawRect(
+                    brush =
+                        Brush.radialGradient(
+                            colors =
+                                listOf(
+                                    accent.copy(alpha = glow + 0.10f),
+                                    accent.copy(alpha = 0f),
+                                ),
+                            center = Offset(size.width * 0.18f, size.height * 0.04f),
+                            radius = size.maxDimension * 0.95f,
+                        ),
+                )
+                drawRect(
+                    brush =
+                        Brush.radialGradient(
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.22f)),
+                            center = Offset(size.width * 0.5f, size.height * 0.45f),
+                            radius = size.maxDimension * 0.8f,
+                        ),
+                )
+            },
     )
 }
 
@@ -258,6 +312,43 @@ fun formatListeningSpan(millis: Long?): String {
 fun memberSinceLabel(timestamp: LocalDateTime?): String? =
     timestamp?.format(DateTimeFormatter.ofPattern("MM/yy"))
 
+/**
+ * One gradient per fact, so the rail reads as four related cards without four
+ * copies of the same picture. The labels are the four the stats screen builds;
+ * anything else falls back to the app's own plum so a new card still looks
+ * deliberate.
+ */
+private data class CardPalette(val stops: List<Color>, val accent: Color)
+
+private fun paletteFor(label: String): CardPalette =
+    when (label.lowercase(Locale.ROOT)) {
+        "minutes listened" ->
+            CardPalette(
+                stops = listOf(Color(0xFF8C3B57), Color(0xFF3B1B2C), Color(0xFF150E14)),
+                accent = Color(0xFFF0B7C8),
+            )
+        "top song" ->
+            CardPalette(
+                stops = listOf(Color(0xFF4E3A86), Color(0xFF241C44), Color(0xFF110F1D)),
+                accent = Color(0xFFC9BCFF),
+            )
+        "top artist" ->
+            CardPalette(
+                stops = listOf(Color(0xFF1E5C5B), Color(0xFF122B30), Color(0xFF0B1519)),
+                accent = Color(0xFF9BE6DA),
+            )
+        "top album" ->
+            CardPalette(
+                stops = listOf(Color(0xFF7A4A20), Color(0xFF32200F), Color(0xFF171008)),
+                accent = Color(0xFFFFD2A1),
+            )
+        else ->
+            CardPalette(
+                stops = listOf(Color(0xFF3F3450), Color(0xFF1B1724), Color(0xFF111014)),
+                accent = Color(0xFFE5D6FF),
+            )
+    }
+
 /** The fill on every raised line: bright along the top edge, cooler below. */
 private val PolishedInk =
     Brush.verticalGradient(listOf(Color(0xFFFFFFFF), Color(0xFFF8F9FC), Color(0xFFDDE1E8)))
@@ -271,6 +362,15 @@ private val CardScrim =
         0.0f to Color.Black.copy(alpha = 0.22f),
         0.55f to Color.Black.copy(alpha = 0.34f),
         1.0f to Color.Black.copy(alpha = 0.58f),
+    )
+
+/** Light from the top-left, shade into the bottom-right, like the cards in hand. */
+private val CardSheen =
+    Brush.linearGradient(
+        0.0f to Color.White.copy(alpha = 0.08f),
+        0.36f to Color.White.copy(alpha = 0f),
+        0.72f to Color.White.copy(alpha = 0f),
+        1.0f to Color.Black.copy(alpha = 0.18f),
     )
 
 private val CardShape = RoundedCornerShape(20.dp)

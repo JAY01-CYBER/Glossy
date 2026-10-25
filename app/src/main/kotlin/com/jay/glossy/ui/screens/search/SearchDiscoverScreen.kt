@@ -108,6 +108,8 @@ fun SearchDiscoverRoute(
     val chartsPage by chartsViewModel.chartsPage.collectAsStateWithLifecycle()
     val isLoading by chartsViewModel.isLoading.collectAsStateWithLifecycle()
     val error by chartsViewModel.error.collectAsStateWithLifecycle()
+    // Songs the view model searched for when the chart itself had none to give.
+    val suggestedSongs by chartsViewModel.suggestedSongs.collectAsStateWithLifecycle()
     // The explore browse is the fallback source: it returns the new-release
     // albums in every region, where the charts response can come back empty.
     val explorePage by exploreViewModel.explorePage.collectAsStateWithLifecycle()
@@ -144,9 +146,13 @@ fun SearchDiscoverRoute(
     SearchDiscoverPage(
         tab = tab,
         onTabChange = { tab = it },
-        data = remember(chartsPage, explorePage) {
+        data = remember(chartsPage, explorePage, suggestedSongs) {
             val fromCharts = chartsPage?.toDiscover() ?: SearchDiscoverData()
             fromCharts.copy(
+                // The chart's own songs win; when it answered with none — or did
+                // not answer at all — the stand-in search fills the Suggestions
+                // tab instead of leaving it on "Couldn't load trending music".
+                ranked = fromCharts.ranked.ifEmpty { suggestedSongs },
                 albums = fromCharts.albums
                     .ifEmpty { explorePage?.newReleaseAlbums.orEmpty() }
                     .distinctBy { it.id }
@@ -154,7 +160,12 @@ fun SearchDiscoverRoute(
             )
         },
         isLoading = isLoading && chartsMissing,
-        errorMessage = if (chartsMissing && error != null) chartsErrorMessage else null,
+        errorMessage =
+            if (chartsMissing && error != null && suggestedSongs.isEmpty()) {
+                chartsErrorMessage
+            } else {
+                null
+            },
         recentSearches = remember(history) { history.take(3).map { it.query } },
         nowPlayingId = mediaMetadata?.id,
         onSearch = onSearch,

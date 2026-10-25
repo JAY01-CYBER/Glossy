@@ -139,6 +139,8 @@ import coil3.compose.AsyncImage
 import com.jay.glossy.LocalNavController
 import com.jay.glossy.LocalListenTogetherManager
 import com.jay.glossy.LocalPlayerConnection
+import com.jay.glossy.constants.AudioQuality
+import com.jay.glossy.constants.AudioQualityKey
 import com.jay.glossy.constants.ListItemHeight
 import com.jay.glossy.constants.PlayerBackgroundStyle
 import com.jay.glossy.constants.QueueEditLockKey
@@ -293,6 +295,9 @@ fun Queue(
     // unless asked for: it is an answer about the file, and it changes as the
     // queue moves on, so it stays quiet until a listener wants to check it.
     val (showAudioFormat) = rememberPreference(ShowAudioFormatKey, defaultValue = false)
+    // The tier is what was asked for; the badge says what arrived. Passing it
+    // along lets the chip admit a lossy fallback when Lossless is selected.
+    val (audioQuality) = rememberEnumPreference(AudioQualityKey, AudioQuality.AUTO)
     // The queue is drawn over the player's own backdrop, not over a surface the
     // theme picked, so its text does not read the colour scheme here: on a
     // saturated cover the scheme's onSurface can sit at a contrast that is
@@ -1307,26 +1312,27 @@ fun Queue(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        // The title keeps the row: an inline badge as wide as
+                        // "WebM · Opus · 179 kbps · no FLAC" plus the duration and the
+                        // collapse control left it a few pixels, and Compose broke
+                        // "Playback Queue" one letter per line — "Pl / ay / ba /
+                        // ck". The badge has moved to its own line below, where it
+                        // still describes the playing song, and one line is pinned so
+                        // this can never happen again.
                         Text(
                             text = stringResource(R.string.playback_queue),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = queueTextColor ?: MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f),
                         )
-                        // Sits with the title because it describes the song that
-                        // is playing, not the queue: WebM or M4A, Opus or AAC,
-                        // and how many bits per second arrived.
-                        if (showAudioFormat) {
-                            AudioFormatBadge(
-                                format = currentFormat,
-                                modifier = Modifier.padding(start = 8.dp),
-                            )
-                        }
                         Text(
                             text = makeTimeString(queueLength * 1000L),
                             style = MaterialTheme.typography.labelMedium,
                             color = queueTextColor ?: MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 8.dp),
                         )
                         IconButton(onClick = { playerBottomSheetState.collapseSoft() }) {
                             Icon(
@@ -1335,6 +1341,16 @@ fun Queue(
                                 modifier = Modifier.size(26.dp),
                             )
                         }
+                    }
+
+                    // Its own line, so the chip is never squeezed: it describes the
+                    // song that is playing, not the queue — WebM or M4A, Opus or AAC,
+                    // and how many bits per second arrived.
+                    if (showAudioFormat) {
+                        AudioFormatBadge(
+                            format = currentFormat,
+                            requestedLossless = audioQuality == AudioQuality.LOSSLESS,
+                        )
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {

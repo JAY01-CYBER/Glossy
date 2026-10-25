@@ -199,7 +199,6 @@ fun StatsScreen(
                             label = "Minutes listened",
                             value = totalMinutes.toString(),
                             detail = "$totalPlays plays · ${currentDate.year}",
-                            artworkUrl = topSong.thumbnailUrl,
                         ),
                     )
                     add(
@@ -207,7 +206,6 @@ fun StatsScreen(
                             label = "Top song",
                             value = topSong.title,
                             detail = topSong.artists.joinToString(", ") { it.name },
-                            artworkUrl = topSong.thumbnailUrl,
                         ),
                     )
                 }
@@ -219,7 +217,6 @@ fun StatsScreen(
                             detail =
                                 "${formatListeningSpan(artist.timeListened?.toLong())} · " +
                                     "${artist.songCount} plays",
-                            artworkUrl = artist.artist.thumbnailUrl,
                         ),
                     )
                 }
@@ -233,7 +230,6 @@ fun StatsScreen(
                                     album.artists.firstOrNull()?.name,
                                     formatListeningSpan(album.timeListened),
                                 ),
-                            artworkUrl = album.album.thumbnailUrl,
                         ),
                     )
                 }

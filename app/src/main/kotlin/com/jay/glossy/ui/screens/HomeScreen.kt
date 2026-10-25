@@ -83,6 +83,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -1295,12 +1296,43 @@ fun HomeScreen(
                                     val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
                                     val scaleFactor = 1f - (kotlin.math.abs(pageOffset).coerceIn(0f, 1f) * 0.15f)
                                     val alphaFactor = 1f - (kotlin.math.abs(pageOffset).coerceIn(0f, 1f) * 0.4f)
-                                    
+
+                                    // Card, print and surface, all from the one corner
+                                    // setting the player uses. The clamp is deliberate: the
+                                    // footer needs a corner it can sit inside, and the
+                                    // fully round setting would clip it off the card.
+                                    val cardCorner = spotlightCanvasCorner.coerceAtMost(36.dp)
+                                    val cardShape = RoundedCornerShape(cardCorner)
+                                    val frameShape = RoundedCornerShape((cardCorner - 9.dp).coerceAtLeast(12.dp))
+                                    val cardBrush =
+                                        Brush.verticalGradient(
+                                            listOf(
+                                                MaterialTheme.colorScheme.surfaceContainerHigh,
+                                                MaterialTheme.colorScheme.surfaceContainerLow,
+                                            )
+                                        )
+
                                     Box(
                                         modifier = Modifier
                                             .fillMaxSize()
                                             .graphicsLayer { scaleX = scaleFactor; scaleY = scaleFactor; alpha = alphaFactor }
-                                            .clip(RoundedCornerShape(spotlightCanvasCorner))
+                                            // "Framed": the cover is an inset print inside a
+                                            // card surface, and everything the listener reads
+                                            // lives in a footer row, so no copy is ever laid
+                                            // over the artwork.
+                                            .shadow(
+                                                // Kept shallow: the pager's viewport is exactly
+                                                // the card's height, so a deep bloom would be
+                                                // clipped top and bottom. The accent hairline
+                                                // does most of the framing anyway.
+                                                elevation = 12.dp,
+                                                shape = cardShape,
+                                                ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.30f),
+                                                spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.40f),
+                                            )
+                                            .clip(cardShape)
+                                            .background(cardBrush)
+                                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.26f), cardShape)
                                             .combinedClickable(
                                                 onClick = {
                                                     playerConnection.playQueue(
@@ -1314,116 +1346,160 @@ fun HomeScreen(
                                                 }
                                             )
                                     ) {
-                                        val thumbUrl = item.thumbnail.resize(1080, 1080)
-                                        AsyncImage(
-                                            model = remember(thumbUrl) {
-                                                ImageRequest.Builder(context).data(thumbUrl).memoryCachePolicy(CachePolicy.ENABLED).crossfade(200).build()
-                                            },
-                                            contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()
-                                        )
-                                        // Moving artwork over the still: the still
-                                        // stays visible while the clip buffers,
-                                        // and remains the fallback when the song
-                                        // has no canvas at all. Exactly one card
-                                        // owns a decoder — the settled one — and
-                                        // the card after it is only warmed.
-                                        if (spotlightCanvasEnabled) {
-                                            // Exactly one card owns a decoder —
-                                            // the settled one — so a strip you
-                                            // flick through never leaves a
-                                            // player parked on every card. Its
-                                            // two neighbours are prepared
-                                            // instead: URL resolved, and their
-                                            // opening bytes in the player's
-                                            // cache, so either of them can
-                                            // start on its first frame.
-                                            when (page) {
-                                                settledSpotlightPage ->
-                                                    SpotlightCanvasLayer(
-                                                        item = item,
-                                                        modifier = Modifier.fillMaxSize(),
-                                                    )
-
-                                                activeSpotlightPage + 1,
-                                                activeSpotlightPage + 2,
-                                                ->
-                                                    SpotlightCanvasPrefetch(
-                                                        item = item,
-                                                        warmVideo = spotlightPreload,
-                                                        allowMetered = canvasOnMobileData,
-                                                    )
-                                            }
-                                        }
-                                        Box(
-                                            modifier = Modifier.fillMaxSize().background(
-                                                Brush.verticalGradient(
-                                                    colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.1f), Color.Black.copy(alpha = 0.85f)),
-                                                    startY = 100f
-                                                )
-                                            )
-                                        )
-                                        // Title block clears both the play pill and the
-                                        // dots below it, so a long song name never runs
-                                        // under either.
-                                        Column(modifier = Modifier.align(Alignment.BottomStart).padding(start = 20.dp, end = 116.dp, bottom = 62.dp)) {
-                                            Surface(
-                                                shape = RoundedCornerShape(percent = 50),
-                                                color = Color.White.copy(alpha = 0.22f),
-                                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.34f)),
-                                            ) {
-                                                Text(
-                                                    text = stringResource(R.string.glossy_featured).uppercase(),
-                                                    fontSize = 9.5.sp,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                    letterSpacing = 1.2.sp,
-                                                    color = Color.White,
-                                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
-                                                )
-                                            }
-                                            Spacer(modifier = Modifier.height(9.dp))
-                                            Text(text = item.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                            Spacer(modifier = Modifier.height(4.dp))
-                                            Text(text = item.artists.joinToArtistString(" & ") { it.name }, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.78f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                        }
-                                        // Labelled rather than a bare circle: on a hero card
-                                        // nobody has to guess what the triangle does.
-                                        Row(
-                                            modifier = Modifier
-                                                .align(Alignment.BottomEnd)
-                                                .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
-                                                .clip(RoundedCornerShape(percent = 50))
-                                                .background(Color.White)
-                                                .clickable {
-                                                    playerConnection.playQueue(
-                                                        if (autoRadioQueue) YouTubeQueue(item.endpoint ?: WatchEndpoint(videoId = item.id), item.toMediaMetadata())
-                                                        else ListQueue(title = item.title, items = listOf(item.toMediaItem()))
-                                                    )
-                                                }
-                                                .padding(start = 7.dp, end = 16.dp, top = 7.dp, bottom = 7.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        ) {
+                                        Column(modifier = Modifier.fillMaxSize().padding(9.dp)) {
+                                            // The print. Its hairline is the same accent as
+                                            // the play pill, so image and control read as one
+                                            // object rather than a picture with a button.
                                             Box(
                                                 modifier = Modifier
-                                                    .size(26.dp)
-                                                    .clip(CircleShape)
-                                                    .background(MaterialTheme.colorScheme.primary),
-                                                contentAlignment = Alignment.Center,
+                                                    .fillMaxWidth()
+                                                    .weight(1f)
+                                                    .clip(frameShape)
+                                                    // Behind the cover: a song with no artwork
+                                                    // leaves a surface, not a hole, and a
+                                                    // slow image shows the card rather than
+                                                    // flashing white.
+                                                    .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                                                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.38f), frameShape)
                                             ) {
-                                                Icon(
-                                                    painter = painterResource(R.drawable.play),
-                                                    contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.onPrimary,
-                                                    modifier = Modifier.size(15.dp),
+                                                val thumbUrl = item.thumbnail.resize(1080, 1080)
+                                                AsyncImage(
+                                                    model = remember(thumbUrl) {
+                                                        ImageRequest.Builder(context).data(thumbUrl).memoryCachePolicy(CachePolicy.ENABLED).crossfade(200).build()
+                                                    },
+                                                    contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()
                                                 )
+                                                // Moving artwork over the still: the still
+                                                // stays visible while the clip buffers,
+                                                // and remains the fallback when the song
+                                                // has no canvas at all. Exactly one card
+                                                // owns a decoder — the settled one — and
+                                                // the card after it is only warmed.
+                                                if (spotlightCanvasEnabled) {
+                                                    // Exactly one card owns a decoder —
+                                                    // the settled one — so a strip you
+                                                    // flick through never leaves a
+                                                    // player parked on every card. Its
+                                                    // two neighbours are prepared
+                                                    // instead: URL resolved, and their
+                                                    // opening bytes in the player's
+                                                    // cache, so either of them can
+                                                    // start on its first frame.
+                                                    when (page) {
+                                                        settledSpotlightPage ->
+                                                            SpotlightCanvasLayer(
+                                                                item = item,
+                                                                modifier = Modifier.fillMaxSize(),
+                                                            )
+
+                                                        activeSpotlightPage + 1,
+                                                        activeSpotlightPage + 2,
+                                                        ->
+                                                            SpotlightCanvasPrefetch(
+                                                                item = item,
+                                                                warmVideo = spotlightPreload,
+                                                                allowMetered = canvasOnMobileData,
+                                                            )
+                                                    }
+                                                }
+                                                // A soft vignette only: nothing is written
+                                                // over the print, so this just settles its
+                                                // bottom edge into the card.
+                                                Box(
+                                                    modifier = Modifier.fillMaxSize().background(
+                                                        Brush.verticalGradient(
+                                                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.06f), Color.Black.copy(alpha = 0.5f)),
+                                                            startY = 60f
+                                                        )
+                                                    )
+                                                )
+                                                Surface(
+                                                    shape = RoundedCornerShape(percent = 50),
+                                                    color = Color.Black.copy(alpha = 0.42f),
+                                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)),
+                                                    modifier = Modifier.align(Alignment.TopStart).padding(11.dp),
+                                                ) {
+                                                    Text(
+                                                        text = stringResource(R.string.glossy_featured).uppercase(),
+                                                        fontSize = 8.5.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        letterSpacing = 1.2.sp,
+                                                        color = Color.White,
+                                                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                                                    )
+                                                }
                                             }
-                                            Text(
-                                                text = stringResource(R.string.play),
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.SemiBold,
-                                                color = Color(0xFF15171C),
-                                                maxLines = 1,
-                                            )
+                                            // Footer: the card's surface carries the copy, so
+                                            // a bright cover can never fight the title, and a
+                                            // long one has a whole row to ellipsize in.
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(start = 4.dp, end = 4.dp, top = 10.dp, bottom = 2.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                            ) {
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(
+                                                        text = item.title,
+                                                        fontSize = 16.sp,
+                                                        // Explicit line heights: the footer is a
+                                                        // fixed strip of the card, and the theme's
+                                                        // default 24 sp line box would push the
+                                                        // print short for no visible reason.
+                                                        lineHeight = 20.sp,
+                                                        fontWeight = FontWeight.SemiBold,
+                                                        letterSpacing = (-0.2).sp,
+                                                        color = MaterialTheme.colorScheme.onSurface,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis,
+                                                    )
+                                                    Text(
+                                                        text = item.artists.joinToArtistString(" & ") { it.name },
+                                                        fontSize = 11.5.sp,
+                                                        lineHeight = 15.sp,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis,
+                                                    )
+                                                }
+                                                Row(
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(percent = 50))
+                                                        .background(MaterialTheme.colorScheme.primary)
+                                                        .clickable {
+                                                            playerConnection.playQueue(
+                                                                if (autoRadioQueue) YouTubeQueue(item.endpoint ?: WatchEndpoint(videoId = item.id), item.toMediaMetadata())
+                                                                else ListQueue(title = item.title, items = listOf(item.toMediaItem()))
+                                                            )
+                                                        }
+                                                        .padding(start = 5.dp, end = 13.dp, top = 5.dp, bottom = 5.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(21.dp)
+                                                            .clip(CircleShape)
+                                                            .background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.16f)),
+                                                        contentAlignment = Alignment.Center,
+                                                    ) {
+                                                        Icon(
+                                                            painter = painterResource(R.drawable.play),
+                                                            contentDescription = null,
+                                                            tint = MaterialTheme.colorScheme.onPrimary,
+                                                            modifier = Modifier.size(12.dp),
+                                                        )
+                                                    }
+                                                    Text(
+                                                        text = stringResource(R.string.play),
+                                                        fontSize = 11.5.sp,
+                                                        fontWeight = FontWeight.SemiBold,
+                                                        color = MaterialTheme.colorScheme.onPrimary,
+                                                        maxLines = 1,
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -2458,6 +2534,11 @@ fun HomeScreen(
 
             HideOnScrollFAB(
                 visible = allLocalItems.isNotEmpty() || allYtItems.isNotEmpty(),
+                // The feed runs almost edge to edge, so a settled stack sat on top
+                // of the Spotlight card's Play pill and the section's "Play all" —
+                // it now belongs to the gesture: it appears while the list is
+                // moving upwards and leaves as soon as the feed comes to rest.
+                hideWhenIdle = true,
                 lazyListState = lazylistState,
                 icon = R.drawable.shuffle,
                 onClick = {

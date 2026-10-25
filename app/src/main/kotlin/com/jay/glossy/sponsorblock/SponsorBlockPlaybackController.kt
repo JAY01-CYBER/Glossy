@@ -8,6 +8,7 @@
 
 package com.jay.glossy.sponsorblock
 
+import android.os.SystemClock
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -21,6 +22,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -31,6 +33,18 @@ import timber.log.Timber
  * Attached to the service's player rather than to a screen: the skip has to
  * happen with the phone in a pocket and no UI composed, so it lives as long as
  * playback does.
+ *
+ * Two races decide whether a sponsor read is really skipped, and both are
+ * handled here instead of being left to luck:
+ *
+ * - A queued song begins the instant the previous one ends, so a lookup started
+ *   at that moment is racing the very segment it means to skip. The next items
+ *   of the queue are therefore asked for in advance — a queued track is already
+ *   answered before it starts and can be skipped from its first millisecond,
+ *   instead of only skipping when it is replayed and the answer is cached.
+ * - A seek the player swallows must not be remembered as done. A segment only
+ *   counts as skipped once the position has actually left it, and the seek is
+ *   tried again when it has not.
  *
  * The check is a poll, not a listener — Media3 only reports position changes at
  * coarse intervals, and a 30-second sponsor read would be most of the way
@@ -46,7 +60,9 @@ class SponsorBlockPlaybackController
     ) {
         private val currentMediaId = MutableStateFlow<String?>(null)
         private var attachedPlayer: Player? = null
+        private var attachedScope: CoroutineScope? = null
         private var observationJob: Job? = null
+        private var prefetchJob: Job? = null
 
         private val playerListener =
             object : Player.Listener {
@@ -55,6 +71,7 @@ class SponsorBlockPlaybackController
                     reason: Int,
                 ) {
                     currentMediaId.value = mediaItem.normalizedMediaId()
+                    prefetchUpcoming()
                 }
 
                 override fun onTimelineChanged(
@@ -62,6 +79,7 @@ class SponsorBlockPlaybackController
                     reason: Int,
                 ) {
                     currentMediaId.value = attachedPlayer?.currentMediaItem.normalizedMediaId()
+                    prefetchUpcoming()
                 }
             }
 
@@ -73,6 +91,7 @@ class SponsorBlockPlaybackController
             detach()
 
             attachedPlayer = player
+            attachedScope = scope
             currentMediaId.value = player.currentMediaItem.normalizedMediaId()
             player.addListener(playerListener)
             observationJob =
@@ -88,8 +107,11 @@ class SponsorBlockPlaybackController
                                     return@collectLatest
                                 }
 
-                                val segments = repository.getSegments(activeMediaId, settings)
-                                if (segments.isEmpty() || currentMediaId.value != activeMediaId) {
+                                val segments = awaitSegments(activeMediaId, settings)
+                                if (segments == null ||
+                                    segments.isEmpty() ||
+                                    currentMediaId.value != activeMediaId
+                                ) {
                                     return@collectLatest
                                 }
 
@@ -105,6 +127,11 @@ class SponsorBlockPlaybackController
                         Timber.tag(TAG).w(throwable, "SponsorBlock settings observation failed")
                     }
                 }
+
+            // A queue can already be loaded when the player is swapped (audio
+            // offload, crossfade), so the song after it needs asking for here as
+            // well as on the next transition.
+            prefetchUpcoming()
         }
 
         /**
@@ -118,9 +145,89 @@ class SponsorBlockPlaybackController
         fun detach() {
             observationJob?.cancel()
             observationJob = null
+            prefetchJob?.cancel()
+            prefetchJob = null
             attachedPlayer?.removeListener(playerListener)
             attachedPlayer = null
+            attachedScope = null
             currentMediaId.value = null
+        }
+
+        /**
+         * The segments of the song that is playing now, asked again when the
+         * first answer never arrived.
+         *
+         * A song gets one continuous chance at a skip: if the lookup times out
+         * at 0:00 and gives up, a sponsor read at 2:00 would play in full even
+         * though the network came back a moment later. Asking again while the
+         * song still plays costs nothing when there is nothing to skip and saves
+         * the song when there is.
+         */
+        private suspend fun awaitSegments(
+            mediaId: String,
+            settings: SponsorBlockSettings,
+        ): List<SponsorBlockSegment>? {
+            repeat(CURRENT_LOOKUP_ATTEMPTS) { attemptIndex ->
+                val segments = repository.getSegments(mediaId, settings)
+                if (segments != null) return segments
+                if (attemptIndex < CURRENT_LOOKUP_ATTEMPTS - 1) {
+                    delay(CURRENT_LOOKUP_RETRY_MILLIS)
+                }
+            }
+            return null
+        }
+
+        /**
+         * Asks for the segments of what is queued up next, while the current
+         * song is still playing.
+         *
+         * Debounced because setting a queue changes the timeline once per item
+         * added: without the wait, dropping a fifty-song queue would fire fifty
+         * lookups for songs nobody is going to hear for an hour.
+         */
+        private fun prefetchUpcoming() {
+            val player = attachedPlayer ?: return
+            val scope = attachedScope ?: return
+            prefetchJob?.cancel()
+            prefetchJob =
+                scope.launch {
+                    try {
+                        delay(PREFETCH_DEBOUNCE_MILLIS)
+                        // A player released by a crossfade in the meantime is no
+                        // longer a queue worth reading, and touching it would
+                        // throw out of this scope.
+                        if (attachedPlayer !== player) return@launch
+                        val mediaIds = upcomingMediaIds(player)
+                        if (mediaIds.isEmpty()) return@launch
+                        val settings = repository.observeSettings().first()
+                        repository.prefetchSegments(mediaIds, settings)
+                    } catch (cancellation: CancellationException) {
+                        throw cancellation
+                    } catch (throwable: Throwable) {
+                        Timber.tag(TAG).w(throwable, "SponsorBlock prefetch failed")
+                    }
+                }
+        }
+
+        /**
+         * The media ids of the few items that will play after the current one.
+         *
+         * Read through [Player.getMediaItemAt] on the current index rather than
+         * from the service's song list so shuffle order and any item inserted
+         * while playing are respected: this asks about the song that is actually
+         * next, not the one that is next in the album.
+         */
+        private fun upcomingMediaIds(player: Player): List<String> {
+            val currentIndex = player.currentMediaItemIndex
+            if (currentIndex == C.INDEX_UNSET) return emptyList()
+
+            return buildList {
+                for (offset in 1..PREFETCH_AHEAD_ITEMS) {
+                    val index = currentIndex + offset
+                    if (index >= player.mediaItemCount) break
+                    player.getMediaItemAt(index).normalizedMediaId()?.let { mediaId -> add(mediaId) }
+                }
+            }
         }
 
         private suspend fun monitorPlayback(
@@ -128,10 +235,9 @@ class SponsorBlockPlaybackController
             mediaId: String,
             segments: List<SponsorBlockSegment>,
         ) {
-            // The end of the last segment that was jumped. It keeps the same
-            // segment from being sought twice while the player settles after a
-            // seek and still reports a position inside it.
-            var lastSkippedEndMs: Long? = null
+            // When the last skip was attempted, so a seek the player swallowed is
+            // tried again instead of being remembered as a completed skip.
+            var lastSeekAttemptMs: Long? = null
             while (
                 currentCoroutineContext().isActive &&
                 attachedPlayer === player &&
@@ -148,10 +254,8 @@ class SponsorBlockPlaybackController
                         positionMs >= segment.startMs &&
                             positionMs < segment.endMs - END_TOLERANCE_MILLIS
                     }
-                if (activeSegment == null) {
-                    lastSkippedEndMs = null
-                } else if (lastSkippedEndMs != activeSegment.endMs) {
-                    lastSkippedEndMs = activeSegment.endMs
+
+                if (activeSegment != null) {
                     val knownDuration =
                         player.duration.takeIf { duration ->
                             duration != C.TIME_UNSET && duration > 0L
@@ -160,10 +264,20 @@ class SponsorBlockPlaybackController
                         knownDuration
                             ?.let { duration -> activeSegment.endMs.coerceAtMost(duration) }
                             ?: activeSegment.endMs
-                    if (targetPositionMs - positionMs >= MIN_SEEK_DISTANCE_MILLIS) {
+                    val nowMs = SystemClock.elapsedRealtime()
+                    val previousAttemptMs = lastSeekAttemptMs
+                    val seekIsDue =
+                        previousAttemptMs == null ||
+                            nowMs - previousAttemptMs >= SEEK_RETRY_INTERVAL_MILLIS
+                    if (targetPositionMs - positionMs >= MIN_SEEK_DISTANCE_MILLIS && seekIsDue) {
+                        lastSeekAttemptMs = nowMs
                         player.seekTo(targetPositionMs)
+                        Timber
+                            .tag(TAG)
+                            .d("Skipping ${targetPositionMs - positionMs}ms of $mediaId from $positionMs")
                     }
                 }
+
                 delay(ACTIVE_POLL_INTERVAL_MILLIS)
             }
         }
@@ -180,5 +294,10 @@ class SponsorBlockPlaybackController
             const val INACTIVE_POLL_INTERVAL_MILLIS = 750L
             const val END_TOLERANCE_MILLIS = 50L
             const val MIN_SEEK_DISTANCE_MILLIS = 100L
+            const val SEEK_RETRY_INTERVAL_MILLIS = 1_000L
+            const val CURRENT_LOOKUP_ATTEMPTS = 2
+            const val CURRENT_LOOKUP_RETRY_MILLIS = 12_000L
+            const val PREFETCH_AHEAD_ITEMS = 2
+            const val PREFETCH_DEBOUNCE_MILLIS = 250L
         }
     }

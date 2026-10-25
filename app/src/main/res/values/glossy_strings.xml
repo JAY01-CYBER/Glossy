@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Playlist screen — the small type label that sits above the playlist name -->
+    <string name="playlist">Playlist</string>
     <!-- Credits / About Screen — lead developer role titles -->
     <string name="credits_main_head">Main Head Of The Project</string>
     <string name="credits_ui_design_styling">UI Design and Styling</string>
@@ -20,9 +22,15 @@
     <string name="listen_together_glossy_cloudflare">Glossy on Cloudflare</string>
     <!-- Audio quality tiers added beyond Auto / Low / High -->
     <string name="audio_quality_very_high">Very high (best bitrate)</string>
+    <!-- Audio quality — the very high tier: where its ceiling actually comes from -->
+    <string name="audio_quality_very_high_desc">Takes the highest-bitrate stream YouTube will serve this account. Free accounts top out around 160 kbps Opus; 256 kbps Opus (itag 774) appears only when the app is signed in to YouTube Music Premium.</string>
     <!-- Audio quality — the lossless tier: a source module's FLAC/ALAC master, YouTube's best stream as fallback -->
     <string name="audio_quality_lossless">Lossless</string>
     <string name="audio_quality_lossless_desc">FLAC or ALAC from your lossless source; YouTube\'s best stream when it has nothing for the track</string>
+    <!-- Lossless — status shown when the tier is on but no source can answer -->
+    <string name="lossless_fallback_title">Lossless is falling back</string>
+    <string name="lossless_fallback_desc">No source is set, so tracks play YouTube\'s best stream — usually Opus around 130–160 kbps. Add a source to hear FLAC or ALAC.</string>
+    <string name="lossless_last_check_title">Last check</string>
     <!-- Queue — the header of the playback queue: its title, the line under it and the row actions -->
     <string name="playback_queue">Playback Queue</string>
     <string name="queue_playing_next">Playing next</string>
