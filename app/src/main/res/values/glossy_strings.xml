@@ -133,4 +133,7 @@
     <!-- Appearance - "Liquid glass" row: refracts the wallpaper through the floating navigation chrome -->
     <string name="liquid_glass">Liquid glass</string>
     <string name="liquid_glass_desc">Refract the wallpaper through the floating navigation bar and its search orb instead of painting the flat wash.</string>
+    <!-- Mini player - transport controls -->
+    <string name="mini_player_previous">Previous song</string>
+    <string name="mini_player_next">Next song</string>
 </resources>

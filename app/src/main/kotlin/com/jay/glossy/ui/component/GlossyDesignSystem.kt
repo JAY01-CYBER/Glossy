@@ -629,7 +629,10 @@ fun GlossyDiscGlyph(
     }
 }
 
-/** Square artwork placeholder filled with the item's category colour. */
+/**
+ * Square artwork placeholder filled with the item's category colour, or with
+ * [swatch] when the caller already knows the collection's accent.
+ */
 @Composable
 fun GlossyThumb(
     seed: String?,
@@ -638,13 +641,14 @@ fun GlossyThumb(
     corner: Dp = 12.dp,
     imageUrl: String? = null,
     glyph: Boolean = true,
+    swatch: Color? = null,
 ) {
-    val swatch = remember(seed) { glossySwatchFor(seed) }
+    val seedSwatch = remember(seed) { glossySwatchFor(seed) }
     Box(
         modifier = modifier
             .size(size)
             .clip(RoundedCornerShape(corner))
-            .background(swatch),
+            .background(swatch ?: seedSwatch),
         contentAlignment = Alignment.Center,
     ) {
         if (!imageUrl.isNullOrBlank()) {

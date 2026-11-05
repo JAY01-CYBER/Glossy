@@ -331,6 +331,29 @@ val GlossyCategorySwatches = listOf(
 )
 
 /**
+ * One virtual library collection's gradient. [start] doubles as the flat
+ * swatch for the compact list rows, so a collection keeps one identity
+ * whichever Library layout is showing.
+ */
+data class GlossyCollectionGradient(
+    val start: Color,
+    val end: Color,
+)
+
+/**
+ * Accents for the five virtual collections. They live here so the quick cards,
+ * the playlist rows and the grid tiles cannot drift apart, and so a colour
+ * changes once rather than in every view that draws the collection.
+ */
+object GlossyCollectionGradients {
+    val liked = GlossyCollectionGradient(Color(0xFFF2555A), Color(0xFFB3252F))
+    val downloaded = GlossyCollectionGradient(Color(0xFF4C8DF6), Color(0xFF2551B8))
+    val cached = GlossyCollectionGradient(Color(0xFFD98A2B), Color(0xFF8A4B08))
+    val uploaded = GlossyCollectionGradient(Color(0xFF43B877), Color(0xFF1B7A46))
+    val myTop = GlossyCollectionGradient(Color(0xFF9B6BF2), Color(0xFF5B2FB5))
+}
+
+/**
  * Stable colour for a given id, so a song or playlist keeps the same swatch
  * every time it is drawn.
  */
