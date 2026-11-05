@@ -684,20 +684,31 @@ class MainActivity : ComponentActivity() {
             }
 
             CompositionLocalProvider(LocalDensity provides scaledDensity) {
-            // The backdrop is the blur source for the navigation bar — never the
-            // whole screen. Haze throws when a hazeChild sits inside the subtree
-            // of its haze source ("Layout nodes using Modifier.haze and
+            // Haze source for the wallpaper layer. Kept as a sibling of the
+            // Scaffold: Haze throws when a hazeChild sits inside the subtree of
+            // its haze source ("Layout nodes using Modifier.haze and
             // Modifier.hazeChild can not be descendants of each other"), and the
-            // bar lives in the Scaffold, so a source on this outer Box put the
-            // bar inside it and crashed every draw. The wallpaper layer is a
-            // *sibling* of the Scaffold and is what the bar actually has behind
-            // it, which is precisely what it should frost.
+            // bar lives in the Scaffold.
             val navBarHazeState = remember { HazeState() }
-            // The layer the optional liquid-glass navigation bar samples. It is
-            // recorded from the same wallpaper that actually sits behind the
-            // floating pill, so the refraction has real colour to bend.
-            val navBarGlassBackdrop = rememberLayerBackdrop()
+            val baseBg = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
             val navBarBaseColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surface
+            // What the optional liquid-glass navigation bar refracts. It captures
+            // the app content itself — lists, artwork and page transitions — not
+            // just the static wallpaper: a pane that only samples the backdrop
+            // looks like a flat tint, because there is nothing moving behind it
+            // for the blur and lens to distort. The base fill keeps transparent
+            // page gaps opaque so the pill never samples an empty layer.
+            val navBarGlassBackdrop =
+                rememberLayerBackdrop(
+                    onDraw =
+                        remember(baseBg) {
+                            val backgroundColor = baseBg
+                            {
+                                drawRect(backgroundColor)
+                                drawContent()
+                            }
+                        },
+                )
             BoxWithConstraints(
                 modifier =
                     Modifier
@@ -711,14 +722,7 @@ class MainActivity : ComponentActivity() {
                     modifier =
                         Modifier
                             .matchParentSize()
-                            .haze(navBarHazeState)
-                            .then(
-                                if (liquidGlassOn) {
-                                    Modifier.layerBackdrop(navBarGlassBackdrop)
-                                } else {
-                                    Modifier
-                                },
-                            ),
+                            .haze(navBarHazeState),
                 ) {
                     // Always painted, so the source is never an empty layer the
                     // bar would sample as transparent: with the artwork backdrop
@@ -1085,8 +1089,6 @@ class MainActivity : ComponentActivity() {
                     remember(pauseListenHistory, eventCount) {
                         !(pauseListenHistory && eventCount == 0)
                     }
-
-                val baseBg = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
 
                 CompositionLocalProvider(
                     LocalDatabase provides database,
@@ -1490,7 +1492,28 @@ class MainActivity : ComponentActivity() {
                                 .fillMaxSize()
                                 .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
                     ) {
-                        Row(Modifier.fillMaxSize()) {
+                        Row(
+                            Modifier
+                                .fillMaxSize()
+                                .then(
+                                    if (liquidGlassOn) {
+                                        // Record the page content for the glass
+                                        // pill. The outer layer isolates this
+                                        // subtree from sibling redraws (the bar,
+                                        // the mini player) so the backdrop is not
+                                        // re-captured for their animations; the
+                                        // inner one caches the whole page as a
+                                        // single RenderNode instead of replaying
+                                        // every draw op on each sample.
+                                        Modifier
+                                            .graphicsLayer()
+                                            .layerBackdrop(navBarGlassBackdrop)
+                                            .graphicsLayer()
+                                    } else {
+                                        Modifier
+                                    },
+                                ),
+                        ) {
                             val onRailItemClick: (Screens, Boolean) -> Unit =
                                 remember(navController, coroutineScope, topAppBarScrollBehavior, playerBottomSheetState) {
                                     { screen: Screens, isSelected: Boolean ->

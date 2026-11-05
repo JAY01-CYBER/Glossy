@@ -207,7 +207,6 @@ private fun GreetingVideoLoop(
     val lifecycleOwner = LocalLifecycleOwner.current
     val rawRes = when (animation) {
         GreetingAnimation.BOHO_HOME -> R.raw.greeting_boho
-        GreetingAnimation.HEMMING -> R.raw.greeting_hemming
         GreetingAnimation.STREET_MARKET -> R.raw.greeting_market
         GreetingAnimation.OFF -> return
     }

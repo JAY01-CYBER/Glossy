@@ -255,9 +255,9 @@ fun GlossyBottomNav(
     // A liquid-glass pane takes its colour from the recorded backdrop, so the
     // palette fill is only a translucent tint over it. The fluid wash stays the
     // fallback whenever the caller has no backdrop to sample; below the API
-    // levels that support the lens shader the glass degrades to the same tint,
+    // levels that support RenderEffect the glass degrades to the same tint,
     // which keeps the bar looking like part of the palette rather than flat.
-    val glassTint = glass.copy(alpha = 0.55f)
+    val glassTint = glass.copy(alpha = 0.35f)
     val navSurface: (Shape) -> Modifier = { shape ->
         liquidGlassBackdrop?.let { backdrop ->
             Modifier.liquidGlassSurface(

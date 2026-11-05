@@ -1424,7 +1424,6 @@ fun AppearanceSettings(
                             when (greetingAnimation) {
                                 GreetingAnimation.OFF -> "Off — the plain card"
                                 GreetingAnimation.BOHO_HOME -> "Reddish tree"
-                                GreetingAnimation.HEMMING -> "Luffy"
                                 GreetingAnimation.STREET_MARKET -> "Sunset samurai"
                             }
                         )
@@ -2964,7 +2963,6 @@ private fun greetingAnimationLabel(animation: GreetingAnimation): String =
     when (animation) {
         GreetingAnimation.OFF -> "Off (plain card)"
         GreetingAnimation.BOHO_HOME -> "Reddish tree"
-        GreetingAnimation.HEMMING -> "Luffy"
         GreetingAnimation.STREET_MARKET -> "Sunset samurai"
     }
 

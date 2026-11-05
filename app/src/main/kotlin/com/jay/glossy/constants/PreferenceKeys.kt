@@ -178,7 +178,6 @@ enum class GreetingAnimation {
     // rather than the file they came from, so the picker says what the card
     // will show instead of which download it is.
     BOHO_HOME,
-    HEMMING,
     STREET_MARKET,
 }
 
