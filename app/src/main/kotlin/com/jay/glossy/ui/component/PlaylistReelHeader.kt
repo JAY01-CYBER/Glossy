@@ -98,13 +98,16 @@ fun PlaylistReelHeader(
     val playStyle = remember(typography) {
         typography.titleSmall.copy(fontWeight = FontWeight.Bold)
     }
+    // Read the colour here: MaterialTheme is only readable from a composable
+    // context, not from inside the remember calculation.
+    val background = MaterialTheme.colorScheme.background
     // The scrim sits under the scrolling list, so it must not be rebuilt on
     // every recomposition the player state triggers.
-    val scrim = remember(MaterialTheme.colorScheme.background) {
+    val scrim = remember(background) {
         Brush.verticalGradient(
             0f to Color.Black.copy(alpha = 0.38f),
             0.55f to Color.Black.copy(alpha = 0.08f),
-            1f to MaterialTheme.colorScheme.background.copy(alpha = 0.62f),
+            1f to background.copy(alpha = 0.62f),
         )
     }
 
