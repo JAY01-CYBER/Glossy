@@ -157,6 +157,29 @@ fun Modifier.liquidGlass(
     )
 }
 
+/**
+ * A static liquid-glass pane over whatever [Modifier.layerBackdrop] recorded
+ * behind it. Unlike [liquidGlass] this does not install a press interaction,
+ * so it can sit under a row of tabs without stealing their gestures.
+ * [tint] is laid over the refracted backdrop to keep the controls legible.
+ */
+fun Modifier.liquidGlassSurface(
+    backdrop: Backdrop,
+    shape: Shape,
+    tint: Color,
+): Modifier =
+    drawBackdrop(
+        backdrop = backdrop,
+        shape = { shape },
+        effects = {
+            vibrancy()
+            colorControls(brightness = 0.02f, contrast = 1f, saturation = 1.35f)
+            blur(10.dp.toPx())
+            lens(18.dp.toPx(), 30.dp.toPx())
+        },
+        onDrawSurface = { drawRect(tint) },
+    )
+
 @Composable
 fun LiquidGlassIconButton(
     backdrop: Backdrop,

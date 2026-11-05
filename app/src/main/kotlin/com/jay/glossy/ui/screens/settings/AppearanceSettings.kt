@@ -98,6 +98,7 @@ import com.jay.glossy.constants.HidePlayerThumbnailKey
 import com.jay.glossy.constants.ReduceMotionKey
 import com.jay.glossy.constants.HideStatusBarOnFullscreenKey
 import com.jay.glossy.constants.LibraryFilter
+import com.jay.glossy.constants.LiquidGlassEnabledKey
 import com.jay.glossy.constants.ListenTogetherInTopBarKey
 import com.jay.glossy.constants.LyricsAnimationStyle
 import com.jay.glossy.constants.LyricsAnimationStyleKey
@@ -456,6 +457,12 @@ fun AppearanceSettings(
         rememberPreference(
             UseFloatingNavBarKey,
             defaultValue = true,
+        )
+
+    val (liquidGlass, onLiquidGlassChange) =
+        rememberPreference(
+            LiquidGlassEnabledKey,
+            defaultValue = false,
         )
 
     val context = activity as Context
@@ -2578,6 +2585,28 @@ fun AppearanceSettings(
                             )
                         },
                         onClick = { onUseFloatingNavBarChange(!useFloatingNavBar) },
+                    ),
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.nav_bar),
+                        title = { Text(stringResource(R.string.liquid_glass)) },
+                        description = { Text(stringResource(R.string.liquid_glass_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = liquidGlass,
+                                onCheckedChange = onLiquidGlassChange,
+                                thumbContent = {
+                                    Icon(
+                                        painter =
+                                            painterResource(
+                                                id = if (liquidGlass) R.drawable.check else R.drawable.close,
+                                            ),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize),
+                                    )
+                                },
+                            )
+                        },
+                        onClick = { onLiquidGlassChange(!liquidGlass) },
                     ),
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.group_outlined),

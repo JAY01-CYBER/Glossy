@@ -89,6 +89,15 @@ val DefaultOpenTabKey = stringPreferencesKey("defaultOpenTab")
 val SlimNavBarKey = booleanPreferencesKey("slimNavBar")
 val UseFloatingNavBarKey = booleanPreferencesKey("useFloatingNavBar")
 
+/**
+ * Paints the floating navigation pill and its search orb as liquid glass: the
+ * wallpaper behind them is captured, blurred and refracted through the bar
+ * instead of being covered by the flat fluid wash. Off by default because the
+ * lens shader is the most expensive paint in the app and the wash is the look
+ * the rest of the chrome is tuned for.
+ */
+val LiquidGlassEnabledKey = booleanPreferencesKey("liquidGlassEnabled")
+
 // App-wide background blur (frosted gradient backdrop behind Home/Library/etc.)
 val BackgroundBlurEnabledKey = booleanPreferencesKey("backgroundBlurEnabled")
 val BackgroundBlurStrengthKey = floatPreferencesKey("backgroundBlurStrength")

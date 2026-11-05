@@ -162,6 +162,7 @@ import com.jay.glossy.constants.EnableHighRefreshRateKey
 import com.jay.glossy.constants.EnableLandscapeScalingKey
 import com.jay.glossy.constants.ExperimentalLyricsKey
 import com.jay.glossy.constants.LastSeenVersionKey
+import com.jay.glossy.constants.LiquidGlassEnabledKey
 import com.jay.glossy.constants.ListenTogetherInTopBarKey
 import com.jay.glossy.constants.ListenTogetherUsernameKey
 import com.jay.glossy.constants.LyricsProviderOrderKey
@@ -230,6 +231,8 @@ import com.jay.glossy.utils.reportException
 import com.jay.glossy.utils.setAppLocale
 import com.jay.glossy.viewmodels.HomeViewModel
 import com.jay.glossy.widget.PlaylistWidgetReceiver
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.valentinilk.shimmer.LocalShimmerTheme
 import dagger.hilt.android.AndroidEntryPoint
 import dev.chrisbanes.haze.HazeState
@@ -690,6 +693,10 @@ class MainActivity : ComponentActivity() {
             // *sibling* of the Scaffold and is what the bar actually has behind
             // it, which is precisely what it should frost.
             val navBarHazeState = remember { HazeState() }
+            // The layer the optional liquid-glass navigation bar samples. It is
+            // recorded from the same wallpaper that actually sits behind the
+            // floating pill, so the refraction has real colour to bend.
+            val navBarGlassBackdrop = rememberLayerBackdrop()
             val navBarBaseColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surface
             BoxWithConstraints(
                 modifier =
@@ -698,12 +705,20 @@ class MainActivity : ComponentActivity() {
                         .background(navBarBaseColor),
             ) {
                 val (backgroundBlurOn) = rememberPreference(BackgroundBlurEnabledKey, defaultValue = true)
+                val (liquidGlassOn) = rememberPreference(LiquidGlassEnabledKey, defaultValue = false)
 
                 Box(
                     modifier =
                         Modifier
                             .matchParentSize()
-                            .haze(navBarHazeState),
+                            .haze(navBarHazeState)
+                            .then(
+                                if (liquidGlassOn) {
+                                    Modifier.layerBackdrop(navBarGlassBackdrop)
+                                } else {
+                                    Modifier
+                                },
+                            ),
                 ) {
                     // Always painted, so the source is never an empty layer the
                     // bar would sample as transparent: with the artwork backdrop
@@ -1411,6 +1426,7 @@ class MainActivity : ComponentActivity() {
                                         slimNav = slimNav,
                                         onSearchLongClick = onSearchLongClick,
                                         hazeNav = navBarHazeState,
+                                        liquidGlassBackdrop = if (liquidGlassOn) navBarGlassBackdrop else null,
                                         modifier =
                                             Modifier
                                                 .align(Alignment.BottomCenter)

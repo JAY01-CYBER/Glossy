@@ -50,6 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
@@ -67,6 +68,7 @@ import com.jay.glossy.ui.screens.Screens
 import com.jay.glossy.ui.theme.GlossyDimens
 import com.jay.glossy.ui.theme.GlossyPalette
 import com.jay.glossy.utils.rememberPreference
+import com.kyant.backdrop.Backdrop
 import dev.chrisbanes.haze.HazeState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -184,6 +186,7 @@ fun AppNavigationBar(
     slimNav: Boolean = false,
     onSearchLongClick: (() -> Unit)? = null,
     hazeNav: HazeState? = null,
+    liquidGlassBackdrop: Backdrop? = null,
 ) {
     // One bar for the whole app: the floating pill of the design, painted with
     // whatever scheme the theme resolved. [pureBlack] is still accepted so the
@@ -196,6 +199,7 @@ fun AppNavigationBar(
         slimNav = slimNav,
         onSearchLongClick = onSearchLongClick,
         hazeNav = hazeNav,
+        liquidGlassBackdrop = liquidGlassBackdrop,
     )
 }
 
@@ -224,6 +228,7 @@ fun GlossyBottomNav(
     slimNav: Boolean = false,
     onSearchLongClick: (() -> Unit)? = null,
     hazeNav: HazeState? = null,
+    liquidGlassBackdrop: Backdrop? = null,
 ) {
     // The tab set the app passes in is Home, Mix and Library; Search is the
     // orb beside the pill, never one of its tabs.
@@ -246,6 +251,28 @@ fun GlossyBottomNav(
     val fluidRose = GlossyPalette.Accent
     val fluidViolet = MaterialTheme.colorScheme.tertiary
     val fluidShade = GlossyPalette.AccentSoft
+
+    // A liquid-glass pane takes its colour from the recorded backdrop, so the
+    // palette fill is only a translucent tint over it. The fluid wash stays the
+    // fallback whenever the caller has no backdrop to sample; below the API
+    // levels that support the lens shader the glass degrades to the same tint,
+    // which keeps the bar looking like part of the palette rather than flat.
+    val glassTint = glass.copy(alpha = 0.55f)
+    val navSurface: (Shape) -> Modifier = { shape ->
+        liquidGlassBackdrop?.let { backdrop ->
+            Modifier.liquidGlassSurface(
+                backdrop = backdrop,
+                shape = shape,
+                tint = glassTint,
+            )
+        } ?: Modifier.navFluidWash(
+            base = glass,
+            rose = fluidRose,
+            violet = fluidViolet,
+            shade = fluidShade,
+            fluid = navFluid,
+        )
+    }
 
     // Keep the navigation bar on its palette surface rather than a Haze child:
     // Haze 1.1.1 can throw at draw time when a HazeChild has no backgroundColor
@@ -274,13 +301,7 @@ fun GlossyBottomNav(
                     // strip painted onto it.
                     .shadow(elevation = 12.dp, shape = pill, clip = false)
                     .clip(pill)
-                    .navFluidWash(
-                        base = glass,
-                        rose = fluidRose,
-                        violet = fluidViolet,
-                        shade = fluidShade,
-                        fluid = navFluid,
-                    )
+                    .then(navSurface(pill))
                     .border(GlossyDimens.Hairline, rim, pill)
                     .padding(horizontal = 5.dp, vertical = 5.dp),
             horizontalArrangement = Arrangement.spacedBy(2.dp),
@@ -339,13 +360,7 @@ fun GlossyBottomNav(
                         .size(orbSize)
                         .shadow(elevation = 12.dp, shape = CircleShape, clip = false)
                         .clip(CircleShape)
-                            .navFluidWash(
-                                base = glass,
-                                rose = fluidRose,
-                                violet = fluidViolet,
-                                shade = fluidShade,
-                                fluid = navFluid,
-                            )
+                            .then(navSurface(CircleShape))
                         .border(GlossyDimens.Hairline, rim, CircleShape)
                         // A press opens search; holding it opens recognition.
                         .combinedClickable(
