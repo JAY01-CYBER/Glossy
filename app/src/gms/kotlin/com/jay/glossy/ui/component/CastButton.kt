@@ -7,7 +7,6 @@ package com.jay.glossy.ui.component
 
 import com.jay.glossy.R
 
-import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -63,21 +62,20 @@ fun CastButton(
         defaultValue = true
     )
 
-    // Get cast state from service
+    // Get cast state from service. Keep the State objects rather than their
+    // current values: the picker reads them inside its own composition so
+    // devices found by mDNS after the sheet opens still show up.
     val castHandler = playerConnection?.service?.castConnectionHandler
-    val isCasting by castHandler?.isCasting?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(false) }
-    val isConnecting by castHandler?.isConnecting?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(false) }
-    val availableRoutes by castHandler?.availableRoutes?.collectAsStateWithLifecycle()
+    val isCasting = castHandler?.isCasting?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(false) }
+    val isConnecting = castHandler?.isConnecting?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(false) }
+    val availableRoutes = castHandler?.availableRoutes?.collectAsStateWithLifecycle()
         ?: remember { mutableStateOf<List<MediaRouter.RouteInfo>>(emptyList()) }
-
-    // Get current media metadata
-    val currentMetadata by playerConnection?.mediaMetadata?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(null) }
 
     // Check if Cast is available and disconnect if disabled while casting
     LaunchedEffect(enableGoogleCast, castHandler) {
         if (!enableGoogleCast) {
             // Disconnect from Cast if currently casting
-            if (isCasting) {
+            if (isCasting.value) {
                 castHandler?.disconnect()
             }
             castHandler?.stopDiscovery()
@@ -124,11 +122,6 @@ fun CastButton(
                     .align(Alignment.Center)
                     .clip(RoundedCornerShape(20.dp))
                     .clickable {
-                    if (currentMetadata == null && !isCasting) {
-                        Toast.makeText(context, "Play a song first to cast", Toast.LENGTH_SHORT).show()
-                        return@clickable
-                    }
-
                     // Ask for a fresh scan before showing the sheet so a TV that
                     // was not in the router's cache still gets a chance to answer.
                     castHandler?.refreshDiscovery()
@@ -136,9 +129,9 @@ fun CastButton(
                     // Show bottom sheet with cast picker
                     menuState.show {
                         CastPickerSheet(
-                            routes = availableRoutes,
-                            isConnecting = isConnecting,
-                            currentlyConnectedRoute = if (isCasting) castHandler?.selectedRoute else null,
+                            routes = availableRoutes.value,
+                            isConnecting = isConnecting.value,
+                            currentlyConnectedRoute = if (isCasting.value) castHandler?.selectedRoute else null,
                             onRouteSelected = { route ->
                                 castHandler?.connectToRoute(route)
                                 menuState.dismiss()
@@ -154,11 +147,11 @@ fun CastButton(
             ) {
                 Image(
                     painter = painterResource(
-                        if (isCasting) R.drawable.cast_connected else R.drawable.cast
+                        if (isCasting.value) R.drawable.cast_connected else R.drawable.cast
                     ),
-                    contentDescription = if (isCasting) "Stop casting" else "Cast",
+                    contentDescription = if (isCasting.value) "Stop casting" else "Cast",
                     colorFilter = ColorFilter.tint(
-                        if (isCasting) MaterialTheme.colorScheme.primary else tintColor
+                        if (isCasting.value) MaterialTheme.colorScheme.primary else tintColor
                     ),
                     modifier = Modifier.size(24.dp)
                 )

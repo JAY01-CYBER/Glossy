@@ -443,7 +443,11 @@ class CastConnectionHandler(
             castContext = CastContext.getSharedInstance(context)
             sessionManager = castContext?.sessionManager
             mediaRouter = MediaRouter.getInstance(context)
-            routeSelector = MediaRouteSelector.Builder()
+            // The SDK's merged selector covers the receiver app from CastOptions
+            // plus any extra session providers. A hand-built selector can miss a
+            // category the route provider publishes, which hides devices from
+            // discovery.
+            routeSelector = castContext?.mergedSelector ?: MediaRouteSelector.Builder()
                 .addControlCategory(CastMediaControlIntent.categoryForCast(CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID))
                 .build()
             
