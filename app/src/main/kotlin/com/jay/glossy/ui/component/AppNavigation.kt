@@ -59,12 +59,14 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jay.glossy.constants.UseFloatingNavBarKey
@@ -328,6 +330,7 @@ fun GlossyBottomNav(
             val tabWidth = maxWidth / tabCount
             val tabWidthPx = with(LocalDensity.current) { tabWidth.toPx() }
             val currentTabWidthPx by rememberUpdatedState(tabWidthPx)
+            val isLtr = LocalLayoutDirection.current == LayoutDirection.Ltr
             val animationScope = rememberCoroutineScope()
             val selectedTabIndex =
                 tabs.indexOfFirst { screen ->
@@ -347,7 +350,7 @@ fun GlossyBottomNav(
             val draggedFlag = remember { booleanArrayOf(false) }
 
             val dampedDrag =
-                remember(animationScope, tabCount) {
+                remember(animationScope, tabCount, isLtr) {
                     DampedDragAnimation(
                         animationScope = animationScope,
                         initialValue = selectedTabIndex.coerceAtLeast(0).toFloat(),
@@ -375,7 +378,8 @@ fun GlossyBottomNav(
                         onDrag = { _, dragAmount ->
                             if (dragAmount.x != 0f) draggedFlag[0] = true
                             updateValue(
-                                (targetValue + dragAmount.x / currentTabWidthPx)
+                                (targetValue +
+                                    dragAmount.x / currentTabWidthPx * if (isLtr) 1f else -1f)
                                     .coerceIn(0f, (tabCount - 1).toFloat()),
                             )
                         },
@@ -466,7 +470,10 @@ fun GlossyBottomNav(
                         .width(tabWidth)
                         .fillMaxHeight()
                         .graphicsLayer {
-                            translationX = dampedDrag.value * currentTabWidthPx
+                            translationX =
+                                dampedDrag.value *
+                                    currentTabWidthPx *
+                                    if (isLtr) 1f else -1f
                             // Search is the orb, not one of these tabs, so no
                             // tab pane exists while it is open. Pressing the
                             // pill brings the pane back for the drag.
