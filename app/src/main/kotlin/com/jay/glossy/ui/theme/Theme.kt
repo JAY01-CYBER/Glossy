@@ -109,7 +109,10 @@ fun MetrolistTheme(
         }
     }
 
-    CompositionLocalProvider(LocalGlossyColors provides glossyColors) {
+    CompositionLocalProvider(
+        LocalGlossyColors provides glossyColors,
+        LocalSongAccent provides seedScheme.primary,
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = typography,

@@ -5,6 +5,7 @@ package com.jay.glossy.ui.component
 import android.os.Build
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -73,6 +74,7 @@ import com.jay.glossy.constants.UseFloatingNavBarKey
 import com.jay.glossy.ui.screens.Screens
 import com.jay.glossy.ui.theme.GlossyDimens
 import com.jay.glossy.ui.theme.GlossyPalette
+import com.jay.glossy.ui.theme.LocalSongAccent
 import com.jay.glossy.utils.rememberPreference
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.drawBackdrop
@@ -255,6 +257,18 @@ fun GlossyBottomNav(
     // Captured before the draw phase: the palette reads are composition-only.
     val glass = GlossyPalette.MiniBar
     val rim = GlossyPalette.Border
+
+    // The glyphs follow the tonal accent generated from the current song, the
+    // same seed the dynamic theme uses. A fixed palette may paint the rest of
+    // the app from its own tokens, but the navigation icons stay on the song.
+    val themeSongAccent = LocalSongAccent.current
+    val songAccent =
+        if (themeSongAccent == Color.Unspecified) GlossyPalette.Accent else themeSongAccent
+    val songIconTint by animateColorAsState(
+        targetValue = songAccent,
+        animationSpec = tween(durationMillis = 450),
+        label = "navSongIconTint",
+    )
 
     // The bar's lava wash. It is the only surface in the app that animates its
     // background: the motion is deliberately scoped to the navigation pill and
@@ -517,7 +531,7 @@ fun GlossyBottomNav(
                                 if (highlighted) screen.iconIdActive else screen.iconIdInactive
                             ),
                             contentDescription = stringResource(screen.titleId),
-                            tint = if (highlighted) GlossyPalette.Accent else GlossyPalette.TextSecondary,
+                            tint = if (highlighted) songIconTint else songIconTint.copy(alpha = 0.55f),
                             modifier = Modifier.size(20.dp),
                         )
                         Spacer(Modifier.height(2.dp))
