@@ -5,7 +5,6 @@ package com.jay.glossy.ui.component
 import android.os.Build
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -74,7 +73,6 @@ import com.jay.glossy.constants.UseFloatingNavBarKey
 import com.jay.glossy.ui.screens.Screens
 import com.jay.glossy.ui.theme.GlossyDimens
 import com.jay.glossy.ui.theme.GlossyPalette
-import com.jay.glossy.ui.theme.LocalSongAccent
 import com.jay.glossy.utils.rememberPreference
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.drawBackdrop
@@ -258,18 +256,6 @@ fun GlossyBottomNav(
     val glass = GlossyPalette.MiniBar
     val rim = GlossyPalette.Border
 
-    // The glyphs follow the tonal accent generated from the current song, the
-    // same seed the dynamic theme uses. A fixed palette may paint the rest of
-    // the app from its own tokens, but the navigation icons stay on the song.
-    val themeSongAccent = LocalSongAccent.current
-    val songAccent =
-        if (themeSongAccent == Color.Unspecified) GlossyPalette.Accent else themeSongAccent
-    val songIconTint by animateColorAsState(
-        targetValue = songAccent,
-        animationSpec = tween(durationMillis = 450),
-        label = "navSongIconTint",
-    )
-
     // The bar's lava wash. It is the only surface in the app that animates its
     // background: the motion is deliberately scoped to the navigation pill and
     // its search orb, not painted over the screens behind them. Ambient motion
@@ -311,6 +297,12 @@ fun GlossyBottomNav(
     val barHeight = if (slimNav) 56.dp else GlossyDimens.NavPillHeight
     val pillHeight = if (slimNav) 50.dp else 62.dp
     val orbSize = if (slimNav) 50.dp else 58.dp
+    // The selected bubble is a little shorter than the pill at rest (56dp in a
+    // 62dp pill) and grows to ~76dp while it is dragged, so its top edge rises
+    // above the bar like the reference recording. It therefore has to be drawn
+    // outside the pill's clip instead of inside it.
+    val paneInset = 3.dp
+    val tabInset = 5.dp
 
     Row(
         modifier =
@@ -328,12 +320,20 @@ fun GlossyBottomNav(
                     // The design's bar carries a shadow *and* a hairline, so it
                     // reads as a control floating over the feed rather than a
                     // strip painted onto it.
-                    .shadow(elevation = 12.dp, shape = pill, clip = false)
-                    .clip(pill)
-                    .then(navSurface(pill))
-                    .border(GlossyDimens.Hairline, rim, pill)
-                    .padding(horizontal = 5.dp, vertical = 5.dp),
+                    .shadow(elevation = 12.dp, shape = pill, clip = false),
         ) {
+            // The pill's own glass is clipped separately: the selection bubble
+            // is a sibling and stays unclipped so the press scale can spill
+            // over the bar's edge.
+            Box(
+                modifier =
+                    Modifier
+                        .matchParentSize()
+                        .clip(pill)
+                        .then(navSurface(pill))
+                        .border(GlossyDimens.Hairline, rim, pill),
+            )
+
             // The selection rides on one liquid pane that stretches between
             // tabs instead of each tab painting its own background. The
             // animation is deliberately driven by drag position rather than by
@@ -341,7 +341,7 @@ fun GlossyBottomNav(
             // stretch the video shows, then settles on the tab it is released
             // over.
             val tabCount = tabs.size.coerceAtLeast(1)
-            val tabWidth = maxWidth / tabCount
+            val tabWidth = (maxWidth - tabInset * 2) / tabCount
             val tabWidthPx = with(LocalDensity.current) { tabWidth.toPx() }
             val currentTabWidthPx by rememberUpdatedState(tabWidthPx)
             val isLtr = LocalLayoutDirection.current == LayoutDirection.Ltr
@@ -481,8 +481,10 @@ fun GlossyBottomNav(
             Box(
                 modifier =
                     Modifier
+                        .align(Alignment.CenterStart)
+                        .padding(start = tabInset)
                         .width(tabWidth)
-                        .fillMaxHeight()
+                        .height(pillHeight - paneInset * 2)
                         .graphicsLayer {
                             translationX =
                                 dampedDrag.value *
@@ -500,6 +502,7 @@ fun GlossyBottomNav(
                 modifier =
                     Modifier
                         .fillMaxSize()
+                        .padding(horizontal = tabInset)
                         .then(dampedDrag.modifier),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -531,7 +534,7 @@ fun GlossyBottomNav(
                                 if (highlighted) screen.iconIdActive else screen.iconIdInactive
                             ),
                             contentDescription = stringResource(screen.titleId),
-                            tint = if (highlighted) songIconTint else songIconTint.copy(alpha = 0.55f),
+                            tint = if (highlighted) GlossyPalette.Accent else GlossyPalette.TextSecondary,
                             modifier = Modifier.size(20.dp),
                         )
                         Spacer(Modifier.height(2.dp))

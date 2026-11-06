@@ -187,16 +187,6 @@ fun materialisticColors(scheme: ColorScheme): GlossyColors = GlossyColors(
 val LocalGlossyColors = staticCompositionLocalOf { GlossyColors.Dark }
 
 /**
- * The tonal primary generated from the current theme seed. When dynamic
- * theming follows the now-playing artwork this is the song's accent, even if
- * the selected design palette paints the rest of the app from fixed tokens.
- *
- * [Color.Unspecified] when no theme provider is in composition; readers should
- * fall back to [GlossyPalette.Accent].
- */
-val LocalSongAccent = staticCompositionLocalOf { Color.Unspecified }
-
-/**
  * Exact tokens of the design system, resolved for the current theme.
  *
  * Provided by the app theme (see `MetrolistTheme`), so every redesigned screen
