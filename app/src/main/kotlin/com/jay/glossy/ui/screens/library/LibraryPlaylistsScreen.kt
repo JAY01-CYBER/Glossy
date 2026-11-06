@@ -103,6 +103,8 @@ import com.jay.glossy.extensions.matchesNormalizedQuery
 import com.jay.glossy.extensions.normalizeForSearch
 import com.jay.glossy.spotify.SpotifyAccountViewModel
 import com.jay.glossy.spotifycore.models.SpotifyPlaylist
+import com.jay.glossy.ui.theme.GlossyCollectionGradient
+import com.jay.glossy.ui.theme.GlossyCollectionGradients
 import com.jay.glossy.utils.rememberEnumPreference
 import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.viewmodels.LibraryPlaylistsViewModel
@@ -115,6 +117,45 @@ private data class VisiblePlaylistItem(
     val playlist: Playlist,
     val autoPlaylist: Boolean,
     val route: String? = null,
+)
+
+/**
+ * Fixed look for a virtual collection. Keyed by the stable
+ * [VisiblePlaylistItem.key] rather than the display name, so translating the
+ * app or renaming a collection cannot change its colour.
+ */
+private data class VirtualPlaylistStyle(
+    val icon: Int,
+    val gradient: GlossyCollectionGradient,
+)
+
+private fun virtualPlaylistStyle(key: String?): VirtualPlaylistStyle? = when (key) {
+    "likedPlaylist" -> VirtualPlaylistStyle(
+        icon = R.drawable.favorite,
+        gradient = GlossyCollectionGradients.liked,
+    )
+    "downloadedPlaylist" -> VirtualPlaylistStyle(
+        icon = R.drawable.download,
+        gradient = GlossyCollectionGradients.downloaded,
+    )
+    "cachedPlaylist" -> VirtualPlaylistStyle(
+        icon = R.drawable.sync,
+        gradient = GlossyCollectionGradients.cached,
+    )
+    "uploadedPlaylist" -> VirtualPlaylistStyle(
+        icon = R.drawable.upload,
+        gradient = GlossyCollectionGradients.uploaded,
+    )
+    "TopPlaylist" -> VirtualPlaylistStyle(
+        icon = R.drawable.trending_up,
+        gradient = GlossyCollectionGradients.myTop,
+    )
+    else -> null
+}
+
+private val DefaultAutoPlaylistStyle = VirtualPlaylistStyle(
+    icon = R.drawable.playlist_play,
+    gradient = GlossyCollectionGradient(Color(0xFF7C86FF), Color(0xFF3A3F8F)),
 )
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
@@ -545,6 +586,7 @@ fun LibraryPlaylistsScreen(
                                 playlist = item.playlist,
                                 route = item.route,
                                 subtitle = subtitle,
+                                swatch = virtualPlaylistStyle(item.key)?.gradient?.start,
                                 modifier = Modifier.animateItem(),
                             )
                         }
@@ -589,6 +631,7 @@ fun LibraryPlaylistsScreen(
                                     Box(modifier = Modifier.weight(1f)) {
                                         AutoPlaylistGridItem(
                                             playlist = item.playlist,
+                                            style = virtualPlaylistStyle(item.key),
                                             onClick = { item.route?.let(navController::navigate) }
                                         )
                                     }
@@ -679,6 +722,7 @@ fun LibraryPlaylistsScreen(
                         if (item.autoPlaylist) {
                             AutoPlaylistGridItem(
                                 playlist = item.playlist,
+                                style = virtualPlaylistStyle(item.key),
                                 onClick = {
                                     item.route?.let(navController::navigate)
                                 },
@@ -736,45 +780,12 @@ fun LibraryPlaylistsScreen(
 @Composable
 private fun AutoPlaylistGridItem(
     playlist: Playlist,
+    style: VirtualPlaylistStyle?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val title = playlist.playlist.name
-
-    // Saturated two-stop gradient per collection — the old flat pastel washes
-    // read as placeholders next to real artwork cards.
-    val (iconRes, startColor, endColor) = when {
-        title.contains("Liked", ignoreCase = true) || title.contains("पसंद", ignoreCase = true) -> Triple(
-            R.drawable.favorite,
-            Color(0xFFFF5C7A),
-            Color(0xFFD62E56),
-        )
-        title.contains("Offline", ignoreCase = true) || title.contains("Downloaded", ignoreCase = true) -> Triple(
-            R.drawable.download,
-            Color(0xFF6C7BFF),
-            Color(0xFF3646C9),
-        )
-        title.contains("Cached", ignoreCase = true) -> Triple(
-            R.drawable.sync,
-            Color(0xFFA66BFF),
-            Color(0xFF6B37D6),
-        )
-        title.contains("Uploaded", ignoreCase = true) -> Triple(
-            R.drawable.upload,
-            Color(0xFF4CC9B0),
-            Color(0xFF12897B),
-        )
-        title.contains("Top", ignoreCase = true) -> Triple(
-            R.drawable.trending_up,
-            Color(0xFF5B6C7A),
-            Color(0xFF24313B),
-        )
-        else -> Triple(
-            R.drawable.playlist_play,
-            Color(0xFF7C86FF),
-            Color(0xFF3A3F8F),
-        )
-    }
+    val look = style ?: DefaultAutoPlaylistStyle
 
     Box(
         modifier = modifier
@@ -782,7 +793,7 @@ private fun AutoPlaylistGridItem(
             .fillMaxWidth()
             .height(115.dp)
             .clip(RoundedCornerShape(20.dp))
-            .background(Brush.linearGradient(colors = listOf(startColor, endColor)))
+            .background(Brush.linearGradient(colors = listOf(look.gradient.start, look.gradient.end)))
             .clickable(onClick = onClick)
             .padding(14.dp)
     ) {
@@ -803,7 +814,7 @@ private fun AutoPlaylistGridItem(
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                painter = painterResource(id = iconRes),
+                painter = painterResource(id = look.icon),
                 contentDescription = title,
                 tint = Color.White,
                 modifier = Modifier.size(20.dp)

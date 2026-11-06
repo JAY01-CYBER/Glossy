@@ -110,5 +110,11 @@ data class Material3MenuItemData(
     val description: (@Composable () -> Unit)? = null,
     val onClick: (() -> Unit)? = null,
     val cardColors: CardColors? = null,
+    /**
+     * Paints the row in the accent container. Used by menus that put a whole
+     * section in one card: there the row's own [cardColors] would hide the
+     * separation the card provides, so the on-state needs its own flag.
+     */
+    val highlighted: Boolean = false,
     val trailingContent: (@Composable () -> Unit)? = null
 )

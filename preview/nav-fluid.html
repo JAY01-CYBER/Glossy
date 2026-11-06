@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Glossy · fluid navigation bar</title>
+<style>
+  :root {
+    --page:#101114; --bar:#24262C; --border:#34353C; --accent:#EDB8C3;
+    --accent-soft:#382B33; --text:#F6F2F3; --text2:#A1A0AA; --muted:#6F6E77;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    min-height: 100vh; display: grid; place-items: center; padding: 32px;
+    background: radial-gradient(900px 600px at 20% -10%, #1b1920, transparent 60%), var(--page);
+    color: var(--text); font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .stage { width: 390px; }
+  .eyebrow { font-size: 10.5px; letter-spacing: .2em; text-transform: uppercase; color: var(--accent); margin: 0 0 10px; }
+  h1 { font-size: 22px; letter-spacing: -.02em; margin: 0 0 4px; font-weight: 620; }
+  .sub { margin: 0 0 18px; font-size: 12.5px; line-height: 1.5; color: #9b98a2; }
+
+  .phone { position: relative; height: 640px; border-radius: 34px; overflow: hidden; border: 1px solid rgba(255,255,255,.07); background: linear-gradient(180deg,#131418,#0d0e11); }
+
+  /* pretend feed so the bar has something to sit on */
+  .feed { padding: 26px 20px 0; }
+  .kicker { font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+  .feed h2 { margin: 7px 0 3px; font-size: 20px; letter-spacing: -.02em; font-weight: 600; }
+  .feed p { margin: 0; font-size: 12px; color: var(--text2); }
+  .cards { margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .card { height: 92px; border-radius: 18px; background: linear-gradient(140deg,#2a2430,#1a171d); border: 1px solid rgba(255,255,255,.05); }
+  .card:nth-child(2) { background: linear-gradient(140deg,#1e2a2a,#141a1a); }
+  .card:nth-child(3) { background: linear-gradient(140deg,#2c2320,#1b1614); }
+  .card:nth-child(4) { background: linear-gradient(140deg,#20242e,#15171c); }
+
+  .nav { position: absolute; left: 4px; right: 4px; bottom: 14px; display: flex; align-items: center; gap: 10px; }
+
+  .pill { position: relative; flex: 1; height: 62px; border-radius: 31px; overflow: hidden; background: var(--bar);
+    box-shadow: inset 0 0 0 1px var(--border), 0 12px 24px -14px #000;
+    display: flex; align-items: center; padding: 5px; gap: 2px; isolation: isolate; }
+
+  .wash { position: absolute; inset: -30%; z-index: 0; pointer-events: none; overflow: hidden; border-radius: inherit; }
+  .orb .wash { inset: -60%; }
+  .blob { position: absolute; width: 210px; height: 210px; border-radius: 50%; filter: blur(6px); }
+  .b1 { background: radial-gradient(circle, rgba(237,184,195,.55) 0%, rgba(237,184,195,.18) 52%, transparent 72%);
+        animation: driftA 21s linear infinite; }
+  .b2 { background: radial-gradient(circle, rgba(140,124,240,.46) 0%, rgba(140,124,240,.14) 52%, transparent 72%);
+        animation: driftB 34s linear infinite; }
+  .b3 { width: 170px; height: 170px;
+        background: radial-gradient(circle, rgba(56,43,51,.7) 0%, rgba(56,43,51,.24) 54%, transparent 74%);
+        animation: driftC 34s linear infinite; }
+
+  @keyframes driftA {
+    0%   { transform: translate(-84px, 4px) scale(1); }
+    25%  { transform: translate(30px, -34px) scale(1.08); }
+    50%  { transform: translate(150px, 10px) scale(1); }
+    75%  { transform: translate(34px, 34px) scale(.94); }
+    100% { transform: translate(-84px, 4px) scale(1); }
+  }
+  @keyframes driftB {
+    0%   { transform: translate(150px, 22px) scale(1); }
+    25%  { transform: translate(20px, -18px) scale(1.05); }
+    50%  { transform: translate(-90px, -4px) scale(.96); }
+    75%  { transform: translate(18px, 26px) scale(1.04); }
+    100% { transform: translate(150px, 22px) scale(1); }
+  }
+  @keyframes driftC {
+    0%   { transform: translate(60px, -12px); }
+    33%  { transform: translate(-40px, 22px); }
+    66%  { transform: translate(120px, 18px); }
+    100% { transform: translate(60px, -12px); }
+  }
+
+  .tab { position: relative; z-index: 1; flex: 1; height: 52px; border-radius: 26px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: var(--text2); }
+  .tab.active { background: var(--accent-soft); color: var(--accent); }
+  .tab span { font-size: 10px; line-height: 12px; font-weight: 500; letter-spacing: .01em; }
+  .tab.active span { font-weight: 600; }
+  .icon { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+  .orb { position: relative; width: 58px; height: 58px; border-radius: 50%; overflow: hidden; background: var(--bar);
+    box-shadow: inset 0 0 0 1px var(--border), 0 12px 24px -14px #000; display: grid; place-items: center; color: var(--text2); isolation: isolate; }
+  .orb .icon { position: relative; z-index: 1; }
+
+  .note { margin-top: 16px; display: flex; gap: 8px; align-items: flex-start; font-size: 11.5px; color: #8e8b95; line-height: 1.5; }
+  .dot { width: 6px; height: 6px; margin-top: 5px; border-radius: 50%; background: var(--accent); flex: 0 0 auto; }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <p class="eyebrow">Glossy · navigation</p>
+    <h1>Fluid nav wash</h1>
+    <p class="sub">Two accent blobs and a darker core drift inside the pill and the search orb — nothing behind them moves.</p>
+
+    <div class="phone">
+      <div class="feed">
+        <div class="kicker">For you</div>
+        <h2>Late night</h2>
+        <p>Slow Tamil melodies, one after another.</p>
+        <div class="cards"><div class="card"></div><div class="card"></div><div class="card"></div><div class="card"></div></div>
+      </div>
+
+      <div class="nav">
+        <div class="pill">
+          <div class="wash">
+            <i class="blob b1"></i><i class="blob b2"></i><i class="blob b3"></i>
+          </div>
+          <div class="tab active">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M4 11l8-7 8 7"/><path d="M6 10v9h12v-9"/></svg>
+            <span>Home</span>
+          </div>
+          <div class="tab">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M4 14l6-6 4 4 6-6"/><path d="M4 20h16"/></svg>
+            <span>Mix</span>
+          </div>
+          <div class="tab">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M5 5h5v14H5z"/><path d="M14 5h5v9h-5z"/></svg>
+            <span>Library</span>
+          </div>
+        </div>
+
+        <div class="orb">
+          <div class="wash">
+            <i class="blob b1"></i><i class="blob b2"></i><i class="blob b3"></i>
+          </div>
+          <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M16 16l4 4"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <p class="note"><span class="dot"></span><span>Approximate preview of the Compose wash. In the app the blobs use the theme accent and tertiary, and freeze when Reduce motion is on.</span></p>
+  </div>
+</body>
+</html>

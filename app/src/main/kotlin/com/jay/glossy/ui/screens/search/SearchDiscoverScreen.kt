@@ -155,7 +155,7 @@ fun SearchDiscoverRoute(
                 ranked = fromCharts.ranked.ifEmpty { suggestedSongs },
                 albums = fromCharts.albums
                     .ifEmpty { explorePage?.newReleaseAlbums.orEmpty() }
-                    .distinctBy { it.id }
+                    .distinctReleases()
                     .take(8),
             )
         },

@@ -542,13 +542,23 @@ object YTPlayerUtils {
                 null
             }
 
+        // The master's own lifetime can be shorter than YouTube's URL. Using
+        // the shorter one keeps a stale master URL out of the stream cache,
+        // which would otherwise hand a 403 to the next song that reuses it.
+        val streamLifetime =
+            if (lossless == null) {
+                streamExpiresInSeconds
+            } else {
+                minOf(streamExpiresInSeconds, lossless.expiresInSeconds)
+            }
+
         PlaybackData(
             audioConfig,
             videoDetails,
             playbackTracking,
             format,
             lossless?.url ?: streamUrl,
-            streamExpiresInSeconds,
+            streamLifetime,
             streamClient = if (lossless != null) LOSSLESS_CLIENT else successClient ?: "unknown",
             lossless = lossless,
         )
@@ -625,8 +635,17 @@ object YTPlayerUtils {
                 // LOSSLESS lands here too: this is its fallback when the source
                 // module has nothing, and the best YouTube stream is a better
                 // answer than silence.
-                audioCapableFormats.filter { it.isOriginal }.maxByOrNull { it.bitrate }
-                    ?: audioCapableFormats.maxByOrNull { it.bitrate }
+                // Bitrate first, then the codec: at the same number Opus keeps
+                // more detail than AAC, and YouTube masters music in Opus. The
+                // plain maxByOrNull left that tie to whatever order the
+                // response happened to list formats in, which is not a choice.
+                audioCapableFormats
+                    .filter { it.isOriginal }
+                    .ifEmpty { audioCapableFormats }
+                    .maxWithOrNull(
+                        compareBy<PlayerResponse.StreamingData.Format> { it.bitrate }
+                            .thenBy { scoreCodec(it.mimeType) },
+                    )
             }
 
             AudioQuality.LOW -> {

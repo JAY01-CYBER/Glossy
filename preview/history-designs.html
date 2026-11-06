@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Glossy · History screen directions</title>
+<style>
+  :root {
+    --page: #080b0d;
+    --ink: #eef4f5;
+    --muted: #8c979b;
+    --line: rgba(255,255,255,.08);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    background:
+      radial-gradient(1000px 620px at 10% -10%, #12262a 0%, transparent 60%),
+      radial-gradient(900px 520px at 96% 4%, #1f1a26 0%, transparent 58%),
+      var(--page);
+    color: var(--ink);
+    padding: 40px 40px 56px;
+    -webkit-font-smoothing: antialiased;
+  }
+  header { max-width: 1200px; margin: 0 auto 30px; }
+  .eyebrow { font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: #7fe8d8; margin: 0 0 12px; }
+  h1 { font-size: 36px; line-height: 1.06; letter-spacing: -.03em; margin: 0 0 10px; font-weight: 650; }
+  h1 span { color: #8b9599; }
+  header p { margin: 0; max-width: 760px; color: var(--muted); font-size: 14px; line-height: 1.6; }
+
+  .gallery { display: flex; flex-wrap: nowrap; gap: 40px; max-width: 1200px; margin: 0 auto; transform-origin: top left; }
+  .col { width: 390px; flex: 0 0 auto; }
+  .colhead { display: flex; align-items: baseline; justify-content: space-between; }
+  .tag { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: #b9c2c7; margin: 0; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .colname { font-size: 18px; font-weight: 600; margin: 4px 0 3px; letter-spacing: -.01em; }
+  .coldesc { color: var(--muted); font-size: 12.5px; line-height: 1.5; margin: 0 0 12px; min-height: 38px; }
+
+  .phone {
+    position: relative; width: 390px; height: 844px; border-radius: 40px; overflow: hidden;
+    border: 1px solid rgba(255,255,255,.09); isolation: isolate;
+    box-shadow: 0 30px 64px -28px rgba(0,0,0,.85);
+  }
+  .status { position: relative; z-index: 6; display: flex; align-items: center; justify-content: space-between; padding: 15px 24px 4px; font-size: 12.5px; font-weight: 600; }
+  .status .r { display: flex; align-items: center; gap: 6px; }
+  .bars { display: flex; align-items: flex-end; gap: 2px; }
+  .bars i { width: 3px; background: currentColor; border-radius: 1px; }
+  .bars i:nth-child(1) { height: 4px; } .bars i:nth-child(2) { height: 7px; } .bars i:nth-child(3) { height: 10px; }
+  .batt { width: 20px; height: 10px; border: 1.4px solid currentColor; border-radius: 3px; position: relative; }
+  .batt::before { content: ""; position: absolute; inset: 2px; width: 9px; background: currentColor; border-radius: 1px; }
+  .batt::after { content: ""; position: absolute; right: -3px; top: 2.5px; width: 2px; height: 4px; background: currentColor; }
+
+  .ico { width: 20px; height: 20px; display: block; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .ico.sm { width: 16px; height: 16px; }
+
+  /* app bar */
+  .appbar { position: relative; z-index: 5; display: flex; align-items: center; gap: 8px; padding: 4px 14px 4px 8px; }
+  .appbar h2 { flex: 1 1 auto; font-size: 22px; font-weight: 600; letter-spacing: -.015em; margin: 0; }
+  .iconbtn { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; }
+
+  /* tabs */
+  .tabs { position: relative; z-index: 5; display: flex; gap: 8px; padding: 8px 16px 12px; }
+  .tab { display: flex; align-items: center; gap: 7px; height: 34px; padding: 0 15px; border-radius: 12px; font-size: 13px; font-weight: 600; }
+
+  /* rows */
+  .list { position: relative; z-index: 3; }
+  .row { display: flex; align-items: center; gap: 13px; padding: 10px 18px 10px 16px; }
+  .thumb { width: 54px; height: 54px; border-radius: 14px; flex: 0 0 auto; position: relative; overflow: hidden; display: grid; place-items: center; font-size: 15px; font-weight: 700; color: rgba(0,0,0,.55); }
+  .thumb::after { content: ""; position: absolute; inset: 0; background: linear-gradient(150deg, rgba(255,255,255,.28), transparent 55%); }
+  .meta { flex: 1 1 auto; min-width: 0; }
+  .meta b { display: block; font-size: 15px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -.005em; }
+  .meta small { display: block; margin-top: 3px; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .more { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #a7b2b6; flex: 0 0 auto; }
+  .dots { letter-spacing: 2px; font-size: 15px; line-height: 1; }
+
+  /* mini player + fab */
+  .mini { position: absolute; z-index: 7; left: 12px; right: 12px; bottom: 14px; height: 68px; border-radius: 22px; display: flex; align-items: center; gap: 11px; padding: 8px 10px; backdrop-filter: blur(20px); }
+  .mini .art { width: 50px; height: 50px; border-radius: 50%; flex: 0 0 auto; }
+  .mini .t { flex: 1 1 auto; min-width: 0; }
+  .mini .t b { display: block; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mini .t small { display: block; font-size: 12px; opacity: .65; margin-top: 2px; }
+  .mini .c { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; }
+  .fab { position: absolute; right: 18px; bottom: 104px; z-index: 6; width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; }
+
+  /* ============ A · Echo Timeline ============ */
+  .a { background: #03181c; color: #e8f7f4; }
+  .a .wash { position: absolute; inset: 0; z-index: 0;
+    background:
+      radial-gradient(420px 300px at 18% 18%, rgba(64, 190, 175, .22), transparent 65%),
+      radial-gradient(380px 320px at 88% 46%, rgba(146, 178, 84, .18), transparent 65%),
+      radial-gradient(420px 320px at 24% 78%, rgba(58, 120, 190, .16), transparent 68%),
+      #03181c; }
+  .a .scrim { position: absolute; inset: 0; z-index: 1; background: linear-gradient(180deg, rgba(3,24,28,.92) 0%, rgba(3,24,28,.35) 26%, rgba(3,24,28,.45) 70%, rgba(3,24,28,.94) 100%); }
+  .a .appbar { padding-top: 2px; }
+  .a .appbar h2 { font-weight: 600; }
+  .a .tab { color: #9dc4bf; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.07); }
+  .a .tab.on { background: #8ef0dc; color: #062a26; border-color: transparent; box-shadow: 0 6px 18px -8px rgba(142,240,220,.7); }
+  .a .daybar { position: sticky; top: 0; display: flex; align-items: center; gap: 10px; padding: 14px 18px 8px; }
+  .a .daybar .bar { width: 3px; height: 18px; border-radius: 3px; background: #8ef0dc; }
+  .a .daybar b { font-size: 14px; font-weight: 650; letter-spacing: -.01em; }
+  .a .daybar small { margin-left: auto; font-size: 11px; color: #7fa8a3; letter-spacing: .08em; text-transform: uppercase; }
+  .a .rail { position: relative; }
+  .a .rail::before { content: ""; position: absolute; left: 42px; top: 12px; bottom: 12px; width: 1px; background: linear-gradient(180deg, rgba(142,240,220,.28), rgba(142,240,220,.04)); }
+  .a .row { padding-left: 18px; }
+  .a .row .thumb { box-shadow: 0 0 0 1px rgba(255,255,255,.08); }
+  .a .row:active { background: rgba(255,255,255,.03); }
+  .a .mini { background: rgba(8, 40, 44, .72); border: 1px solid rgba(142,240,220,.16); box-shadow: 0 18px 40px -20px #000; }
+  .a .mini .art { background: radial-gradient(circle at 35% 30%, #ffe6b8, #b8552f 45%, #123f3d 80%); }
+  .a .mini .c { background: rgba(255,255,255,.07); color: #cfe9e4; }
+  .a .fab { background: #8ef0dc; color: #04231f; box-shadow: 0 16px 34px -12px rgba(142,240,220,.75); }
+
+  /* ============ B · Echo Days ============ */
+  .b { background: #0a0a0c; color: #f6f1ea; }
+  .b .wash { position: absolute; inset: 0; z-index: 0; background:
+      radial-gradient(400px 280px at 82% 6%, rgba(255, 150, 92, .18), transparent 68%),
+      radial-gradient(380px 300px at 8% 54%, rgba(196, 126, 92, .12), transparent 66%),
+      #0a0a0c; }
+  .b .appbar h2 { font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif; font-weight: 500; font-size: 25px; letter-spacing: -.01em; }
+  .b .appbar .iconbtn { border: 1px solid rgba(255,255,255,.1); }
+  .b .tabs { gap: 18px; padding: 6px 22px 10px; border-bottom: 1px solid rgba(255,255,255,.06); }
+  .b .tab { height: 34px; padding: 0 2px; border-radius: 0; color: #8b8178; background: transparent; border: 0; position: relative; }
+  .b .tab.on { color: #ffd9bd; }
+  .b .tab.on::after { content: ""; position: absolute; left: 0; right: 0; bottom: -11px; height: 2px; border-radius: 2px; background: #ffb27a; }
+  .b .appbar, .b .tabs, .b .cards { position: relative; z-index: 3; }
+  .b .cards { padding: 16px 14px 110px; display: grid; gap: 14px; }
+  .b .day { border-radius: 24px; padding: 6px 6px 8px; background: linear-gradient(165deg, rgba(255,255,255,.07), rgba(255,255,255,.025)); border: 1px solid rgba(255,255,255,.08); }
+  .b .dayhead { display: flex; align-items: center; gap: 10px; padding: 12px 14px 8px; }
+  .b .dayhead b { font-size: 15px; font-weight: 600; letter-spacing: -.005em; }
+  .b .dayhead small { margin-left: auto; font-size: 11px; color: #9b9089; }
+  .b .dayhead .pip { width: 7px; height: 7px; border-radius: 50%; background: #ffb27a; box-shadow: 0 0 0 4px rgba(255,178,122,.12); }
+  .b .row { padding: 9px 10px; border-radius: 16px; }
+  .b .row + .row { border-top: 1px solid rgba(255,255,255,.05); border-radius: 0; }
+  .b .thumb { border-radius: 12px; width: 50px; height: 50px; }
+  .b .mini { background: rgba(22, 20, 20, .8); border: 1px solid rgba(255,255,255,.1); }
+  .b .mini .art { background: radial-gradient(circle at 30% 25%, #ffd9a8, #d06b3c 48%, #3a1f2a 82%); }
+  .b .mini .c { background: rgba(255,255,255,.06); color: #e9ddd3; }
+  .b .fab { background: #ffb27a; color: #33170a; box-shadow: 0 16px 32px -14px rgba(255,178,122,.7); }
+
+  /* ============ C · Echo Reel ============ */
+  .c { background: #0a0a14; color: #ecebff; }
+  .c .wash { position: absolute; inset: 0; z-index: 0; background:
+      radial-gradient(460px 320px at 20% 0%, rgba(112, 96, 255, .3), transparent 62%),
+      radial-gradient(420px 320px at 92% 34%, rgba(0, 214, 255, .18), transparent 64%),
+      #0a0a14; }
+  .c .appbar h2 { font-size: 21px; }
+  .c .tab { color: #9a9ac4; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); }
+  .c .tab.on { background: linear-gradient(120deg, #8b7bff, #46d6ff); color: #0a0a1a; border-color: transparent; }
+  .c .appbar, .c .tabs, .c .reel, .c .sectionlabel, .c .row, .c .list { position: relative; z-index: 3; }
+  .c .reel { display: flex; gap: 12px; overflow: hidden; padding: 4px 16px 14px; }
+  .c .card { width: 132px; flex: 0 0 auto; }
+  .c .cover { height: 128px; border-radius: 20px; position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,.12); }
+  .c .cover span { position: absolute; left: 10px; right: 10px; bottom: 9px; font-size: 11.5px; font-weight: 600; color: #fff; text-shadow: 0 1px 6px rgba(0,0,0,.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .c .card small { display: block; margin-top: 6px; font-size: 10.5px; color: #9696b8; letter-spacing: .02em; }
+  .c .sectionlabel { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 10px; letter-spacing: .24em; color: #8f8fb8; padding: 8px 18px 5px; }
+  .c .row { padding: 9px 18px; }
+  .c .thumb { border-radius: 10px; width: 44px; height: 44px; }
+  .c .meta b { font-size: 14px; }
+  .c .meta small { font-size: 11.5px; }
+  .c .time { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 10.5px; color: #8f8fb8; margin-right: 6px; }
+  .c .mini { background: rgba(24, 24, 46, .78); border: 1px solid rgba(255,255,255,.14); }
+  .c .mini .art { background: radial-gradient(circle at 30% 28%, #b7f2ff, #6c5bff 52%, #191a3a 85%); }
+  .c .mini .c { background: rgba(255,255,255,.08); color: #dfe2ff; }
+  .c .fab { background: linear-gradient(120deg, #8b7bff, #46d6ff); color: #0a0a1a; box-shadow: 0 16px 32px -12px rgba(120,120,255,.65); }
+
+  footer { max-width: 1200px; margin: 34px auto 0; color: #6f787d; font-size: 12.5px; line-height: 1.6; }
+  footer b { color: #aeb7bc; font-weight: 550; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.3"/><path d="M15.6 15.6 20 20"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></symbol>
+  <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="M4 7h3.5l9 10H20M4 17h3.5l2.2-2.4M14.5 9.4 16.5 7H20"/><path d="M17.5 4.5 20 7l-2.5 2.5M17.5 14.5 20 17l-2.5 2.5"/></symbol>
+  <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="12" cy="5.5" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="18.5" r="1.4" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.4"/><path d="M5 19.5c.8-3.4 3.4-5 7-5s6.2 1.6 7 5"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 19s-7-4.3-7-9a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 4.7-7 9-7 9z"/></symbol>
+</defs></svg>
+
+<header>
+  <p class="eyebrow">Glossy · history screen</p>
+  <h1>Three ways to read your listening history <span>— echo-led.</span></h1>
+  <p>The current screen already has the right parts: Local / Remote, day groups, dense rows, shuffle, mini player. What changes here is how a day is framed and how much of the artwork leaks into the page. All three keep the dark, media-first Glossy mood and the same content, so any of them is a swap rather than a rework.</p>
+</header>
+
+<div class="gallery">
+
+  <!-- ============ A ============ -->
+  <section class="col">
+    <div class="colhead"><p class="tag"><span class="dot" style="background:#8ef0dc"></span>Option A</p></div>
+    <h3 class="colname">Echo Timeline</h3>
+    <p class="coldesc">The current list, refined: a quiet rail down the day, artwork wash behind everything, one accent for the active tab and FAB.</p>
+
+    <div class="phone a">
+      <div class="wash"></div><div class="scrim"></div>
+      <div class="status"><span>3:54</span><span class="r"><span class="bars"><i></i><i></i><i></i></span><span class="batt"></span></span></div>
+
+      <div class="appbar">
+        <div class="iconbtn"><svg class="ico"><use href="#i-back"/></svg></div>
+        <h2>History</h2>
+        <div class="iconbtn"><svg class="ico"><use href="#i-search"/></svg></div>
+      </div>
+
+      <div class="tabs">
+        <div class="tab on"><svg class="ico sm"><use href="#i-check"/></svg> Local</div>
+        <div class="tab">Remote</div>
+      </div>
+
+      <div class="list">
+        <div class="daybar"><span class="bar"></span><b>Today</b><small>3 plays</small></div>
+        <div class="rail">
+          <div class="row">
+            <div class="thumb" style="background:linear-gradient(150deg,#b8434f,#6a2130 70%,#2a1420)">L</div>
+            <div class="meta"><b>Love Me Back</b><small>Trinidad Cardona · 3:12</small></div>
+            <div class="more"><svg class="ico"><use href="#i-dots"/></svg></div>
+          </div>
+          <div class="row">
+            <div class="thumb" style="background:linear-gradient(150deg,#d8a24a,#7a4a1f 70%,#241407)">K</div>
+            <div class="meta"><b>KALYANI (Remix)</b><small>Shreya Ghoshal · 4:30</small></div>
+            <div class="more"><svg class="ico"><use href="#i-dots"/></svg></div>
+          </div>
+          <div class="row">
+            <div class="thumb" style="background:linear-gradient(150deg,#9fd0c2,#3f7d76 70%,#123230)">B</div>
+            <div class="meta"><b>Bad Boys</b><small>INNA · 2:47</small></div>
+            <div class="more"><svg class="ico"><use href="#i-dots"/></svg></div>
+          </div>
+        </div>
+
+        <div class="daybar"><span class="bar"></span><b>Yesterday</b><small>4 plays</small></div>
+        <div class="rail">
+          <div class="row">
+            <div class="thumb" style="background:linear-gradient(150deg,#c65c2e,#5d2114 72%,#1a0c08)">K</div>
+            <div class="meta"><b>Kaamini</b><small>Humanoid · 3:07</small></div>
+            <div class="more"><svg class="ico"><use href="#i-dots"/></svg></div>
+          </div>
+          <div class="row">
+            <div class="thumb" style="background:linear-gradient(150deg,#3b3f4a,#15171d 72%,#0a0b0e)">J</div>
+            <div class="meta"><b>For the Weekend | Jimmy</b><small>Ribin Richard · 4:10</small></div>
+            <div class="more"><svg class="ico"><use href="#i-dots"/></svg></div>
+          </div>
+          <div class="row">
+            <div class="thumb" style="background:linear-gradient(150deg,#5fb7a6,#1f5c58 70%,#0f2b2a)">K</div>
+            <div class="meta"><b>Kiliye Kiliye (Top Mix)</b><small>DJ VIM and S. Janaki · 1:24</small></div>
+            <div class="more"><svg class="ico"><use href="#i-dots"/></svg></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="fab"><svg class="ico"><use href="#i-shuffle"/></svg></div>
+      <div class="mini">
+        <div class="art"></div>
+        <div class="t"><b>Dailamo Dailamo</b><small>Vijay Antony and A</small></div>
+        <div class="c"><svg class="ico sm"><use href="#i-user"/></svg></div>
+        <div class="c"><svg class="ico sm"><use href="#i-plus"/></svg></div>
+        <div class="c"><svg class="ico sm"><use href="#i-heart"/></svg></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ B ============ -->
+  <section class="col">
+    <div class="colhead"><p class="tag"><span class="dot" style="background:#ffb27a"></span>Option B</p></div>
+    <h3 class="colname">Echo Days</h3>
+    <p class="coldesc">Each day is its own card with a play count, so the history reads as sessions instead of one endless list.</p>
+
+    <div class="phone b">
+      <div class="wash"></div>
+      <div class="status"><span>3:54</span><span class="r"><span class="bars"><i></i><i></i><i></i></span><span class="batt"></span></span></div>
+
+      <div class="appbar">
+        <div class="iconbtn"><svg class="ico"><use href="#i-back"/></svg></div>
+        <h2>History</h2>
+        <div class="iconbtn"><svg class="ico"><use href="#i-search"/></svg></div>
+      </div>
+
+      <div class="tabs">
+        <div class="tab on">Local</div>
+        <div class="tab">Remote</div>
+      </div>
+
+      <div class="cards">
+        <div class="day">
+          <div class="dayhead"><span class="pip"></span><b>Today</b><small>3 plays</small></div>
+          <div class="row">
+            <div class="thumb" style="background:linear-gradient(150deg,#b8434f,#5e1c2a 75%)">L</div>
+            <div class="meta"><b>Love Me Back</b><small>Trinidad Cardona · 3:12</small></div>
+            <div class="more"><svg class="ico"><use href="#i-dots"/></svg></div>
+          </div>
+          <div class="row">
+            <div class="thumb" style="background:linear-gradient(150deg,#d8a24a,#6d3f18 75%)">K</div>
+            <div class="meta"><b>KALYANI (Remix)</b><small>Shreya Ghoshal · 4:30</small></div>
+            <div class="more"><svg class="ico"><use href="#i-dots"/></svg></div>
+          </div>
+          <div class="row">
+            <div class="thumb" style="background:linear-gradient(150deg,#9fd0c2,#39706a 75%)">B</div>
+            <div class="meta"><b>Bad Boys</b><small>INNA · 2:47</small></div>
+            <div class="more"><svg class="ico"><use href="#i-dots"/></svg></div>
+          </div>
+        </div>
+
+        <div class="day">
+          <div class="dayhead"><span class="pip" style="background:#9b9089;box-shadow:none"></span><b>Yesterday</b><small>4 plays</small></div>
+          <div class="row">
+            <div class="thumb" style="background:linear-gradient(150deg,#c65c2e,#4f1b11 75%)">K</div>
+            <div class="meta"><b>Kaamini</b><small>Humanoid · 3:07</small></div>
+            <div class="more"><svg class="ico"><use href="#i-dots"/></svg></div>
+          </div>
+          <div class="row">
+            <div class="thumb" style="background:linear-gradient(150deg,#3b3f4a,#111318 75%)">J</div>
+            <div class="meta"><b>For the Weekend | Jimmy</b><small>Ribin Richard · 4:10</small></div>
+            <div class="more"><svg class="ico"><use href="#i-dots"/></svg></div>
+          </div>
+          <div class="row">
+            <div class="thumb" style="background:linear-gradient(150deg,#5fb7a6,#154c49 75%)">K</div>
+            <div class="meta"><b>Kiliye Kiliye (Top Mix)</b><small>DJ VIM and S. Janaki · 1:24</small></div>
+            <div class="more"><svg class="ico"><use href="#i-dots"/></svg></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="fab"><svg class="ico"><use href="#i-shuffle"/></svg></div>
+      <div class="mini">
+        <div class="art"></div>
+        <div class="t"><b>Dailamo Dailamo</b><small>Vijay Antony and A</small></div>
+        <div class="c"><svg class="ico sm"><use href="#i-user"/></svg></div>
+        <div class="c"><svg class="ico sm"><use href="#i-plus"/></svg></div>
+        <div class="c"><svg class="ico sm"><use href="#i-heart"/></svg></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ C ============ -->
+  <section class="col">
+    <div class="colhead"><p class="tag"><span class="dot" style="background:#8b7bff"></span>Option C</p></div>
+    <h3 class="colname">Echo Reel</h3>
+    <p class="coldesc">Leads with the last few covers as a reel, then a compact mono-labelled timeline. Most editorial, best for quick re-entry.</p>
+
+    <div class="phone c">
+      <div class="wash"></div>
+      <div class="status"><span>3:54</span><span class="r"><span class="bars"><i></i><i></i><i></i></span><span class="batt"></span></span></div>
+
+      <div class="appbar">
+        <div class="iconbtn"><svg class="ico"><use href="#i-back"/></svg></div>
+        <h2>History</h2>
+        <div class="iconbtn"><svg class="ico"><use href="#i-search"/></svg></div>
+      </div>
+
+      <div class="tabs">
+        <div class="tab on">Local</div>
+        <div class="tab">Remote</div>
+      </div>
+
+      <div class="reel">
+        <div class="card">
+          <div class="cover" style="background:linear-gradient(160deg,#b8434f,#5d1b29 65%,#20101a)"><span>Love Me Back</span></div>
+          <small>Trinidad Cardona</small>
+        </div>
+        <div class="card">
+          <div class="cover" style="background:linear-gradient(160deg,#d8a24a,#6b3d16 65%,#1e1206)"><span>KALYANI</span></div>
+          <small>Shreya Ghoshal</small>
+        </div>
+        <div class="card">
+          <div class="cover" style="background:linear-gradient(160deg,#9fd0c2,#356b64 65%,#0f2a28)"><span>Bad Boys</span></div>
+          <small>INNA</small>
+        </div>
+      </div>
+
+      <p class="sectionlabel">TODAY</p>
+      <div class="row">
+        <div class="thumb" style="background:linear-gradient(150deg,#b8434f,#5e1c2a 75%)"></div>
+        <div class="meta"><b>Love Me Back</b><small>Trinidad Cardona</small></div>
+        <span class="time">3:12</span>
+        <div class="more"><svg class="ico"><use href="#i-dots"/></svg></div>
+      </div>
+      <div class="row">
+        <div class="thumb" style="background:linear-gradient(150deg,#d8a24a,#6d3f18 75%)"></div>
+        <div class="meta"><b>KALYANI (Remix)</b><small>Shreya Ghoshal</small></div>
+        <span class="time">4:30</span>
+        <div class="more"><svg class="ico"><use href="#i-dots"/></svg></div>
+      </div>
+      <div class="row">
+        <div class="thumb" style="background:linear-gradient(150deg,#9fd0c2,#39706a 75%)"></div>
+        <div class="meta"><b>Bad Boys</b><small>INNA</small></div>
+        <span class="time">2:47</span>
+        <div class="more"><svg class="ico"><use href="#i-dots"/></svg></div>
+      </div>
+
+      <p class="sectionlabel">YESTERDAY</p>
+      <div class="row">
+        <div class="thumb" style="background:linear-gradient(150deg,#c65c2e,#4f1b11 75%)"></div>
+        <div class="meta"><b>Kaamini</b><small>Humanoid</small></div>
+        <span class="time">3:07</span>
+        <div class="more"><svg class="ico"><use href="#i-dots"/></svg></div>
+      </div>
+      <div class="row">
+        <div class="thumb" style="background:linear-gradient(150deg,#3b3f4a,#111318 75%)"></div>
+        <div class="meta"><b>For the Weekend | Jimmy</b><small>Ribin Richard</small></div>
+        <span class="time">4:10</span>
+        <div class="more"><svg class="ico"><use href="#i-dots"/></svg></div>
+      </div>
+
+      <div class="fab"><svg class="ico"><use href="#i-shuffle"/></svg></div>
+      <div class="mini">
+        <div class="art"></div>
+        <div class="t"><b>Dailamo Dailamo</b><small>Vijay Antony and A</small></div>
+        <div class="c"><svg class="ico sm"><use href="#i-user"/></svg></div>
+        <div class="c"><svg class="ico sm"><use href="#i-plus"/></svg></div>
+        <div class="c"><svg class="ico sm"><use href="#i-heart"/></svg></div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  <b>A</b> is the smallest change: same list, new chrome and grouping accents. <b>B</b> turns days into cards — more structure, slightly less density per screen. <b>C</b> trades one row of list for a reel of recent covers. Say which one you want and I’ll build it in the app.
+</footer>
+
+<script>
+  const fit = () => {
+    const g = document.querySelector('.gallery');
+    const need = 3 * 390 + 2 * 40;
+    g.style.zoom = Math.min(1, (innerWidth - 80) / need).toFixed(3);
+  };
+  fit(); addEventListener('resize', fit);
+</script>
+</body>
+</html>

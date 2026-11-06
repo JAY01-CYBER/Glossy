@@ -118,6 +118,7 @@ import com.jay.glossy.ui.component.EmptyPlaceholder
 import com.jay.glossy.ui.component.LocalMenuState
 import com.jay.glossy.ui.component.SongListItem
 import com.jay.glossy.ui.component.SortHeader
+import com.jay.glossy.ui.component.PlaylistReelHeader
 import com.jay.glossy.ui.menu.CachePlaylistMenu
 import com.jay.glossy.ui.menu.SelectionSongMenu
 import com.jay.glossy.ui.menu.SongMenu
@@ -279,7 +280,7 @@ fun CachePlaylistScreen(
                     }
                 }
 
-                itemsIndexed(filteredSongs, key = { index, song -> "${song.id}_$index" }) { index, song ->
+                itemsIndexed(filteredSongs, key = { _, song -> song.id }) { index, song ->
                     val onCheckedChange: (Boolean) -> Unit = {
                         if (it) selection.add(song.id) else selection.remove(song.id)
                     }
@@ -432,198 +433,72 @@ private fun CachePlaylistHeader(
     modifier: Modifier = Modifier
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
-    val configuration = LocalConfiguration.current
-    val screenHeight = configuration.screenHeightDp.dp
-    val thumbUrl = songs.firstOrNull()?.thumbnailUrl
+    val thumbnails = remember(songs) {
+        songs.asSequence().mapNotNull { it.thumbnailUrl }.distinct().take(4).toList()
+    }
 
     Column(
-        modifier = modifier.fillMaxWidth().padding(bottom = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // EDGE-TO-EDGE ARTWORK BOX
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(screenHeight / 2)
-        ) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current).data(thumbUrl).build(),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-
-            // Soft Gradient overlay to transition into pure background color seamlessly
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(screenHeight * 0.4f)
-                    .align(Alignment.BottomCenter)
-                    .background(
-                        Brush.verticalGradient(
-                            0.0f to Color.Transparent,
-                            0.5f to MaterialTheme.colorScheme.background.copy(alpha = 0.6f),
-                            1.0f to MaterialTheme.colorScheme.background
-                        )
+        PlaylistReelHeader(
+            title = stringResource(R.string.cached_playlist),
+            owner = stringResource(R.string.app_name),
+            subtitle = "Playlist \u2022 2026",
+            thumbnails = thumbnails,
+            onBack = { navController.navigateUp() },
+            onSearch = onSearchClick,
+            onOverflow = {
+                menuState.show {
+                    CachePlaylistMenu(
+                        downloadState = Download.STATE_STOPPED,
+                        onQueue = { playerConnection.addToQueue(songs.map { it.toMediaItem() }) },
+                        onDownload = {
+                            songs.forEach { song ->
+                                val downloadRequest = DownloadRequest
+                                    .Builder(song.song.id, song.song.id.toUri())
+                                    .setCustomCacheKey(song.song.id)
+                                    .setData(song.song.title.toByteArray())
+                                    .build()
+                                DownloadService.sendAddDownload(context, ExoDownloadService::class.java, downloadRequest, false)
+                            }
+                        },
+                        onDismiss = { menuState.dismiss() }
                     )
-            )
-            
-            // Title & Subtitle overlaid on the bottom of the image
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp) 
-                    .padding(bottom = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = stringResource(R.string.cached_playlist),
-                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold), 
-                    color = MaterialTheme.colorScheme.onBackground,
-                    maxLines = 2,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Text(
-                    text = stringResource(R.string.app_name),
-                    style = MaterialTheme.typography.titleMedium, 
-                    color = MaterialTheme.colorScheme.onBackground,
-                    textAlign = TextAlign.Center,
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                
-                Text(
-                    text = "Playlist • 2026",
-                    style = MaterialTheme.typography.bodyMedium, 
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f), 
-                    textAlign = TextAlign.Center
-                )
-            }
-
-            // TOP ROW BUTTONS (Solid M3, with shadows)
-            Row(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .fillMaxWidth()
-                    .windowInsetsPadding(WindowInsets.statusBars.only(WindowInsetsSides.Top))
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    onClick = { navController.navigateUp() },
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    shadowElevation = 6.dp,
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(painterResource(R.drawable.arrow_back), null)
-                    }
                 }
-
-                Surface(
-                    shape = RoundedCornerShape(50),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    shadowElevation = 6.dp,
-                    modifier = Modifier.height(48.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        com.jay.glossy.ui.component.IconButton(onClick = onSearchClick, onLongClick = {}) {
-                            Icon(painterResource(R.drawable.search), null)
-                        }
-                    }
+            },
+            onPlay = {
+                playerConnection.playQueue(ListQueue(title = "Cache Songs", items = songs.map { it.toMediaItem() }))
+            },
+            onShuffle = {
+                playerConnection.playQueue(ListQueue(title = "Cache Songs", items = songs.shuffled().map { it.toMediaItem() }))
+            },
+            onDownload = {
+                songs.forEach { song ->
+                    val downloadRequest = DownloadRequest
+                        .Builder(song.song.id, song.song.id.toUri())
+                        .setCustomCacheKey(song.song.id)
+                        .setData(song.song.title.toByteArray())
+                        .build()
+                    DownloadService.sendAddDownload(context, ExoDownloadService::class.java, downloadRequest, false)
                 }
-            }
-        }
+            },
+            downloadButton = {
+                Icon(painterResource(R.drawable.download), contentDescription = null, modifier = Modifier.size(20.dp))
+            },
+        )
 
-        // BOTTOM ACTION ROW
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(top = 16.dp, bottom = 24.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Surface(
-                onClick = {
-                    playerConnection.playQueue(ListQueue(title = "Cache Songs", items = songs.shuffled().map { it.toMediaItem() }))
-                },
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                shadowElevation = 6.dp,
-                modifier = Modifier.size(48.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(painterResource(R.drawable.shuffle), null, modifier = Modifier.size(20.dp))
-                }
-            }
-
-            Surface(
-                onClick = {
-                    playerConnection.playQueue(ListQueue(title = "Cache Songs", items = songs.map { it.toMediaItem() }))
-                },
-                shape = RoundedCornerShape(50),
-                color = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                shadowElevation = 6.dp,
-                modifier = Modifier.height(48.dp).weight(1f)
-            ) {
-                Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                    Icon(painterResource(R.drawable.play), null, modifier = Modifier.size(24.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.play), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                }
-            }
-
-            Surface(
-                onClick = {
-                    menuState.show {
-                        CachePlaylistMenu(
-                            downloadState = Download.STATE_STOPPED,
-                            onQueue = { playerConnection.addToQueue(songs.map { it.toMediaItem() }) },
-                            onDownload = {
-                                songs.forEach { song ->
-                                    val downloadRequest = DownloadRequest.Builder(song.song.id, song.song.id.toUri()).setCustomCacheKey(song.song.id).setData(song.song.title.toByteArray()).build()
-                                    DownloadService.sendAddDownload(context, ExoDownloadService::class.java, downloadRequest, false)
-                                }
-                            },
-                            onDismiss = { menuState.dismiss() }
-                        )
-                    }
-                },
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                shadowElevation = 6.dp,
-                modifier = Modifier.size(48.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(painterResource(R.drawable.more_vert), null, modifier = Modifier.size(20.dp))
-                }
-            }
-        }
-
-        val totalDuration = songs.sumOf { it.song.duration }
+        val totalDuration = remember(songs) { songs.sumOf { it.song.duration } }
         val durationText = if (totalDuration > 0) makeTimeString(totalDuration * 1000L) else ""
         val trackCountText = pluralStringResource(R.plurals.n_song, songs.size, songs.size)
 
         Text(
-            text = if (durationText.isNotEmpty()) "$trackCountText • $durationText" else trackCountText,
+            text = if (durationText.isNotEmpty()) "$trackCountText \u2022 $durationText" else trackCountText,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-            textAlign = TextAlign.Start
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(top = 14.dp),
+            textAlign = TextAlign.Start,
         )
     }
 }

@@ -10,18 +10,27 @@ import com.jay.glossy.R
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -43,23 +52,34 @@ import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastForEachReversed
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
+import coil3.compose.AsyncImage
 import com.metrolist.innertube.utils.parseCookieString
 import com.jay.glossy.LocalDatabase
+import com.jay.glossy.db.entities.Song
 import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.constants.HistorySource
@@ -73,7 +93,6 @@ import com.jay.glossy.ui.component.ChipsRow
 import com.jay.glossy.ui.component.HideOnScrollFAB
 import com.jay.glossy.ui.component.IconButton
 import com.jay.glossy.ui.component.LocalMenuState
-import com.jay.glossy.ui.component.NavigationTitle
 import com.jay.glossy.ui.component.SongListItem
 import com.jay.glossy.ui.component.YouTubeListItem
 import com.jay.glossy.ui.menu.SelectionMediaMetadataMenu
@@ -209,6 +228,16 @@ fun HistoryScreen(
 
     val lazyListState = rememberLazyListState()
 
+    val historyTitle = stringResource(R.string.history)
+    // A track played three times is still one cover in the reel.
+    val reelSongs =
+        remember(allEvents) {
+            allEvents
+                .map { it.song }
+                .distinctBy { it.id }
+                .take(6)
+        }
+
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
             state = lazyListState,
@@ -244,22 +273,39 @@ fun HistoryScreen(
                 )
             }
 
+            if (historySource == HistorySource.LOCAL && reelSongs.isNotEmpty()) {
+                item(key = "history_reel") {
+                    HistoryReel(
+                        songs = reelSongs,
+                        onClick = { song ->
+                            // Enter the day-by-day queue at the cover that was
+                            // tapped, so the rest of the history stays behind it.
+                            val index = allEvents.indexOfFirst { it.song.id == song.id }.coerceAtLeast(0)
+                            playerConnection.playQueue(
+                                ListQueue(
+                                    title = historyTitle,
+                                    items = allEvents.map { it.song.toMediaItem() },
+                                    startIndex = index,
+                                ),
+                            )
+                        },
+                    )
+                }
+            }
+
             if (historySource == HistorySource.REMOTE && isLoggedIn) {
                 filteredRemoteContent?.forEach { section ->
                     stickyHeader {
-                        NavigationTitle(
-                            title = section.title,
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .background(MaterialTheme.colorScheme.background),
-                        )
+                        HistorySectionLabel(section.title)
                     }
 
-                    items(
+                    // Indexed keys: the same track can sit twice in one remote
+                    // section, and keying on indexOf() gave both entries the
+                    // first match's key, which LazyColumn rejects at runtime.
+                    itemsIndexed(
                         items = section.songs,
-                        key = { "${section.title}_${it.id}_${section.songs.indexOf(it)}" },
-                    ) { song ->
+                        key = { index, song -> "${section.title}_${song.id}_$index" },
+                    ) { _, song ->
                         YouTubeListItem(
                             item = song,
                             isActive = song.id == mediaMetadata?.id,
@@ -315,13 +361,7 @@ fun HistoryScreen(
             } else {
                 filteredEvents.forEach { (dateAgo, dateEvents) ->
                     stickyHeader {
-                        NavigationTitle(
-                            title = dateAgoToString(dateAgo),
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .background(MaterialTheme.colorScheme.surface),
-                        )
+                        HistorySectionLabel(dateAgoToString(dateAgo))
                     }
 
                     itemsIndexed(
@@ -399,8 +439,6 @@ fun HistoryScreen(
                 }
             }
         }
-
-        val historyTitle = stringResource(R.string.history)
 
         HideOnScrollFAB(
             visible =
@@ -548,5 +586,106 @@ fun HistoryScreen(
                 }
             }
         },
+    )
+}
+
+/**
+ * The reel that opens the local history: the last few covers at a size worth
+ * tapping, so re-entering a track is one gesture instead of a scan down the
+ * day groups. The caller de-duplicates, so a track played three times is still
+ * one card.
+ */
+@Composable
+private fun HistoryReel(
+    songs: List<Song>,
+    onClick: (Song) -> Unit,
+) {
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.padding(top = 2.dp, bottom = 16.dp),
+    ) {
+        items(
+            items = songs,
+            key = { song -> "history_reel_${song.id}" },
+        ) { song ->
+            Column(
+                modifier =
+                    Modifier
+                        .width(132.dp)
+                        .clickable { onClick(song) },
+            ) {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(128.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+                ) {
+                    AsyncImage(
+                        model = song.song.thumbnailUrl,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    // The title sits on the artwork, so it carries its own
+                    // scrim rather than trusting every cover to be dark.
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .height(64.dp)
+                                .align(Alignment.BottomCenter)
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f)),
+                                    ),
+                                ),
+                    )
+                    Text(
+                        text = song.song.title,
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier =
+                            Modifier
+                                .align(Alignment.BottomStart)
+                                .padding(horizontal = 10.dp, vertical = 9.dp),
+                    )
+                }
+                Text(
+                    text = song.artists.joinToString { it.name },
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 11.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 6.dp, start = 2.dp, end = 2.dp),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * A day heading in the reel layout: a quiet mono label instead of the home
+ * feed's accent lockup, so the covers above stay the loudest thing on screen.
+ */
+@Composable
+private fun HistorySectionLabel(text: String) {
+    Text(
+        text = text.uppercase(),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        fontFamily = FontFamily.Monospace,
+        fontSize = 10.sp,
+        fontWeight = FontWeight.Medium,
+        letterSpacing = 2.sp,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(horizontal = 18.dp, vertical = 8.dp),
     )
 }

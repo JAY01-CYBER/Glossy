@@ -50,6 +50,7 @@ import com.jay.glossy.constants.AudioOffload
 import com.jay.glossy.constants.AudioTrackPlaybackParamsKey
 import com.jay.glossy.constants.AudioQuality
 import com.jay.glossy.constants.AudioQualityKey
+import com.jay.glossy.constants.DefaultAudioQuality
 import com.jay.glossy.constants.AutoDownloadOnLikeKey
 import com.jay.glossy.constants.CrossfadeDurationKey
 import com.jay.glossy.constants.CrossfadeEnabledKey
@@ -114,7 +115,7 @@ fun PlayerSettings(
 ) {
     val (audioQuality, onAudioQualityChange) = rememberEnumPreference(
         AudioQualityKey,
-        defaultValue = AudioQuality.AUTO
+        defaultValue = DefaultAudioQuality
     )
     val (showAudioFormat, onShowAudioFormatChange) = rememberPreference(
         ShowAudioFormatKey,

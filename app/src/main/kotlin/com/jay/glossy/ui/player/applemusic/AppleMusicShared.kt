@@ -612,7 +612,7 @@ internal fun AppleMusicHeaderActions(
                         )
                     }
                 } else {
-                    menuState.show {
+                    menuState.show(horizontalPadding = 0.dp) {
                         PlayerMenu(
                             mediaMetadata = mediaMetadata,
                             playerBottomSheetState = bottomSheetState,

@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Glossy · Echo Reel in the playlist screen</title>
+<style>
+  :root {
+    --page:#070d0c;
+    --ink:#eef7f3;
+    --muted:#93a8a2;
+    --mint:#b7f5e2;
+    --mint-ink:#06231d;
+    --line:rgba(255,255,255,.055);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    background:
+      radial-gradient(1000px 600px at 6% -12%, #122321 0%, transparent 58%),
+      radial-gradient(860px 520px at 96% 2%, #1b1712 0%, transparent 56%),
+      var(--page);
+    color: var(--ink);
+    padding: 40px 34px 50px;
+    -webkit-font-smoothing: antialiased;
+  }
+  header { max-width: 1040px; margin: 0 auto 26px; }
+  .eyebrow { font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: var(--mint); margin: 0 0 10px; }
+  h1 { font-size: 34px; line-height: 1.07; letter-spacing: -.03em; margin: 0 0 8px; font-weight: 650; }
+  h1 span { color: #8d9a95; }
+  header p { margin: 0; max-width: 720px; color: var(--muted); font-size: 13.5px; line-height: 1.55; }
+
+  .board { max-width: 1040px; margin: 0 auto; display: flex; align-items: flex-start; gap: 48px; }
+  .frame { flex: 0 0 auto; }
+  .caption { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: #b9c6c1; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+  .caption i { width: 8px; height: 8px; border-radius: 50%; background: var(--mint); display: block; }
+  .caption em { font-style: normal; color: var(--mint); opacity: .8; }
+
+  .phone {
+    position: relative; width: 390px; height: 844px; border-radius: 40px; overflow: hidden;
+    border: 1px solid rgba(255,255,255,.09); isolation: isolate;
+    background: #06100f; color: var(--ink);
+    box-shadow: 0 34px 70px -34px rgba(0,0,0,.9);
+  }
+
+  .ico { width: 20px; height: 20px; display: block; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .ico.sm { width: 17px; height: 17px; }
+  .ico.xs { width: 14px; height: 14px; }
+  .iconbtn { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; }
+  .mono { font-family: "SF Mono", "JetBrains Mono", ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; }
+  .bars { display: flex; align-items: flex-end; gap: 2px; }
+  .bars i { width: 3px; background: currentColor; border-radius: 1px; }
+  .bars i:nth-child(1){height:4px}.bars i:nth-child(2){height:7px}.bars i:nth-child(3){height:10px}
+  .batt { width: 20px; height: 10px; border: 1.4px solid currentColor; border-radius: 3px; position: relative; }
+  .batt::before { content:""; position:absolute; inset:2px; width:9px; background:currentColor; border-radius:1px; }
+  .batt::after { content:""; position:absolute; right:-3px; top:2.5px; width:2px; height:4px; background:currentColor; }
+  .status .r { display: flex; align-items: center; gap: 6px; }
+
+  /* ---------- the reel ---------- */
+  .reel {
+    position: relative; height: 220px; display: grid;
+    grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 1px;
+    background: rgba(255,255,255,.07);
+  }
+  .reel .pane { position: relative; overflow: hidden; }
+  .art { position: absolute; inset: 0; overflow: hidden; }
+  .art::after { content:""; position:absolute; inset:0; background: linear-gradient(160deg, rgba(255,255,255,.16), transparent 55%); }
+  .art.red { background:
+      radial-gradient(circle at 32% 30%, #e4644a 0 16%, rgba(228,100,74,0) 40%),
+      radial-gradient(circle at 50% 48%, #a92c25 0 26%, rgba(169,44,37,0) 58%),
+      radial-gradient(circle at 20% 82%, #6d2a22 0 28%, transparent 62%),
+      linear-gradient(160deg,#7d2a22,#3a1512 62%,#1e0f0d); }
+  .art.bed { background:
+      radial-gradient(90% 70% at 82% 26%, #efc878 0 18%, rgba(239,200,120,0) 58%),
+      radial-gradient(70% 60% at 20% 88%, #5d3a20 0 30%, transparent 70%),
+      linear-gradient(150deg,#9b6a34,#5c3a1e 55%,#241609); }
+  .art.night { background:
+      radial-gradient(70% 70% at 28% 36%, #39646b 0 18%, transparent 62%),
+      radial-gradient(60% 70% at 84% 20%, #4a2b2f 0 16%, transparent 58%),
+      linear-gradient(160deg,#24444b,#132a31 58%,#0a161b); }
+  .art.ink { background:
+      radial-gradient(60% 60% at 68% 38%, #39476b 0 16%, transparent 60%),
+      linear-gradient(155deg,#1d2438,#121723 58%,#0a0d14); }
+  .art.teal { background:
+      radial-gradient(70% 60% at 40% 30%, #5f9f96 0 18%, transparent 60%),
+      linear-gradient(155deg,#2c5852,#173530 58%,#0c1c1a); }
+  .art.gold { background:
+      radial-gradient(60% 60% at 34% 32%, #d9ab5e 0 18%, transparent 58%),
+      linear-gradient(150deg,#7a5a28,#4a3417 58%,#1d1409); }
+
+  .reel .scrim {
+    position: absolute; inset: 0; z-index: 2; pointer-events: none;
+    background: linear-gradient(180deg, rgba(6,16,15,.58) 0%, rgba(6,16,15,.02) 30%, rgba(6,16,15,.6) 72%, #06100f 100%);
+  }
+  .reel .status {
+    position: absolute; z-index: 6; top: 0; left: 0; right: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 24px 2px; font-size: 12.5px; font-weight: 600;
+  }
+  .toolbar { position: absolute; z-index: 6; top: 42px; left: 14px; right: 14px; display: flex; align-items: center; justify-content: space-between; }
+  .back {
+    width: 62px; height: 46px; border-radius: 16px; display: grid; place-items: center;
+    background: rgba(6,16,15,.46); border: 1px solid rgba(255,255,255,.1); backdrop-filter: blur(10px);
+  }
+  .toolpill {
+    display: flex; align-items: center; padding: 3px; border-radius: 999px;
+    background: rgba(6,16,15,.46); border: 1px solid rgba(255,255,255,.1); backdrop-filter: blur(10px);
+  }
+  .toolpill .iconbtn { width: 38px; height: 38px; }
+
+  /* pencil sits on the seam, as on the app screen */
+  .edit {
+    position: absolute; z-index: 8; left: 50%; transform: translateX(-50%); top: 201px;
+    width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center;
+    background: #0c1b19; border: 1px solid rgba(255,255,255,.12); color: #dcece6;
+    box-shadow: 0 8px 18px -10px #000;
+  }
+
+  /* ---------- title + controls ---------- */
+  .titleblock { position: relative; z-index: 2; text-align: center; padding: 26px 24px 0; }
+  .titleblock h2 { margin: 0; font-size: 31px; line-height: 1.04; letter-spacing: -.03em; font-weight: 660; }
+  .titleblock .who { margin-top: 7px; font-size: 13px; font-weight: 600; color: rgba(255,255,255,.74); }
+  .titleblock .sub { margin-top: 4px; font-size: 12px; color: rgba(255,255,255,.4); }
+
+  .actions { position: relative; z-index: 2; display: flex; align-items: center; gap: 11px; padding: 15px 22px 0; }
+  .round {
+    width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center;
+    background: #132625; border: 1px solid rgba(255,255,255,.07); color: #e7f3ee; flex: 0 0 auto;
+  }
+  .play {
+    flex: 1 1 auto; height: 52px; border-radius: 999px; display: flex; align-items: center; justify-content: center; gap: 9px;
+    background: var(--mint); color: var(--mint-ink); font-size: 15px; font-weight: 690; letter-spacing: -.01em;
+    box-shadow: 0 16px 30px -18px rgba(183,245,226,.9);
+  }
+
+  .metarow { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; padding: 15px 22px 0; }
+  .stats { font-size: 12.5px; font-weight: 560; color: rgba(255,255,255,.86); }
+  .metarow .right { display: flex; align-items: center; gap: 12px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 11px; border-radius: 9px;
+    background: rgba(176,168,78,.16); border: 1px solid rgba(190,182,96,.3); color: #ded6a4;
+    font-size: 11.5px; font-weight: 560;
+  }
+  .lock { color: rgba(255,255,255,.55); display: grid; place-items: center; }
+
+  .label { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; padding: 17px 22px 8px; font-size: 9.5px; color: rgba(183,245,226,.6); }
+  .label .hint { color: rgba(255,255,255,.38); }
+
+  /* ---------- playing next shelf ---------- */
+  .shelf { position: relative; z-index: 2; display: flex; gap: 10px; padding: 0 22px; }
+  .shelf .card { width: 88px; flex: 0 0 auto; }
+  .shelf .cover { position: relative; width: 88px; height: 88px; border-radius: 15px; overflow: hidden; }
+  .shelf b { display: block; margin-top: 7px; font-size: 12px; font-weight: 600; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .shelf small { display: block; margin-top: 2px; font-size: 10.5px; color: rgba(255,255,255,.45); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ---------- the list ---------- */
+  .list { position: relative; z-index: 2; padding: 0 10px; }
+  .trk { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 16px; }
+  .trk .art { position: relative; inset: auto; width: 50px; height: 50px; border-radius: 13px; flex: 0 0 auto; }
+  .trk .t { flex: 1 1 auto; min-width: 0; }
+  .trk b { display: block; font-size: 14px; font-weight: 600; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .trk small { display: flex; align-items: center; gap: 5px; font-size: 11.5px; color: rgba(255,255,255,.48); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .trk .side { display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,.55); flex: 0 0 auto; }
+  .trk .heart.on { color: #f2708f; }
+  .trk.now { background: rgba(183,245,226,.06); }
+  .trk.now b { color: var(--mint); }
+
+  /* ---------- mini player ---------- */
+  .mini {
+    position: absolute; z-index: 9; left: 12px; right: 12px; bottom: 14px; height: 70px;
+    display: flex; align-items: center; gap: 10px; padding: 0 10px 0 8px; border-radius: 25px;
+    background: rgba(20,38,36,.68); border: 1px solid rgba(255,255,255,.1); backdrop-filter: blur(18px);
+    box-shadow: 0 20px 34px -22px #000;
+  }
+  .mini .ring {
+    width: 50px; height: 50px; border-radius: 50%; flex: 0 0 auto; display: grid; place-items: center;
+    background: conic-gradient(var(--mint) 0 38%, rgba(255,255,255,.13) 38% 100%);
+  }
+  .mini .ring .art { position: relative; inset: auto; width: 42px; height: 42px; border-radius: 50%; }
+  .mini .t { flex: 1 1 auto; min-width: 0; }
+  .mini b { display: block; font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mini small { display: block; font-size: 10.5px; color: rgba(255,255,255,.5); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mbtn {
+    width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto;
+    background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); color: rgba(255,255,255,.8);
+  }
+
+  /* ---------- notes ---------- */
+  .notes { flex: 1 1 auto; padding-top: 22px; max-width: 400px; }
+  .notes h3 { font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--mint); margin: 0 0 14px; font-weight: 600; }
+  .notes dl { margin: 0; }
+  .notes dt { font-size: 13.5px; font-weight: 620; margin-top: 18px; color: #eaf4ef; }
+  .notes dt:first-child { margin-top: 0; }
+  .notes dd { margin: 5px 0 0; font-size: 12.8px; line-height: 1.6; color: var(--muted); }
+  .swatches { display: flex; gap: 8px; margin-top: 20px; }
+  .swatches span { width: 34px; height: 34px; border-radius: 10px; border: 1px solid rgba(255,255,255,.12); }
+
+  @media (max-width: 860px) {
+    body { padding: 26px 18px 36px; }
+    .board { flex-direction: column; gap: 26px; }
+    .notes { max-width: 390px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <p class="eyebrow">Glossy · Echo Reel</p>
+  <h1>Playlist <span>— Echo Reel folded into your screen</span></h1>
+  <p>The shelves and the reel from the Echo Reel concept, dropped into the playlist UI you already ship: same collage, same Play row, same custom-order chip, same hearts. Nothing new to learn — the “what plays next” answer is simply visible now.</p>
+</header>
+
+<div class="board">
+  <div class="frame">
+    <p class="caption"><i></i>Echo Reel × playlist <em>· merged</em></p>
+    <div class="phone">
+      <div class="reel">
+        <div class="pane"><div class="art red"></div></div>
+        <div class="pane"><div class="art bed"></div></div>
+        <div class="pane"><div class="art night"></div></div>
+        <div class="pane"><div class="art ink"></div></div>
+        <div class="scrim"></div>
+
+        <div class="status">
+          <span>6:35</span>
+          <span class="r"><span class="bars"><i></i><i></i><i></i></span><span class="batt"></span></span>
+        </div>
+
+        <div class="toolbar">
+          <span class="back"><svg class="ico" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></span>
+          <span class="toolpill">
+            <span class="iconbtn"><svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg></span>
+            <span class="iconbtn"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></span>
+          </span>
+        </div>
+      </div>
+
+      <span class="edit"><svg class="ico sm" viewBox="0 0 24 24"><path d="M4 20h4l10-10-4-4L4 16v4z"/><path d="M14 6l4 4"/></svg></span>
+
+      <div class="titleblock">
+        <h2>Music</h2>
+        <div class="who">MYT–FOXA</div>
+        <div class="sub">Playlist · 2026</div>
+      </div>
+
+      <div class="actions">
+        <span class="round"><svg class="ico" viewBox="0 0 24 24"><path d="M17 4h4v4"/><path d="M21 4l-6.5 6.5"/><path d="M3 20l6.5-6.5"/><path d="M7 20H3v-4"/><path d="M21 16v4h-4"/><path d="M21 20l-6.5-6.5"/></svg></span>
+        <span class="play"><svg class="ico" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M8 5l11 7-11 7z"/></svg>Play</span>
+        <span class="round"><svg class="ico" viewBox="0 0 24 24"><path d="M12 4v10"/><path d="M8 11l4 4 4-4"/><path d="M5 19h14"/></svg></span>
+      </div>
+
+      <div class="metarow">
+        <span class="stats">35 songs · 2:01:57</span>
+        <span class="right">
+          <span class="chip"><svg class="ico xs" viewBox="0 0 24 24"><path d="M4 7h10"/><path d="M4 12h7"/><path d="M4 17h10"/><path d="M17 15V6l4 2"/></svg>Custom order</span>
+          <span class="lock"><svg class="ico sm" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2.5"/><path d="M8.5 11V8a3.5 3.5 0 017 0v3"/></svg></span>
+        </span>
+      </div>
+
+      <div class="label mono"><span>Playing next</span><span class="hint">4 of 35</span></div>
+      <div class="shelf">
+        <div class="card">
+          <div class="cover"><div class="art red"></div></div>
+          <b>CHEMBARATHI</b>
+          <small>Lil PAY, AZWIN</small>
+        </div>
+        <div class="card">
+          <div class="cover"><div class="art bed"></div></div>
+          <b>KALYANI</b>
+          <small>4 and Ronn</small>
+        </div>
+        <div class="card">
+          <div class="cover"><div class="art night"></div></div>
+          <b>Nej – Paro</b>
+          <small>Decade</small>
+        </div>
+        <div class="card">
+          <div class="cover"><div class="art ink"></div></div>
+          <b>Constellations</b>
+          <small>Nats…</small>
+        </div>
+      </div>
+
+      <div class="label mono"><span>All tracks</span><span class="hint">35</span></div>
+      <div class="list">
+        <div class="trk">
+          <div class="art red"></div>
+          <div class="t">
+            <b>CHEMBARATHI</b>
+            <small><svg class="ico xs" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="16" rx="3"/><path d="M9 9h6"/><path d="M9 13h4"/></svg>WIN · 3:14</small>
+          </div>
+          <span class="side">
+            <svg class="ico sm heart on" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 20s-7-4.4-7-9a4 4 0 017-2.6A4 4 0 0119 11c0 4.6-7 9-7 9z"/></svg>
+            <svg class="ico sm" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+          </span>
+        </div>
+
+        <div class="trk now">
+          <div class="art bed"></div>
+          <div class="t">
+            <b>KALYANI</b>
+            <small><svg class="ico xs" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="16" rx="3"/><path d="M9 9h6"/><path d="M9 13h4"/></svg>4 and Ronn · 3:55</small>
+          </div>
+          <span class="side">
+            <svg class="ico sm heart on" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 20s-7-4.4-7-9a4 4 0 017-2.6A4 4 0 0119 11c0 4.6-7 9-7 9z"/></svg>
+            <svg class="ico sm" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+          </span>
+        </div>
+
+        <div class="trk">
+          <div class="art night"></div>
+          <div class="t">
+            <b>Nej – Paro (slowed)</b>
+            <small><svg class="ico xs" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="16" rx="3"/><path d="M9 9h6"/><path d="M9 13h4"/></svg>Decade · 3:52</small>
+          </div>
+          <span class="side">
+            <svg class="ico sm" viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-9a4 4 0 017-2.6A4 4 0 0119 11c0 4.6-7 9-7 9z"/></svg>
+            <svg class="ico sm" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+          </span>
+        </div>
+
+        <div class="trk">
+          <div class="art gold"></div>
+          <div class="t">
+            <b>Paro (slowed + reverb)</b>
+            <small><svg class="ico xs" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="16" rx="3"/><path d="M9 9h6"/><path d="M9 13h4"/></svg>Decade · 3:52</small>
+          </div>
+          <span class="side">
+            <svg class="ico sm" viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-9a4 4 0 017-2.6A4 4 0 0119 11c0 4.6-7 9-7 9z"/></svg>
+            <svg class="ico sm" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+          </span>
+        </div>
+      </div>
+
+      <div class="mini">
+        <span class="ring"><span class="art teal"></span></span>
+        <span class="t"><b>Kangna Tera Ni</b><small>cryoutloud · Music</small></span>
+        <span class="mbtn"><svg class="ico sm" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.5 3.1-5.5 7-5.5s7 2 7 5.5"/></svg></span>
+        <span class="mbtn"><svg class="ico sm" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg></span>
+        <span class="mbtn"><svg class="ico sm" viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-9a4 4 0 017-2.6A4 4 0 0119 11c0 4.6-7 9-7 9z"/></svg></span>
+      </div>
+    </div>
+  </div>
+
+  <aside class="notes">
+    <h3>What moved across</h3>
+    <dl>
+      <dt>The reel</dt>
+      <dd>The four cover panes now share one scrim, so the 2×2 reads as a single frame rather than four tiles. Back, search and overflow stay floating on top, and the pencil still sits on the seam.</dd>
+
+      <dt>Playing next</dt>
+      <dd>The one thing your screen could not answer: a short shelf of what follows the current track, sitting between the controls and the list. It scrolls sideways and never takes over the list.</dd>
+
+      <dt>Ringed mini player</dt>
+      <dd>The mini player takes the progress ring from Echo Reel, so the pill is a transport as well as a label. Same three buttons — profile, add, like — in the same order.</dd>
+
+      <dt>Left untouched</dt>
+      <dd>Play pill with shuffle and download, the custom-order chip and lock, the artist line with provider icon and duration, and the per-row heart plus overflow. KALYANI stays the playing row, now tinted mint.</dd>
+    </dl>
+
+    <div class="swatches">
+      <span style="background:#06100f"></span>
+      <span style="background:#132625"></span>
+      <span style="background:#b7f5e2"></span>
+      <span style="background:#ded6a4"></span>
+      <span style="background:#f2708f"></span>
+    </div>
+  </aside>
+</div>
+</body>
+</html>

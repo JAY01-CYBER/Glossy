@@ -9,13 +9,14 @@ import com.jay.glossy.R
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -82,7 +83,7 @@ fun NewActionButton(
             CardDefaults.cardColors(
                 containerColor = animatedBackground,
             ),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         elevation =
             CardDefaults.cardElevation(),
     ) {
@@ -90,7 +91,8 @@ fun NewActionButton(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(12.dp),
+                    .fillMaxHeight()
+                    .padding(horizontal = 9.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
@@ -110,7 +112,10 @@ fun NewActionButton(
                 textAlign = TextAlign.Center,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.basicMarquee(),
+                // Labels here are short and known ("Start radio", "Add to
+                // playlist"). Marqueeing them made the button look sliced in
+                // half and never stopped moving, so the text wraps instead and
+                // is cut with an ellipsis only if it genuinely does not fit.
             )
         }
     }
@@ -173,6 +178,11 @@ fun NewActionGrid(
     ) {
         rows.forEach { row ->
             Row(
+                // Intrinsic height plus fillMaxHeight on the tiles: a label
+                // that wraps to two lines makes the whole row that tall, so the
+                // three buttons stay equal instead of the short ones floating
+                // in a ragged row.
+                modifier = Modifier.height(IntrinsicSize.Min),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 row.forEach { action ->
@@ -180,7 +190,7 @@ fun NewActionGrid(
                         icon = action.icon,
                         text = action.text,
                         onClick = action.onClick,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
                         enabled = action.enabled,
                         backgroundColor =
                             if (action.backgroundColor !=

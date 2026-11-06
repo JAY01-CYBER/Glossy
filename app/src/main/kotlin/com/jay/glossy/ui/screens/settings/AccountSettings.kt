@@ -7,6 +7,11 @@ package com.jay.glossy.ui.screens.settings
 
 import com.jay.glossy.R
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,17 +24,17 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -46,11 +51,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
@@ -113,7 +120,17 @@ fun AccountSettings(
 
     Column(
         modifier = Modifier
-            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+            // The sheet lightens towards the handle and settles into the page
+            // colour at the bottom, so the rounded top edge reads against the
+            // feed behind it instead of ending on a flat block.
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        MaterialTheme.colorScheme.surfaceContainerHigh,
+                        MaterialTheme.colorScheme.surfaceContainerLow,
+                    ),
+                ),
+            )
             .padding(horizontal = 16.dp)
             .verticalScroll(rememberScrollState())
     ) {
@@ -122,8 +139,8 @@ fun AccountSettings(
         Box(
             modifier = Modifier
                 .align(Alignment.CenterHorizontally)
-                .padding(top = 10.dp, bottom = 12.dp)
-                .size(width = 34.dp, height = 4.dp)
+                .padding(top = 12.dp, bottom = 14.dp)
+                .size(width = 40.dp, height = 4.dp)
                 .clip(RoundedCornerShape(2.dp))
                 .background(MaterialTheme.colorScheme.outlineVariant),
         )
@@ -338,22 +355,13 @@ fun AccountSettings(
                     onUseLoginForBrowseChange(next)
                 },
                 trailing = {
-                    Switch(
-                        enabled = isLoggedIn,
+                    EchoSwitch(
                         checked = useLoginForBrowse,
+                        enabled = isLoggedIn,
                         onCheckedChange = {
                             YouTube.useLoginForBrowse = it
                             onUseLoginForBrowseChange(it)
                         },
-                        thumbContent = {
-                            Icon(
-                                painter = painterResource(
-                                    id = if (useLoginForBrowse) R.drawable.check else R.drawable.close
-                                ),
-                                contentDescription = null,
-                                modifier = Modifier.size(SwitchDefaults.IconSize)
-                            )
-                        }
                     )
                 },
             )
@@ -367,19 +375,10 @@ fun AccountSettings(
                 enabled = isLoggedIn,
                 onClick = { onYtmSyncChange(!ytmSync) },
                 trailing = {
-                    Switch(
-                        enabled = isLoggedIn,
+                    EchoSwitch(
                         checked = ytmSync,
+                        enabled = isLoggedIn,
                         onCheckedChange = onYtmSyncChange,
-                        thumbContent = {
-                            Icon(
-                                painter = painterResource(
-                                    id = if (ytmSync) R.drawable.check else R.drawable.close
-                                ),
-                                contentDescription = null,
-                                modifier = Modifier.size(SwitchDefaults.IconSize)
-                            )
-                        }
                     )
                 },
             )
@@ -398,7 +397,10 @@ fun AccountSettings(
                 label = stringResource(R.string.glossy_switch_account),
                 onClick = {
                     onClose()
-                    navController.navigate("account")
+                    // Switching accounts is the sign-in flow, not the library:
+                    // this used to open the account content screen, so the one
+                    // control that promises another account never offered one.
+                    navController.navigate("login")
                 },
             )
 
@@ -520,6 +522,65 @@ private fun SheetDivider() {
             .height(1.dp)
             .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
     )
+}
+
+/**
+ * The sheet's switch: a compact pill instead of the platform control, so the
+ * trailing side of a row stays on one line with the chevrons. [toggleable]
+ * keeps the role and the state, so TalkBack still announces a switch and the
+ * row keeps one tap target per action.
+ */
+@Composable
+private fun EchoSwitch(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    val scheme = MaterialTheme.colorScheme
+    val trackColor by animateColorAsState(
+        targetValue = if (checked) scheme.primary else scheme.surfaceContainerHighest,
+        animationSpec = tween(durationMillis = 180),
+        label = "echoSwitchTrack",
+    )
+    val knobColor by animateColorAsState(
+        targetValue = if (checked) scheme.onPrimary else scheme.onSurfaceVariant,
+        animationSpec = tween(durationMillis = 180),
+        label = "echoSwitchKnob",
+    )
+    val travel by animateFloatAsState(
+        targetValue = if (checked) 1f else 0f,
+        animationSpec =
+            spring(
+                dampingRatio = Spring.DampingRatioNoBouncy,
+                stiffness = Spring.StiffnessMediumLow,
+            ),
+        label = "echoSwitchTravel",
+    )
+
+    Box(
+        modifier =
+            modifier
+                .size(width = 46.dp, height = 27.dp)
+                .clip(CircleShape)
+                .background(trackColor)
+                .toggleable(
+                    value = checked,
+                    enabled = enabled,
+                    role = Role.Switch,
+                    onValueChange = onCheckedChange,
+                ),
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .padding(3.dp)
+                    .offset(x = 19.dp * travel)
+                    .size(21.dp)
+                    .clip(CircleShape)
+                    .background(knobColor),
+        )
+    }
 }
 
 /**
@@ -651,38 +712,59 @@ private fun AccountHeroCard(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            modifier = Modifier
-                .size(50.dp)
-                .clip(CircleShape)
-                .background(scheme.surfaceContainerHighest),
+            modifier = Modifier.size(56.dp),
             contentAlignment = Alignment.Center,
         ) {
-            when {
-                isLoggedIn && accountImageUrl != null ->
-                    AsyncImage(
-                        model = accountImageUrl,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
-                    )
+            // Echo halo: a sweep of the theme's accents behind the face, so the
+            // row has one coloured element without a second accent colour.
+            Box(
+                modifier =
+                    Modifier
+                        .matchParentSize()
+                        .clip(CircleShape)
+                        .background(
+                            Brush.sweepGradient(
+                                listOf(scheme.primary, scheme.tertiary, scheme.secondary, scheme.primary),
+                            ),
+                        )
+                        .alpha(0.55f),
+            )
 
-                // Signed in without a picture: the initial carries the row, as
-                // in the design.
-                isLoggedIn ->
-                    Text(
-                        text = accountName.trim().firstOrNull()?.uppercase() ?: "",
-                        color = scheme.primary,
-                        fontSize = 19.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    )
+            Box(
+                modifier =
+                    Modifier
+                        .size(50.dp)
+                        .clip(CircleShape)
+                        .background(scheme.surfaceContainerHighest),
+                contentAlignment = Alignment.Center,
+            ) {
+                when {
+                    isLoggedIn && accountImageUrl != null ->
+                        AsyncImage(
+                            model = accountImageUrl,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize(),
+                        )
 
-                else ->
-                    Icon(
-                        painter = painterResource(R.drawable.person),
-                        contentDescription = null,
-                        tint = scheme.onSurfaceVariant,
-                        modifier = Modifier.size(24.dp),
-                    )
+                    // Signed in without a picture: the initial carries the row, as
+                    // in the design.
+                    isLoggedIn ->
+                        Text(
+                            text = accountName.trim().firstOrNull()?.uppercase() ?: "",
+                            color = scheme.primary,
+                            fontSize = 19.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+
+                    else ->
+                        Icon(
+                            painter = painterResource(R.drawable.person),
+                            contentDescription = null,
+                            tint = scheme.onSurfaceVariant,
+                            modifier = Modifier.size(24.dp),
+                        )
+                }
             }
         }
 
@@ -710,15 +792,17 @@ private fun AccountHeroCard(
         }
 
         // A status chip, not a control: the actions sit below the preferences.
+        // Signed in it takes the accent, which is the one bright note in the
+        // card, so the row reads as live rather than as another list item.
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(50))
-                .background(scheme.surfaceContainerHighest)
-                .padding(horizontal = 11.dp, vertical = 6.dp),
+                .background(if (isLoggedIn) scheme.primary else scheme.surfaceContainerHighest)
+                .padding(horizontal = 12.dp, vertical = 6.dp),
         ) {
             Text(
                 text = statusLabel,
-                color = if (isLoggedIn) scheme.primary else scheme.onSurfaceVariant,
+                color = if (isLoggedIn) scheme.onPrimary else scheme.onSurfaceVariant,
                 fontSize = 11.5.sp,
                 fontWeight = FontWeight.SemiBold,
             )

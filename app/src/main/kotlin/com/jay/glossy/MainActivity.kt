@@ -162,6 +162,7 @@ import com.jay.glossy.constants.EnableHighRefreshRateKey
 import com.jay.glossy.constants.EnableLandscapeScalingKey
 import com.jay.glossy.constants.ExperimentalLyricsKey
 import com.jay.glossy.constants.LastSeenVersionKey
+import com.jay.glossy.constants.LiquidGlassEnabledKey
 import com.jay.glossy.constants.ListenTogetherInTopBarKey
 import com.jay.glossy.constants.ListenTogetherUsernameKey
 import com.jay.glossy.constants.LyricsProviderOrderKey
@@ -230,6 +231,8 @@ import com.jay.glossy.utils.reportException
 import com.jay.glossy.utils.setAppLocale
 import com.jay.glossy.viewmodels.HomeViewModel
 import com.jay.glossy.widget.PlaylistWidgetReceiver
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.valentinilk.shimmer.LocalShimmerTheme
 import dagger.hilt.android.AndroidEntryPoint
 import dev.chrisbanes.haze.HazeState
@@ -681,16 +684,31 @@ class MainActivity : ComponentActivity() {
             }
 
             CompositionLocalProvider(LocalDensity provides scaledDensity) {
-            // The backdrop is the blur source for the navigation bar — never the
-            // whole screen. Haze throws when a hazeChild sits inside the subtree
-            // of its haze source ("Layout nodes using Modifier.haze and
+            // Haze source for the wallpaper layer. Kept as a sibling of the
+            // Scaffold: Haze throws when a hazeChild sits inside the subtree of
+            // its haze source ("Layout nodes using Modifier.haze and
             // Modifier.hazeChild can not be descendants of each other"), and the
-            // bar lives in the Scaffold, so a source on this outer Box put the
-            // bar inside it and crashed every draw. The wallpaper layer is a
-            // *sibling* of the Scaffold and is what the bar actually has behind
-            // it, which is precisely what it should frost.
+            // bar lives in the Scaffold.
             val navBarHazeState = remember { HazeState() }
+            val baseBg = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
             val navBarBaseColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surface
+            // What the optional liquid-glass navigation bar refracts. It captures
+            // the app content itself — lists, artwork and page transitions — not
+            // just the static wallpaper: a pane that only samples the backdrop
+            // looks like a flat tint, because there is nothing moving behind it
+            // for the blur and lens to distort. The base fill keeps transparent
+            // page gaps opaque so the pill never samples an empty layer.
+            val navBarGlassBackdrop =
+                rememberLayerBackdrop(
+                    onDraw =
+                        remember(baseBg) {
+                            val backgroundColor = baseBg
+                            {
+                                drawRect(backgroundColor)
+                                drawContent()
+                            }
+                        },
+                )
             BoxWithConstraints(
                 modifier =
                     Modifier
@@ -698,6 +716,7 @@ class MainActivity : ComponentActivity() {
                         .background(navBarBaseColor),
             ) {
                 val (backgroundBlurOn) = rememberPreference(BackgroundBlurEnabledKey, defaultValue = true)
+                val (liquidGlassOn) = rememberPreference(LiquidGlassEnabledKey, defaultValue = false)
 
                 Box(
                     modifier =
@@ -1071,8 +1090,6 @@ class MainActivity : ComponentActivity() {
                         !(pauseListenHistory && eventCount == 0)
                     }
 
-                val baseBg = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
-
                 CompositionLocalProvider(
                     LocalDatabase provides database,
                     LocalNavController provides navController,
@@ -1411,6 +1428,7 @@ class MainActivity : ComponentActivity() {
                                         slimNav = slimNav,
                                         onSearchLongClick = onSearchLongClick,
                                         hazeNav = navBarHazeState,
+                                        liquidGlassBackdrop = if (liquidGlassOn) navBarGlassBackdrop else null,
                                         modifier =
                                             Modifier
                                                 .align(Alignment.BottomCenter)
@@ -1474,7 +1492,28 @@ class MainActivity : ComponentActivity() {
                                 .fillMaxSize()
                                 .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
                     ) {
-                        Row(Modifier.fillMaxSize()) {
+                        Row(
+                            Modifier
+                                .fillMaxSize()
+                                .then(
+                                    if (liquidGlassOn) {
+                                        // Record the page content for the glass
+                                        // pill. The outer layer isolates this
+                                        // subtree from sibling redraws (the bar,
+                                        // the mini player) so the backdrop is not
+                                        // re-captured for their animations; the
+                                        // inner one caches the whole page as a
+                                        // single RenderNode instead of replaying
+                                        // every draw op on each sample.
+                                        Modifier
+                                            .graphicsLayer()
+                                            .layerBackdrop(navBarGlassBackdrop)
+                                            .graphicsLayer()
+                                    } else {
+                                        Modifier
+                                    },
+                                ),
+                        ) {
                             val onRailItemClick: (Screens, Boolean) -> Unit =
                                 remember(navController, coroutineScope, topAppBarScrollBehavior, playerBottomSheetState) {
                                     { screen: Screens, isSelected: Boolean ->

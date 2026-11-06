@@ -141,6 +141,7 @@ import com.jay.glossy.LocalListenTogetherManager
 import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.constants.AudioQuality
 import com.jay.glossy.constants.AudioQualityKey
+import com.jay.glossy.constants.DefaultAudioQuality
 import com.jay.glossy.constants.ListItemHeight
 import com.jay.glossy.constants.PlayerBackgroundStyle
 import com.jay.glossy.constants.QueueEditLockKey
@@ -297,7 +298,7 @@ fun Queue(
     val (showAudioFormat) = rememberPreference(ShowAudioFormatKey, defaultValue = false)
     // The tier is what was asked for; the badge says what arrived. Passing it
     // along lets the chip admit a lossy fallback when Lossless is selected.
-    val (audioQuality) = rememberEnumPreference(AudioQualityKey, AudioQuality.AUTO)
+    val (audioQuality) = rememberEnumPreference(AudioQualityKey, DefaultAudioQuality)
     // The queue is drawn over the player's own backdrop, not over a surface the
     // theme picked, so its text does not read the colour scheme here: on a
     // saturated cover the scheme's onSurface can sit at a contrast that is
@@ -723,7 +724,7 @@ fun Queue(
                             .clip(CircleShape)
                             .background(textButtonColor)
                             .clickable {
-                                menuState.show {
+                                menuState.show(horizontalPadding = 0.dp) {
                                     PlayerMenu(
                                         mediaMetadata = mediaMetadata,
                                         playerBottomSheetState = playerBottomSheetState,
@@ -1164,7 +1165,7 @@ fun Queue(
                     ) {
                         FilledTonalIconButton(
                             onClick = {
-                                menuState.show {
+                                menuState.show(horizontalPadding = 0.dp) {
                                     PlayerMenu(
                                         mediaMetadata = mediaMetadata,
                                         playerBottomSheetState = playerBottomSheetState,

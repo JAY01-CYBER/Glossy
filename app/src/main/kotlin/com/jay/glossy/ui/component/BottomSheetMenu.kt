@@ -52,8 +52,22 @@ class MenuState(
     var isVisible by mutableStateOf(isVisible)
     var content by mutableStateOf(content)
 
-    fun show(content: @Composable ColumnScope.() -> Unit) {
+    /**
+     * The inset [BottomSheetMenu] applies to the sheet's content.
+     *
+     * Most menus are a stack of rows and want breathing room from the sheet
+     * edge. A menu that paints the sheet itself — the player's Echo wash —
+     * passes `0.dp` so its background reaches both edges instead of ending in
+     * a square block inside a visible border.
+     */
+    var horizontalPadding by mutableStateOf(20.dp)
+
+    fun show(
+        horizontalPadding: Dp = 20.dp,
+        content: @Composable ColumnScope.() -> Unit,
+    ) {
         isVisible = true
+        this.horizontalPadding = horizontalPadding
         this.content = content
     }
 
@@ -150,7 +164,7 @@ fun BottomSheetMenu(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp)
+                .padding(horizontal = state.horizontalPadding)
         ) {
             state.content(this)
         }

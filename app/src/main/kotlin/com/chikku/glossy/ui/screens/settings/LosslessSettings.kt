@@ -39,6 +39,7 @@ import com.jay.glossy.LocalPlayerAwareWindowInsets
 import com.jay.glossy.R
 import com.jay.glossy.constants.AudioQuality
 import com.jay.glossy.constants.AudioQualityKey
+import com.jay.glossy.constants.DefaultAudioQuality
 import com.jay.glossy.constants.LosslessSourceKey
 import com.jay.glossy.lossless.LosslessOutput
 import com.jay.glossy.lossless.LosslessSource
@@ -70,7 +71,7 @@ import com.jay.glossy.utils.rememberPreference
 fun LosslessSettings(navController: NavController) {
     val context = LocalContext.current
 
-    val (audioQuality, _) = rememberEnumPreference(AudioQualityKey, AudioQuality.AUTO)
+    val (audioQuality, _) = rememberEnumPreference(AudioQualityKey, DefaultAudioQuality)
     val (source, onSourceChange) = rememberPreference(LosslessSourceKey, "")
 
     var showSourceDialog by remember { mutableStateOf(false) }

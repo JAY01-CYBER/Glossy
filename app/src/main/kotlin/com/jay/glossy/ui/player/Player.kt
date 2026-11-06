@@ -821,7 +821,7 @@ fun BottomSheetPlayer(
                                                 )
                                             }
                                         } else {
-                                            menuState.show {
+                                            menuState.show(horizontalPadding = 0.dp) {
                                                 PlayerMenu(
                                                     mediaMetadata = mediaMetadata,
                                                     playerBottomSheetState = state,
@@ -1259,7 +1259,7 @@ fun BottomSheetPlayer(
                                         } else {
                                             androidx.compose.material3.IconButton(
                                                 onClick = {
-                                                    menuState.show {
+                                                    menuState.show(horizontalPadding = 0.dp) {
                                                         PlayerMenu(
                                                             mediaMetadata = mediaMetadata,
                                                             playerBottomSheetState = state,
@@ -2024,7 +2024,7 @@ fun MoreActionsButton(
             .clip(RoundedCornerShape(24.dp))
             .background(textButtonColor)
             .clickable {
-                menuState.show {
+                menuState.show(horizontalPadding = 0.dp) {
                     PlayerMenu(
                         mediaMetadata = mediaMetadata,
                         playerBottomSheetState = state,
@@ -2064,7 +2064,7 @@ private fun PlayerMoreMenuButton(
             .clip(RoundedCornerShape(24.dp))
             .background(textButtonColor)
             .clickable {
-                menuState.show {
+                menuState.show(horizontalPadding = 0.dp) {
                     PlayerMenu(
                         mediaMetadata = mediaMetadata,
                         playerBottomSheetState = state,

@@ -17,13 +17,22 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.mediarouter.media.MediaRouter
+import kotlinx.coroutines.delay
 
 @Composable
 fun CastPickerSheet(
@@ -32,8 +41,18 @@ fun CastPickerSheet(
     onRouteSelected: (MediaRouter.RouteInfo) -> Unit,
     onDisconnect: () -> Unit,
     currentlyConnectedRoute: MediaRouter.RouteInfo?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onRefresh: () -> Unit = {},
 ) {
+    // Discovery is asynchronous: mDNS answers take a few seconds. Showing
+    // "no devices" straight away is what made TVs look missing, so hold the
+    // searching state instead of declaring failure on the first empty frame.
+    var searchTimedOut by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(SEARCH_TIMEOUT_MS)
+        searchTimedOut = true
+    }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -57,7 +76,7 @@ fun CastPickerSheet(
                 fontWeight = FontWeight.Bold
             )
         }
-        
+
         if (isConnecting) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -109,6 +128,25 @@ fun CastPickerSheet(
                     color = MaterialTheme.colorScheme.error
                 )
             }
+        } else if (routes.isEmpty() && !searchTimedOut) {
+            // Still scanning
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp)
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    strokeWidth = 2.dp
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Text(
+                    text = stringResource(R.string.cast_searching_devices),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         } else if (routes.isEmpty()) {
             // No devices found
             Column(
@@ -131,10 +169,20 @@ fun CastPickerSheet(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Make sure your device is on the same Wi-Fi network",
+                    text = stringResource(R.string.cast_no_devices_hint),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    textAlign = TextAlign.Center
                 )
+                Spacer(modifier = Modifier.height(8.dp))
+                TextButton(
+                    onClick = {
+                        searchTimedOut = false
+                        onRefresh()
+                    }
+                ) {
+                    Text(text = stringResource(R.string.cast_search_again))
+                }
             }
         } else {
             // Show available devices
@@ -165,3 +213,6 @@ fun CastPickerSheet(
         }
     }
 }
+
+/** How long a scan runs before the picker stops claiming it is still searching. */
+private const val SEARCH_TIMEOUT_MS = 8_000L

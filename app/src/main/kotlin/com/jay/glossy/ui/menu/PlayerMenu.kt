@@ -46,7 +46,6 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
@@ -56,6 +55,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -75,6 +75,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -110,7 +111,6 @@ import com.jay.glossy.db.entities.Song
 import com.jay.glossy.db.entities.SpeedDialItem
 import com.jay.glossy.ui.component.BottomSheetState
 import com.jay.glossy.ui.component.ListDialog
-import com.jay.glossy.ui.component.Material3MenuGroup
 import com.jay.glossy.ui.component.Material3MenuItemData
 import com.jay.glossy.ui.component.NewAction
 import com.jay.glossy.ui.component.NewActionGrid
@@ -291,8 +291,20 @@ fun PlayerMenu(
             end = 16.dp,
             bottom = 8.dp + WindowInsets.systemBars.asPaddingValues().calculateBottomPadding(),
         ),
-        verticalArrangement = Arrangement.spacedBy(12.dp), 
-        modifier = Modifier.animateContentSize().fillMaxSize()
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        // Echo Sheet's backdrop: a warm wash that fades down the sheet, so the
+        // cards sit on something instead of on a flat panel.
+        modifier = Modifier
+            .animateContentSize()
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.02f),
+                    ),
+                ),
+            ),
     ) {
         if (isQueueTrigger != true) {
             item {
@@ -334,7 +346,7 @@ fun PlayerMenu(
                                         painter = painterResource(R.drawable.radio),
                                         contentDescription = null,
                                         modifier = Modifier.size(26.dp),
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        tint = MaterialTheme.colorScheme.onPrimary,
                                     )
                                 },
                                 text = stringResource(R.string.start_radio),
@@ -343,8 +355,8 @@ fun PlayerMenu(
                                     playerConnection.startRadioSeamlessly()
                                     onDismiss()
                                 },
-                                backgroundColor = MaterialTheme.colorScheme.primaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                backgroundColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary,
                             )
                         },
                         NewAction(
@@ -382,7 +394,8 @@ fun PlayerMenu(
                             contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         ),
                     ),
-                modifier = Modifier.padding(horizontal = 4.dp),
+                // No extra inset: the sheet no longer pads this menu, and the
+                // tiles should line up with the cards below them.
                 columns = if (isListenTogetherGuest) 2 else 3,
             )
         }
@@ -394,7 +407,7 @@ fun PlayerMenu(
 
             PlayerMenuSectionLabel(text = stringResource(R.string.menu_section_song))
 
-            Material3MenuGroup(
+            EchoMenuGroup(
                 items =
                     listOfNotNull(
                         if (artists.isNotEmpty() && !isPodcast) {
@@ -402,7 +415,6 @@ fun PlayerMenu(
                                 icon = { PlayerMenuTonalTile(iconRes = R.drawable.artist) },
                                 title = { Text(text = stringResource(R.string.view_artist)) },
                                 description = { Text(text = mediaMetadata.artists.joinToString { it.name }) },
-                                cardColors = menuRowColors(),
                                 onClick = {
                                     if (mediaMetadata.artists.size == 1) {
                                         navController.navigate("artist/${mediaMetadata.artists[0].id}")
@@ -421,7 +433,6 @@ fun PlayerMenu(
                                 icon = { PlayerMenuTonalTile(iconRes = if (isPodcast) R.drawable.mic else R.drawable.album) },
                                 title = { Text(text = stringResource(if (isPodcast) R.string.view_podcast else R.string.view_album)) },
                                 description = { Text(text = mediaMetadata.album.title) },
-                                cardColors = menuRowColors(),
                                 onClick = {
                                     if (isPodcast) navController.navigate("online_podcast/${mediaMetadata.album.id}")
                                     else navController.navigate("album/${mediaMetadata.album.id}")
@@ -435,7 +446,6 @@ fun PlayerMenu(
                         Material3MenuItemData(
                             icon = { PlayerMenuTonalTile(iconRes = if (isInLibrary) R.drawable.library_add_check else R.drawable.library_add) },
                             title = { Text(text = stringResource(if (isInLibrary) R.string.remove_from_library else R.string.add_to_library)) },
-                            cardColors = menuRowColors(),
                             onClick = {
                                 playerConnection.toggleLibrary()
                                 onDismiss()
@@ -444,7 +454,6 @@ fun PlayerMenu(
                         Material3MenuItemData(
                             icon = { PlayerMenuTonalTile(iconRes = if (isPinned) R.drawable.remove else R.drawable.add) },
                             title = { Text(text = if (isPinned) stringResource(R.string.unpin_from_speed_dial) else stringResource(R.string.pin_to_speed_dial)) },
-                            cardColors = menuRowColors(),
                             onClick = {
                                 coroutineScope.launch(Dispatchers.IO) {
                                     if (isPinned) database.speedDialDao.delete(mediaMetadata.id)
@@ -458,21 +467,18 @@ fun PlayerMenu(
                                 Material3MenuItemData(
                                     icon = { PlayerMenuTonalTile(iconRes = R.drawable.offline) },
                                     title = { Text(text = stringResource(R.string.remove_download)) },
-                                    cardColors = menuRowColors(),
                                     onClick = { DownloadService.sendRemoveDownload(context, ExoDownloadService::class.java, mediaMetadata.id, false) },
                                 )
                             Download.STATE_QUEUED, Download.STATE_DOWNLOADING ->
                                 Material3MenuItemData(
                                     icon = { CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp) },
                                     title = { Text(text = stringResource(R.string.downloading)) },
-                                    cardColors = menuRowColors(),
                                     onClick = { DownloadService.sendRemoveDownload(context, ExoDownloadService::class.java, mediaMetadata.id, false) },
                                 )
                             else ->
                                 Material3MenuItemData(
                                     icon = { PlayerMenuTonalTile(iconRes = R.drawable.download) },
                                     title = { Text(text = stringResource(R.string.action_download)) },
-                                    cardColors = menuRowColors(),
                                     onClick = {
                                         database.transaction { insert(mediaMetadata) }
                                         val downloadRequest = DownloadRequest.Builder(mediaMetadata.id, mediaMetadata.id.toUri())
@@ -491,7 +497,7 @@ fun PlayerMenu(
             // Playback: toggles that change how the queue plays.
             PlayerMenuSectionLabel(text = stringResource(R.string.menu_section_playback))
 
-            Material3MenuGroup(
+            EchoMenuGroup(
                 items =
                     listOf(
                         Material3MenuItemData(
@@ -500,7 +506,7 @@ fun PlayerMenu(
                                 else PlayerMenuTonalTile(iconRes = R.drawable.shuffle)
                             },
                             title = { Text(text = stringResource(R.string.shuffle)) },
-                            cardColors = if (shuffleModeEnabled) menuActiveRowColors() else menuRowColors(),
+                            highlighted = shuffleModeEnabled,
                             trailingContent = if (shuffleModeEnabled) {
                                 { PlayerMenuActiveCheck() }
                             } else {
@@ -526,7 +532,7 @@ fun PlayerMenu(
                                     )
                                 )
                             },
-                            cardColors = if (showLyricsOnPlayer) menuActiveRowColors() else menuRowColors(),
+                            highlighted = showLyricsOnPlayer,
                             trailingContent = if (showLyricsOnPlayer) {
                                 { PlayerMenuActiveCheck() }
                             } else {
@@ -543,7 +549,7 @@ fun PlayerMenu(
                                 else PlayerMenuTonalTile(iconRes = R.drawable.bedtime)
                             },
                             title = { Text(text = stringResource(R.string.sleep_timer)) },
-                            cardColors = if (sleepTimerEnabled) menuActiveRowColors() else menuRowColors(),
+                            highlighted = sleepTimerEnabled,
                             trailingContent = if (sleepTimerEnabled) {
                                 { PlayerMenuActiveCheck() }
                             } else {
@@ -568,13 +574,12 @@ fun PlayerMenu(
 
             PlayerMenuSectionLabel(text = stringResource(R.string.menu_section_room))
 
-            Material3MenuGroup(
+            EchoMenuGroup(
                 items =
                     listOfNotNull(
                         Material3MenuItemData(
                             icon = { PlayerMenuTonalTile(iconRes = R.drawable.group) },
                             title = { Text(text = stringResource(R.string.listen_together)) },
-                            cardColors = menuRowColors(),
                             trailingContent = if (pendingCount > 0) {
                                 {
                                     Surface(
@@ -594,7 +599,6 @@ fun PlayerMenu(
                             Material3MenuItemData(
                                 icon = { PlayerMenuTonalTile(iconRes = R.drawable.replay) },
                                 title = { Text(text = stringResource(R.string.resync)) },
-                                cardColors = menuRowColors(),
                                 onClick = {
                                     listenTogetherManager?.requestSync()
                                     onDismiss()
@@ -612,14 +616,13 @@ fun PlayerMenu(
                 // Audio: sound shaping and the system effect panel.
                 PlayerMenuSectionLabel(text = stringResource(R.string.menu_section_audio))
 
-                Material3MenuGroup(
+                EchoMenuGroup(
                     items =
                         listOf(
                             Material3MenuItemData(
                                 icon = { PlayerMenuTonalTile(iconRes = R.drawable.equalizer) },
                                 title = { Text(text = stringResource(R.string.equalizer)) },
                                 description = { Text(text = stringResource(R.string.equalizer_desc)) },
-                                cardColors = menuRowColors(),
                                 onClick = {
                                     navController.navigate("equalizer")
                                     onDismiss()
@@ -629,7 +632,6 @@ fun PlayerMenu(
                                 icon = { PlayerMenuTonalTile(iconRes = R.drawable.graphic_eq) },
                                 title = { Text(text = stringResource(R.string.system_equalizer)) },
                                 description = { Text(text = stringResource(R.string.system_equalizer_desc)) },
-                                cardColors = menuRowColors(),
                                 onClick = {
                                     val audioSessionId = playerConnection.player.audioSessionId
                                     if (audioSessionId != C.AUDIO_SESSION_ID_UNSET && audioSessionId > 0) {
@@ -649,7 +651,6 @@ fun PlayerMenu(
                                 icon = { PlayerMenuTonalTile(iconRes = R.drawable.tune) },
                                 title = { Text(text = stringResource(R.string.advanced)) },
                                 description = { Text(text = stringResource(R.string.advanced_desc)) },
-                                cardColors = menuRowColors(),
                                 onClick = {
                                     if (!varispeedMode) showPitchTempoDialog = true
                                     else showSpeedDialog = true
@@ -664,14 +665,13 @@ fun PlayerMenu(
             // More: the track's technical details.
             PlayerMenuSectionLabel(text = stringResource(R.string.menu_section_more))
 
-            Material3MenuGroup(
+            EchoMenuGroup(
                 items =
                     listOf(
                         Material3MenuItemData(
                             icon = { PlayerMenuTonalTile(iconRes = R.drawable.info) },
                             title = { Text(text = stringResource(R.string.details)) },
                             description = { Text(text = stringResource(R.string.details_desc)) },
-                            cardColors = menuRowColors(),
                             onClick = {
                                 onShowDetailsDialog()
                                 onDismiss()
@@ -681,7 +681,6 @@ fun PlayerMenu(
                             icon = { PlayerMenuTonalTile(iconRes = R.drawable.refresh) },
                             title = { Text(text = stringResource(R.string.refresh_canvas)) },
                             description = { Text(text = stringResource(R.string.refresh_canvas_desc)) },
-                            cardColors = menuRowColors(),
                             onClick = {
                                 // Drops every cached canvas answer and re-keys the
                                 // on-screen surfaces, so a wrong or missing
@@ -707,19 +706,95 @@ fun PlayerMenu(
 // MATERIAL 3 MENU PIECES
 // ============================================================================
 
+/**
+ * One card per section, with hairlines between the rows.
+ *
+ * Echo Sheet frames the sheet as a few lists rather than a stack of loose
+ * cards: a section reads as one surface, so the eye can follow the actions
+ * without the gaps between rows cutting the sheet into stripes.
+ */
 @Composable
-private fun menuRowColors() = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+private fun EchoMenuGroup(items: List<Material3MenuItemData>) {
+    if (items.isEmpty()) return
+    Surface(
+        shape = RoundedCornerShape(26.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.92f),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            items.forEachIndexed { index, item ->
+                if (index > 0) {
+                    // Full width, as in the design: an inset rule would read as
+                    // a second alignment grid next to the tiles' own column.
+                    HorizontalDivider(
+                        thickness = 1.dp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
+                    )
+                }
+                EchoMenuRow(item = item)
+            }
+        }
+    }
+}
 
 @Composable
-private fun menuActiveRowColors() = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+private fun EchoMenuRow(item: Material3MenuItemData) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .then(
+                    // A wash rather than a filled block: the row keeps its
+                    // text contrast, while the accent tile and the tick still
+                    // carry the on-state.
+                    if (item.highlighted) {
+                        Modifier.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f))
+                    } else {
+                        Modifier
+                    },
+                )
+                .clickable(enabled = item.onClick != null) { item.onClick?.invoke() }
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        item.icon?.let { icon ->
+            icon()
+            Spacer(modifier = Modifier.width(14.dp))
+        }
+
+        Column(modifier = Modifier.weight(1f)) {
+            ProvideTextStyle(MaterialTheme.typography.titleMedium) {
+                item.title()
+            }
+
+            item.description?.let { description ->
+                Spacer(modifier = Modifier.height(2.dp))
+                ProvideTextStyle(
+                    MaterialTheme.typography.bodySmall.copy(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    ),
+                ) {
+                    description()
+                }
+            }
+        }
+
+        item.trailingContent?.let { trailing ->
+            Spacer(modifier = Modifier.width(8.dp))
+            trailing()
+        }
+    }
+}
 
 @Composable
 private fun PlayerMenuSectionLabel(text: String, modifier: Modifier = Modifier) {
+    // The accent is spent on the primary action above; the labels ride on the
+    // sheet surface so the lists stay the quiet half of the sheet.
     Text(
         text = text,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = modifier.padding(start = 8.dp, top = 4.dp, bottom = 4.dp),
+        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+        color = MaterialTheme.colorScheme.onSurface,
+        modifier = modifier.padding(start = 6.dp, top = 6.dp, bottom = 4.dp),
     )
 }
 
@@ -731,7 +806,7 @@ private fun PlayerMenuIconTile(
 ) {
     Box(
         modifier = Modifier
-            .size(40.dp)
+            .size(44.dp)
             .clip(CircleShape)
             .background(containerColor),
         contentAlignment = Alignment.Center,
@@ -779,12 +854,12 @@ private fun PlayerMenuNowPlayingHeader(
     castDeviceName: String?,
 ) {
     Surface(
-        shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.92f),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
@@ -846,8 +921,8 @@ private fun PlayerMenuAudioCard(
     onVolumeChange: (Float) -> Unit,
 ) {
     Surface(
-        shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = RoundedCornerShape(26.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.92f),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {

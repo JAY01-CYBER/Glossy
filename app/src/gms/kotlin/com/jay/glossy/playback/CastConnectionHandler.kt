@@ -79,6 +79,15 @@ class CastConnectionHandler(
     private val _castVolume = MutableStateFlow(1.0f)
     val castVolume: StateFlow<Float> = _castVolume.asStateFlow()
     
+    // Receivers currently visible on the network. Kept as a flow so the picker
+    // can show a TV the moment mDNS answers instead of reading a snapshot once.
+    private val _availableRoutes = MutableStateFlow<List<MediaRouter.RouteInfo>>(emptyList())
+    val availableRoutes: StateFlow<List<MediaRouter.RouteInfo>> = _availableRoutes.asStateFlow()
+    
+    private var discoveryCallback: MediaRouter.Callback? = null
+    private var discoveryTimeoutJob: Job? = null
+    private var initialized = false
+    
     private var positionUpdateJob: Job? = null
     private var currentMediaId: String? = null
     private var lastCastItemId: Int = -1
@@ -423,13 +432,30 @@ class CastConnectionHandler(
     }
     
     fun initialize(): Boolean {
+        // The service and the cast UI both initialize this handler. Registering
+        // the session listener twice would handle every session event twice and
+        // load the current track onto the receiver twice.
+        if (initialized) {
+            refreshDiscovery()
+            return true
+        }
         return try {
             castContext = CastContext.getSharedInstance(context)
             sessionManager = castContext?.sessionManager
             mediaRouter = MediaRouter.getInstance(context)
-            routeSelector = MediaRouteSelector.Builder()
+            // The SDK's merged selector covers the receiver app from CastOptions
+            // plus any extra session providers. A hand-built selector can miss a
+            // category the route provider publishes, which hides devices from
+            // discovery.
+            routeSelector = castContext?.mergedSelector ?: MediaRouteSelector.Builder()
                 .addControlCategory(CastMediaControlIntent.categoryForCast(CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID))
                 .build()
+            
+            // Start discovery as soon as the service exists. MediaRouter only
+            // scans for Cast receivers while a callback asks for discovery, and
+            // routes expire quickly once it stops; without this the picker opens
+            // on an empty list and users see no TV at all.
+            refreshDiscovery()
             
             sessionManager?.addSessionManagerListener(sessionManagerListener, CastSession::class.java)
             
@@ -442,6 +468,7 @@ class CastConnectionHandler(
                 startPositionUpdates()
             }
             
+            initialized = true
             true
         } catch (e: Exception) {
             Timber.e(e, "Failed to initialize Cast")
@@ -449,13 +476,72 @@ class CastConnectionHandler(
         }
     }
     
-    fun getAvailableRoutes(): List<MediaRouter.RouteInfo> {
-        val router = mediaRouter ?: return emptyList()
-        val selector = routeSelector ?: return emptyList()
+    fun getAvailableRoutes(): List<MediaRouter.RouteInfo> = _availableRoutes.value
+    
+    /**
+     * Route the current Cast session is attached to, if any. Used by the picker
+     * to show which TV is connected.
+     */
+    val selectedRoute: MediaRouter.RouteInfo?
+        get() {
+            val router = mediaRouter ?: return null
+            val selector = routeSelector ?: return null
+            return router.routes.firstOrNull { route ->
+                route.matchesSelector(selector) && route.isSelected
+            }
+        }
+    
+    /**
+     * (Re)starts device discovery. Re-registering the callback is what makes
+     * MediaRouter ask the Cast route provider for a fresh mDNS scan, so this is
+     * both the initial start and the picker's manual refresh.
+     */
+    fun refreshDiscovery() {
+        val router = mediaRouter ?: return
+        val selector = routeSelector ?: return
         
-        return router.routes.filter { route ->
+        discoveryCallback?.let { router.removeCallback(it) }
+        
+        val callback = object : MediaRouter.Callback() {
+            override fun onRouteAdded(router: MediaRouter, route: MediaRouter.RouteInfo) = publishRoutes()
+            override fun onRouteRemoved(router: MediaRouter, route: MediaRouter.RouteInfo) = publishRoutes()
+            override fun onRouteChanged(router: MediaRouter, route: MediaRouter.RouteInfo) = publishRoutes()
+            override fun onRoutePresentationDisplayChanged(router: MediaRouter, route: MediaRouter.RouteInfo) = publishRoutes()
+        }
+        
+        discoveryCallback = callback
+        router.addCallback(selector, callback, MediaRouter.CALLBACK_FLAG_REQUEST_DISCOVERY)
+        publishRoutes()
+        
+        // mDNS scans are not free: let the window lapse instead of listening for
+        // as long as the playback service lives. Opening the picker restarts it.
+        // The list is dropped with the window because routes the router no longer
+        // reports would otherwise look current and connect to devices that are gone.
+        discoveryTimeoutJob?.cancel()
+        discoveryTimeoutJob = scope.launch {
+            delay(DISCOVERY_WINDOW_MS)
+            stopDiscovery()
+            _availableRoutes.value = emptyList()
+        }
+    }
+    
+    /** Stops the mDNS scan without forgetting the last known routes. */
+    fun stopDiscovery() {
+        discoveryCallback?.let { mediaRouter?.removeCallback(it) }
+        discoveryCallback = null
+    }
+    
+    private fun publishRoutes() {
+        val router = mediaRouter ?: return
+        val selector = routeSelector ?: return
+        val routes = router.routes.filter { route ->
             route.matchesSelector(selector) && !route.isDefault
         }
+        if (routes.size != _availableRoutes.value.size) {
+            // Helps support logs answer "why is my TV not listed?"
+            Timber.d("Cast discovery: ${routes.size} receiver(s) visible")
+        }
+        _availableRoutes.value = routes
     }
     
     fun connectToRoute(route: MediaRouter.RouteInfo) {
@@ -774,7 +860,21 @@ class CastConnectionHandler(
     
     fun release() {
         stopPositionUpdates()
+        discoveryTimeoutJob?.cancel()
+        discoveryTimeoutJob = null
+        stopDiscovery()
+        _availableRoutes.value = emptyList()
         remoteMediaClient?.unregisterCallback(remoteMediaClientCallback)
         sessionManager?.removeSessionManagerListener(sessionManagerListener, CastSession::class.java)
+        sessionManager = null
+        castContext = null
+        mediaRouter = null
+        routeSelector = null
+        initialized = false
+    }
+    
+    private companion object {
+        /** How long a discovery window stays open before the scan is stopped. */
+        const val DISCOVERY_WINDOW_MS = 120_000L
     }
 }

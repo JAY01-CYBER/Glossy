@@ -15,6 +15,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.jay.glossy.constants.AudioQuality
+import com.jay.glossy.constants.DefaultAudioQuality
 import com.jay.glossy.utils.YTPlayerUtils
 import com.jay.glossy.utils.dataStore
 import com.jay.glossy.utils.get
@@ -105,7 +106,7 @@ class WrappedAudioService(
 
         return try {
             val audioQuality = context.dataStore.get(com.jay.glossy.constants.AudioQualityKey).let { value ->
-                AudioQuality.entries.find { it.name == value } ?: AudioQuality.AUTO
+                AudioQuality.entries.find { it.name == value } ?: DefaultAudioQuality
             }
             val playbackData = withContext(Dispatchers.IO) {
                 YTPlayerUtils.playerResponseForPlayback(

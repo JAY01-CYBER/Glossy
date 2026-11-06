@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Glossy · song sheet directions</title>
+<style>
+  :root { --page:#0a0807; --ink:#f3ece7; --muted:#9b918b; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    background:
+      radial-gradient(1000px 600px at 8% -10%, #241611 0%, transparent 60%),
+      radial-gradient(900px 520px at 96% 2%, #171d24 0%, transparent 58%),
+      var(--page);
+    color: var(--ink); padding: 38px 38px 54px; -webkit-font-smoothing: antialiased;
+  }
+  header { max-width: 1200px; margin: 0 auto 26px; }
+  .eyebrow { font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: #ffb08a; margin: 0 0 10px; }
+  h1 { font-size: 34px; line-height: 1.07; letter-spacing: -.03em; margin: 0 0 8px; font-weight: 650; }
+  h1 span { color: #8d8480; }
+  header p { margin: 0; max-width: 780px; color: var(--muted); font-size: 13.5px; line-height: 1.55; }
+
+  .gallery { display: flex; flex-wrap: nowrap; gap: 38px; max-width: 1200px; margin: 0 auto; transform-origin: top left; }
+  .col { width: 390px; flex: 0 0 auto; }
+  .tag { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: #b9c2c7; margin: 0; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .colname { font-size: 18px; font-weight: 600; margin: 4px 0 2px; }
+  .coldesc { color: var(--muted); font-size: 12.5px; line-height: 1.5; margin: 0 0 12px; min-height: 36px; }
+
+  .phone { position: relative; width: 390px; height: 844px; border-radius: 40px; overflow: hidden; border: 1px solid rgba(255,255,255,.09); isolation: isolate; box-shadow: 0 30px 60px -28px rgba(0,0,0,.85); }
+  .status { position: relative; z-index: 6; display: flex; align-items: center; justify-content: space-between; padding: 14px 24px 2px; font-size: 12.5px; font-weight: 600; }
+  .status .r { display: flex; align-items: center; gap: 6px; }
+  .bars { display: flex; align-items: flex-end; gap: 2px; }
+  .bars i { width: 3px; background: currentColor; border-radius: 1px; }
+  .bars i:nth-child(1){height:4px}.bars i:nth-child(2){height:7px}.bars i:nth-child(3){height:10px}
+  .batt { width: 20px; height: 10px; border: 1.4px solid currentColor; border-radius: 3px; position: relative; }
+  .batt::before { content:""; position:absolute; inset:2px; width:9px; background:currentColor; border-radius:1px; }
+  .batt::after { content:""; position:absolute; right:-3px; top:2.5px; width:2px; height:4px; background:currentColor; }
+
+  .ico { width: 20px; height: 20px; display: block; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .ico.sm { width: 17px; height: 17px; }
+  .grab { width: 40px; height: 4px; border-radius: 4px; margin: 8px auto 0; background: rgba(255,255,255,.18); }
+  .art { border-radius: 18px; flex: 0 0 auto; background: linear-gradient(150deg,#c9553f,#7a2a22 55%,#3a1a17); position: relative; overflow: hidden; }
+  .art::after { content:""; position:absolute; inset:0; background: linear-gradient(160deg, rgba(255,255,255,.28), transparent 55%); }
+  .np { display: flex; align-items: center; gap: 13px; padding: 12px; border-radius: 22px; }
+  .np .art { width: 58px; height: 58px; border-radius: 16px; }
+  .np .who { flex: 1 1 auto; min-width: 0; }
+  .np .k { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; opacity: .62; }
+  .np b { display: block; font-size: 16px; font-weight: 600; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 3px; }
+  .np small { display: block; font-size: 12px; opacity: .6; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .vol { display: flex; align-items: center; gap: 12px; }
+  .track { flex: 1 1 auto; height: 10px; border-radius: 6px; }
+  .fill { height: 10px; border-radius: 6px; width: 100%; }
+  .pct { font-size: 13px; font-weight: 600; width: 40px; text-align: right; }
+
+  .quick { display: flex; gap: 10px; }
+  .qtile { flex: 1; border-radius: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; height: 96px; font-size: 12.5px; font-weight: 550; }
+
+  .sectionlabel { font-size: 12.5px; font-weight: 650; letter-spacing: .01em; margin: 0; }
+  .list { border-radius: 24px; overflow: hidden; }
+  .row { display: flex; align-items: center; gap: 13px; padding: 12px 14px; }
+  .row + .row { border-top: 1px solid rgba(255,255,255,.06); }
+  .tile { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; }
+  .row .t { flex: 1 1 auto; min-width: 0; }
+  .row b { display: block; font-size: 15px; font-weight: 550; }
+  .row small { display: block; font-size: 12px; opacity: .58; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chev { opacity: .4; }
+
+  /* ================= A · Echo Sheet ================= */
+  .a { background: #170d08; color: #f7ece4; }
+  .a .sheetbg { position: absolute; inset: 0; z-index: 0;
+    background: radial-gradient(420px 280px at 20% 0%, rgba(255,150,110,.16), transparent 68%),
+                linear-gradient(180deg,#1b0f09 0%, #150c08 100%); }
+  .a .content { position: relative; z-index: 2; padding: 8px 16px 0; }
+  .a .np { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.07); }
+  .a .audio { margin-top: 12px; padding: 16px; border-radius: 24px; background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.06); }
+  .a .audiohead { display: flex; align-items: center; gap: 12px; }
+  .a .bt { width: 46px; height: 46px; border-radius: 50%; background: #6db6f0; color: #08212f; display: grid; place-items: center; flex: 0 0 auto; }
+  .a .audiohead .t { flex: 1 1 auto; }
+  .a .audiohead .k { font-size: 12px; opacity: .62; }
+  .a .audiohead b { display: block; font-size: 16px; font-weight: 600; margin-top: 1px; }
+  .a .vol { margin-top: 16px; color: #f7c6b0; }
+  .a .track { background: rgba(255,255,255,.1); }
+  .a .fill { background: #ffb08a; }
+  .a .pct { color: #f7c6b0; }
+  .a .quick { margin-top: 14px; }
+  .a .qtile { background: rgba(255,255,255,.055); color: #f0dfd6; }
+  .a .qtile.primary { background: #ffb08a; color: #2c1206; }
+  .a .sectionlabel { margin: 18px 4px 8px; }
+  .a .list { background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.06); }
+  .a .tile { background: #1b3a52; color: #9fd2ff; }
+  .a .row.hot .tile { background: #4a2418; color: #ffb08a; }
+
+  /* ================= B · Echo Page ================= */
+  .b { background: #0a0b12; color: #eef1fb; }
+  .b .bg { position: absolute; inset: 0; z-index: 0;
+    background: radial-gradient(420px 320px at 50% -4%, rgba(120,110,255,.28), transparent 66%),
+                radial-gradient(420px 300px at 8% 46%, rgba(90,200,220,.14), transparent 64%), #0a0b12; }
+  .b .content { position: relative; z-index: 2; padding: 6px 18px 0; }
+  .b .bar { display: flex; align-items: center; justify-content: space-between; padding: 4px 0 2px; }
+  .b .round { width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(255,255,255,.12); display: grid; place-items: center; }
+  .b .hero { text-align: center; padding: 14px 0 0; }
+  .b .hero .art { width: 168px; height: 168px; border-radius: 26px; margin: 0 auto; box-shadow: 0 26px 44px -22px rgba(0,0,0,.9); }
+  .b h2 { font-size: 22px; font-weight: 620; letter-spacing: -.02em; margin: 16px 0 4px; }
+  .b .sub { font-size: 12.5px; color: #9aa0bd; margin: 0; }
+  .b .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
+  .b .cell { height: 74px; border-radius: 20px; display: flex; align-items: center; gap: 11px; padding: 0 15px; background: rgba(255,255,255,.055); border: 1px solid rgba(255,255,255,.07); font-size: 13.5px; font-weight: 550; }
+  .b .cell.primary { background: linear-gradient(125deg,#8b7bff,#46d6ff); color: #0a0b16; border-color: transparent; }
+  .b .block { margin-top: 12px; border-radius: 22px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.07); overflow: hidden; }
+  .b .label { margin: 18px 4px 8px; font-family: ui-monospace, Menlo, monospace; font-size: 10px; letter-spacing: .22em; color: #8f95b8; }
+  .b .tile { background: rgba(140,150,255,.16); color: #b9c3ff; }
+  .b .audio { display: flex; align-items: center; gap: 12px; padding: 14px; }
+  .b .bt { width: 42px; height: 42px; border-radius: 50%; background: #7bd0ff; color: #06202e; display: grid; place-items: center; }
+  .b .vol { flex: 1 1 auto; }
+  .b .track { background: rgba(255,255,255,.12); }
+  .b .fill { background: linear-gradient(90deg,#8b7bff,#46d6ff); }
+  .b .pct { color: #a8b0d8; }
+
+  /* ================= C · Echo Orbit ================= */
+  .c { background: #05171a; color: #e6f7f4; }
+  .c .bg { position: absolute; inset: 0; z-index: 0;
+    background: radial-gradient(380px 320px at 50% 22%, rgba(74,214,190,.2), transparent 64%),
+                radial-gradient(420px 320px at 90% 80%, rgba(40,120,180,.16), transparent 66%), #05171a; }
+  .c .content { position: relative; z-index: 2; padding: 4px 16px 0; }
+  .c .bar { display: flex; justify-content: space-between; align-items: center; padding: 4px 2px; }
+  .c .round { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.06); }
+  .c .orbit { position: relative; height: 268px; display: grid; place-items: center; margin-top: 2px; }
+  .c .ring { position: absolute; border: 1px solid rgba(140,240,220,.16); border-radius: 50%; }
+  .c .ring.one { width: 208px; height: 208px; }
+  .c .ring.two { width: 262px; height: 262px; border-color: rgba(140,240,220,.09); }
+  .c .art { width: 156px; height: 156px; border-radius: 50%; box-shadow: 0 0 0 6px rgba(255,255,255,.03), 0 24px 48px -22px rgba(0,0,0,.9); }
+  .c .pill { position: absolute; height: 34px; padding: 0 13px; border-radius: 999px; display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; background: rgba(10,44,46,.9); border: 1px solid rgba(140,240,220,.28); color: #9ff0e0; }
+  .c .pill.p1 { top: 18px; right: 14px; }
+  .c .pill.p2 { bottom: 26px; left: 6px; }
+  .c .pill.p3 { bottom: 62px; right: 0; }
+  .c .meta { text-align: center; margin-top: -4px; }
+  .c h2 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+  .c .sub { font-size: 12px; color: #82b3ad; margin: 0; }
+  .c .audio { margin-top: 16px; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 18px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.07); }
+  .c .bt { width: 36px; height: 36px; border-radius: 50%; background: #5fd8c6; color: #05241f; display: grid; place-items: center; }
+  .c .track { background: rgba(255,255,255,.12); }
+  .c .fill { background: #5fd8c6; }
+  .c .pct { color: #9fe3d8; }
+  .c .label { margin: 16px 4px 7px; font-family: ui-monospace, Menlo, monospace; font-size: 10px; letter-spacing: .22em; color: #7fa8a3; }
+  .c .list { border-radius: 20px; background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.07); }
+  .c .tile { background: rgba(95,216,198,.12); color: #8ef0dc; width: 38px; height: 38px; }
+  .c .row { padding: 10px 12px; }
+  .c .row b { font-size: 14px; }
+
+  footer { max-width: 1200px; margin: 30px auto 0; color: #6f787d; font-size: 12.5px; line-height: 1.55; }
+  footer b { color: #aeb7bc; font-weight: 550; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-chev-down" viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></symbol>
+  <symbol id="i-vol" viewBox="0 0 24 24"><path d="M4 10v4h3l4 3.5v-11L7 10z"/><path d="M15.5 9.5a3.5 3.5 0 0 1 0 5M18 7a7 7 0 0 1 0 10"/></symbol>
+  <symbol id="i-radio" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.2"/><path d="M8.2 8.2a5.4 5.4 0 0 0 0 7.6M15.8 15.8a5.4 5.4 0 0 0 0-7.6"/><path d="M5.2 5.2a9.6 9.6 0 0 0 0 13.6M18.8 18.8a9.6 9.6 0 0 0 0-13.6"/></symbol>
+  <symbol id="i-addlist" viewBox="0 0 24 24"><path d="M4 7h10M4 12h8M4 17h6"/><path d="M16 15v6M13 18h6"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M9.5 14.5 14.5 9.5"/><path d="M8 11 6.4 12.6a3.5 3.5 0 0 0 5 5L13 16"/><path d="M16 13l1.6-1.6a3.5 3.5 0 0 0-5-5L11 8"/></symbol>
+  <symbol id="i-artist" viewBox="0 0 24 24"><circle cx="12" cy="7.5" r="2.6"/><path d="M7 19c.4-2.8 2.4-4.3 5-4.3s4.6 1.5 5 4.3"/><circle cx="18" cy="16.5" r="1.6"/><path d="M18 15.4v3.7"/></symbol>
+  <symbol id="i-album" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><circle cx="12" cy="12" r="2.2"/></symbol>
+  <symbol id="i-library" viewBox="0 0 24 24"><rect x="4" y="4.5" width="12" height="15" rx="1.6"/><path d="M9 12h6M12 9v6"/><path d="M18.5 8v9"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 4.5v15M4.5 12h15"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4.5v10M8 11l4 4 4-4M5 19.5h14"/></symbol>
+  <symbol id="i-bt" viewBox="0 0 24 24"><path d="M8 8.5 16 16l-4 4V4l4 4-8 7.5"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M14 6l-6 6 6 6"/></symbol>
+</defs></svg>
+
+<header>
+  <p class="eyebrow">Glossy · song sheet</p>
+  <h1>Three ways to frame “now playing” <span>— echo-led.</span></h1>
+  <p>The sheet you have today is one column of cards: now playing, audio output, three actions, then the song menu. These directions keep every control but change the frame — a tighter sheet, a full page, or an orbit around the artwork. Same content, so any one is a swap.</p>
+</header>
+
+<div class="gallery">
+
+  <!-- ===== A ===== -->
+  <section class="col">
+    <p class="tag"><span class="dot" style="background:#ffb08a"></span>Option A</p>
+    <h3 class="colname">Echo Sheet</h3>
+    <p class="coldesc">The current sheet, tightened: warmer surfaces, a real volume read-out, and the primary action carrying the accent.</p>
+
+    <div class="phone a">
+      <div class="sheetbg"></div>
+      <div class="status"><span>4:00</span><span class="r"><span class="bars"><i></i><i></i><i></i></span><span class="batt"></span></span></div>
+      <div class="grab"></div>
+
+      <div class="content">
+        <div class="np">
+          <div class="art"></div>
+          <div class="who"><span class="k">Now playing</span><b>Tum Tum (From "Enem…</b><small>Thaman S, Sri Vardhini, Aditi…</small></div>
+        </div>
+
+        <div class="audio">
+          <div class="audiohead">
+            <div class="bt"><svg class="ico"><use href="#i-bt"/></svg></div>
+            <div class="t"><span class="k">Audio output</span><b>Phone speaker</b></div>
+            <svg class="ico chev"><use href="#i-chev-down"/></svg>
+          </div>
+          <div class="vol">
+            <svg class="ico"><use href="#i-vol"/></svg>
+            <div class="track"><div class="fill"></div></div>
+            <span class="pct">100%</span>
+          </div>
+        </div>
+
+        <div class="quick">
+          <div class="qtile primary"><svg class="ico"><use href="#i-radio"/></svg> Start radio</div>
+          <div class="qtile"><svg class="ico"><use href="#i-addlist"/></svg> Add to pl</div>
+          <div class="qtile"><svg class="ico"><use href="#i-link"/></svg> Copy link</div>
+        </div>
+
+        <p class="sectionlabel">Song</p>
+        <div class="list">
+          <div class="row hot">
+            <div class="tile"><svg class="ico"><use href="#i-artist"/></svg></div>
+            <div class="t"><b>View artist</b><small>Thaman S, Sri Vardhini, Aditi Bhavaraju</small></div>
+          </div>
+          <div class="row">
+            <div class="tile"><svg class="ico"><use href="#i-album"/></svg></div>
+            <div class="t"><b>View album</b><small>Classic Tamil Film Melodies</small></div>
+          </div>
+          <div class="row">
+            <div class="tile"><svg class="ico"><use href="#i-library"/></svg></div>
+            <div class="t"><b>Add to library</b></div>
+          </div>
+          <div class="row">
+            <div class="tile"><svg class="ico"><use href="#i-pin"/></svg></div>
+            <div class="t"><b>Pin to speed dial</b></div>
+          </div>
+          <div class="row">
+            <div class="tile"><svg class="ico"><use href="#i-download"/></svg></div>
+            <div class="t"><b>Download</b></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== B ===== -->
+  <section class="col">
+    <p class="tag"><span class="dot" style="background:#8b7bff"></span>Option B</p>
+    <h3 class="colname">Echo Page</h3>
+    <p class="coldesc">A full page with the artwork as the hero and actions in a 2×2 grid. Feels like a song page, not an options dialog.</p>
+
+    <div class="phone b">
+      <div class="bg"></div>
+      <div class="status"><span>4:00</span><span class="r"><span class="bars"><i></i><i></i><i></i></span><span class="batt"></span></span></div>
+
+      <div class="content">
+        <div class="bar">
+          <div class="round"><svg class="ico"><use href="#i-chev-down"/></svg></div>
+          <span style="font-size:11px;letter-spacing:.2em;color:#9aa0bd">NOW PLAYING</span>
+          <div class="round"><svg class="ico"><use href="#i-close"/></svg></div>
+        </div>
+
+        <div class="hero">
+          <div class="art"></div>
+          <h2>Tum Tum</h2>
+          <p class="sub">Thaman S, Sri Vardhini, Aditi Bhavaraju</p>
+        </div>
+
+        <div class="grid">
+          <div class="cell primary"><svg class="ico sm"><use href="#i-radio"/></svg> Start radio</div>
+          <div class="cell"><svg class="ico sm"><use href="#i-addlist"/></svg> Add to playlist</div>
+          <div class="cell"><svg class="ico sm"><use href="#i-link"/></svg> Copy link</div>
+          <div class="cell"><svg class="ico sm"><use href="#i-library"/></svg> Add to library</div>
+        </div>
+
+        <div class="block audio">
+          <div class="bt"><svg class="ico"><use href="#i-bt"/></svg></div>
+          <div class="vol">
+            <div style="font-size:12px;color:#9aa0bd">Phone speaker</div>
+            <div class="track" style="margin-top:6px"><div class="fill"></div></div>
+          </div>
+          <span class="pct">100%</span>
+        </div>
+
+        <p class="label">SONG</p>
+        <div class="block">
+          <div class="row">
+            <div class="tile"><svg class="ico"><use href="#i-artist"/></svg></div>
+            <div class="t"><b>View artist</b><small>Thaman S, Sri Vardhini, Aditi Bhavaraju</small></div>
+            <svg class="ico sm chev"><use href="#i-chev"/></svg>
+          </div>
+          <div class="row">
+            <div class="tile"><svg class="ico"><use href="#i-album"/></svg></div>
+            <div class="t"><b>View album</b><small>Classic Tamil Film Melodies</small></div>
+            <svg class="ico sm chev"><use href="#i-chev"/></svg>
+          </div>
+          <div class="row">
+            <div class="tile"><svg class="ico"><use href="#i-pin"/></svg></div>
+            <div class="t"><b>Pin to speed dial</b></div>
+            <svg class="ico sm chev"><use href="#i-chev"/></svg>
+          </div>
+          <div class="row">
+            <div class="tile"><svg class="ico"><use href="#i-download"/></svg></div>
+            <div class="t"><b>Download</b></div>
+            <svg class="ico sm chev"><use href="#i-chev"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== C ===== -->
+  <section class="col">
+    <p class="tag"><span class="dot" style="background:#5fd8c6"></span>Option C</p>
+    <h3 class="colname">Echo Orbit</h3>
+    <p class="coldesc">The artwork centred inside echo rings, with the three actions orbiting it; details stay in a compact list below.</p>
+
+    <div class="phone c">
+      <div class="bg"></div>
+      <div class="status"><span>4:00</span><span class="r"><span class="bars"><i></i><i></i><i></i></span><span class="batt"></span></span></div>
+
+      <div class="content">
+        <div class="bar">
+          <div class="round"><svg class="ico"><use href="#i-back"/></svg></div>
+          <div class="round"><svg class="ico"><use href="#i-close"/></svg></div>
+        </div>
+
+        <div class="orbit">
+          <div class="ring one"></div><div class="ring two"></div>
+          <div class="art"></div>
+          <div class="pill p1"><svg class="ico sm"><use href="#i-radio"/></svg> Radio</div>
+          <div class="pill p2"><svg class="ico sm"><use href="#i-addlist"/></svg> Playlist</div>
+          <div class="pill p3"><svg class="ico sm"><use href="#i-link"/></svg> Link</div>
+        </div>
+
+        <div class="meta">
+          <h2>Tum Tum</h2>
+          <p class="sub">Thaman S, Sri Vardhini, Aditi Bhavaraju</p>
+        </div>
+
+        <div class="audio">
+          <div class="bt"><svg class="ico sm"><use href="#i-bt"/></svg></div>
+          <div style="flex:1 1 auto">
+            <div style="font-size:12px;color:#82b3ad">Phone speaker</div>
+            <div class="track" style="margin-top:6px"><div class="fill"></div></div>
+          </div>
+          <span class="pct">100%</span>
+        </div>
+
+        <p class="label">SONG</p>
+        <div class="list">
+          <div class="row">
+            <div class="tile"><svg class="ico sm"><use href="#i-artist"/></svg></div>
+            <div class="t"><b>View artist</b><small>Thaman S, Sri Vardhini</small></div>
+          </div>
+          <div class="row">
+            <div class="tile"><svg class="ico sm"><use href="#i-album"/></svg></div>
+            <div class="t"><b>View album</b><small>Classic Tamil Film Melodies</small></div>
+          </div>
+          <div class="row">
+            <div class="tile"><svg class="ico sm"><use href="#i-library"/></svg></div>
+            <div class="t"><b>Add to library</b></div>
+          </div>
+          <div class="row">
+            <div class="tile"><svg class="ico sm"><use href="#i-pin"/></svg></div>
+            <div class="t"><b>Pin to speed dial</b></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  <b>A</b> keeps the sheet’s shape and is the cheapest to ship. <b>B</b> gives the song a page of its own and room for more actions. <b>C</b> is the most playful — the orbit is the identity, but it spends the most vertical space on artwork. Pick one and I’ll build it.
+</footer>
+
+<script>
+  const fit = () => {
+    const g = document.querySelector('.gallery');
+    const need = 3 * 390 + 2 * 38;
+    g.style.zoom = Math.min(1, (innerWidth - 76) / need).toFixed(3);
+  };
+  fit(); addEventListener('resize', fit);
+</script>
+</body>
+</html>

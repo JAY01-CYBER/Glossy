@@ -67,8 +67,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -280,7 +282,8 @@ private fun GlossyBarMiniPlayer(
     val playerConnection = LocalPlayerConnection.current ?: return
     val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
     val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
-    val currentSong by playerConnection.currentSong.collectAsStateWithLifecycle(initialValue = null)
+    val canSkipPrevious by playerConnection.canSkipPrevious.collectAsStateWithLifecycle()
+    val canSkipNext by playerConnection.canSkipNext.collectAsStateWithLifecycle()
 
     // The bar used to paint a flat [GlossyPalette.MiniBar] and ignore the
     // mini player background setting entirely. It now honours the same styles
@@ -296,7 +299,6 @@ private fun GlossyBarMiniPlayer(
         onGradientColorsChange = onGradientColorsChange,
     )
 
-    val isFavorite = currentSong?.song?.liked == true
     val duration = durationState.longValue
     val progress = if (duration > 0) {
         (positionState.longValue.toFloat() / duration).coerceIn(0f, 1f)
@@ -353,6 +355,15 @@ private fun GlossyBarMiniPlayer(
                 .offset { IntOffset(offsetX().roundToInt(), 0) }
                 .clip(RoundedCornerShape(GlossyDimens.CornerMiniPlayer))
                 .background(containerColor)
+                .border(
+                    width = 1.dp,
+                    color = if (darkBackground) {
+                        Color.White.copy(alpha = 0.10f)
+                    } else {
+                        Color.Black.copy(alpha = 0.06f)
+                    },
+                    shape = RoundedCornerShape(GlossyDimens.CornerMiniPlayer),
+                )
                 .clickable(onClick = onClick),
         ) {
             MiniPlayerStyleBackground(
@@ -362,11 +373,12 @@ private fun GlossyBarMiniPlayer(
                 modifier = Modifier.matchParentSize(),
             )
 
-            // Thin progress hairline pinned to the top edge of the card. It is a
-            // sibling of the content row rather than its parent, so it never
-            // pushes the row down or indents it.
+            // Thin progress hairline pinned to the bottom edge, as on the
+            // Apple Music mini player. It is a sibling of the content row so it
+            // never pushes the row up or indents it.
             Box(
                 modifier = Modifier
+                    .align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .height(2.dp),
             ) {
@@ -381,7 +393,7 @@ private fun GlossyBarMiniPlayer(
             Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                        .padding(start = 10.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box(
@@ -391,7 +403,7 @@ private fun GlossyBarMiniPlayer(
                         GlossyThumb(
                             seed = mediaMetadata?.id,
                             size = 48.dp,
-                            corner = 12.dp,
+                            corner = 10.dp,
                             imageUrl = mediaMetadata?.thumbnailUrl,
                         )
                         if (studioPlayingAnimation == MiniPlayerPlayingAnimation.NOTES) {
@@ -435,37 +447,67 @@ private fun GlossyBarMiniPlayer(
                             )
                         }
                     }
-                    GlossyIconAction(
-                        icon = if (isFavorite) R.drawable.favorite else R.drawable.favorite_border,
-                        contentDescription = null,
-                        tint = if (isFavorite) {
-                            if (darkBackground) Color(0xFFFF7A9A) else GlossyPalette.Accent
-                        } else {
-                            primaryTextColor
-                        },
-                        buttonSize = 36.dp,
-                        iconSize = 20.dp,
-                        onClick = { playerConnection.toggleLike() },
-                    )
-                    GlossyIconAction(
-                        icon = if (isPlaying) R.drawable.pause else R.drawable.play,
-                        contentDescription = null,
+                    Spacer(Modifier.width(4.dp))
+                    AppleMiniPlayerSkipButton(
+                        icon = R.drawable.apple_skip_previous,
+                        contentDescription = stringResource(R.string.mini_player_previous),
+                        enabled = canSkipPrevious && !isListenTogetherGuest,
                         tint = primaryTextColor,
-                        buttonSize = 36.dp,
-                        iconSize = 20.dp,
+                        onClick = { playerConnection.seekToPrevious() },
+                    )
+                    FilledIconButton(
                         onClick = { playerConnection.togglePlayPause() },
-                    )
-                    GlossyIconAction(
-                        icon = R.drawable.skip_next,
-                        contentDescription = null,
+                        modifier = Modifier.size(42.dp),
+                        shape = CircleShape,
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = GlossyPalette.Accent,
+                            contentColor = GlossyPalette.OnAccent,
+                        ),
+                    ) {
+                        Crossfade(targetState = isPlaying, label = "miniPlayerPlayPause") { playing ->
+                            Icon(
+                                painter = painterResource(
+                                    if (playing) R.drawable.pause_applemusic else R.drawable.play_applemusic
+                                ),
+                                contentDescription = stringResource(
+                                    if (playing) R.string.pause else R.string.play
+                                ),
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                    }
+                    AppleMiniPlayerSkipButton(
+                        icon = R.drawable.apple_skip_next,
+                        contentDescription = stringResource(R.string.mini_player_next),
+                        enabled = canSkipNext && !isListenTogetherGuest,
                         tint = primaryTextColor,
-                        buttonSize = 36.dp,
-                        iconSize = 20.dp,
                         onClick = { playerConnection.seekToNext() },
                     )
                 }
             }
     }
+}
+
+/**
+ * Bare transport glyph beside the M3 play button. Disabled skips keep their
+ * place in the row and only dim, so the control cluster never changes width.
+ */
+@Composable
+private fun AppleMiniPlayerSkipButton(
+    icon: Int,
+    contentDescription: String,
+    enabled: Boolean,
+    tint: Color,
+    onClick: () -> Unit,
+) {
+    GlossyIconAction(
+        icon = icon,
+        contentDescription = contentDescription,
+        tint = tint.copy(alpha = if (enabled) 0.92f else 0.32f),
+        buttonSize = 36.dp,
+        iconSize = 20.dp,
+        onClick = { if (enabled) onClick() },
+    )
 }
 
 /**

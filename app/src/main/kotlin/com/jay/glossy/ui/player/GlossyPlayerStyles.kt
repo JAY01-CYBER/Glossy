@@ -1157,7 +1157,7 @@ private fun TrackMenuButton(
         container = colors.side.copy(alpha = 0.65f),
         onClick = {
             mediaMetadata?.let { metadata ->
-                menuState.show {
+                menuState.show(horizontalPadding = 0.dp) {
                     PlayerMenu(
                         mediaMetadata = metadata,
                         playerBottomSheetState = bottomSheetState,
@@ -1731,7 +1731,7 @@ private fun StyleMenuButton(
         contentDescription = "More options",
         onClick = {
             mediaMetadata?.let { metadata ->
-                menuState.show {
+                menuState.show(horizontalPadding = 0.dp) {
                     PlayerMenu(
                         mediaMetadata = metadata,
                         playerBottomSheetState = bottomSheetState,

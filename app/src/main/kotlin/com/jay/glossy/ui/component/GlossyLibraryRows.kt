@@ -10,6 +10,7 @@ package com.jay.glossy.ui.component
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.jay.glossy.LocalNavController
@@ -37,6 +38,7 @@ fun GlossyPlaylistListRow(
     menuState: MenuState? = null,
     coroutineScope: CoroutineScope? = null,
     showDivider: Boolean = true,
+    swatch: Color? = null,
 ) {
     val navController = LocalNavController.current
 
@@ -49,6 +51,7 @@ fun GlossyPlaylistListRow(
                 size = 46.dp,
                 corner = 12.dp,
                 imageUrl = playlist.thumbnails.firstOrNull(),
+                swatch = swatch,
             )
         },
         trailing = {

@@ -4,6 +4,8 @@
  */
 package com.jay.glossy.ui.component
 
+import android.os.Build
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -15,6 +17,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
@@ -156,6 +159,52 @@ fun Modifier.liquidGlass(
         interaction = if (isInteractive) interactiveHighlight else null
     )
 }
+
+/**
+ * A static liquid-glass pane over whatever [Modifier.layerBackdrop] recorded
+ * behind it. Unlike [liquidGlass] this does not install a press interaction,
+ * so it can sit under a row of tabs without stealing their gestures.
+ * [tint] is laid over the refracted backdrop to keep the controls legible.
+ *
+ * Blur needs a RenderEffect (Android 12), and the lens shader needs Android 13.
+ * Older devices get the flat translucent [tint] instead, which matches the
+ * non-glass fallback rather than leaving the bar transparent.
+ */
+fun Modifier.liquidGlassSurface(
+    backdrop: Backdrop,
+    shape: Shape,
+    tint: Color,
+): Modifier =
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+        clip(shape).background(tint)
+    } else {
+        drawBackdrop(
+            backdrop = backdrop,
+            shape = { shape },
+            effects = {
+                vibrancy()
+                colorControls(brightness = 0.02f, contrast = 1.02f, saturation = 1.5f)
+                blur(8.dp.toPx())
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    lens(22.dp.toPx(), 36.dp.toPx())
+                }
+            },
+            onDrawSurface = {
+                drawRect(tint)
+                // A faint sheen along the top edge: glass catches the light
+                // there, which keeps the pill reading as a pane even when the
+                // content behind it happens to be a flat colour.
+                drawRect(
+                    brush =
+                        Brush.verticalGradient(
+                            colors = listOf(Color.White.copy(alpha = 0.14f), Color.Transparent),
+                            startY = 0f,
+                            endY = size.height * 0.6f,
+                        ),
+                )
+            },
+        )
+    }
 
 @Composable
 fun LiquidGlassIconButton(

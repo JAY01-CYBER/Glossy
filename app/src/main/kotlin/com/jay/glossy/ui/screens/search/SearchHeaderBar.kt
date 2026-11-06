@@ -18,11 +18,9 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -54,7 +52,6 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Dp
@@ -163,24 +160,6 @@ internal fun SearchHeaderBar(
                 .statusBarsPadding()
                 .padding(top = topPadding, bottom = bottomPadding),
     ) {
-        AnimatedVisibility(
-            visible = !active,
-            enter = fadeIn(fadeInSpec) + expandVertically(sizeMorph),
-            exit = fadeOut(fadeOutSpec) + shrinkVertically(sizeMorph),
-        ) {
-            Column(modifier = Modifier.padding(horizontal = GlossyDimens.ScreenPadding)) {
-                Text(
-                    text = stringResource(R.string.glossy_search_discover),
-                    fontSize = 27.sp,
-                    lineHeight = 33.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = (-0.6).sp,
-                    color = GlossyPalette.Accent,
-                )
-                Spacer(Modifier.height(20.dp))
-            }
-        }
-
         Row(
             modifier =
                 Modifier

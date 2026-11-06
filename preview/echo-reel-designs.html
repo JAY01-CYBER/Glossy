@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Glossy · Echo Reel for the current playlist screen</title>
+<style>
+  :root { --page:#0a0807; --ink:#f3ece7; --muted:#9b918b; --accent:#ffb08a; --accent-ink:#2a120a; --mint:#a8e6d8; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    background:
+      radial-gradient(1000px 600px at 8% -10%, #241611 0%, transparent 60%),
+      radial-gradient(900px 520px at 96% 2%, #171d24 0%, transparent 58%),
+      var(--page);
+    color: var(--ink); padding: 34px 32px 46px; -webkit-font-smoothing: antialiased;
+  }
+  header { max-width: 1240px; margin: 0 auto 22px; }
+  .eyebrow { font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: var(--accent); margin: 0 0 10px; }
+  h1 { font-size: 34px; line-height: 1.07; letter-spacing: -.03em; margin: 0 0 8px; font-weight: 650; }
+  h1 span { color: #8d8480; }
+  header p { margin: 0; max-width: 820px; color: var(--muted); font-size: 13.5px; line-height: 1.55; }
+
+  .stage { max-width: 1240px; margin: 0 auto; }
+  .gallery { display: flex; flex-wrap: nowrap; gap: 34px; }
+  .col { width: 390px; flex: 0 0 auto; }
+  .tag { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: #b9c2c7; margin: 0; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .colname { font-size: 18px; font-weight: 600; margin: 4px 0 2px; }
+  .coldesc { color: var(--muted); font-size: 12.5px; line-height: 1.5; margin: 0 0 12px; min-height: 34px; }
+
+  .phone { position: relative; width: 390px; height: 844px; border-radius: 40px; overflow: hidden; border: 1px solid rgba(255,255,255,.09); isolation: isolate; box-shadow: 0 30px 60px -28px rgba(0,0,0,.85); }
+  .status { position: relative; z-index: 9; display: flex; align-items: center; justify-content: space-between; padding: 14px 24px 2px; font-size: 12.5px; font-weight: 600; }
+  .status .r { display: flex; align-items: center; gap: 6px; }
+  .bars { display: flex; align-items: flex-end; gap: 2px; }
+  .bars i { width: 3px; background: currentColor; border-radius: 1px; }
+  .bars i:nth-child(1){height:4px}.bars i:nth-child(2){height:7px}.bars i:nth-child(3){height:10px}
+  .batt { width: 20px; height: 10px; border: 1.4px solid currentColor; border-radius: 3px; position: relative; }
+  .batt::before { content:""; position:absolute; inset:2px; width:9px; background:currentColor; border-radius:1px; }
+  .batt::after { content:""; position:absolute; right:-3px; top:2.5px; width:2px; height:4px; background:currentColor; }
+
+  .ico { width: 20px; height: 20px; display: block; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .ico.sm { width: 17px; height: 17px; }
+  .ico.xs { width: 14px; height: 14px; }
+  .iconbtn { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; }
+  .mono { font-family: "SF Mono", "JetBrains Mono", ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; }
+
+  /* ---------- artwork placeholders (photographic gradients) ---------- */
+  .art { position: relative; overflow: hidden; }
+  .art::after { content:""; position:absolute; inset:0; background: linear-gradient(160deg, rgba(255,255,255,.2), transparent 55%); }
+  .art.red { background:
+      radial-gradient(circle at 34% 32%, #e4644a 0 15%, rgba(228,100,74,0) 38%),
+      radial-gradient(circle at 52% 46%, #a92c25 0 26%, rgba(169,44,37,0) 58%),
+      radial-gradient(circle at 20% 80%, #6d2a22 0 28%, transparent 62%),
+      linear-gradient(160deg,#7d2a22,#3a1512 62%,#1e0f0d); }
+  .art.bed { background:
+      radial-gradient(90% 70% at 82% 26%, #efc878 0 18%, rgba(239,200,120,0) 58%),
+      radial-gradient(70% 60% at 20% 88%, #5d3a20 0 30%, transparent 70%),
+      linear-gradient(150deg,#9b6a34,#5c3a1e 55%,#241609); }
+  .art.night { background:
+      radial-gradient(70% 70% at 28% 36%, #39646b 0 18%, transparent 62%),
+      radial-gradient(60% 70% at 84% 20%, #4a2b2f 0 16%, transparent 58%),
+      linear-gradient(160deg,#24444b,#132a31 58%,#0a161b); }
+  .art.gold { background:
+      radial-gradient(80% 70% at 30% 30%, #e0b56f 0 20%, transparent 62%),
+      linear-gradient(145deg,#b98a48,#7a5524 58%,#2c1e0d); }
+  .art.teal { background:
+      radial-gradient(70% 60% at 40% 30%, #5f9f96 0 18%, transparent 60%),
+      linear-gradient(155deg,#2c5852,#173530 58%,#0c1c1a); }
+
+  /* ---------- shared mini player ---------- */
+  .mini { position: absolute; left: 12px; right: 12px; bottom: 14px; z-index: 8; display: flex; align-items: center; gap: 9px; padding: 8px 9px; border-radius: 26px; }
+  .mini .art { width: 44px; height: 44px; border-radius: 50%; flex: 0 0 auto; }
+  .mini .t { flex: 1 1 auto; min-width: 0; }
+  .mini b { display: block; font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mini small { display: block; font-size: 10.5px; opacity: .55; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mini .mbtn { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; }
+
+  /* ============================================================
+     A · Echo Reel — Twin
+     The reference collage kept, but the two covers become one
+     continuous banner with a warm seam, and the toolbar turns
+     into a single pill on the art.
+     ============================================================ */
+  .a { background: #120e0c; color: #f6efe9; }
+  .a .cover { position: relative; z-index: 1; height: 262px; display: flex; }
+  .a .cover .pane { position: relative; flex: 1 1 50%; overflow: hidden; }
+  .a .cover .pane .art { position: absolute; inset: 0; height: 100%; }
+  .a .cover .pane:first-child { border-right: 1px solid rgba(255,255,255,.09); }
+  .a .cover .scrim { position: absolute; inset: 0; z-index: 2;
+    background: linear-gradient(180deg, rgba(10,7,6,.5) 0%, rgba(10,7,6,.02) 30%, rgba(18,14,12,.66) 78%, #120e0c 100%); }
+  .a .cover .status { position: absolute; top: 0; left: 0; right: 0; z-index: 6; }
+  .a .toolbar { position: absolute; z-index: 4; top: 44px; left: 14px; right: 14px; display: flex; align-items: center; justify-content: space-between; }
+  .a .toolbar .iconbtn { background: rgba(9,7,6,.42); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.1); }
+  .a .toolpill { display: flex; align-items: center; gap: 2px; padding: 4px; border-radius: 999px; background: rgba(9,7,6,.42); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.1); }
+  .a .toolpill .iconbtn { width: 38px; height: 38px; background: none; border: none; }
+  .a .edit { position: absolute; z-index: 4; left: 50%; transform: translateX(-50%); top: 245px; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: #1d1512; border: 1px solid rgba(255,255,255,.1); }
+  .a .titleblock { position: relative; z-index: 2; text-align: center; padding: 26px 24px 0; }
+  .a .titleblock .kicker { font-size: 9.5px; letter-spacing: .16em; color: rgba(255,255,255,.45); }
+  .a .titleblock h2 { margin: 5px 0 0; font-size: 30px; line-height: 1.05; letter-spacing: -.03em; font-weight: 650; }
+  .a .titleblock .who { margin-top: 7px; font-size: 13px; color: rgba(255,255,255,.72); font-weight: 550; }
+  .a .titleblock .sub { margin-top: 5px; font-size: 12px; color: rgba(255,255,255,.4); }
+  .a .actions { position: relative; z-index: 2; display: flex; align-items: center; gap: 12px; padding: 18px 22px 0; }
+  .a .round { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; background: #1e1714; border: 1px solid rgba(255,255,255,.07); color: #f0e3da; }
+  .a .play { flex: 1 1 auto; height: 52px; border-radius: 999px; display: flex; align-items: center; justify-content: center; gap: 9px; background: var(--accent); color: var(--accent-ink); font-size: 15px; font-weight: 680; letter-spacing: -.01em; box-shadow: 0 14px 26px -16px rgba(255,176,138,.9); }
+  .a .meta { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; padding: 16px 22px 0; font-size: 12px; color: rgba(255,255,255,.62); }
+  .a .chiprow { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; padding: 12px 22px 0; }
+  .a .chip { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px; border-radius: 9px; background: rgba(198,154,84,.15); border: 1px solid rgba(198,154,84,.25); color: #e0b56f; font-size: 12px; font-weight: 550; }
+  .a .lock { color: rgba(255,255,255,.5); }
+  .a .list { position: relative; z-index: 2; padding: 10px 10px 0; }
+  .a .trk { display: flex; align-items: center; gap: 12px; padding: 9px 6px; }
+  .a .trk .art { width: 50px; height: 50px; border-radius: 13px; flex: 0 0 auto; }
+  .a .trk .t { flex: 1 1 auto; min-width: 0; }
+  .a .trk b { display: block; font-size: 14.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .a .trk small { display: flex; align-items: center; gap: 5px; font-size: 11.5px; color: rgba(255,255,255,.48); margin-top: 3px; }
+  .a .trk .collab { font-size: 11.5px; color: rgba(255,255,255,.55); margin-right: 8px; white-space: nowrap; }
+  .a .trk .side { display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,.55); }
+  .a .trk .heart.on { color: #f2708f; }
+  .a .trk.now b { color: #ffc7a8; }
+  .a .mini { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.09); backdrop-filter: blur(16px); }
+  .a .mini .mbtn { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); }
+
+  /* ============================================================
+     B · Echo Reel — Single
+     One tall cover, its own blurred echo behind the title, the
+     action bar floats over the art seam.
+     ============================================================ */
+  .b { background: #100d0c; color: #f7f0ea; }
+  .b .hero { position: relative; z-index: 1; height: 330px; }
+  .b .hero .art { position: absolute; inset: -22px; height: calc(100% + 44px); filter: blur(22px) saturate(1.1); opacity: .55; }
+  .b .hero .sharp { position: absolute; left: 0; right: 0; top: 0; height: 284px; overflow: hidden; }
+  .b .hero .sharp .art { inset: 0; height: 100%; filter: none; opacity: 1; }
+  .b .hero .scrim { position: absolute; inset: 0; z-index: 2;
+    background: linear-gradient(180deg, rgba(9,7,6,.55) 0%, rgba(9,7,6,.04) 30%, rgba(16,13,12,.72) 80%, #100d0c 100%); }
+  .b .toolbar { position: absolute; z-index: 5; top: 34px; left: 14px; right: 14px; display: flex; align-items: center; justify-content: space-between; }
+  .b .toolbar .iconbtn { background: rgba(9,7,6,.42); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.1); }
+  .b .toolpill { display: flex; align-items: center; padding: 4px; border-radius: 999px; background: rgba(9,7,6,.42); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.1); }
+  .b .toolpill .iconbtn { width: 38px; height: 38px; background: none; border: none; }
+  .b .reel { position: absolute; z-index: 5; left: 22px; bottom: 18px; right: 22px; }
+  .b .reel .kicker { font-size: 9px; letter-spacing: .2em; color: rgba(255,255,255,.55); display: flex; align-items: center; gap: 8px; }
+  .b .reel .kicker i { width: 16px; height: 1px; background: rgba(255,255,255,.4); display: block; }
+  .b .reel h2 { margin: 8px 0 0; font-size: 33px; line-height: 1.04; letter-spacing: -.035em; font-weight: 670; text-shadow: 0 2px 20px rgba(0,0,0,.45); }
+  .b .reel .who { margin-top: 8px; font-size: 13px; font-weight: 550; color: rgba(255,255,255,.82); }
+  .b .reel .sub { margin-top: 4px; font-size: 11.5px; color: rgba(255,255,255,.5); }
+  .b .stills { display: flex; gap: 4px; margin-top: 12px; }
+  .b .stills i { height: 3px; border-radius: 2px; background: rgba(255,255,255,.22); display: block; flex: 1 1 0; }
+  .b .stills i.on { background: var(--accent); }
+  .b .actions { position: relative; z-index: 6; display: flex; align-items: center; gap: 11px; padding: 14px 18px 0; margin-top: -8px; }
+  .b .play { flex: 1 1 auto; height: 52px; border-radius: 999px; display: flex; align-items: center; justify-content: center; gap: 9px; background: var(--accent); color: var(--accent-ink); font-size: 15px; font-weight: 680; box-shadow: 0 18px 30px -18px rgba(255,176,138,.95); }
+  .b .round { width: 50px; height: 50px; border-radius: 50%; display: grid; place-items: center; background: #1d1614; border: 1px solid rgba(255,255,255,.07); }
+  .b .meta { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px 0; font-size: 12px; color: rgba(255,255,255,.6); }
+  .b .chiprow { display: flex; align-items: center; justify-content: space-between; padding: 10px 20px 0; }
+  .b .chip { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px; border-radius: 9px; background: rgba(198,154,84,.15); border: 1px solid rgba(198,154,84,.25); color: #e0b56f; font-size: 12px; font-weight: 550; }
+  .b .list { padding: 12px 10px 0; }
+  .b .trk { display: flex; align-items: center; gap: 12px; padding: 9px 6px; }
+  .b .trk .art { width: 50px; height: 50px; border-radius: 13px; flex: 0 0 auto; }
+  .b .trk .t { flex: 1 1 auto; min-width: 0; }
+  .b .trk b { display: block; font-size: 14.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .b .trk small { display: flex; align-items: center; gap: 5px; font-size: 11.5px; color: rgba(255,255,255,.48); margin-top: 3px; }
+  .b .trk .side { display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,.55); }
+  .b .trk .heart.on { color: #f2708f; }
+  .b .mini { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.09); backdrop-filter: blur(16px); }
+  .b .mini .mbtn { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); }
+
+  /* ============================================================
+     C · Echo Reel — Spool
+     The cover becomes a three-frame film strip over a black band
+     with sprocket holes; the list turns into a numbered spool.
+     ============================================================ */
+  .c { background: #0e0c0b; color: #f5eee8; }
+  .c .band { position: relative; z-index: 1; padding: 0 0 4px; background: #0a0807; }
+  .c .bandtop { display: flex; align-items: center; justify-content: space-between; padding: 4px 14px 10px; }
+  .c .bandtop .iconbtn { width: 38px; height: 38px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); }
+  .c .toolpill { display: flex; align-items: center; padding: 3px; border-radius: 999px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); }
+  .c .toolpill .iconbtn { width: 34px; height: 34px; background: none; border: none; }
+  .c .spool { display: flex; gap: 6px; padding: 0 12px; }
+  .c .frame { position: relative; flex: 1 1 0; height: 178px; border-radius: 4px; overflow: hidden; }
+  .c .frame .art { position: absolute; inset: 0; height: 100%; }
+  .c .frame::after { content:""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(10,8,7,.65) 100%); }
+  .c .sprocket { display: flex; justify-content: space-between; padding: 7px 12px; }
+  .c .sprocket i { width: 9px; height: 5px; border-radius: 2px; background: rgba(255,255,255,.09); display: block; }
+  .c .titleblock { position: relative; z-index: 2; padding: 18px 20px 0; }
+  .c .titleblock .kicker { font-size: 9px; letter-spacing: .2em; color: var(--accent); }
+  .c .titleblock h2 { margin: 7px 0 0; font-size: 30px; line-height: 1.05; letter-spacing: -.03em; font-weight: 660; }
+  .c .titleblock .who { margin-top: 7px; font-size: 12.5px; color: rgba(255,255,255,.7); font-weight: 540; }
+  .c .titleblock .sub { margin-top: 4px; font-size: 11.5px; color: rgba(255,255,255,.42); }
+  .c .actions { display: flex; align-items: center; gap: 10px; padding: 16px 18px 0; }
+  .c .play { flex: 1 1 auto; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; gap: 9px; background: var(--mint); color: #0d2724; font-size: 14.5px; font-weight: 700; }
+  .c .round { width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.07); }
+  .c .meta { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px 0; font-size: 11.5px; color: rgba(255,255,255,.55); }
+  .c .chiprow { display: flex; align-items: center; justify-content: space-between; padding: 10px 20px 0; }
+  .c .chip { display: inline-flex; align-items: center; gap: 7px; height: 29px; padding: 0 11px; border-radius: 8px; background: rgba(198,154,84,.14); border: 1px solid rgba(198,154,84,.22); color: #e0b56f; font-size: 11.5px; font-weight: 550; }
+  .c .rule { height: 1px; margin: 12px 20px 0; background: rgba(255,255,255,.07); }
+  .c .list { padding: 4px 8px 0; }
+  .c .trk { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,.045); }
+  .c .trk .idx { width: 20px; font-size: 10px; color: rgba(255,255,255,.3); }
+  .c .trk .art { width: 42px; height: 42px; border-radius: 10px; flex: 0 0 auto; }
+  .c .trk .t { flex: 1 1 auto; min-width: 0; }
+  .c .trk b { display: block; font-size: 14px; font-weight: 560; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .c .trk small { display: flex; align-items: center; gap: 5px; font-size: 11px; color: rgba(255,255,255,.45); margin-top: 2px; }
+  .c .trk .time { font-size: 10.5px; color: rgba(255,255,255,.32); }
+  .c .trk.now { background: linear-gradient(90deg, rgba(255,176,138,.12), transparent 78%); }
+  .c .trk.now b { color: #ffc7a8; }
+  .c .mini { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); backdrop-filter: blur(16px); }
+  .c .mini .mbtn { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); }
+
+  @media (max-width: 1300px) { body { padding: 26px 20px 36px; } }
+  @media (max-width: 1239px) {
+    .gallery { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <p class="eyebrow">Glossy · Echo Reel</p>
+  <h1>Your playlist screen <span>— three reels</span></h1>
+  <p>Everything from your current screen stays: the two-panel cover, the back button plus search/overflow pill, the pencil at the seam, the centred title, Play row, "Custom order" chip with lock, artist and collaborator per row, and the three-button mini player. What changes is how the cover behaves — it becomes a reel that carries the title and the accent.</p>
+</header>
+
+<div class="stage">
+  <div class="gallery">
+
+    <!-- ================= A · Twin ================= -->
+    <div class="col">
+      <p class="tag"><span class="dot" style="background:#ffb08a"></span>A · Reel Twin</p>
+      <p class="colname">Collage kept</p>
+      <p class="coldesc">Closest to today: two panes, one scrim, the seam softened and the edit button pulled onto it. Warm Echo accent replaces the mint.</p>
+      <div class="phone a">
+        <div class="cover">
+          <div class="pane"><div class="art red"></div></div>
+          <div class="pane"><div class="art bed"></div></div>
+          <div class="scrim"></div>
+          <div class="status">
+            <span>6:35</span>
+            <span class="r"><span class="bars"><i></i><i></i><i></i></span><span class="batt"></span></span>
+          </div>
+          <div class="toolbar">
+            <span class="iconbtn"><svg class="ico" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></span>
+            <span class="toolpill">
+              <span class="iconbtn"><svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg></span>
+              <span class="iconbtn"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></span>
+            </span>
+          </div>
+        </div>
+        <span class="edit"><svg class="ico sm" viewBox="0 0 24 24"><path d="M4 20h4l10-10-4-4L4 16v4z"/><path d="M14 6l4 4"/></svg></span>
+
+        <div class="titleblock">
+          <h2>Music</h2>
+          <div class="who">MYT–FOXA</div>
+          <div class="sub">Playlist · 2026</div>
+        </div>
+
+        <div class="actions">
+          <span class="round"><svg class="ico" viewBox="0 0 24 24"><path d="M17 4h4v4"/><path d="M21 4l-6.5 6.5"/><path d="M3 20l6.5-6.5"/><path d="M7 20H3v-4"/><path d="M3 20l6.5-6.5"/><path d="M21 16v4h-4"/><path d="M21 20l-6.5-6.5"/></svg></span>
+          <span class="play"><svg class="ico" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M8 5l11 7-11 7z"/></svg>Play</span>
+          <span class="round"><svg class="ico" viewBox="0 0 24 24"><path d="M12 4v10"/><path d="M8 11l4 4 4-4"/><path d="M5 19h14"/></svg></span>
+        </div>
+
+        <div class="meta"><span>34 songs · 1:58:15</span></div>
+
+        <div class="chiprow">
+          <span class="chip"><svg class="ico xs" viewBox="0 0 24 24"><path d="M4 7h10"/><path d="M4 12h7"/><path d="M4 17h10"/><path d="M17 15V6l4 2"/></svg>Custom order</span>
+          <span class="lock"><svg class="ico sm" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2.5"/><path d="M8.5 11V8a3.5 3.5 0 017 0v3"/></svg></span>
+        </div>
+
+        <div class="list">
+          <div class="trk">
+            <div class="art red"></div>
+            <div class="t">
+              <b>CHEMBARATHI</b>
+              <small><svg class="ico xs" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="16" rx="3"/><path d="M9 9h6"/><path d="M9 13h4"/></svg>WIN · 3:14</small>
+            </div>
+            <span class="collab">Lil PAY</span>
+            <span class="side">
+              <svg class="ico sm heart on" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 20s-7-4.4-7-9a4 4 0 017-2.6A4 4 0 0119 11c0 4.6-7 9-7 9z"/></svg>
+              <svg class="ico sm" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+            </span>
+          </div>
+
+          <div class="trk now">
+            <div class="art bed"></div>
+            <div class="t">
+              <b>KALYANI</b>
+              <small><svg class="ico xs" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="16" rx="3"/><path d="M9 9h6"/><path d="M9 13h4"/></svg>4 and Ronn · 3:55</small>
+            </div>
+            <span class="side">
+              <svg class="ico sm heart on" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 20s-7-4.4-7-9a4 4 0 017-2.6A4 4 0 0119 11c0 4.6-7 9-7 9z"/></svg>
+              <svg class="ico sm" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+            </span>
+          </div>
+
+          <div class="trk">
+            <div class="art night"></div>
+            <div class="t">
+              <b>Nee Partha</b>
+              <small><svg class="ico xs" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="16" rx="3"/><path d="M9 9h6"/><path d="M9 13h4"/></svg>Harris J · 4:12</small>
+            </div>
+            <span class="side">
+              <svg class="ico sm" viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-9a4 4 0 017-2.6A4 4 0 0119 11c0 4.6-7 9-7 9z"/></svg>
+              <svg class="ico sm" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+            </span>
+          </div>
+        </div>
+
+        <div class="mini">
+          <div class="art teal"></div>
+          <div class="t"><b>Kiliye Kiliye – Ch</b><small>DJ VIM and S. Janaki</small></div>
+          <span class="mbtn"><svg class="ico sm" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.5 3.1-5.5 7-5.5s7 2 7 5.5"/></svg></span>
+          <span class="mbtn"><svg class="ico sm" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg></span>
+          <span class="mbtn"><svg class="ico sm" viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-9a4 4 0 017-2.6A4 4 0 0119 11c0 4.6-7 9-7 9z"/></svg></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= B · Single ================= -->
+    <div class="col">
+      <p class="tag"><span class="dot" style="background:#e4644a"></span>B · Reel Single</p>
+      <p class="colname">One cover, taller</p>
+      <p class="coldesc">A single 284dp cover with its own blurred echo above, title sitting on the art, action bar floating over the seam. Reel ticks under the title read as frames.</p>
+      <div class="phone b">
+        <div class="hero">
+          <div class="art red"></div>
+          <div class="sharp"><div class="art red"></div></div>
+          <div class="scrim"></div>
+          <div class="status">
+            <span>6:35</span>
+            <span class="r"><span class="bars"><i></i><i></i><i></i></span><span class="batt"></span></span>
+          </div>
+          <div class="toolbar">
+            <span class="iconbtn"><svg class="ico" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></span>
+            <span class="toolpill">
+              <span class="iconbtn"><svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg></span>
+              <span class="iconbtn"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></span>
+            </span>
+          </div>
+          <div class="reel">
+            <div class="kicker mono"><i></i>Playlist · 2026</div>
+            <h2>Music</h2>
+            <div class="who">MYT–FOXA</div>
+            <div class="sub">34 songs · 1:58:15</div>
+            <div class="stills"><i class="on"></i><i></i><i></i><i></i><i></i></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <span class="play"><svg class="ico" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M8 5l11 7-11 7z"/></svg>Play</span>
+          <span class="round"><svg class="ico" viewBox="0 0 24 24"><path d="M17 4h4v4"/><path d="M21 4l-6.5 6.5"/><path d="M3 20l6.5-6.5"/><path d="M7 20H3v-4"/><path d="M3 20l6.5-6.5"/><path d="M21 16v4h-4"/><path d="M21 20l-6.5-6.5"/></svg></span>
+          <span class="round"><svg class="ico" viewBox="0 0 24 24"><path d="M12 4v10"/><path d="M8 11l4 4 4-4"/><path d="M5 19h14"/></svg></span>
+        </div>
+
+        <div class="chiprow">
+          <span class="chip"><svg class="ico xs" viewBox="0 0 24 24"><path d="M4 7h10"/><path d="M4 12h7"/><path d="M4 17h10"/><path d="M17 15V6l4 2"/></svg>Custom order</span>
+          <span class="lock"><svg class="ico sm" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2.5"/><path d="M8.5 11V8a3.5 3.5 0 017 0v3"/></svg></span>
+        </div>
+
+        <div class="list">
+          <div class="trk">
+            <div class="art red"></div>
+            <div class="t">
+              <b>CHEMBARATHI</b>
+              <small><svg class="ico xs" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="16" rx="3"/><path d="M9 9h6"/><path d="M9 13h4"/></svg>WIN · 3:14</small>
+            </div>
+            <span class="side">
+              <svg class="ico sm heart on" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 20s-7-4.4-7-9a4 4 0 017-2.6A4 4 0 0119 11c0 4.6-7 9-7 9z"/></svg>
+              <svg class="ico sm" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+            </span>
+          </div>
+          <div class="trk">
+            <div class="art bed"></div>
+            <div class="t">
+              <b>KALYANI</b>
+              <small><svg class="ico xs" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="16" rx="3"/><path d="M9 9h6"/><path d="M9 13h4"/></svg>4 and Ronn · 3:55</small>
+            </div>
+            <span class="side">
+              <svg class="ico sm heart on" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 20s-7-4.4-7-9a4 4 0 017-2.6A4 4 0 0119 11c0 4.6-7 9-7 9z"/></svg>
+              <svg class="ico sm" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+            </span>
+          </div>
+          <div class="trk">
+            <div class="art night"></div>
+            <div class="t">
+              <b>Nee Partha</b>
+              <small><svg class="ico xs" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="16" rx="3"/><path d="M9 9h6"/><path d="M9 13h4"/></svg>Harris J · 4:12</small>
+            </div>
+            <span class="side">
+              <svg class="ico sm" viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-9a4 4 0 017-2.6A4 4 0 0119 11c0 4.6-7 9-7 9z"/></svg>
+              <svg class="ico sm" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+            </span>
+          </div>
+        </div>
+
+        <div class="mini">
+          <div class="art teal"></div>
+          <div class="t"><b>Kiliye Kiliye – Ch</b><small>DJ VIM and S. Janaki</small></div>
+          <span class="mbtn"><svg class="ico sm" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.5 3.1-5.5 7-5.5s7 2 7 5.5"/></svg></span>
+          <span class="mbtn"><svg class="ico sm" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg></span>
+          <span class="mbtn"><svg class="ico sm" viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-9a4 4 0 017-2.6A4 4 0 0119 11c0 4.6-7 9-7 9z"/></svg></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= C · Spool ================= -->
+    <div class="col">
+      <p class="tag"><span class="dot" style="background:#a8e6d8"></span>C · Reel Spool</p>
+      <p class="colname">Film strip</p>
+      <p class="coldesc">Three frames of the first tracks on a sprocketed band, title under the film, numbered spool below. Keeps your mint as the Play colour.</p>
+      <div class="phone c">
+        <div class="band">
+          <div class="status">
+            <span>6:35</span>
+            <span class="r"><span class="bars"><i></i><i></i><i></i></span><span class="batt"></span></span>
+          </div>
+          <div class="bandtop">
+            <span class="iconbtn"><svg class="ico" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></span>
+            <span class="toolpill">
+              <span class="iconbtn"><svg class="ico sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg></span>
+              <span class="iconbtn"><svg class="ico sm" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></span>
+            </span>
+          </div>
+          <div class="sprocket"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="spool">
+            <div class="frame"><div class="art red"></div></div>
+            <div class="frame"><div class="art bed"></div></div>
+            <div class="frame"><div class="art night"></div></div>
+          </div>
+          <div class="sprocket"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+
+        <div class="titleblock">
+          <div class="kicker mono">Playlist · 2026</div>
+          <h2>Music</h2>
+          <div class="who">MYT–FOXA</div>
+        </div>
+
+        <div class="actions">
+          <span class="play"><svg class="ico" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M8 5l11 7-11 7z"/></svg>Play</span>
+          <span class="round"><svg class="ico" viewBox="0 0 24 24"><path d="M17 4h4v4"/><path d="M21 4l-6.5 6.5"/><path d="M3 20l6.5-6.5"/><path d="M7 20H3v-4"/><path d="M3 20l6.5-6.5"/><path d="M21 16v4h-4"/><path d="M21 20l-6.5-6.5"/></svg></span>
+          <span class="round"><svg class="ico" viewBox="0 0 24 24"><path d="M12 4v10"/><path d="M8 11l4 4 4-4"/><path d="M5 19h14"/></svg></span>
+        </div>
+
+        <div class="meta"><span>34 songs · 1:58:15</span></div>
+
+        <div class="chiprow">
+          <span class="chip"><svg class="ico xs" viewBox="0 0 24 24"><path d="M4 7h10"/><path d="M4 12h7"/><path d="M4 17h10"/><path d="M17 15V6l4 2"/></svg>Custom order</span>
+          <span class="lock"><svg class="ico sm" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2.5"/><path d="M8.5 11V8a3.5 3.5 0 017 0v3"/></svg></span>
+        </div>
+
+        <div class="rule"></div>
+
+        <div class="list">
+          <div class="trk">
+            <span class="idx mono">01</span>
+            <div class="art red"></div>
+            <div class="t"><b>CHEMBARATHI</b><small>WIN · Lil PAY</small></div>
+            <span class="time mono">3:14</span>
+          </div>
+          <div class="trk now">
+            <span class="idx mono">02</span>
+            <div class="art bed"></div>
+            <div class="t"><b>KALYANI</b><small>4 and Ronn</small></div>
+            <span class="time mono">3:55</span>
+          </div>
+          <div class="trk">
+            <span class="idx mono">03</span>
+            <div class="art night"></div>
+            <div class="t"><b>Nee Partha</b><small>Harris J</small></div>
+            <span class="time mono">4:12</span>
+          </div>
+        </div>
+
+        <div class="mini">
+          <div class="art teal"></div>
+          <div class="t"><b>Kiliye Kiliye – Ch</b><small>DJ VIM and S. Janaki</small></div>
+          <span class="mbtn"><svg class="ico sm" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.5 3.1-5.5 7-5.5s7 2 7 5.5"/></svg></span>
+          <span class="mbtn"><svg class="ico sm" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg></span>
+          <span class="mbtn"><svg class="ico sm" viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-9a4 4 0 017-2.6A4 4 0 0119 11c0 4.6-7 9-7 9z"/></svg></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

@@ -54,10 +54,13 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.datasource.RawResourceDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.PlayerView
 import com.jay.glossy.R
 import com.jay.glossy.constants.DefaultGreetingAnimationOpacity
@@ -203,16 +206,27 @@ private fun GreetingVideoLoop(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val rawRes = when (animation) {
-        GreetingAnimation.NEON_GLOW -> R.raw.greeting_neon
-        GreetingAnimation.SUNSET_TRAIN -> R.raw.greeting_sunset
         GreetingAnimation.BOHO_HOME -> R.raw.greeting_boho
-        GreetingAnimation.HEMMING -> R.raw.greeting_hemming
         GreetingAnimation.STREET_MARKET -> R.raw.greeting_market
         GreetingAnimation.OFF -> return
     }
 
     val exoPlayer = remember(rawRes) {
+        // Two of the bundled clips ship with their own audio track. Turning the
+        // volume down only silences the output: the track is still decoded and
+        // ExoPlayer still asks for audio focus. Deselecting the audio type is
+        // what makes the loop decoration in fact as well as in name, so it can
+        // never speak over whatever the listener is playing.
+        val videoOnlySelector = DefaultTrackSelector(context).apply {
+            setParameters(
+                buildUponParameters()
+                    .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true)
+                    .build(),
+            )
+        }
         ExoPlayer.Builder(context)
+            .setTrackSelector(videoOnlySelector)
+            .setAudioAttributes(AudioAttributes.DEFAULT, /* handleAudioFocus= */ false)
             .build()
             .apply {
                 setMediaItem(MediaItem.fromUri(RawResourceDataSource.buildRawResourceUri(rawRes)))

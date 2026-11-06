@@ -84,6 +84,24 @@ private const val RankedCount = 5
 private const val AlbumCount = 8
 
 /**
+ * What identifies the release behind a chart entry: its cover. A soundtrack
+ * ships a single per song, each carrying the film's poster, and regional
+ * editions repeat as well; those entries carry different browse ids, which is
+ * why de-duplicating by [AlbumItem.id] let the shelf show one cover three
+ * times. The sizing suffix comes off first, because the same image is served
+ * at several sizes and the size must not split one release in two.
+ */
+private fun AlbumItem.artworkKey(): String =
+    thumbnail
+        .substringAfterLast('/')
+        .substringBefore('=')
+        .substringBefore('?')
+        .ifBlank { id }
+
+/** One card per cover; see [artworkKey]. */
+fun List<AlbumItem>.distinctReleases(): List<AlbumItem> = distinctBy { it.artworkKey() }
+
+/**
  * Maps the chart response onto the page's shelves.
  *
  * The trending chart is what the ranked list wants, so its songs win over any
@@ -116,7 +134,7 @@ fun ChartsPage.toDiscover(
         .asSequence()
         .flatMap { it.items.asSequence() }
         .filterIsInstance<AlbumItem>()
-        .distinctBy { it.id }
+        .distinctBy { it.artworkKey() }
         .take(albumCount)
         .toList()
 

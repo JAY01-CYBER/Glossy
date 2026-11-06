@@ -110,6 +110,9 @@ import com.jay.glossy.ui.component.ExpressiveEmptyPlaceholder
 import com.jay.glossy.ui.component.ExpressivePullToRefreshBox
 import com.jay.glossy.ui.component.IconButton
 import com.jay.glossy.ui.component.LocalMenuState
+import com.jay.glossy.ui.component.PlaylistReelHeader
+import com.jay.glossy.ui.component.PlaylistUpNextCard
+import com.jay.glossy.ui.component.PlaylistUpNextShelf
 import com.jay.glossy.ui.component.SpotifyTrackListItem
 import com.jay.glossy.ui.menu.YouTubeSongMenu
 import com.jay.glossy.ui.utils.HeaderDownloadItem
@@ -305,6 +308,35 @@ fun SpotifyPlaylistScreen(
                 }
             }
 
+            if (!isSearching && !inSelectMode && tracks.isNotEmpty()) {
+                item(key = "up_next_shelf") {
+                    val activeIndex = remember(tracks, mediaMetadata) {
+                        tracks.indexOfFirst { track -> track.isResolvedAs(mediaMetadata) }
+                    }
+                    val upNext = remember(tracks, activeIndex) {
+                        val start = if (activeIndex == -1) 0 else activeIndex + 1
+                        (0 until tracks.size)
+                            .map { (start + it) % tracks.size }
+                            .filter { it != activeIndex }
+                            .take(6)
+                            .map { index ->
+                                val track = tracks[index]
+                                PlaylistUpNextCard(
+                                    key = "spotify-${track.id}-$index",
+                                    title = track.name,
+                                    artist = track.artists.joinToString { it.name },
+                                    thumbnailUrl = SpotifyMapper.getTrackThumbnail(track),
+                                    playlistIndex = index,
+                                )
+                            }
+                    }
+                    PlaylistUpNextShelf(
+                        cards = upNext,
+                        onPlayAt = { index -> playPlaylist(startIndex = index) },
+                    )
+                }
+            }
+
             if (state.isLoading && tracks.isEmpty()) {
                 item(key = "loading") {
                     Box(modifier = Modifier.fillMaxWidth().height(160.dp), contentAlignment = Alignment.Center) {
@@ -495,208 +527,59 @@ private fun SpotifyPlaylistHeader(
     menuState: com.jay.glossy.ui.component.MenuState,
     modifier: Modifier = Modifier
 ) {
-    val configuration = LocalConfiguration.current
-    val screenHeight = configuration.screenHeightDp.dp
+    val durationText = if (loadedDurationMs > 0) makeTimeString(loadedDurationMs) else ""
+    val trackCountText = pluralStringResource(R.plurals.n_song, trackCount, trackCount)
+    val statsText = if (durationText.isNotEmpty()) "$trackCountText • $durationText" else trackCountText
 
-    Column(
-        modifier = modifier.fillMaxWidth().padding(bottom = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(
-            modifier = Modifier.fillMaxWidth().height(screenHeight / 2)
-        ) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current).data(thumbnailUrl).build(),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(screenHeight * 0.4f)
-                    .align(Alignment.BottomCenter)
-                    .background(
-                        Brush.verticalGradient(
-                            0.0f to Color.Transparent,
-                            0.5f to MaterialTheme.colorScheme.background.copy(alpha = 0.6f),
-                            1.0f to MaterialTheme.colorScheme.background
-                        )
-                    )
-            )
-
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
-                    .padding(bottom = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = name,
-                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold), 
-                    color = MaterialTheme.colorScheme.onBackground,
-                    maxLines = 2,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Text(
-                    text = author ?: "Spotify",
-                    style = MaterialTheme.typography.titleMedium, 
-                    color = MaterialTheme.colorScheme.onBackground,
-                    textAlign = TextAlign.Center,
-                )
-                
-                Spacer(modifier = Modifier.height(4.dp))
-                
-                Text(
-                    text = "Spotify Playlist",
-                    style = MaterialTheme.typography.bodyMedium, 
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f), 
-                    textAlign = TextAlign.Center
-                )
-            }
-
-            Row(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .fillMaxWidth()
-                    .windowInsetsPadding(WindowInsets.statusBars.only(WindowInsetsSides.Top))
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+    PlaylistReelHeader(
+        title = name,
+        owner = author ?: "Spotify",
+        subtitle = "Spotify playlist",
+        thumbnails = listOf(thumbnailUrl),
+        onBack = { navController.navigateUp() },
+        onSearch = onSearchClick,
+        onOverflow = {
+            menuState.show {
                 Surface(
-                    onClick = { navController.navigateUp() },
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    shadowElevation = 6.dp,
-                    modifier = Modifier.size(48.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    modifier = Modifier.padding(16.dp).width(200.dp),
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(painterResource(R.drawable.arrow_back), null)
-                    }
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(50),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    shadowElevation = 6.dp,
-                    modifier = Modifier.height(48.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(onClick = onSearchClick, onLongClick = {}) {
-                            Icon(painterResource(R.drawable.search), null)
+                    Column(modifier = Modifier.padding(8.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clickable { menuState.dismiss(); onReload() }.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(painterResource(R.drawable.sync), null)
+                            Spacer(Modifier.width(16.dp))
+                            Text("Reload playlist", style = MaterialTheme.typography.titleMedium)
                         }
-                        IconButton(onClick = {
-                            menuState.show {
-                                Surface(
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = MaterialTheme.colorScheme.surfaceContainer,
-                                    modifier = Modifier.padding(16.dp).width(200.dp)
-                                ) {
-                                    Column(modifier = Modifier.padding(8.dp)) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth().clickable { menuState.dismiss(); onReload() }.padding(16.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Icon(painterResource(R.drawable.sync), null)
-                                            Spacer(Modifier.width(16.dp))
-                                            Text("Reload playlist", style = MaterialTheme.typography.titleMedium)
-                                        }
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth().clickable { menuState.dismiss(); onDownload() }.padding(16.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Icon(painterResource(R.drawable.download), null)
-                                            Spacer(Modifier.width(16.dp))
-                                            Text("Download All", style = MaterialTheme.typography.titleMedium)
-                                        }
-                                    }
-                                }
-                            }
-                        }, onLongClick = {}) {
-                            Icon(painterResource(R.drawable.more_vert), null)
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clickable { menuState.dismiss(); onDownload() }.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(painterResource(R.drawable.download), null)
+                            Spacer(Modifier.width(16.dp))
+                            Text("Download All", style = MaterialTheme.typography.titleMedium)
                         }
                     }
                 }
             }
-        }
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(top = 16.dp, bottom = 24.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Surface(
-                onClick = onShuffle,
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                shadowElevation = 6.dp,
-                modifier = Modifier.size(48.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(painterResource(R.drawable.shuffle), null, modifier = Modifier.size(20.dp))
-                }
+        },
+        onPlay = onPlay,
+        onShuffle = onShuffle,
+        onDownload = onDownload,
+        downloadButton = {
+            when (downloadState) {
+                HeaderDownloadState.Completed -> Icon(painterResource(R.drawable.offline), null, modifier = Modifier.size(20.dp))
+                is HeaderDownloadState.Partial -> HeaderDownloadProgressIndicator(progress = downloadState.progress, paused = downloadState.paused, icon = R.drawable.download)
+                HeaderDownloadState.None -> Icon(painterResource(R.drawable.download), null, modifier = Modifier.size(20.dp))
             }
-
-            Surface(
-                onClick = onPlay,
-                shape = RoundedCornerShape(50),
-                color = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                shadowElevation = 6.dp,
-                modifier = Modifier.height(48.dp).weight(1f)
-            ) {
-                Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                    Icon(painterResource(R.drawable.play), null, modifier = Modifier.size(24.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.play), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                }
-            }
-
-            Surface(
-                onClick = onDownload,
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                shadowElevation = 6.dp,
-                modifier = Modifier.size(48.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    when (downloadState) {
-                        HeaderDownloadState.Completed -> Icon(painterResource(R.drawable.offline), null, modifier = Modifier.size(20.dp))
-                        is HeaderDownloadState.Partial -> HeaderDownloadProgressIndicator(progress = downloadState.progress, paused = downloadState.paused, icon = R.drawable.download)
-                        HeaderDownloadState.None -> Icon(painterResource(R.drawable.download), null, modifier = Modifier.size(20.dp))
-                    }
-                }
-            }
-        }
-
-        val durationText = if (loadedDurationMs > 0) makeTimeString(loadedDurationMs) else ""
-        val trackCountText = pluralStringResource(R.plurals.n_song, trackCount, trackCount)
-
-        Text(
-            text = if (durationText.isNotEmpty()) "$trackCountText • $durationText" else trackCountText,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-            textAlign = TextAlign.Start
-        )
-    }
+        },
+        downloadActive = downloadState == HeaderDownloadState.Completed || downloadState is HeaderDownloadState.Partial,
+        statsText = statsText,
+        modifier = modifier,
+    )
 }
 
 private fun SpotifyTrack.isResolvedAs(mediaMetadata: MediaMetadata?): Boolean {

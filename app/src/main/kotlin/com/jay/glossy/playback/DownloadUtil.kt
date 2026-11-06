@@ -21,8 +21,8 @@ import androidx.media3.exoplayer.offline.DownloadManager
 import androidx.media3.exoplayer.offline.DownloadNotificationHelper
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.strategy.ContentHints
-import com.jay.glossy.constants.AudioQuality
 import com.jay.glossy.constants.AudioQualityKey
+import com.jay.glossy.constants.DefaultAudioQuality
 import com.jay.glossy.db.MusicDatabase
 import com.jay.glossy.db.entities.FormatEntity
 import com.jay.glossy.db.entities.SongEntity
@@ -62,7 +62,7 @@ constructor(
 ) {
     private val TAG = "DownloadUtil"
     private val connectivityManager = context.getSystemService<ConnectivityManager>()!!
-    private val audioQuality by enumPreference(context, AudioQualityKey, AudioQuality.AUTO)
+    private val audioQuality by enumPreference(context, AudioQualityKey, DefaultAudioQuality)
     private val songUrlCache = HashMap<String, Pair<String, Long>>()
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)

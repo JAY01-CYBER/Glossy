@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Glossy · Account screen directions</title>
+<style>
+  :root {
+    --page: #0b0c0e;
+    --ink: #f2f4f5;
+    --muted: #8d969c;
+    --line: rgba(255, 255, 255, 0.08);
+    --font: "Inter", "Segoe UI", "Helvetica Neue", system-ui, -apple-system, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background:
+      radial-gradient(1100px 600px at 12% -8%, #13222a 0%, transparent 62%),
+      radial-gradient(900px 500px at 92% 8%, #241720 0%, transparent 58%),
+      var(--page);
+    color: var(--ink);
+    font-family: var(--font);
+    padding: 44px 40px 64px;
+    -webkit-font-smoothing: antialiased;
+  }
+  header { max-width: 1180px; margin: 0 auto 40px; }
+  .eyebrow {
+    font-size: 12px; letter-spacing: .22em; text-transform: uppercase;
+    color: #7fd8d0; margin: 0 0 14px;
+  }
+  h1 { font-size: 40px; line-height: 1.05; letter-spacing: -.03em; margin: 0 0 12px; font-weight: 650; }
+  h1 span { color: #8e979d; }
+  header p { margin: 0; max-width: 720px; color: var(--muted); font-size: 15px; line-height: 1.6; }
+
+  .gallery { display: flex; flex-wrap: nowrap; gap: 44px; max-width: 1180px; margin: 0 auto; justify-content: flex-start; transform-origin: top left; }
+  .col { width: 390px; }
+  .colhead { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
+  .tag {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: #b9c2c7;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .colname { font-size: 18px; font-weight: 600; letter-spacing: -.01em; margin: 0 0 3px; }
+  .coldesc { font-size: 12.5px; color: var(--muted); margin: 0 0 14px; min-height: 32px; }
+
+  .phone {
+    position: relative; width: 390px; height: 844px; border-radius: 40px;
+    overflow: hidden; isolation: isolate;
+    border: 1px solid rgba(255,255,255,.09);
+    box-shadow: 0 34px 70px -30px rgba(0,0,0,.85), inset 0 0 0 1px rgba(255,255,255,.03);
+  }
+  .status {
+    position: relative; z-index: 5; display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 26px 6px; font-size: 12.5px; font-weight: 600; letter-spacing: .02em;
+  }
+  .status .right { display: flex; align-items: center; gap: 7px; opacity: .9; }
+  .status .bars { display: flex; align-items: flex-end; gap: 2px; }
+  .status .bars i { width: 3px; background: currentColor; border-radius: 1px; display: block; }
+  .status .bars i:nth-child(1) { height: 4px; }
+  .status .bars i:nth-child(2) { height: 7px; }
+  .status .bars i:nth-child(3) { height: 10px; }
+  .status .battery {
+    width: 21px; height: 11px; border: 1.4px solid currentColor; border-radius: 3px;
+    position: relative; opacity: .95;
+  }
+  .status .battery::before { content: ""; position: absolute; inset: 2px; width: 10px; border-radius: 1px; background: currentColor; }
+  .status .battery::after { content: ""; position: absolute; right: -3.5px; top: 3px; width: 2px; height: 5px; border-radius: 0 1px 1px 0; background: currentColor; }
+
+  /* ---------- shared bits ---------- */
+  .ico { width: 20px; height: 20px; display: block; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .ico.sm { width: 17px; height: 17px; }
+  .tile { width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; flex: 0 0 auto; }
+  .switch { width: 46px; height: 27px; border-radius: 999px; flex: 0 0 auto; position: relative; }
+  .switch::after { content: ""; position: absolute; top: 3px; width: 21px; height: 21px; border-radius: 50%; background: #04262a; }
+  .switch.on::after { right: 3px; }
+  .switch.off { opacity: .35; }
+  .switch.off::after { left: 3px; }
+  .chev { opacity: .45; }
+  .eyebrow-xs { font-size: 10.5px; letter-spacing: .2em; text-transform: uppercase; }
+
+  /* ================= A — Echo Sheet ================= */
+  .a { background: #04191d; color: #e9fbf7; }
+  .a .homefade {
+    position: absolute; inset: 0; z-index: 0;
+    background:
+      radial-gradient(340px 240px at 18% 10%, rgba(47, 208, 186, .16), transparent 70%),
+      radial-gradient(300px 260px at 88% 4%, rgba(255, 92, 122, .12), transparent 70%),
+      #04191d;
+  }
+  .a .homefade::after { content: ""; position: absolute; inset: 0; backdrop-filter: blur(2px); background: rgba(2, 14, 17, .5); }
+  .a .topbar {
+    position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 20px 0;
+  }
+  .a .brand { display: flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 650; letter-spacing: -.02em; color: #cdeee8; }
+  .a .brand svg { width: 26px; height: 26px; }
+  .a .top-actions { display: flex; gap: 8px; }
+  .a .top-actions span { width: 36px; height: 36px; border-radius: 12px; background: rgba(255,255,255,.045); display: grid; place-items: center; color: #8fbdb6; }
+  .a .top-actions span.me { border-radius: 50%; background: linear-gradient(140deg, #f0b98a, #a2457a 55%, #2fb9a6); color: #10201f; }
+
+  .a .sheet {
+    position: absolute; left: 0; right: 0; bottom: 0; top: 196px; z-index: 3;
+    background: linear-gradient(180deg, #06262c 0%, #041d22 100%);
+    border-radius: 30px 30px 0 0;
+    border-top: 1px solid rgba(146, 255, 235, .12);
+    box-shadow: 0 -30px 60px -20px rgba(0,0,0,.65);
+    padding: 12px 22px 0;
+    display: flex; flex-direction: column;
+  }
+  .a .handle { width: 40px; height: 4px; border-radius: 4px; background: rgba(198, 240, 232, .28); margin: 0 auto 12px; }
+  .a .sheethead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .a h2 { font-size: 24px; letter-spacing: -.02em; margin: 0; font-weight: 600; }
+  .a .close { width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,.06); display: grid; place-items: center; color: #b6ddd6; }
+
+  .a .profile { display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: 20px; background: rgba(9, 45, 51, .9); border: 1px solid rgba(122, 233, 213, .12); }
+  .a .avatar { position: relative; width: 52px; height: 52px; flex: 0 0 auto; }
+  .a .avatar .halo {
+    position: absolute; inset: -7px; border-radius: 50%;
+    background: conic-gradient(from 200deg, #67e8d5, #ff5c7a, #f7b267, #67e8d5);
+    opacity: .5; filter: blur(8px);
+  }
+  .a .avatar .face {
+    position: absolute; inset: 0; border-radius: 50%;
+    background: radial-gradient(circle at 35% 28%, #ffd9a8, #b2497c 55%, #1d5f63);
+    border: 2px solid rgba(240, 255, 250, .8);
+    display: grid; place-items: center; font-size: 16px; font-weight: 700; color: #10201f;
+  }
+  .a .who { flex: 1 1 auto; min-width: 0; }
+  .a .who b { display: block; font-size: 16.5px; letter-spacing: -.01em; }
+  .a .who small { display: block; margin-top: 2px; font-size: 12.5px; color: #86b3ad; }
+  .a .pill { font-size: 12px; font-weight: 600; color: #0a2a26; background: #8ef0dc; padding: 8px 14px; border-radius: 999px; white-space: nowrap; }
+
+  .a .section { margin: 20px 0 10px; color: #7fb0aa; }
+  .a .group { border-radius: 20px; background: rgba(8, 38, 44, .82); border: 1px solid rgba(122, 233, 213, .1); overflow: hidden; }
+  .a .row { display: flex; align-items: center; gap: 12px; padding: 14px 15px; }
+  .a .row + .row { border-top: 1px solid rgba(122, 233, 213, .08); }
+  .a .tile { background: rgba(122, 233, 213, .09); color: #96e8db; }
+  .a .row .txt { flex: 1 1 auto; min-width: 0; }
+  .a .row .txt b { display: block; font-size: 14.5px; font-weight: 550; }
+  .a .row .txt small { display: block; margin-top: 2px; font-size: 12px; color: #7fa9a4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .a .switch.on { background: #7ce8d5; box-shadow: 0 0 0 3px rgba(124, 232, 213, .12); }
+  .a .wide {
+    margin-top: 14px; height: 50px; border-radius: 999px; border: 1px solid rgba(146, 233, 218, .24);
+    display: flex; align-items: center; justify-content: center; gap: 9px; font-size: 14px; font-weight: 600; color: #cdeee8;
+  }
+  .a .signout { margin: 12px 0 0; text-align: center; font-size: 13.5px; color: #93bdb7; display: flex; align-items: center; gap: 8px; justify-content: center; }
+  .a .approw { margin-top: 10px; display: flex; align-items: center; gap: 12px; padding: 15px; border-radius: 18px; background: rgba(8, 38, 44, .82); border: 1px solid rgba(122, 233, 213, .1); }
+  .a .approw b { flex: 1 1 auto; font-size: 14.5px; font-weight: 600; }
+  .a .approw .ico { color: #96e8db; }
+
+
+  /* ================= B — Echo Canvas ================= */
+  .b { background: #09090b; color: #f6f4f2; }
+  .b .glow {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(420px 300px at 50% -6%, rgba(255, 107, 122, .18), transparent 68%),
+      radial-gradient(360px 320px at 10% 42%, rgba(255, 178, 102, .07), transparent 70%);
+  }
+  .b .topbar { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; padding: 4px 22px 0; }
+  .b .round { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; color: #d6d2cf; }
+  .b .kicker { font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: #8f8882; }
+  .b .hero { position: relative; z-index: 2; text-align: center; padding: 10px 26px 0; }
+  .b .echo { position: relative; width: 116px; height: 116px; margin: 0 auto 18px; }
+  .b .echo span { position: absolute; border-radius: 50%; border: 1px solid rgba(255, 107, 122, .3); inset: 0; }
+  .b .echo span:nth-child(1) { inset: -22px; opacity: .35; }
+  .b .echo span:nth-child(2) { inset: -12px; opacity: .55; }
+  .b .echo .face {
+    position: absolute; inset: 0; border-radius: 50%;
+    background: radial-gradient(circle at 32% 26%, #ffdcae, #b44f6e 58%, #3a2f5e);
+    border: 2px solid rgba(255,255,255,.5);
+    display: grid; place-items: center; font-size: 32px; font-weight: 700; color: #221b1c;
+  }
+  .b h2 { font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif; font-size: 34px; letter-spacing: -.02em; margin: 0; font-weight: 500; }
+  .b .handle { color: #918a85; font-size: 13.5px; margin: 6px 0 12px; }
+  .b .status-chip { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: #ffc8a1; border: 1px solid rgba(255, 200, 161, .28); border-radius: 999px; padding: 6px 12px; }
+  .b .status-chip i { width: 6px; height: 6px; border-radius: 50%; background: #ffb27a; display: block; }
+  .b .canvas { position: relative; z-index: 2; padding: 18px 22px 0; }
+  .b .label { color: #837c77; margin: 0 4px 10px; }
+  .b .card { border-radius: 22px; border: 1px solid var(--line); background: rgba(255,255,255,.026); overflow: hidden; }
+  .b .row { display: flex; align-items: center; gap: 13px; padding: 13px 16px; }
+  .b .row + .row { border-top: 1px solid rgba(255,255,255,.055); }
+  .b .tile { background: rgba(255, 107, 122, .1); color: #ff9aa7; }
+  .b .txt { flex: 1 1 auto; min-width: 0; }
+  .b .txt b { display: block; font-size: 14.5px; font-weight: 550; }
+  .b .txt small { display: block; color: #8b8480; font-size: 12px; margin-top: 2px; }
+  .b .switch.on { background: #ff8f9c; }
+  .b .switch.on::after { background: #2a1418; }
+  .b .actions { display: flex; gap: 10px; margin-top: 14px; }
+  .b .primary { flex: 1.25; height: 50px; border-radius: 16px; background: #ff6b7a; color: #24070b; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 650; font-size: 14px; }
+  .b .secondary { flex: 1; height: 50px; border-radius: 16px; border: 1px solid var(--line); color: #d8d2ce; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 550; font-size: 14px; }
+  .b .app { margin-top: 18px; }
+  .b .linkrow { display: flex; align-items: center; gap: 12px; padding: 16px; border-radius: 20px; border: 1px solid var(--line); background: rgba(255,255,255,.026); }
+  .b .linkrow b { flex: 1 1 auto; font-size: 14.5px; }
+  .b .linkrow .ico { color: #ffb27a; }
+  .b .canvas { padding-bottom: 108px; }
+  .b .tabbar { position: absolute; left: 18px; right: 18px; bottom: 18px; z-index: 4; height: 66px; border-radius: 999px;
+    display: flex; align-items: center; gap: 4px; padding: 0 9px 0 10px;
+    background: rgba(20, 19, 22, .82); border: 1px solid rgba(255,255,255,.1); backdrop-filter: blur(18px); }
+  .b .tabbar .nav { flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 12px; color: #8f8882; }
+  .b .tabbar .nav.on { color: #ffd9c9; }
+  .b .tabbar .go { width: 48px; height: 48px; border-radius: 50%; background: #ff6b7a; color: #24070b; display: grid; place-items: center; }
+
+  /* ================= C — Echo Glass ================= */
+  .c { background: #070810; color: #eef2ff; }
+  .c .aurora { position: absolute; inset: -10%; filter: blur(18px); }
+  .c .aurora::before, .c .aurora::after { content: ""; position: absolute; border-radius: 50%; }
+  .c .aurora::before { width: 520px; height: 520px; left: -160px; top: -140px; background: radial-gradient(circle, rgba(88, 110, 255, .55), transparent 62%); }
+  .c .aurora::after { width: 480px; height: 480px; right: -190px; top: 120px; background: radial-gradient(circle, rgba(0, 232, 214, .38), transparent 60%); }
+  .c .grain { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(4,6,12,.15), rgba(4,6,12,.72)); }
+  .c .topbar { position: relative; z-index: 3; display: flex; align-items: center; justify-content: space-between; padding: 4px 22px 0; }
+  .c .topbar .label { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 10.5px; letter-spacing: .26em; color: rgba(214, 226, 255, .72); }
+  .c .round { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; color: #dfe7ff;
+    background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.14); backdrop-filter: blur(14px); }
+  .c .content { position: relative; z-index: 3; padding: 22px 20px 0; }
+  .c .card {
+    border-radius: 24px; padding: 18px;
+    background: linear-gradient(160deg, rgba(255,255,255,.11), rgba(255,255,255,.045));
+    border: 1px solid rgba(255,255,255,.16);
+    box-shadow: 0 18px 40px -24px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.16);
+    backdrop-filter: blur(22px);
+  }
+  .c .idcard { display: flex; align-items: center; gap: 14px; }
+  .c .avatar { position: relative; width: 58px; height: 58px; flex: 0 0 auto; }
+  .c .avatar .face {
+    position: absolute; inset: 0; border-radius: 50%;
+    background: radial-gradient(circle at 32% 26%, #ffd7a6, #a6437a 58%, #2a3b8f);
+    display: grid; place-items: center; font-weight: 700; color: #101528;
+    border: 1px solid rgba(255,255,255,.45);
+    box-shadow: 0 0 0 4px rgba(255,255,255,.06), 0 0 30px rgba(0, 232, 214, .28);
+  }
+  .c .who { flex: 1 1 auto; min-width: 0; }
+  .c .who b { display: block; font-size: 18px; letter-spacing: -.01em; }
+  .c .who small { display: block; color: rgba(214, 226, 255, .62); font-size: 12.5px; margin-top: 2px; }
+  .c .chip { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #9ff6ea; background: rgba(0, 232, 214, .12); border: 1px solid rgba(0, 232, 214, .38); border-radius: 999px; padding: 7px 11px; white-space: nowrap; }
+  .c .section { margin: 22px 4px 10px; font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 10px; letter-spacing: .24em; color: rgba(196, 210, 255, .52); }
+  .c .rows { padding: 4px 0; }
+  .c .row { display: flex; align-items: center; gap: 13px; padding: 13px 16px; }
+  .c .row + .row { border-top: 1px solid rgba(255,255,255,.1); }
+  .c .tile { background: rgba(120, 140, 255, .18); color: #b9c6ff; }
+  .c .txt { flex: 1 1 auto; min-width: 0; }
+  .c .txt b { display: block; font-size: 14.5px; font-weight: 550; }
+  .c .txt small { display: block; color: rgba(208, 220, 255, .56); font-size: 11.5px; margin-top: 2px; }
+  .c .switch.on { background: linear-gradient(120deg, #59f4e2, #8ea0ff); }
+  .c .switch.on::after { background: #0b1224; }
+  .c .actions { display: grid; gap: 10px; margin-top: 16px; }
+  .c .ghost { height: 50px; border-radius: 16px; display: flex; align-items: center; justify-content: center; gap: 9px; font-size: 14px; font-weight: 550;
+    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16); backdrop-filter: blur(16px); color: #e9efff; }
+  .c .quiet { height: 44px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; color: rgba(214, 226, 255, .66); }
+  .c .applabel { margin: 18px 4px 10px; font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 10px; letter-spacing: .24em; color: rgba(196, 210, 255, .52); }
+  .c .linkrow { display: flex; align-items: center; gap: 12px; padding: 16px; }
+  .c .linkrow b { flex: 1 1 auto; font-size: 14.5px; }
+  .c .linkrow .ico { color: #9ff6ea; }
+  .c .content { padding-bottom: 112px; }
+  .c .tabbar { position: absolute; left: 18px; right: 18px; bottom: 18px; z-index: 4; height: 66px; border-radius: 999px;
+    display: flex; align-items: center; gap: 4px; padding: 0 9px 0 10px;
+    background: rgba(18, 22, 40, .55); border: 1px solid rgba(255,255,255,.18); backdrop-filter: blur(22px);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.18); }
+  .c .tabbar .nav { flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 12px; color: rgba(214, 226, 255, .62); }
+  .c .tabbar .nav.on { color: #9ff6ea; }
+  .c .tabbar .go { width: 48px; height: 48px; border-radius: 50%; color: #06121f; display: grid; place-items: center;
+    background: linear-gradient(120deg, #59f4e2, #8ea0ff); box-shadow: 0 0 22px rgba(89, 244, 226, .35); }
+
+  footer { max-width: 1180px; margin: 44px auto 0; color: #6f787d; font-size: 12.5px; line-height: 1.6; }
+  footer b { color: #aeb7bc; font-weight: 550; }
+
+
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="8" r="3.6"/><path d="M10.7 10.7 20 20M15.5 15.5l2.2-2.2M18 18l1.9-1.9"/></symbol>
+    <symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><path d="M14.9 9.1l-1.7 4.1-4.1 1.7 1.7-4.1z"/></symbol>
+    <symbol id="i-sync" viewBox="0 0 24 24"><path d="M20 12a8 8 0 0 1-13.7 5.6M4 12a8 8 0 0 1 13.7-5.6"/><path d="M4 17v-4h4M20 7v4h-4"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19c.6-3 2.9-4.6 5.5-4.6S14 16 14.6 19"/><circle cx="17" cy="9.5" r="2.4"/><path d="M16 14.4c2.1.2 3.7 1.6 4.2 4"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M14 5H7a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h7"/><path d="M16.5 8.5 20 12l-3.5 3.5M10 12h10"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></symbol>
+    <symbol id="i-puzzle" viewBox="0 0 24 24"><path d="M10 4.5a2 2 0 1 1 4 0V6h2.5a1 1 0 0 1 1 1v2.5H19a2 2 0 1 1 0 4h-1.5V17a1 1 0 0 1-1 1H14v1.5a2 2 0 1 1-4 0V18H7.5a1 1 0 0 1-1-1v-3.5H5a2 2 0 1 1 0-4h1.5V7a1 1 0 0 1 1-1H10z"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M14 6l-6 6 6 6"/></symbol>
+    <symbol id="i-logo" viewBox="0 0 24 24"><path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11 12 4l8 7v8a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z"/></symbol>
+    <symbol id="i-mix" viewBox="0 0 24 24"><path d="M5 10v4M9.5 7v10M14 9v6M18.5 6v12"/></symbol>
+    <symbol id="i-library" viewBox="0 0 24 24"><rect x="4" y="5" width="5" height="14" rx="1.4"/><path d="M12 5h4.2a1.4 1.4 0 0 1 1.4 1.4V18"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.3"/><path d="M15.6 15.6 20 20"/></symbol>
+  </defs>
+</svg>
+
+<header>
+  <p class="eyebrow">Glossy · account screen</p>
+  <h1>Three directions for “Your account” <span>— echo-led.</span></h1>
+  <p>Same content and same job as the sheet you have now: identity, token, discovery toggle, auto-sync, switching accounts, integrations. What changes is the shape — a rebuilt sheet, a full canvas, or a glass stack. Each keeps Glossy’s dark, media-first mood with an echo/ripple motif borrowed from the Echo music language.</p>
+</header>
+
+<div class="gallery">
+
+  <!-- ============ A ============ -->
+  <section class="col">
+    <div class="colhead">
+      <div>
+        <p class="tag"><span class="dot" style="background:#7ce8d5"></span>Option A</p>
+        <h3 class="colname">Echo Sheet</h3>
+      </div>
+    </div>
+    <p class="coldesc">The current sheet, rebuilt. Closest to what ships today — lowest-risk swap, keeps the home screen visible behind it.</p>
+
+    <div class="phone a">
+      <div class="homefade"></div>
+      <div class="status"><span>3:54</span><span class="right"><span class="bars"><i></i><i></i><i></i></span><span class="battery"></span></span></div>
+
+      <div class="topbar">
+        <div class="brand"><svg class="ico" style="width:26px;height:26px;stroke-width:2.2"><use href="#i-logo"/></svg> Glossy</div>
+        <div class="top-actions">
+          <span><svg class="ico sm"><use href="#i-sync"/></svg></span>
+          <span><svg class="ico sm"><use href="#i-users"/></svg></span>
+          <span class="me">M</span>
+        </div>
+      </div>
+
+      <div class="sheet">
+        <div class="handle"></div>
+        <div class="sheethead">
+          <h2>Your account</h2>
+          <div class="close"><svg class="ico"><use href="#i-close"/></svg></div>
+        </div>
+
+        <div class="profile">
+          <div class="avatar">
+            <div class="halo"></div>
+            <div class="face">M</div>
+          </div>
+          <div class="who"><b>MYT--FOXA</b><small>@MYT--FOXA</small></div>
+          <span class="pill">Signed in</span>
+        </div>
+
+        <p class="section eyebrow-xs">Account preferences</p>
+        <div class="group">
+          <div class="row">
+            <div class="tile"><svg class="ico"><use href="#i-key"/></svg></div>
+            <div class="txt"><b>Tap to show token</b><small>Your token stays private</small></div>
+            <svg class="ico sm chev"><use href="#i-chev"/></svg>
+          </div>
+          <div class="row">
+            <div class="tile"><svg class="ico"><use href="#i-compass"/></svg></div>
+            <div class="txt"><b>More content</b><small>Explore beyond your usual songs</small></div>
+            <div class="switch on"></div>
+          </div>
+          <div class="row">
+            <div class="tile"><svg class="ico"><use href="#i-sync"/></svg></div>
+            <div class="txt"><b>Auto-sync with account</b><small>Keep your library up to date</small></div>
+            <div class="switch on"></div>
+          </div>
+        </div>
+
+        <div class="wide"><svg class="ico sm"><use href="#i-users"/></svg> Switch account</div>
+        <div class="signout"><svg class="ico sm"><use href="#i-logout"/></svg> Sign out</div>
+
+        <p class="section eyebrow-xs">App</p>
+        <div class="approw">
+          <svg class="ico"><use href="#i-puzzle"/></svg>
+          <b>Integrations</b>
+          <svg class="ico sm chev"><use href="#i-chev"/></svg>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ B ============ -->
+  <section class="col">
+    <div class="colhead">
+      <div>
+        <p class="tag"><span class="dot" style="background:#ff8f9c"></span>Option B</p>
+        <h3 class="colname">Echo Canvas</h3>
+      </div>
+    </div>
+    <p class="coldesc">A full page instead of a sheet. Editorial type, roomy spacing, one big identity moment — feels like a profile, not settings.</p>
+
+    <div class="phone b">
+      <div class="glow"></div>
+      <div class="status"><span>3:54</span><span class="right"><span class="bars"><i></i><i></i><i></i></span><span class="battery"></span></span></div>
+
+      <div class="topbar">
+        <div class="round"><svg class="ico"><use href="#i-arrow"/></svg></div>
+        <span class="kicker">Account</span>
+        <div class="round"><svg class="ico"><use href="#i-close"/></svg></div>
+      </div>
+
+      <div class="hero">
+        <div class="echo">
+          <span></span><span></span>
+          <div class="face">M</div>
+        </div>
+        <h2>MYT--FOXA</h2>
+        <p class="handle">@MYT--FOXA</p>
+        <span class="status-chip"><i></i> Signed in</span>
+      </div>
+
+      <div class="canvas">
+        <p class="label eyebrow-xs">Account preferences</p>
+        <div class="card">
+          <div class="row">
+            <div class="tile"><svg class="ico"><use href="#i-key"/></svg></div>
+            <div class="txt"><b>Tap to show token</b><small>Your token stays private</small></div>
+            <svg class="ico sm chev"><use href="#i-chev"/></svg>
+          </div>
+          <div class="row">
+            <div class="tile"><svg class="ico"><use href="#i-compass"/></svg></div>
+            <div class="txt"><b>More content</b><small>Explore beyond your usual songs</small></div>
+            <div class="switch on"></div>
+          </div>
+          <div class="row">
+            <div class="tile"><svg class="ico"><use href="#i-sync"/></svg></div>
+            <div class="txt"><b>Auto-sync with account</b><small>Keep your library up to date</small></div>
+            <div class="switch on"></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <div class="primary"><svg class="ico sm"><use href="#i-users"/></svg> Switch account</div>
+          <div class="secondary"><svg class="ico sm"><use href="#i-logout"/></svg> Sign out</div>
+        </div>
+
+        <div class="app">
+          <p class="label eyebrow-xs">App</p>
+          <div class="linkrow">
+            <svg class="ico"><use href="#i-puzzle"/></svg>
+            <b>Integrations</b>
+            <svg class="ico sm chev"><use href="#i-chev"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="tabbar">
+        <span class="nav on"><svg class="ico sm"><use href="#i-home"/></svg> Home</span>
+        <span class="nav"><svg class="ico sm"><use href="#i-mix"/></svg> Mix</span>
+        <span class="nav"><svg class="ico sm"><use href="#i-library"/></svg> Library</span>
+        <span class="go"><svg class="ico"><use href="#i-search"/></svg></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ C ============ -->
+  <section class="col">
+    <div class="colhead">
+      <div>
+        <p class="tag"><span class="dot" style="background:#9ff6ea"></span>Option C</p>
+        <h3 class="colname">Echo Glass</h3>
+      </div>
+    </div>
+    <p class="coldesc">Premium, atmospheric take: aurora light behind frosted cards, mono labels, glowing status. The boldest of the three.</p>
+
+    <div class="phone c">
+      <div class="aurora"></div>
+      <div class="grain"></div>
+      <div class="status"><span>3:54</span><span class="right"><span class="bars"><i></i><i></i><i></i></span><span class="battery"></span></span></div>
+
+      <div class="topbar">
+        <div class="round"><svg class="ico"><use href="#i-arrow"/></svg></div>
+        <span class="label">ACCOUNT</span>
+        <div class="round"><svg class="ico"><use href="#i-close"/></svg></div>
+      </div>
+
+      <div class="content">
+        <div class="card idcard">
+          <div class="avatar"><div class="face">M</div></div>
+          <div class="who"><b>MYT--FOXA</b><small>@MYT--FOXA</small></div>
+          <span class="chip">Signed in</span>
+        </div>
+
+        <p class="section">ACCOUNT PREFERENCES</p>
+        <div class="card rows">
+          <div class="row">
+            <div class="tile"><svg class="ico"><use href="#i-key"/></svg></div>
+            <div class="txt"><b>Tap to show token</b><small>Your token stays private</small></div>
+            <svg class="ico sm chev"><use href="#i-chev"/></svg>
+          </div>
+          <div class="row">
+            <div class="tile"><svg class="ico"><use href="#i-compass"/></svg></div>
+            <div class="txt"><b>More content</b><small>Explore beyond your usual songs</small></div>
+            <div class="switch on"></div>
+          </div>
+          <div class="row">
+            <div class="tile"><svg class="ico"><use href="#i-sync"/></svg></div>
+            <div class="txt"><b>Auto-sync with account</b><small>Keep your library up to date</small></div>
+            <div class="switch on"></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <div class="ghost"><svg class="ico sm"><use href="#i-users"/></svg> Switch account</div>
+          <div class="quiet"><svg class="ico sm"><use href="#i-logout"/></svg> Sign out</div>
+        </div>
+
+        <p class="applabel">APP</p>
+        <div class="card linkrow">
+          <svg class="ico"><use href="#i-puzzle"/></svg>
+          <b>Integrations</b>
+          <svg class="ico sm chev"><use href="#i-chev"/></svg>
+        </div>
+      </div>
+
+      <div class="tabbar">
+        <span class="nav on"><svg class="ico sm"><use href="#i-home"/></svg> Home</span>
+        <span class="nav"><svg class="ico sm"><use href="#i-mix"/></svg> Mix</span>
+        <span class="nav"><svg class="ico sm"><use href="#i-library"/></svg> Library</span>
+        <span class="go"><svg class="ico"><use href="#i-search"/></svg></span>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  <b>A</b> is the fastest to ship — same sheet container, new skin and spacing. <b>B</b> needs a new destination but reads the most like a music profile. <b>C</b> is the most distinctive, and the blur/gradient work is the heaviest to carry into Compose. Pick one and I’ll build it in the app.
+</footer>
+
+<script>
+  // Keep all three boards on one row: scale the row down until it fits the window.
+  const fitGallery = () => {
+    const gallery = document.querySelector('.gallery');
+    const needed = 3 * 390 + 2 * 44;
+    const scale = Math.min(1, (innerWidth - 80) / needed);
+    gallery.style.zoom = scale.toFixed(3);
+  };
+  fitGallery();
+  addEventListener('resize', fitGallery);
+</script>
+</body>
+</html>

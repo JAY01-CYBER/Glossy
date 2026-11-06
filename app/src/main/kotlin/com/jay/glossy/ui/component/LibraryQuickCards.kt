@@ -49,6 +49,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jay.glossy.R
+import com.jay.glossy.ui.theme.GlossyCollectionGradients
 
 private data class QuickCard(
     val label: String,
@@ -62,24 +63,24 @@ private val LikedCard = QuickCard(
     label = "Liked",
     caption = "Songs you love",
     icon = R.drawable.favorite,
-    start = Color(0xFFE9628A),
-    end = Color(0xFFA82E5A),
+    start = GlossyCollectionGradients.liked.start,
+    end = GlossyCollectionGradients.liked.end,
 )
 
 private val DownloadsCard = QuickCard(
     label = "Downloads",
     caption = "Offline",
     icon = R.drawable.download,
-    start = Color(0xFF7B6BF0),
-    end = Color(0xFF3B2C93),
+    start = GlossyCollectionGradients.downloaded.start,
+    end = GlossyCollectionGradients.downloaded.end,
 )
 
 private val UploadsCard = QuickCard(
     label = "Uploads",
     caption = "Added by you",
     icon = R.drawable.upload,
-    start = Color(0xFF37B3A6),
-    end = Color(0xFF1C6B72),
+    start = GlossyCollectionGradients.uploaded.start,
+    end = GlossyCollectionGradients.uploaded.end,
 )
 
 @Composable

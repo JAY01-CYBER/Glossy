@@ -127,4 +127,13 @@
     <string name="sponsor_block_category_filler">Filler</string>
     <string name="sponsor_block_category_interaction">Interaction reminders</string>
     <string name="sponsor_block_category_hook">Hooks</string>
+    <string name="cast_searching_devices">Looking for devices on your Wi-Fi…</string>
+    <string name="cast_no_devices_hint">Check that the TV supports Google Cast (Chromecast built in), is turned on, and is on the same Wi-Fi network as this device.</string>
+    <string name="cast_search_again">Search again</string>
+    <!-- Appearance - "Liquid glass" row: refracts the wallpaper through the floating navigation chrome -->
+    <string name="liquid_glass">Liquid glass</string>
+    <string name="liquid_glass_desc">Refract the wallpaper through the floating navigation bar and its search orb instead of painting the flat wash.</string>
+    <!-- Mini player - transport controls -->
+    <string name="mini_player_previous">Previous song</string>
+    <string name="mini_player_next">Next song</string>
 </resources>
