@@ -136,4 +136,21 @@
     <!-- Mini player - transport controls -->
     <string name="mini_player_previous">Previous song</string>
     <string name="mini_player_next">Next song</string>
+    <!-- Artist page - the announced-release card above Top Songs -->
+    <string name="upcoming_release_coming">Coming %1$s</string>
+    <string name="upcoming_release_type_album">Album</string>
+    <string name="upcoming_release_type_ep">EP</string>
+    <string name="upcoming_release_type_single">Single</string>
+    <string name="upcoming_release_save">Save upcoming release</string>
+    <string name="upcoming_release_remove_reminder">Remove reminder</string>
+    <string name="upcoming_release_reminder_saved">Saved — we’ll nudge you when it drops.</string>
+    <string name="upcoming_release_reminder_removed">Reminder removed.</string>
+    <string name="upcoming_release_not_available">This release isn’t on YouTube Music yet.</string>
+    <plurals name="upcoming_release_song_count">
+        <item quantity="one">%1$d song</item>
+        <item quantity="other">%1$d songs</item>
+    </plurals>
+    <!-- Artist page settings - hide the announced-release card -->
+    <string name="show_upcoming_release">Upcoming releases</string>
+    <string name="show_upcoming_release_desc">Show announced albums, EPs and singles above Top Songs. Powered by MusicBrainz.</string>
 </resources>

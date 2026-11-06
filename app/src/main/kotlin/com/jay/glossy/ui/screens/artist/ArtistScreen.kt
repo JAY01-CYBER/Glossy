@@ -97,6 +97,7 @@ import com.jay.glossy.constants.HideExplicitKey
 import com.jay.glossy.constants.ShowArtistDescriptionKey
 import com.jay.glossy.constants.ShowArtistSubscriberCountKey
 import com.jay.glossy.constants.ShowMonthlyListenersKey
+import com.jay.glossy.constants.ShowUpcomingReleaseKey
 import com.jay.glossy.extensions.toMediaItem
 import com.metrolist.models.toMediaMetadata
 import com.jay.glossy.playback.queues.ListQueue
@@ -148,14 +149,17 @@ fun ArtistScreen(
     val isPlaying by playerConnection.isEffectivelyPlaying.collectAsStateWithLifecycle()
     val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
     val artistPage = viewModel.artistPage
+    val upcomingRelease = viewModel.upcomingRelease
     val libraryArtist by viewModel.libraryArtist.collectAsStateWithLifecycle()
     val librarySongs by viewModel.librarySongs.collectAsStateWithLifecycle()
     val libraryAlbums by viewModel.libraryAlbums.collectAsStateWithLifecycle()
     val isChannelSubscribed by viewModel.isChannelSubscribed.collectAsStateWithLifecycle()
+    val remindedReleaseIds by viewModel.remindedReleaseIds.collectAsStateWithLifecycle()
     val hideExplicit by rememberPreference(key = HideExplicitKey, defaultValue = false)
     val showArtistDescription by rememberPreference(key = ShowArtistDescriptionKey, defaultValue = true)
     val showArtistSubscriberCount by rememberPreference(key = ShowArtistSubscriberCountKey, defaultValue = true)
     val showMonthlyListeners by rememberPreference(key = ShowMonthlyListenersKey, defaultValue = true)
+    val showUpcomingRelease by rememberPreference(key = ShowUpcomingReleaseKey, defaultValue = true)
 
     val lazyListState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -517,6 +521,52 @@ fun ArtistScreen(
                                 }
                             }
                         }
+                    }
+                }
+
+                // The next announced release, when MusicBrainz knows one.
+                val announcedRelease = upcomingRelease
+                if (!showLocal && showUpcomingRelease && announcedRelease != null) {
+                    item(key = "upcoming_release") {
+                        UpcomingReleaseCard(
+                            release = announcedRelease,
+                            fallbackArtworkUrl =
+                                artistPage?.artist?.thumbnail
+                                    ?: libraryArtist?.artist?.thumbnailUrl,
+                            isReminded = announcedRelease.musicBrainzId in remindedReleaseIds,
+                            onOpen = {
+                                coroutineScope.launch {
+                                    val albumId = viewModel.findAlbumIdForUpcomingRelease(announcedRelease)
+                                    if (albumId != null) {
+                                        navController.navigate("album/$albumId")
+                                    } else {
+                                        Toast.makeText(
+                                            context,
+                                            R.string.upcoming_release_not_available,
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
+                                    }
+                                }
+                            },
+                            onToggleReminder = {
+                                val wasReminded = announcedRelease.musicBrainzId in remindedReleaseIds
+                                viewModel.toggleUpcomingReleaseReminder(announcedRelease.musicBrainzId)
+                                Toast.makeText(
+                                    context,
+                                    if (wasReminded) {
+                                        R.string.upcoming_release_reminder_removed
+                                    } else {
+                                        R.string.upcoming_release_reminder_saved
+                                    },
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                            },
+                            modifier =
+                                Modifier
+                                    .padding(horizontal = 16.dp)
+                                    .padding(bottom = 20.dp)
+                                    .animateItem(),
+                        )
                     }
                 }
 

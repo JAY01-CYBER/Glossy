@@ -11,6 +11,7 @@ import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -27,6 +28,7 @@ import com.metrolist.innertube.pages.ArtistPage
 import com.jay.glossy.constants.HideExplicitKey
 import com.jay.glossy.constants.HideVideoSongsKey
 import com.jay.glossy.constants.HideYoutubeShortsKey
+import com.jay.glossy.constants.UpcomingReleaseRemindersKey
 import com.jay.glossy.db.MusicDatabase
 import com.jay.glossy.db.entities.ArtistEntity
 import com.jay.glossy.db.entities.deserializeArtistPage
@@ -34,6 +36,9 @@ import com.jay.glossy.db.entities.serializeArtistPage
 import com.jay.glossy.db.entities.toArtistPage
 import com.jay.glossy.extensions.filterExplicit
 import com.jay.glossy.extensions.filterExplicitAlbums
+import com.jay.glossy.upcoming.UpcomingRelease
+import com.jay.glossy.upcoming.UpcomingReleaseRepository
+import com.jay.glossy.upcoming.normalizeForComparison
 import com.jay.glossy.utils.SyncUtils
 import com.jay.glossy.utils.dataStore
 import com.jay.glossy.utils.get
@@ -62,11 +67,28 @@ class ArtistViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val database: MusicDatabase,
     private val syncUtils: SyncUtils,
+    private val upcomingReleaseRepository: UpcomingReleaseRepository,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
     val artistId = savedStateHandle.get<String>("artistId")!!
     private val isPodcastChannel = savedStateHandle.get<Boolean>("isPodcastChannel") ?: false
     var artistPage by mutableStateOf<ArtistPage?>(null)
+
+    /**
+     * The artist's next announced release, filled from MusicBrainz once the
+     * artist page has a name to match. `null` while the lookup runs and when
+     * the artist has nothing announced.
+     */
+    var upcomingRelease by mutableStateOf<UpcomingRelease?>(null)
+        private set
+
+    /** Release ids the listener saved a local reminder for. */
+    val remindedReleaseIds = context.dataStore.data
+        .map { it[UpcomingReleaseRemindersKey].orEmpty() }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
+
+    private var upcomingReleaseArtistName: String? = null
 
     // Track API subscription state separately
     private val _apiSubscribed = MutableStateFlow<Boolean?>(null)
@@ -135,6 +157,7 @@ class ArtistViewModel @Inject constructor(
 
                 artistPage = page.copy(sections = filteredSections)
                 _apiSubscribed.value = page.isSubscribed
+                viewModelScope.launch { fetchUpcomingRelease(page.artist.title) }
             }
         } catch (e: Exception) {
             reportException(e)
@@ -256,11 +279,74 @@ class ArtistViewModel @Inject constructor(
                     }
                     // Store API subscription state
                     _apiSubscribed.value = resolvedPage.isSubscribed
+                    viewModelScope.launch { fetchUpcomingRelease(resolvedPage.artist.title) }
                 }.onFailure {
                     reportException(it)
                 }
         }
     }
+
+    private suspend fun fetchUpcomingRelease(artistName: String) {
+        if (isPodcastChannel || upcomingReleaseArtistName == artistName) return
+        upcomingReleaseArtistName = artistName
+        upcomingReleaseRepository
+            .findUpcomingRelease(artistName)
+            .onSuccess { release -> upcomingRelease = release }
+            .onFailure { throwable ->
+                // A failed lookup is not a confirmed "nothing announced": allow
+                // the next pass — a retry or a preference change — to ask again.
+                upcomingReleaseArtistName = null
+                reportException(throwable)
+            }
+    }
+
+    fun toggleUpcomingReleaseReminder(releaseId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            context.dataStore.edit { preferences ->
+                val reminders = preferences[UpcomingReleaseRemindersKey].orEmpty()
+                preferences[UpcomingReleaseRemindersKey] =
+                    if (releaseId in reminders) reminders - releaseId else reminders + releaseId
+            }
+        }
+    }
+
+    /**
+     * Looks for the release on YouTube Music when the card is opened. The
+     * release may not have reached YouTube yet, in which case there is nothing
+     * to navigate to.
+     */
+    suspend fun findAlbumIdForUpcomingRelease(release: UpcomingRelease): String? =
+        withContext(Dispatchers.IO) {
+            val targetTitle = normalizeForComparison(release.title)
+            if (targetTitle.isEmpty()) return@withContext null
+
+            val targetArtist = normalizeForComparison(release.artistName)
+            val albums =
+                YouTube
+                    .search(
+                        "${release.artistName} ${release.title}",
+                        YouTube.SearchFilter.FILTER_ALBUM,
+                    ).getOrNull()
+                    ?.items
+                    ?.filterIsInstance<AlbumItem>()
+                    .orEmpty()
+
+            albums
+                .firstOrNull { album ->
+                    val title = normalizeForComparison(album.title)
+                    val titleMatches =
+                        title == targetTitle ||
+                            title.startsWith(targetTitle) ||
+                            targetTitle.startsWith(title)
+                    val albumArtists = album.artists.orEmpty()
+                    val artistMatches =
+                        albumArtists.isEmpty() ||
+                            albumArtists.any { artist ->
+                                normalizeForComparison(artist.name) == targetArtist
+                            }
+                    titleMatches && artistMatches
+                }?.id
+        }
 
     fun toggleChannelSubscription() {
         val channelId = artistPage?.artist?.channelId ?: artistId
