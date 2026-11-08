@@ -43,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.kyant.backdrop.Backdrop
 
 @Composable
 fun NavigationTitle(
@@ -52,6 +53,7 @@ fun NavigationTitle(
     thumbnail: (@Composable () -> Unit)? = null,
     onClick: (() -> Unit)? = null,
     onPlayAllClick: (() -> Unit)? = null,
+    playAllBackdrop: Backdrop? = null,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -106,27 +108,60 @@ fun NavigationTitle(
         }
 
         onPlayAllClick?.let { playAllClick ->
-            OutlinedButton(
-                onClick = playAllClick,
-                shape = RoundedCornerShape(50),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.primary
-                ),
-                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 2.dp),
-                modifier = Modifier.height(30.dp)
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.play),
-                    contentDescription = null,
-                    modifier = Modifier.size(14.dp),
-                )
-                androidx.compose.foundation.layout.Spacer(modifier = Modifier.size(6.dp))
-                Text(
-                    text = stringResource(R.string.play_all),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
+            val backdrop = playAllBackdrop
+            if (backdrop != null) {
+                val pillShape = RoundedCornerShape(50)
+                Row(
+                    modifier = Modifier
+                        .height(30.dp)
+                        .clip(pillShape)
+                        .liquidGlassSurface(
+                            backdrop = backdrop,
+                            shape = pillShape,
+                            tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+                        )
+                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), pillShape)
+                        .clickable(onClick = playAllClick)
+                        .padding(horizontal = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.play),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(14.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.play_all),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            } else {
+                OutlinedButton(
+                    onClick = playAllClick,
+                    shape = RoundedCornerShape(50),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.primary
+                    ),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 2.dp),
+                    modifier = Modifier.height(30.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.play),
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                    )
+                    androidx.compose.foundation.layout.Spacer(modifier = Modifier.size(6.dp))
+                    Text(
+                        text = stringResource(R.string.play_all),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
             }
         }
 

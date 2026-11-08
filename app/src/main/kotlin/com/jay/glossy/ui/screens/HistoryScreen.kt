@@ -102,6 +102,7 @@ import com.jay.glossy.ui.utils.backToMain
 import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.viewmodels.DateAgo
 import com.jay.glossy.viewmodels.HistoryViewModel
+import com.jay.glossy.viewmodels.ReplayViewModel
 import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -109,6 +110,7 @@ import java.time.format.DateTimeFormatter
 fun HistoryScreen(
     navController: NavController,
     viewModel: HistoryViewModel = hiltViewModel(),
+    replayViewModel: ReplayViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
     val database = LocalDatabase.current
@@ -156,6 +158,9 @@ fun HistoryScreen(
     val historyPage by viewModel.historyPage.collectAsStateWithLifecycle()
 
     val events by viewModel.events.collectAsStateWithLifecycle()
+
+    val replayMonth by replayViewModel.month.collectAsStateWithLifecycle()
+    val replayYears by replayViewModel.availableYears.collectAsStateWithLifecycle()
 
     val innerTubeCookie by rememberPreference(InnerTubeCookieKey, "")
     val isLoggedIn =
@@ -271,6 +276,46 @@ fun HistoryScreen(
                         }
                     },
                 )
+            }
+
+            if (historySource == HistorySource.LOCAL && !isSearching && allEvents.isNotEmpty()) {
+                item(key = "history_replay") {
+                    HistoryReplaySection(
+                        state = replayMonth,
+                        years = replayYears,
+                        onMonthSelected = replayViewModel::selectMonth,
+                        onYearSelected = replayViewModel::selectYear,
+                        onArtistClick = { artist ->
+                            navController.navigate("artist/${artist.id}")
+                        },
+                        onAlbumClick = { album ->
+                            navController.navigate("album/${album.id}")
+                        },
+                        onSongClick = { index ->
+                            val songs = replayMonth.topSongs.map { it.song }
+                            if (songs.isNotEmpty()) {
+                                playerConnection.playQueue(
+                                    ListQueue(
+                                        title = historyTitle,
+                                        items = songs.map { it.toMediaItem() },
+                                        startIndex = index.coerceIn(0, songs.lastIndex),
+                                    ),
+                                )
+                            }
+                        },
+                        onSongLongClick = { song ->
+                            menuState.show {
+                                SongMenu(
+                                    originalSong = song,
+                                    onDismiss = menuState::dismiss,
+                                )
+                            }
+                        },
+                    )
+                }
+                item(key = "recently_played_label") {
+                    RecentlyPlayedLabel()
+                }
             }
 
             if (historySource == HistorySource.LOCAL && reelSongs.isNotEmpty()) {

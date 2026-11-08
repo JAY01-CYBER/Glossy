@@ -201,6 +201,7 @@ import com.jay.glossy.ui.component.BottomSheetMenu
 import com.jay.glossy.ui.component.BottomSheetPage
 import com.jay.glossy.ui.component.LocalBottomSheetPageState
 import com.jay.glossy.ui.component.LocalMenuState
+import com.jay.glossy.ui.component.liquidGlassSurface
 import com.jay.glossy.ui.component.rememberBottomSheetState
 import com.jay.glossy.ui.component.shimmer.ShimmerTheme
 import com.jay.glossy.ui.component.rememberAmbientMotionEnabled
@@ -231,6 +232,7 @@ import com.jay.glossy.utils.reportException
 import com.jay.glossy.utils.setAppLocale
 import com.jay.glossy.viewmodels.HomeViewModel
 import com.jay.glossy.widget.PlaylistWidgetReceiver
+import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.valentinilk.shimmer.LocalShimmerTheme
@@ -1096,6 +1098,7 @@ class MainActivity : ComponentActivity() {
                     LocalContentColor provides if (pureBlack) Color.White else contentColorFor(MaterialTheme.colorScheme.surface),
                     LocalPlayerConnection provides playerConnection,
                     LocalPlayerAwareWindowInsets provides playerAwareWindowInsets,
+                    LocalGlassBackdrop provides if (liquidGlassOn) navBarGlassBackdrop else null,
                     LocalDownloadUtil provides downloadUtil,
                     LocalShimmerTheme provides ShimmerTheme,
                     LocalSyncUtils provides syncUtils,
@@ -1187,10 +1190,23 @@ class MainActivity : ComponentActivity() {
                                             }
                                         },
                                         actions = {
-                                            Surface(
-                                                shape = CircleShape, 
-                                                color = MaterialTheme.colorScheme.surfaceVariant, 
-                                                modifier = Modifier.padding(end = 8.dp)
+                                            Box(
+                                                modifier = Modifier
+                                                    .padding(end = 8.dp)
+                                                    .clip(CircleShape)
+                                                    .then(
+                                                        if (liquidGlassOn) {
+                                                            Modifier.liquidGlassSurface(
+                                                                backdrop = navBarGlassBackdrop,
+                                                                shape = CircleShape,
+                                                                tint = MaterialTheme.colorScheme.surface.copy(
+                                                                    alpha = if (pureBlack) 0.72f else 0.52f,
+                                                                ),
+                                                            )
+                                                        } else {
+                                                            Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
+                                                        },
+                                                    ),
                                             ) {
                                                 Box(
                                                     modifier = Modifier.background(
@@ -1998,6 +2014,7 @@ val LocalDatabase = staticCompositionLocalOf<MusicDatabase> { error("No database
 val LocalNavController = staticCompositionLocalOf<NavController> { error("No NavController provided") }
 val LocalPlayerConnection = staticCompositionLocalOf<PlayerConnection?> { error("No PlayerConnection provided") }
 val LocalPlayerAwareWindowInsets = compositionLocalOf<WindowInsets> { error("No WindowInsets provided") }
+val LocalGlassBackdrop = compositionLocalOf<Backdrop?> { null }
 val LocalDownloadUtil = staticCompositionLocalOf<DownloadUtil> { error("No DownloadUtil provided") }
 val LocalSyncUtils = staticCompositionLocalOf<SyncUtils> { error("No SyncUtils provided") }
 val LocalListenTogetherManager = staticCompositionLocalOf<com.chikku.glossy.listentogether.ListenTogetherManager?> { null }

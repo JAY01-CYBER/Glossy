@@ -153,4 +153,14 @@
     <!-- Artist page settings - hide the announced-release card -->
     <string name="show_upcoming_release">Upcoming releases</string>
     <string name="show_upcoming_release_desc">Show announced albums, EPs and singles above Top Songs. Powered by MusicBrainz.</string>
+    <!-- History - the monthly Replay block above the day-by-day log -->
+    <string name="replay">Replay</string>
+    <string name="replay_listened_for">You listened for</string>
+    <string name="replay_minutes_in_month">minutes in %1$s.</string>
+    <string name="replay_no_data">No listening data for this month.</string>
+    <string name="replay_top_artists">Your Top Artists</string>
+    <string name="replay_top_songs">Your Top Songs</string>
+    <string name="replay_top_albums">Your Top Albums</string>
+    <string name="replay_recently_played">Recently played</string>
+    <string name="replay_min_short">%1$d min</string>
 </resources>

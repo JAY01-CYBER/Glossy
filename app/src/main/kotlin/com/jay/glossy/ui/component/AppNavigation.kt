@@ -297,11 +297,12 @@ fun GlossyBottomNav(
     val barHeight = if (slimNav) 56.dp else GlossyDimens.NavPillHeight
     val pillHeight = if (slimNav) 50.dp else 62.dp
     val orbSize = if (slimNav) 50.dp else 58.dp
-    // The selected bubble is a little shorter than the pill at rest (56dp in a
-    // 62dp pill) and grows to ~76dp while it is dragged, so its top edge rises
-    // above the bar like the reference recording. It therefore has to be drawn
-    // outside the pill's clip instead of inside it.
-    val paneInset = 3.dp
+    // The selected bubble is a little shorter and narrower than its tab slot
+    // (52dp in a 62dp pill) and grows to ~71dp while it is dragged, so its top
+    // edge rises above the bar like the reference recording. It therefore has
+    // to be drawn outside the pill's clip instead of inside it.
+    val paneInset = 5.dp
+    val paneHorizontalInset = 4.dp
     val tabInset = 5.dp
 
     Row(
@@ -482,8 +483,8 @@ fun GlossyBottomNav(
                 modifier =
                     Modifier
                         .align(Alignment.CenterStart)
-                        .padding(start = tabInset)
-                        .width(tabWidth)
+                        .padding(start = tabInset + paneHorizontalInset)
+                        .width(tabWidth - paneHorizontalInset * 2)
                         .height(pillHeight - paneInset * 2)
                         .graphicsLayer {
                             translationX =
