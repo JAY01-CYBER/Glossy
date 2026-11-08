@@ -278,7 +278,11 @@ fun HistoryScreen(
                 )
             }
 
-            if (historySource == HistorySource.LOCAL && !isSearching && allEvents.isNotEmpty()) {
+            // The Replay card is part of local history itself rather than a
+            // decoration that depends on the day-by-day list being loaded, so it
+            // stays on screen every time History is reopened. An empty month is
+            // a valid state the card renders on its own.
+            if (historySource == HistorySource.LOCAL && !isSearching) {
                 item(key = "history_replay") {
                     HistoryReplaySection(
                         state = replayMonth,
@@ -313,8 +317,10 @@ fun HistoryScreen(
                         },
                     )
                 }
-                item(key = "recently_played_label") {
-                    RecentlyPlayedLabel()
+                if (allEvents.isNotEmpty()) {
+                    item(key = "recently_played_label") {
+                        RecentlyPlayedLabel()
+                    }
                 }
             }
 

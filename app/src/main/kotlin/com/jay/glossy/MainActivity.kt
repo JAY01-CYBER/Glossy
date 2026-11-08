@@ -711,6 +711,24 @@ class MainActivity : ComponentActivity() {
                             }
                         },
                 )
+            // The backdrop for glass that lives *inside* the page (the Home chips
+            // and play pills). It must not be the page layer: that layer is
+            // recorded after the page draws, so in-content glass would sample its
+            // own previous frame. The feedback makes the pills look flat after
+            // the first pass and stale when the screen is reopened. Recording the
+            // wallpaper layer instead keeps the source stable and independent of
+            // the controls drawn over it.
+            val contentGlassBackdrop =
+                rememberLayerBackdrop(
+                    onDraw =
+                        remember(baseBg) {
+                            val backgroundColor = baseBg
+                            {
+                                drawRect(backgroundColor)
+                                drawContent()
+                            }
+                        },
+                )
             BoxWithConstraints(
                 modifier =
                     Modifier
@@ -724,7 +742,14 @@ class MainActivity : ComponentActivity() {
                     modifier =
                         Modifier
                             .matchParentSize()
-                            .haze(navBarHazeState),
+                            .haze(navBarHazeState)
+                            .then(
+                                if (liquidGlassOn) {
+                                    Modifier.layerBackdrop(contentGlassBackdrop)
+                                } else {
+                                    Modifier
+                                },
+                            ),
                 ) {
                     // Always painted, so the source is never an empty layer the
                     // bar would sample as transparent: with the artwork backdrop
@@ -1098,7 +1123,7 @@ class MainActivity : ComponentActivity() {
                     LocalContentColor provides if (pureBlack) Color.White else contentColorFor(MaterialTheme.colorScheme.surface),
                     LocalPlayerConnection provides playerConnection,
                     LocalPlayerAwareWindowInsets provides playerAwareWindowInsets,
-                    LocalGlassBackdrop provides if (liquidGlassOn) navBarGlassBackdrop else null,
+                    LocalGlassBackdrop provides if (liquidGlassOn) contentGlassBackdrop else null,
                     LocalDownloadUtil provides downloadUtil,
                     LocalShimmerTheme provides ShimmerTheme,
                     LocalSyncUtils provides syncUtils,

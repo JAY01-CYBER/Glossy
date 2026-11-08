@@ -23,6 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
@@ -52,6 +53,13 @@ constructor(
     val events =
         context.dataStore.data
             .map { it[HideVideoSongsKey] ?: false }
+            .catch { throwable ->
+                // A bad preference read must not take the whole history with it:
+                // without a value the events flow never starts, which would also
+                // hide the Replay header until the process restarts.
+                reportException(throwable)
+                emit(false)
+            }
             .distinctUntilChanged()
             .flatMapLatest { hideVideoSongs ->
                 database
