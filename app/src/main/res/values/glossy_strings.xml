@@ -31,6 +31,8 @@
     <string name="lossless_fallback_title">Lossless is falling back</string>
     <string name="lossless_fallback_desc">No source is set, so tracks play YouTube\'s best stream — usually Opus around 130–160 kbps. Add a source to hear FLAC or ALAC.</string>
     <string name="lossless_last_check_title">Last check</string>
+    <!-- Lossless — the source field also accepts a BitChord addon: manifest, catalogue search, then a stream -->
+    <string name="lossless_source_addon_hint">A BitChord addon URL also works: Glossy reads its manifest, searches its catalogue with the track\'s title and artist, and asks it for the lossless stream.</string>
     <!-- Queue — the header of the playback queue: its title, the line under it and the row actions -->
     <string name="playback_queue">Playback Queue</string>
     <string name="queue_playing_next">Playing next</string>
