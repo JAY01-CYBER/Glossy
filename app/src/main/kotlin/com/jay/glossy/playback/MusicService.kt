@@ -365,6 +365,7 @@ class MusicService :
 
     private var currentQueue: Queue = EmptyQueue
     var queueTitle: String? = null
+    val queueSourceRoute: String? get() = currentQueue.sourceRoute
 
     val currentMediaMetadata = MutableStateFlow<com.metrolist.models.MediaMetadata?>(null)
     private val currentSong =

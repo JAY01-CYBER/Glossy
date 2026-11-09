@@ -425,7 +425,12 @@ fun YouTubePlaylistMenu(
                                         },
                                         text = stringResource(R.string.play),
                                         onClick = {
-                                            playerConnection.playQueue(YouTubeQueue(playEndpoint))
+                                            playerConnection.playQueue(
+                                                YouTubeQueue(
+                                                    endpoint = playEndpoint,
+                                                    sourceRoute = "online_playlist/${playlist.id}",
+                                                ),
+                                            )
                                             onDismiss()
                                         },
                                     ),
@@ -444,7 +449,12 @@ fun YouTubePlaylistMenu(
                                         },
                                         text = stringResource(R.string.shuffle),
                                         onClick = {
-                                            playerConnection.playQueue(YouTubeQueue(shuffleEndpoint))
+                                            playerConnection.playQueue(
+                                                YouTubeQueue(
+                                                    endpoint = shuffleEndpoint,
+                                                    sourceRoute = "online_playlist/${playlist.id}",
+                                                ),
+                                            )
                                             onDismiss()
                                         },
                                     ),

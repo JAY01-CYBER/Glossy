@@ -163,4 +163,8 @@
     <string name="replay_top_albums">Your Top Albums</string>
     <string name="replay_recently_played">Recently played</string>
     <string name="replay_min_short">%1$d min</string>
+    <!-- Apple Music player – the menu opened by tapping the song name -->
+    <string name="go_to_playlist">Go to Playlist</string>
+    <string name="go_to_album">Go to Album</string>
+    <string name="go_to_artist">Go to Artist</string>
 </resources>
