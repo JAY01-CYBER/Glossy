@@ -160,11 +160,14 @@ fun rememberTitleActionTargets(
             TitleActionTarget(route, currentAlbum.title)
         }
 
-    val artist = mediaMetadata?.artists.orEmpty().firstNotNullOfOrNull { primary ->
+    // Captured here because the smart cast on the caller's nullable argument
+    // does not reach into the lambda below.
+    val artists = mediaMetadata?.artists.orEmpty()
+    val artist = artists.firstNotNullOfOrNull { primary ->
         val id = primary.id?.takeIf { it.isNotBlank() } ?: return@firstNotNullOfOrNull null
         TitleActionTarget(
             route = "artist/$id",
-            subtitle = mediaMetadata.artists.joinToString { it.name },
+            subtitle = artists.joinToString { it.name },
         )
     }
 
