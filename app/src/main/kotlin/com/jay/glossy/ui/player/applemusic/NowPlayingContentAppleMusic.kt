@@ -5,18 +5,12 @@
 
 package com.jay.glossy.ui.player.applemusic
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -40,7 +34,6 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -53,8 +46,6 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -91,6 +82,7 @@ import com.jay.glossy.ui.player.CanvasResolver
 import com.jay.glossy.ui.player.PlayerCanvasGlowLyrics
 import com.jay.glossy.ui.player.PlayerSyncedLyricsView
 import com.jay.glossy.ui.player.rememberCanvasEnabled
+import com.jay.glossy.ui.player.rememberTitleActionTargets
 import com.jay.glossy.ui.utils.ShowMediaInfo
 import com.jay.glossy.utils.rememberEnumPreference
 import com.jay.glossy.utils.rememberPreference
@@ -487,29 +479,11 @@ private fun AppleMusicMainView(
             },
     )
 
-    val album = mediaMetadata?.album
-    val artists = mediaMetadata?.artists.orEmpty()
-    val artistLine = artists.joinToString { it.name }.takeIf { it.isNotBlank() }
-    val albumRoute = album?.let { currentAlbum ->
-        if (currentAlbum.id.startsWith("MPREb_")) "album/${currentAlbum.id}"
-        else "online_podcast/${currentAlbum.id}"
-    }
-    val artistRoute = artists.firstOrNull { !it.id.isNullOrBlank() }?.id?.let { "artist/$it" }
-
-    val goToAlbum: (() -> Unit)? = albumRoute?.let { route ->
-        {
-            showTitleMenu = false
-            navController.navigate(route)
-            bottomSheetState.collapseSoft()
-        }
-    }
-    val goToArtist: (() -> Unit)? = artistRoute?.let { route ->
-        {
-            showTitleMenu = false
-            navController.navigate(route)
-            bottomSheetState.collapseSoft()
-        }
-    }
+    val titleTargets = rememberTitleActionTargets(
+        mediaMetadata = mediaMetadata,
+        queueTitle = queueTitle,
+        queueSourceRoute = queueSourceRoute,
+    )
 
     // The title row is the first thing inside the measured bottom block, so
     // lifting the menu by the block's height minus that row's leading spacer
@@ -632,175 +606,19 @@ private fun AppleMusicMainView(
             }
         }
 
-        AppleMusicTitleActionsOverlay(
+        com.jay.glossy.ui.player.TitleActionsOverlay(
             visible = showTitleMenu,
-            playlistSubtitle = queueTitle ?: stringResource(R.string.playback_queue),
-            albumSubtitle = album?.title,
-            artistSubtitle = artistLine,
-            onGoToPlaylist = {
+            targets = titleTargets,
+            onNavigate = { route ->
                 showTitleMenu = false
-                val route = queueSourceRoute
-                if (route != null) {
-                    navController.navigate(route)
-                    bottomSheetState.collapseSoft()
-                } else {
-                    onSelectView(AppleMusicView.QUEUE)
-                }
+                navController.navigate(route)
+                bottomSheetState.collapseSoft()
             },
-            onGoToAlbum = goToAlbum,
-            onGoToArtist = goToArtist,
             onDismiss = { showTitleMenu = false },
             bottomInset = menuBottomInset,
             glassBackdrop = if (glassOn) playerGlassBackdrop else null,
+            gutter = AppleMusicGutter,
         )
-    }
-}
-
-/**
- * The title-tap menu, floating over the player the way the Apple Music player
- * does it: a rounded glass sheet with the playlists, albums and artists the
- * current track belongs to.
- *
- * It is drawn as an overlay in the player's own Box rather than a popup window
- * so the liquid-glass modifier can sample the same composition's backdrop.
- * Tapping anywhere outside the card dismisses it; taps on the card are
- * swallowed so they do not fall through to the controls behind it.
- */
-@Composable
-private fun AppleMusicTitleActionsOverlay(
-    visible: Boolean,
-    playlistSubtitle: String,
-    albumSubtitle: String?,
-    artistSubtitle: String?,
-    onGoToPlaylist: () -> Unit,
-    onGoToAlbum: (() -> Unit)?,
-    onGoToArtist: (() -> Unit)?,
-    onDismiss: () -> Unit,
-    bottomInset: Dp,
-    glassBackdrop: Backdrop?,
-) {
-    AnimatedVisibility(
-        visible = visible,
-        enter = fadeIn(animationSpec = tween(140)) +
-            scaleIn(
-                initialScale = 0.94f,
-                animationSpec = tween(180),
-                transformOrigin = TransformOrigin(0f, 1f),
-            ),
-        exit = fadeOut(animationSpec = tween(120)) +
-            scaleOut(
-                targetScale = 0.96f,
-                animationSpec = tween(140),
-                transformOrigin = TransformOrigin(0f, 1f),
-            ),
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onDismiss,
-                ),
-        ) {
-            val shape = RoundedCornerShape(28.dp)
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(start = AppleMusicGutter, end = 48.dp, bottom = bottomInset)
-                    .widthIn(min = 240.dp, max = 300.dp)
-                    .clip(shape)
-                    .then(
-                        if (glassBackdrop != null) {
-                            Modifier.liquidGlassSurface(
-                                backdrop = glassBackdrop,
-                                shape = shape,
-                                tint = Color.Black.copy(alpha = 0.34f),
-                            )
-                        } else {
-                            Modifier
-                                .background(Color(0xF21C1C1E))
-                                .border(1.dp, Color.White.copy(alpha = 0.12f), shape)
-                        },
-                    )
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {},
-                    )
-                    .padding(vertical = 6.dp),
-            ) {
-                AppleMusicTitleActionRow(
-                    icon = R.drawable.queue_music,
-                    title = stringResource(R.string.go_to_playlist),
-                    subtitle = playlistSubtitle,
-                    onClick = onGoToPlaylist,
-                )
-                if (onGoToAlbum != null) {
-                    AppleMusicTitleActionRow(
-                        icon = R.drawable.album,
-                        title = stringResource(R.string.go_to_album),
-                        subtitle = albumSubtitle,
-                        onClick = onGoToAlbum,
-                    )
-                }
-                if (onGoToArtist != null) {
-                    AppleMusicTitleActionRow(
-                        icon = R.drawable.artist,
-                        title = stringResource(R.string.go_to_artist),
-                        subtitle = artistSubtitle,
-                        onClick = onGoToArtist,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun AppleMusicTitleActionRow(
-    icon: Int,
-    title: String,
-    subtitle: String?,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick,
-            )
-            .padding(horizontal = 18.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            painter = painterResource(icon),
-            contentDescription = null,
-            tint = Color.White.copy(alpha = 0.92f),
-            modifier = Modifier.size(22.dp),
-        )
-        Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.White,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (!subtitle.isNullOrBlank()) {
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = AppleMusicTextSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
     }
 }
 
