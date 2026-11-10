@@ -201,6 +201,8 @@ import com.jay.glossy.extensions.collect
 import com.jay.glossy.extensions.collectLatest
 import com.jay.glossy.extensions.currentMetadata
 import com.jay.glossy.extensions.findNextMediaItemById
+import com.jay.glossy.extensions.isInternetConnected
+import com.jay.glossy.extensions.isLosslessMaster
 import com.jay.glossy.extensions.mediaItems
 import com.jay.glossy.extensions.metadata
 import com.jay.glossy.extensions.setOffloadEnabled
@@ -607,6 +609,32 @@ class MusicService :
 
     // Flag to bypass cache when quality changes - forces fresh stream fetch
     private val bypassCacheForQualityChange = mutableSetOf<String>()
+
+    /**
+     * Tracks which songs already asked the lossless source in this session.
+     *
+     * A player-cache entry written for a lossy tier keeps its bytes under the
+     * song id, so switching to Lossless would otherwise replay them forever.
+     * The first request for a song at Lossless drops that entry and any stale
+     * stream URL; later chunks of the same fetch use the caches normally, so
+     * the source is asked once per song rather than once per chunk.
+     */
+    private val losslessFetchedIds = LinkedHashSet<String>()
+
+    private fun needsFreshLosslessFetch(mediaId: String, format: FormatEntity?): Boolean =
+        audioQuality == AudioQuality.LOSSLESS &&
+            isInternetConnected() &&
+            format?.isLosslessMaster() != true &&
+            synchronized(losslessFetchedIds) { mediaId !in losslessFetchedIds }
+
+    private fun markLosslessFetched(mediaId: String) {
+        synchronized(losslessFetchedIds) {
+            if (losslessFetchedIds.size >= 256) {
+                losslessFetchedIds.firstOrNull()?.let(losslessFetchedIds::remove)
+            }
+            losslessFetchedIds.add(mediaId)
+        }
+    }
 
     private var currentMediaIdRetryCount = mutableMapOf<String, Int>()
     private val MAX_RETRY_PER_SONG = 3
@@ -1996,7 +2024,9 @@ class MusicService :
     private suspend fun markCachedIfFullyDownloaded(mediaId: String) {
         val song = database.song(mediaId).first() ?: return
         if (song.song.dateDownload != null || song.song.isDownloaded) return
-        val contentLength = song.format?.contentLength ?: return
+        // A lossless-only stream has no YouTube content length yet, and a zero
+        // length would otherwise read as "the whole file is cached".
+        val contentLength = song.format?.contentLength?.takeIf { it > 0 } ?: return
         if (!playerCache.isCached(mediaId, 0, contentLength)) return
         database.query {
             update(song.song.copy(dateDownload = java.time.LocalDateTime.now()))
@@ -3943,11 +3973,19 @@ class MusicService :
 
             if (!shouldBypassCache) {
                 val usePlayerCache = dataStore.get(EnableSongCacheKey, true)
-
-                val contentLength =
+                // Read once per callback: it carries both the stored length
+                // and the format, which decides whether a cached lossy stream
+                // has to make way for a master.
+                val cachedSong =
                     runBlocking(Dispatchers.IO) {
-                        database.song(mediaId).first()?.format?.contentLength
+                        database.getSongByIdBlocking(mediaId)
                     }
+
+                val contentLength = cachedSong?.format?.contentLength
+                // Switching to Lossless has to reach songs whose lossy stream
+                // was cached by an earlier play. Downloads are deliberately
+                // excluded: those bytes are the user's file and work offline.
+                val fetchMaster = needsFreshLosslessFetch(mediaId, cachedSong?.format)
                 val requiredLength =
                     when {
                         dataSpec.length >= 0 -> dataSpec.length
@@ -3961,13 +3999,26 @@ class MusicService :
                 }
 
                 if (usePlayerCache && playerCache.isCached(mediaId, dataSpec.position, requiredLength)) {
-                    recoverSongDeduped(mediaId)
-                    return@Factory dataSpec
+                    if (fetchMaster) {
+                        // A cached lossy stream must not stand in for the
+                        // master; drop it and resolve the song again.
+                        playerCache.removeResource(mediaId)
+                        Timber.tag(TAG).i("Dropped lossy player cache for $mediaId to fetch lossless")
+                    } else {
+                        recoverSongDeduped(mediaId)
+                        return@Factory dataSpec
+                    }
                 }
 
-                songUrlCache[mediaId]?.takeIf { it.second > System.currentTimeMillis() }?.let {
-                    recoverSongDeduped(mediaId)
-                    return@Factory dataSpec.withUri(it.first.toUri())
+                if (fetchMaster) {
+                    // Likewise for the resolved URL: it points at the lossy
+                    // stream from the previous play, not at the master.
+                    songUrlCache.remove(mediaId)
+                } else {
+                    songUrlCache[mediaId]?.takeIf { it.second > System.currentTimeMillis() }?.let {
+                        recoverSongDeduped(mediaId)
+                        return@Factory dataSpec.withUri(it.first.toUri())
+                    }
                 }
             } else {
                 Timber.tag(TAG).i("BYPASSING CACHE for $mediaId due to quality change")
@@ -3976,15 +4027,18 @@ class MusicService :
             Timber.tag(TAG).i("FETCHING STREAM: $mediaId | quality=$audioQuality")
             val playbackData =
                 runBlocking(Dispatchers.IO) {
-                    val song = database.songEntity(mediaId)
+                    val song = database.getSongByIdBlocking(mediaId)
                     YTPlayerUtils.playerResponseForPlayback(
                         mediaId,
                         audioQuality = audioQuality,
                         connectivityManager = connectivityManager,
                         contentHints = ContentHints(
-                            isExplicit = song?.explicit,
-                            isUploaded = song?.isUploaded,
+                            isExplicit = song?.song?.explicit,
+                            isUploaded = song?.song?.isUploaded,
                         ),
+                        title = song?.song?.title,
+                        artist = song?.artists?.joinToString(", ") { it.name },
+                        durationSeconds = song?.song?.duration?.takeIf { it > 0 } ?: 0,
                     )
                 }.getOrElse { throwable ->
                     when (throwable) {
@@ -4066,6 +4120,12 @@ class MusicService :
 
                 songUrlCache[mediaId] =
                     streamUrl to System.currentTimeMillis() + (nonNullPlayback.streamExpiresInSeconds * 1000L)
+
+                if (audioQuality == AudioQuality.LOSSLESS) {
+                    // One source lookup per song per session: later chunks and
+                    // repeats use the caches this fetch just wrote.
+                    markLosslessFetched(mediaId)
+                }
 
                 nonNullPlayback.playbackTracking?.videostatsPlaybackUrl?.baseUrl?.let {
                     playbackUrlCache[cacheKey(mediaId)] = it
@@ -4891,7 +4951,7 @@ class MusicService :
     suspend fun getStreamUrl(mediaId: String): String? =
         withContext(Dispatchers.IO) {
             try {
-                val song = database.songEntity(mediaId)
+                val song = database.getSongByIdBlocking(mediaId)
                 val playbackData =
                     YTPlayerUtils
                         .playerResponseForPlayback(
@@ -4899,9 +4959,12 @@ class MusicService :
                             audioQuality = audioQuality,
                             connectivityManager = connectivityManager,
                             contentHints = ContentHints(
-                                isExplicit = song?.explicit,
-                                isUploaded = song?.isUploaded,
+                                isExplicit = song?.song?.explicit,
+                                isUploaded = song?.song?.isUploaded,
                             ),
+                            title = song?.song?.title,
+                            artist = song?.artists?.joinToString(", ") { it.name },
+                            durationSeconds = song?.song?.duration?.takeIf { it > 0 } ?: 0,
                         ).getOrNull()
                 playbackData?.streamUrl
             } catch (e: Exception) {

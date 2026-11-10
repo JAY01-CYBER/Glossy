@@ -21,6 +21,7 @@ import androidx.media3.exoplayer.offline.DownloadManager
 import androidx.media3.exoplayer.offline.DownloadNotificationHelper
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.strategy.ContentHints
+import com.jay.glossy.constants.AudioQuality
 import com.jay.glossy.constants.AudioQualityKey
 import com.jay.glossy.constants.DefaultAudioQuality
 import com.jay.glossy.db.MusicDatabase
@@ -29,6 +30,7 @@ import com.jay.glossy.db.entities.LyricsEntity
 import com.jay.glossy.db.entities.SongEntity
 import com.jay.glossy.di.DownloadCache
 import com.jay.glossy.di.PlayerCache
+import com.jay.glossy.extensions.isLosslessMaster
 import com.jay.glossy.lyrics.LyricsHelper
 import com.jay.glossy.utils.YTPlayerUtils
 import com.jay.glossy.utils.enumPreference
@@ -50,6 +52,7 @@ import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import timber.log.Timber
 import java.time.LocalDateTime
+import java.util.Collections
 import java.util.concurrent.Executor
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -69,6 +72,40 @@ constructor(
     private val connectivityManager = context.getSystemService<ConnectivityManager>()!!
     private val audioQuality by enumPreference(context, AudioQualityKey, DefaultAudioQuality)
     private val songUrlCache = HashMap<String, Pair<String, Long>>()
+
+    /**
+     * Songs whose download already resolved a stream in this process.
+     *
+     * The download's upstream is the player cache, so a lossy stream left over
+     * from earlier playback would otherwise be copied into the downloaded file
+     * even when Lossless is selected. The first spec for a song drops that
+     * entry and resolves again; later chunks reuse what the fetch just wrote.
+     */
+    private val losslessResolvedIds = Collections.synchronizedSet(mutableSetOf<String>())
+
+    private fun markLosslessResolved(mediaId: String) {
+        synchronized(losslessResolvedIds) {
+            if (losslessResolvedIds.size >= 256) {
+                losslessResolvedIds.firstOrNull()?.let(losslessResolvedIds::remove)
+            }
+            losslessResolvedIds.add(mediaId)
+        }
+    }
+
+    private fun needsFreshLosslessDownload(mediaId: String): Boolean {
+        if (audioQuality != AudioQuality.LOSSLESS) return false
+        if (mediaId in losslessResolvedIds) return false
+
+        val format =
+            runBlocking(Dispatchers.IO) {
+                database.getSongByIdBlocking(mediaId)?.format
+            }
+        if (format?.isLosslessMaster() == true) {
+            markLosslessResolved(mediaId)
+            return false
+        }
+        return true
+    }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -97,26 +134,38 @@ constructor(
             val mediaId = dataSpec.key ?: error("No media id")
             val length = if (dataSpec.length >= 0) dataSpec.length else 1
 
-            if (playerCache.isCached(mediaId, dataSpec.position, length)) {
+            val fetchMaster = needsFreshLosslessDownload(mediaId)
+            if (fetchMaster) {
+                // Drop a lossy stream cached by an earlier play so the
+                // download's upstream cannot substitute it for the master.
+                playerCache.removeResource(mediaId)
+                songUrlCache.remove(mediaId)
+            } else if (playerCache.isCached(mediaId, dataSpec.position, length)) {
                 return@Factory dataSpec
             }
 
-            songUrlCache[mediaId]?.takeIf { it.second < System.currentTimeMillis() }?.let {
+            songUrlCache[mediaId]?.takeIf { it.second > System.currentTimeMillis() }?.let {
                 return@Factory dataSpec.withUri(it.first.toUri())
             }
 
             val playbackData = runBlocking(Dispatchers.IO) {
-                val song = database.songEntity(mediaId)
+                val song = database.getSongByIdBlocking(mediaId)
                 YTPlayerUtils.playerResponseForPlayback(
                     mediaId,
                     audioQuality = audioQuality,
                     connectivityManager = connectivityManager,
                     contentHints = ContentHints(
-                        isExplicit = song?.explicit,
-                        isUploaded = song?.isUploaded,
+                        isExplicit = song?.song?.explicit,
+                        isUploaded = song?.song?.isUploaded,
                     ),
+                    title = song?.song?.title,
+                    artist = song?.artists?.joinToString(", ") { it.name },
+                    durationSeconds = song?.song?.duration?.takeIf { it > 0 } ?: 0,
                 )
             }.getOrThrow()
+            if (audioQuality == AudioQuality.LOSSLESS) {
+                markLosslessResolved(mediaId)
+            }
             val format = playbackData.format
             // A master from the lossless source is what will be written to disk,
             // so it is what the download's format row describes.
@@ -186,7 +235,8 @@ constructor(
                 "$it${separator}range=0-${actualContentLength}"
             }
 
-            songUrlCache[mediaId] = streamUrl to playbackData.streamExpiresInSeconds * 1000L
+            songUrlCache[mediaId] = streamUrl to
+                (System.currentTimeMillis() + playbackData.streamExpiresInSeconds * 1000L)
             dataSpec.withUri(streamUrl.toUri())
         }
 

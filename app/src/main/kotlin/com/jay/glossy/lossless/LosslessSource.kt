@@ -358,7 +358,7 @@ object LosslessSource {
                         Timber.tag(TAG).d("Lossless source answered ${response.code} for $videoId")
                         return@use Answer(null, "The source answered ${response.code}")
                     }
-                    parse(response.body?.string().orEmpty())
+                    parse(response.body?.string().orEmpty(), baseUrl = base)
                         ?.let { Answer(it) }
                         ?: Answer(null, "The source had no master for this track")
                 }
@@ -517,34 +517,51 @@ object LosslessSource {
         artist: String?,
         durationSeconds: Int,
     ): Answer {
-        val query =
-            listOfNotNull(
-                title?.takeIf { it.isNotBlank() },
-                artist?.takeIf { it.isNotBlank() },
-            ).joinToString(" ").ifBlank { videoId }
-
-        val searchUrl =
-            addonEndpoint(addon, listOf("search"), query = mapOf("q" to query))
-                ?: return Answer(null, "The source URL is not valid")
-
-        return runCatching {
-            client.newCall(Request.Builder().url(searchUrl).header("Accept", "application/json").build())
-                .execute()
-                .use { response ->
-                    if (!response.isSuccessful) {
-                        Timber.tag(TAG).d("Addon search answered ${response.code} for $videoId")
-                        return@use Answer(null, "The source answered ${response.code}")
-                    }
-                    val track =
-                        bestTrack(response.body?.string().orEmpty(), title, artist, durationSeconds)
-                            ?: return@use Answer(null, "The addon has no match for this track")
-                    streamForTrack(addon, track)
+        // Search the way a listener would narrow it: title + artist first, then
+        // the title alone, then the artist. A catalogue that files a track under
+        // a slightly different artist credit still answers the second query,
+        // and one that only understands a bare title still answers the third.
+        val cleanTitle = title?.trim().orEmpty()
+        val cleanArtist = artist?.trim().orEmpty()
+        val queries =
+            buildList {
+                if (cleanTitle.isNotEmpty()) {
+                    if (cleanArtist.isNotEmpty()) add("$cleanTitle $cleanArtist")
+                    add(cleanTitle)
                 }
+                if (cleanArtist.isNotEmpty()) add("$cleanArtist $cleanTitle".trim())
+            }.ifEmpty { listOf(videoId) }.distinct()
+
+        var failure: String? = null
+        for (query in queries) {
+            val searchUrl =
+                addonEndpoint(addon, listOf("search"), query = mapOf("q" to query))
+                    ?: return Answer(null, "The source URL is not valid")
+
+            val answer =
+                runCatching {
+                    client.newCall(Request.Builder().url(searchUrl).header("Accept", "application/json").build())
+                        .execute()
+                        .use { response ->
+                            if (!response.isSuccessful) {
+                                Timber.tag(TAG).d("Addon search answered ${response.code} for $videoId")
+                                return@use Answer(null, "The source answered ${response.code}")
+                            }
+                            val track =
+                                bestTrack(response.body?.string().orEmpty(), title, artist, durationSeconds)
+                                    ?: return@use Answer(null, "The addon has no match for this track")
+                            streamForTrack(addon, track)
+                        }
+                }
+                    .onFailure {
+                        Timber.tag(TAG).w(it, "Addon search failed for $videoId")
+                    }
+                    .getOrElse { Answer(null, "The source could not be reached") }
+
+            if (answer.stream != null) return answer
+            failure = answer.failure
         }
-            .onFailure {
-                Timber.tag(TAG).w(it, "Addon search failed for $videoId")
-            }
-            .getOrElse { Answer(null, "The source could not be reached") }
+        return Answer(null, failure ?: "The addon has no match for this track")
     }
 
     /** `{base}/{segments}?{settings}&{query}`, with every part encoded. */
@@ -677,6 +694,7 @@ object LosslessSource {
                     parse(
                         response.body?.string().orEmpty(),
                         defaultExpirySeconds = LOSSLESS_ADDON_EXPIRY_SECONDS,
+                        baseUrl = addon.baseUrl,
                     )
                         ?.let { Answer(it) }
                         ?: Answer(null, "The addon returned no stream for this track")
@@ -709,12 +727,16 @@ object LosslessSource {
     private fun parse(
         body: String,
         defaultExpirySeconds: Int = LOSSLESS_DEFAULT_EXPIRY_SECONDS,
+        baseUrl: String? = null,
     ): LosslessStream? {
         if (body.isBlank()) return null
         val root = parseObject(body) ?: return null
         val payload = payloadOf(root) ?: return null
-        val url = payload.string("url", "streamUrl", "stream_url") ?: return null
-        if (!url.startsWith("http", ignoreCase = true)) return null
+        val rawUrl = payload.string("url", "streamUrl", "stream_url") ?: return null
+        // A module may answer with a path on its own host; resolving it against
+        // the configured source keeps that working instead of discarding a
+        // perfectly good stream for not spelling out "https://".
+        val url = absoluteUrl(baseUrl.orEmpty(), rawUrl) ?: return null
 
         val objects = metadataObjects(root, payload)
         val sampleRate = objects.firstNotNullOfOrNull {
