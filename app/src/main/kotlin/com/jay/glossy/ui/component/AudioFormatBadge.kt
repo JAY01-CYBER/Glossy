@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.jay.glossy.db.entities.FormatEntity
+import com.jay.glossy.extensions.isLosslessMaster
 import java.util.Locale
 
 /**
@@ -72,7 +73,7 @@ fun audioFormatSummary(
     format: FormatEntity,
     requestedLossless: Boolean = false,
 ): String = buildString {
-    val lossless = isLossless(format)
+    val lossless = format.isLosslessMaster()
     append(containerName(format.mimeType))
     // A lossless master names itself once: "FLAC · FLAC" would repeat the same
     // word, and the number worth printing for it is the rate it runs at rather
@@ -92,16 +93,6 @@ fun audioFormatSummary(
     // (no source / no master) lives on the Lossless settings screen.
     if (!lossless && requestedLossless) append(" · no FLAC")
 }
-
-/**
- * Whether the row describes a master from the lossless source rather than one
- * of YouTube's streams. The MIME type is the primary answer; the codec string
- * covers a module that reported itself in either field.
- */
-private fun isLossless(format: FormatEntity): Boolean =
-    listOf(format.mimeType, format.codecs).any { value ->
-        value.contains("flac", ignoreCase = true) || value.contains("alac", ignoreCase = true)
-    }
 
 /**
  * YouTube serves the same audio in either a WebM (Opus) or an MP4 (AAC)

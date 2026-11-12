@@ -140,9 +140,11 @@ import com.jay.glossy.constants.ActiveDesignStyle
 import com.jay.glossy.constants.DesignStyle
 import com.jay.glossy.constants.QuickPicksStyle
 import com.jay.glossy.constants.QuickPicksStyleKey
+import com.jay.glossy.LocalGlassBackdrop
 import com.jay.glossy.ui.component.GlossyAlbumCard
 import com.jay.glossy.ui.component.GlossyChipRow
 import com.jay.glossy.ui.component.GlossyCompactSongRow
+import com.jay.glossy.ui.component.liquidGlassSurface
 import com.jay.glossy.ui.theme.GlossyDimens
 import com.jay.glossy.constants.ShowFeaturedCarouselKey
 import com.jay.glossy.constants.SmallGridThumbnailHeight
@@ -997,6 +999,11 @@ fun HomeScreen(
     LaunchedEffect(quickPicks) { quickPicksLazyGridState.scrollToItem(0) }
     LaunchedEffect(forgottenFavorites) { forgottenFavoritesLazyGridState.scrollToItem(0) }
 
+    // The shared liquid-glass backdrop is null when the preference is off (or
+    // the design does not opt in), so every glass surface below keeps its
+    // regular fill in that case.
+    val glassBackdrop = LocalGlassBackdrop.current
+
     PullToRefreshBox(
         state = pullRefreshState,
         isRefreshing = isRefreshing,
@@ -1071,6 +1078,7 @@ fun HomeScreen(
                                 items = chipItems,
                                 currentValue = selectedChip,
                                 onValueUpdate = { viewModel.toggleChip(it) },
+                                glassBackdrop = glassBackdrop,
                             )
                         }
                     }
@@ -1466,7 +1474,17 @@ fun HomeScreen(
                                                 Row(
                                                     modifier = Modifier
                                                         .clip(RoundedCornerShape(percent = 50))
-                                                        .background(MaterialTheme.colorScheme.primary)
+                                                        .then(
+                                                            if (glassBackdrop != null) {
+                                                                Modifier.liquidGlassSurface(
+                                                                    backdrop = glassBackdrop,
+                                                                    shape = RoundedCornerShape(percent = 50),
+                                                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.82f),
+                                                                )
+                                                            } else {
+                                                                Modifier.background(MaterialTheme.colorScheme.primary)
+                                                            },
+                                                        )
                                                         .clickable {
                                                             playerConnection.playQueue(
                                                                 if (autoRadioQueue) YouTubeQueue(item.endpoint ?: WatchEndpoint(videoId = item.id), item.toMediaMetadata())
@@ -1711,6 +1729,7 @@ fun HomeScreen(
                                                         )
                                                     )
                                                 },
+                                                playAllBackdrop = glassBackdrop,
                                             )
                                         }
                                     } else {

@@ -30,6 +30,8 @@ import com.jay.glossy.utils.potoken.PoTokenResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -129,7 +131,16 @@ object YTPlayerUtils {
         audioQuality: AudioQuality,
         connectivityManager: ConnectivityManager,
         contentHints: ContentHints = ContentHints(),
-    ): Result<PlaybackData> = runCatching {
+        /**
+         * The library's own title, artist and runtime. The lossless source
+         * matches on these; YouTube's `videoDetails` is a last resort, because
+         * uploads often carry a channel name in `author` and a decorated title.
+         */
+        title: String? = null,
+        artist: String? = null,
+        durationSeconds: Int = 0,
+    ): Result<PlaybackData> = coroutineScope {
+        runCatching {
         Timber.tag(TAG).d("=== PLAYER RESPONSE FOR PLAYBACK ===")
         Timber.tag(TAG).d("videoId: $videoId")
         Timber.tag(TAG).d("playlistId: $playlistId")
@@ -191,6 +202,34 @@ object YTPlayerUtils {
         var streamUrl: String? = null
         var streamExpiresInSeconds: Int? = null
         var streamPlayerResponse: PlayerResponse? = null
+
+        // Ask the lossless source alongside YouTube instead of after it: the
+        // addon search is an extra network round-trip, and a track that needs a
+        // fallback client must not pay for the two one after the other.
+        val losslessDeferred =
+            if (audioQuality == AudioQuality.LOSSLESS) {
+                val losslessTitle = title ?: videoDetails?.title
+                val losslessArtist = artist ?: videoDetails?.author
+                val losslessDuration =
+                    durationSeconds.takeIf { it > 0 }
+                        ?: videoDetails?.lengthSeconds?.toIntOrNull()
+                        ?: 0
+                async(Dispatchers.IO) {
+                    // A source module is an optional extra: a malformed reply
+                    // or a dead host must not be able to take playback down
+                    // with it, so its answer is contained here.
+                    runCatching {
+                        LosslessSource.resolve(
+                            videoId = videoId,
+                            title = losslessTitle,
+                            artist = losslessArtist,
+                            durationSeconds = losslessDuration,
+                        )
+                    }.getOrNull()
+                }
+            } else {
+                null
+            }
 
         // Check current status
         val currentStatus = mainPlayerResponse?.playabilityStatus?.status
@@ -483,7 +522,26 @@ object YTPlayerUtils {
             successClient = bestFallbackClient
         }
 
+        val lossless = losslessDeferred?.let { runCatching { it.await() }.getOrNull() }
+
+        // A master can play on its own: when YouTube has no usable stream, the
+        // track must still be listenable instead of failing outright. The
+        // synthetic format carries the master's own MIME type so ExoPlayer
+        // picks the right extractor without a YouTube stream behind it.
+        fun losslessPlayback(stream: LosslessStream): PlaybackData =
+            PlaybackData(
+                audioConfig = audioConfig,
+                videoDetails = videoDetails,
+                playbackTracking = playbackTracking,
+                format = losslessFormat(stream),
+                streamUrl = stream.url,
+                streamExpiresInSeconds = stream.expiresInSeconds,
+                streamClient = LOSSLESS_CLIENT,
+                lossless = stream,
+            )
+
         if (streamPlayerResponse == null) {
+            if (lossless != null) return@runCatching losslessPlayback(lossless)
             Timber.tag(logTag).e("Bad stream player response - all clients failed")
             if (isUploadedTrack) {
                 println("[PLAYBACK_DEBUG] FAILURE: All clients failed for uploaded track videoId=$videoId")
@@ -493,6 +551,7 @@ object YTPlayerUtils {
 
         if (streamPlayerResponse.playabilityStatus.status != "OK") {
             val errorReason = streamPlayerResponse.playabilityStatus.reason
+            if (lossless != null) return@runCatching losslessPlayback(lossless)
             // YouTube often surfaces generic reasons (e.g. "error 2000") for restricted or
             // unavailable streams; Metrolist cannot recover those without official playback.
             Timber.tag(logTag).e("Playability status not OK: $errorReason")
@@ -507,16 +566,19 @@ object YTPlayerUtils {
         }
 
         if (streamExpiresInSeconds == null) {
+            if (lossless != null) return@runCatching losslessPlayback(lossless)
             Timber.tag(logTag).e("Missing stream expire time")
             throw Exception("Missing stream expire time")
         }
 
         if (format == null) {
+            if (lossless != null) return@runCatching losslessPlayback(lossless)
             Timber.tag(logTag).e("Could not find format")
             throw Exception("Could not find format")
         }
 
         if (streamUrl == null) {
+            if (lossless != null) return@runCatching losslessPlayback(lossless)
             Timber.tag(logTag).e("Could not find stream url")
             throw Exception("Could not find stream url")
         }
@@ -525,22 +587,6 @@ object YTPlayerUtils {
         if (isUploadedTrack) {
             println("[PLAYBACK_DEBUG] SUCCESS: Got playback data for uploaded track - format=${format.mimeType}, streamUrl=${streamUrl.take(100)}...")
         }
-
-        // The lossless tier asks the source module before it settles for the
-        // stream. The YouTube answer above is still resolved first: it is the
-        // fallback when the module has no master, and it carries the loudness
-        // and tracking data the player needs either way.
-        val lossless =
-            if (audioQuality == AudioQuality.LOSSLESS) {
-                LosslessSource.resolve(
-                    videoId = videoId,
-                    title = videoDetails?.title,
-                    artist = videoDetails?.author,
-                    durationSeconds = videoDetails?.lengthSeconds?.toIntOrNull() ?: 0,
-                )
-            } else {
-                null
-            }
 
         // The master's own lifetime can be shorter than YouTube's URL. Using
         // the shorter one keeps a stale master URL out of the stream cache,
@@ -562,9 +608,10 @@ object YTPlayerUtils {
             streamClient = if (lossless != null) LOSSLESS_CLIENT else successClient ?: "unknown",
             lossless = lossless,
         )
-    }.onFailure { e ->
-        println("[PLAYBACK_DEBUG] EXCEPTION during playback for videoId=$videoId: ${e::class.simpleName}: ${e.message}")
-        e.printStackTrace()
+        }.onFailure { e ->
+            println("[PLAYBACK_DEBUG] EXCEPTION during playback for videoId=$videoId: ${e::class.simpleName}: ${e.message}")
+            e.printStackTrace()
+        }
     }
     /**
      * Player response intended for metadata / playback-tracking retrieval.
@@ -587,6 +634,36 @@ object YTPlayerUtils {
             .onSuccess { Timber.tag(logTag).d("Successfully fetched metadata player response") }
             .onFailure { Timber.tag(logTag).e(it, "Failed to fetch metadata player response") }
     }
+
+    /**
+     * A [PlayerResponse.StreamingData.Format] that describes a lossless
+     * master. ExoPlayer reads the MIME type from here, and the downloader and
+     * format table copy its numbers, so a track that only the source can serve
+     * is stored and played like any other.
+     */
+    private fun losslessFormat(stream: LosslessStream): PlayerResponse.StreamingData.Format =
+        PlayerResponse.StreamingData.Format(
+            itag = 0,
+            url = stream.url,
+            mimeType = stream.mimeType,
+            bitrate = stream.bitrate,
+            width = null,
+            height = null,
+            contentLength = null,
+            quality = "LOSSLESS",
+            fps = null,
+            qualityLabel = null,
+            averageBitrate = stream.bitrate.takeIf { it > 0 },
+            audioQuality = "AUDIO_QUALITY_HIGH",
+            approxDurationMs = null,
+            audioSampleRate = stream.sampleRateHz.takeIf { it > 0 },
+            audioChannels = 2,
+            loudnessDb = null,
+            lastModified = null,
+            signatureCipher = null,
+            cipher = null,
+            audioTrack = null,
+        )
 
     private fun findFormat(
         playerResponse: PlayerResponse,

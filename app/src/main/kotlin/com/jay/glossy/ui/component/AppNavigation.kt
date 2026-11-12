@@ -2,6 +2,7 @@
 
 package com.jay.glossy.ui.component
 
+import android.os.Build
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -41,26 +42,31 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jay.glossy.constants.UseFloatingNavBarKey
@@ -69,9 +75,18 @@ import com.jay.glossy.ui.theme.GlossyDimens
 import com.jay.glossy.ui.theme.GlossyPalette
 import com.jay.glossy.utils.rememberPreference
 import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.colorControls
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
+import com.kyant.backdrop.highlight.Highlight
+import com.kyant.backdrop.shadow.InnerShadow
+import com.kyant.backdrop.shadow.Shadow
 import dev.chrisbanes.haze.HazeState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.drop
 import kotlin.math.roundToInt
 
 @Immutable
@@ -282,6 +297,13 @@ fun GlossyBottomNav(
     val barHeight = if (slimNav) 56.dp else GlossyDimens.NavPillHeight
     val pillHeight = if (slimNav) 50.dp else 62.dp
     val orbSize = if (slimNav) 50.dp else 58.dp
+    // The selected bubble is a little shorter and narrower than its tab slot
+    // (52dp in a 62dp pill) and grows to ~71dp while it is dragged, so its top
+    // edge rises above the bar like the reference recording. It therefore has
+    // to be drawn outside the pill's clip instead of inside it.
+    val paneInset = 5.dp
+    val paneHorizontalInset = 4.dp
+    val tabInset = 5.dp
 
     Row(
         modifier =
@@ -291,7 +313,7 @@ fun GlossyBottomNav(
                 .height(barHeight),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
+        BoxWithConstraints(
             modifier =
                 Modifier
                     .weight(1f)
@@ -299,51 +321,234 @@ fun GlossyBottomNav(
                     // The design's bar carries a shadow *and* a hairline, so it
                     // reads as a control floating over the feed rather than a
                     // strip painted onto it.
-                    .shadow(elevation = 12.dp, shape = pill, clip = false)
-                    .clip(pill)
-                    .then(navSurface(pill))
-                    .border(GlossyDimens.Hairline, rim, pill)
-                    .padding(horizontal = 5.dp, vertical = 5.dp),
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
-            verticalAlignment = Alignment.CenterVertically,
+                    .shadow(elevation = 12.dp, shape = pill, clip = false),
         ) {
-            tabs.forEach { screen ->
-                val selected = isRouteSelected(currentRoute, screen.route, navigationItems)
-                Column(
-                    modifier =
-                        Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .clip(tabShape)
-                            .then(
-                                if (selected) {
-                                    Modifier.background(GlossyPalette.AccentSoft)
+            // The pill's own glass is clipped separately: the selection bubble
+            // is a sibling and stays unclipped so the press scale can spill
+            // over the bar's edge.
+            Box(
+                modifier =
+                    Modifier
+                        .matchParentSize()
+                        .clip(pill)
+                        .then(navSurface(pill))
+                        .border(GlossyDimens.Hairline, rim, pill),
+            )
+
+            // The selection rides on one liquid pane that stretches between
+            // tabs instead of each tab painting its own background. The
+            // animation is deliberately driven by drag position rather than by
+            // the route, so the pane follows a finger with the same squash and
+            // stretch the video shows, then settles on the tab it is released
+            // over.
+            val tabCount = tabs.size.coerceAtLeast(1)
+            val tabWidth = (maxWidth - tabInset * 2) / tabCount
+            val tabWidthPx = with(LocalDensity.current) { tabWidth.toPx() }
+            val currentTabWidthPx by rememberUpdatedState(tabWidthPx)
+            val isLtr = LocalLayoutDirection.current == LayoutDirection.Ltr
+            val animationScope = rememberCoroutineScope()
+            val selectedTabIndex =
+                tabs.indexOfFirst { screen ->
+                    isRouteSelected(currentRoute, screen.route, navigationItems)
+                }
+            var currentIndex by remember { mutableIntStateOf(selectedTabIndex.coerceAtLeast(0)) }
+            var dragReleaseTarget by remember { mutableIntStateOf(-1) }
+            var showPane by remember { mutableStateOf(selectedTabIndex >= 0) }
+            val paneAlpha by animateFloatAsState(
+                targetValue = if (showPane) 1f else 0f,
+                label = "navSelectionPaneAlpha",
+            )
+            // The drag callbacks outlive the composition that created them, so
+            // they read these through updated state instead of capturing the
+            // route that happened to be active when the bar first appeared.
+            val currentSelectedTabIndex by rememberUpdatedState(selectedTabIndex)
+            val draggedFlag = remember { booleanArrayOf(false) }
+
+            val dampedDrag =
+                remember(animationScope, tabCount, isLtr) {
+                    DampedDragAnimation(
+                        animationScope = animationScope,
+                        initialValue = selectedTabIndex.coerceAtLeast(0).toFloat(),
+                        valueRange = 0f..(tabCount - 1).toFloat(),
+                        visibilityThreshold = 0.001f,
+                        initialScale = 1f,
+                        pressedScale = 1.36f,
+                        onDragStarted = { draggedFlag[0] = false },
+                        onDragStopped = {
+                            if (draggedFlag[0]) {
+                                val target = targetValue.roundToInt().coerceIn(0, tabCount - 1)
+                                // While Search is open there is no selected
+                                // tab, so releasing on the last tab must still
+                                // navigate back into the pill.
+                                if (target == currentIndex && currentSelectedTabIndex >= 0) {
+                                    // Released over the tab it started on, so
+                                    // just settle the stretched pane back.
+                                    animateToValue(target.toFloat())
                                 } else {
-                                    Modifier
-                                },
+                                    currentIndex = target
+                                    dragReleaseTarget = target
+                                }
+                            }
+                        },
+                        onDrag = { _, dragAmount ->
+                            if (dragAmount.x != 0f) draggedFlag[0] = true
+                            updateValue(
+                                (targetValue +
+                                    dragAmount.x / currentTabWidthPx * if (isLtr) 1f else -1f)
+                                    .coerceIn(0f, (tabCount - 1).toFloat()),
                             )
-                            .clickable(onClick = { onItemClick(screen, selected) }),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                ) {
-                    Icon(
-                        painter = painterResource(
-                            if (selected) screen.iconIdActive else screen.iconIdInactive
-                        ),
-                        contentDescription = stringResource(screen.titleId),
-                        tint = if (selected) GlossyPalette.Accent else GlossyPalette.TextSecondary,
-                        modifier = Modifier.size(20.dp),
+                        },
                     )
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = stringResource(screen.titleId),
-                        fontSize = 10.sp,
-                        lineHeight = 12.sp,
-                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-                        color = if (selected) GlossyPalette.Accent else GlossyPalette.TextMuted,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                }
+
+            // Route changes from anywhere else (back, deep link, shortcut) move
+            // the pane too, instead of leaving it behind on the old tab.
+            LaunchedEffect(selectedTabIndex) {
+                if (selectedTabIndex >= 0) {
+                    showPane = true
+                    if (selectedTabIndex != currentIndex) {
+                        currentIndex = selectedTabIndex
+                    }
+                } else {
+                    showPane = false
+                }
+            }
+            LaunchedEffect(tabCount) {
+                currentIndex = currentIndex.coerceIn(0, tabCount - 1)
+            }
+            LaunchedEffect(dampedDrag) {
+                snapshotFlow { currentIndex }
+                    .drop(1)
+                    .collectLatest { index -> dampedDrag.animateToValue(index.toFloat()) }
+            }
+            LaunchedEffect(dragReleaseTarget) {
+                val target = dragReleaseTarget
+                if (target < 0) return@LaunchedEffect
+                dragReleaseTarget = -1
+                val screen = tabs.getOrNull(target) ?: return@LaunchedEffect
+                onItemClick(screen, isRouteSelected(currentRoute, screen.route, navigationItems))
+            }
+
+            val glassBackdrop = liquidGlassBackdrop
+            // Shared by the glass pane and the tint fallback so the press
+            // squash and the velocity stretch are felt with Liquid glass off
+            // too, not just by the devices that can blur the backdrop.
+            val paneLayer: GraphicsLayerScope.() -> Unit = {
+                scaleX = dampedDrag.scaleX
+                scaleY = dampedDrag.scaleY
+                val velocity = dampedDrag.velocity / 10f
+                scaleX /= 1f - (velocity * 0.75f).coerceIn(-0.2f, 0.2f)
+                scaleY *= 1f - (velocity * 0.25f).coerceIn(-0.2f, 0.2f)
+            }
+            val blobSurface =
+                if (glassBackdrop != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    Modifier.drawBackdrop(
+                        backdrop = glassBackdrop,
+                        shape = { tabShape },
+                        effects = {
+                            val press = dampedDrag.pressProgress
+                            vibrancy()
+                            colorControls(brightness = 0.05f, contrast = 1f, saturation = 1.5f)
+                            blur(18f.dp.toPx() + 8f.dp.toPx() * press)
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                lens(
+                                    10f.dp.toPx() * press,
+                                    14f.dp.toPx() * press,
+                                    chromaticAberration = true,
+                                )
+                            }
+                        },
+                        highlight = { Highlight.Default.copy(alpha = 0.55f) },
+                        shadow = { Shadow(radius = 4f.dp, alpha = 0.35f) },
+                        innerShadow = {
+                            val press = dampedDrag.pressProgress
+                            InnerShadow(radius = 8f.dp * press, alpha = press)
+                        },
+                        layerBlock = paneLayer,
+                        onDrawSurface = {
+                            // A frosted wash keeps the pane readable without
+                            // turning it into a second opaque fill: the
+                            // refracted page stays visible through it.
+                            drawRect(Color.White.copy(alpha = 0.12f))
+                        },
                     )
+                } else {
+                    Modifier
+                        .graphicsLayer(block = paneLayer)
+                        .clip(tabShape)
+                        .background(GlossyPalette.AccentSoft)
+                }
+
+            Box(
+                modifier =
+                    Modifier
+                        .align(Alignment.CenterStart)
+                        .padding(start = tabInset + paneHorizontalInset)
+                        .width(tabWidth - paneHorizontalInset * 2)
+                        .height(pillHeight - paneInset * 2)
+                        .graphicsLayer {
+                            translationX =
+                                dampedDrag.value *
+                                    currentTabWidthPx *
+                                    if (isLtr) 1f else -1f
+                            // Search is the orb, not one of these tabs, so no
+                            // tab pane exists while it is open. Pressing the
+                            // pill brings the pane back for the drag.
+                            alpha = paneAlpha.coerceAtLeast(dampedDrag.pressProgress)
+                        }
+                        .then(blobSurface),
+            )
+
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = tabInset)
+                        .then(dampedDrag.modifier),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                tabs.forEachIndexed { index, screen ->
+                    val routeSelected =
+                        isRouteSelected(currentRoute, screen.route, navigationItems)
+                    val highlighted = selectedTabIndex >= 0 && currentIndex == index
+                    Column(
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .clip(tabShape)
+                                .clickable(
+                                    interactionSource = null,
+                                    indication = null,
+                                    role = Role.Tab,
+                                    onClick = {
+                                        showPane = true
+                                        currentIndex = index
+                                        onItemClick(screen, routeSelected)
+                                    },
+                                ),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Icon(
+                            painter = painterResource(
+                                if (highlighted) screen.iconIdActive else screen.iconIdInactive
+                            ),
+                            contentDescription = stringResource(screen.titleId),
+                            tint = if (highlighted) GlossyPalette.Accent else GlossyPalette.TextSecondary,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = stringResource(screen.titleId),
+                            fontSize = 10.sp,
+                            lineHeight = 12.sp,
+                            fontWeight = if (highlighted) FontWeight.SemiBold else FontWeight.Medium,
+                            color = if (highlighted) GlossyPalette.Accent else GlossyPalette.TextMuted,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
             }
         }

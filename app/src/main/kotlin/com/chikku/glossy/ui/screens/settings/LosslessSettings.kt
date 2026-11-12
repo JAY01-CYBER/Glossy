@@ -285,6 +285,13 @@ fun LosslessSettings(navController: NavController) {
             modifier = Modifier.padding(top = 16.dp),
         )
 
+        Text(
+            text = stringResource(R.string.lossless_source_addon_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 8.dp),
+        )
+
         Spacer(Modifier.height(16.dp))
     }
 

@@ -31,6 +31,8 @@
     <string name="lossless_fallback_title">Lossless is falling back</string>
     <string name="lossless_fallback_desc">No source is set, so tracks play YouTube\'s best stream — usually Opus around 130–160 kbps. Add a source to hear FLAC or ALAC.</string>
     <string name="lossless_last_check_title">Last check</string>
+    <!-- Lossless — the source field also accepts a BitChord addon: manifest, catalogue search, then a stream -->
+    <string name="lossless_source_addon_hint">A BitChord addon URL also works: Glossy reads its manifest, searches its catalogue with the track\'s title and artist, and asks it for the lossless stream.</string>
     <!-- Queue — the header of the playback queue: its title, the line under it and the row actions -->
     <string name="playback_queue">Playback Queue</string>
     <string name="queue_playing_next">Playing next</string>
@@ -136,4 +138,35 @@
     <!-- Mini player - transport controls -->
     <string name="mini_player_previous">Previous song</string>
     <string name="mini_player_next">Next song</string>
+    <!-- Artist page - the announced-release card above Top Songs -->
+    <string name="upcoming_release_coming">Coming %1$s</string>
+    <string name="upcoming_release_type_album">Album</string>
+    <string name="upcoming_release_type_ep">EP</string>
+    <string name="upcoming_release_type_single">Single</string>
+    <string name="upcoming_release_save">Save upcoming release</string>
+    <string name="upcoming_release_remove_reminder">Remove reminder</string>
+    <string name="upcoming_release_reminder_saved">Saved — we’ll nudge you when it drops.</string>
+    <string name="upcoming_release_reminder_removed">Reminder removed.</string>
+    <string name="upcoming_release_not_available">This release isn’t on YouTube Music yet.</string>
+    <plurals name="upcoming_release_song_count">
+        <item quantity="one">%1$d song</item>
+        <item quantity="other">%1$d songs</item>
+    </plurals>
+    <!-- Artist page settings - hide the announced-release card -->
+    <string name="show_upcoming_release">Upcoming releases</string>
+    <string name="show_upcoming_release_desc">Show announced albums, EPs and singles above Top Songs. Powered by MusicBrainz.</string>
+    <!-- History - the monthly Replay block above the day-by-day log -->
+    <string name="replay">Replay</string>
+    <string name="replay_listened_for">You listened for</string>
+    <string name="replay_minutes_in_month">minutes in %1$s.</string>
+    <string name="replay_no_data">No listening data for this month.</string>
+    <string name="replay_top_artists">Your Top Artists</string>
+    <string name="replay_top_songs">Your Top Songs</string>
+    <string name="replay_top_albums">Your Top Albums</string>
+    <string name="replay_recently_played">Recently played</string>
+    <string name="replay_min_short">%1$d min</string>
+    <!-- Apple Music player – the menu opened by tapping the song name -->
+    <string name="go_to_playlist">Go to Playlist</string>
+    <string name="go_to_album">Go to Album</string>
+    <string name="go_to_artist">Go to Artist</string>
 </resources>

@@ -5,13 +5,10 @@
 
 package com.jay.glossy.ui.player.applemusic
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
@@ -49,7 +46,6 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -69,6 +65,7 @@ import com.jay.glossy.LocalNavController
 import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.canvas.CanvasArtwork
 import com.jay.glossy.constants.CanvasThumbnailAnimationKey
+import com.jay.glossy.constants.LiquidGlassEnabledKey
 import com.jay.glossy.constants.MiniLyricsStyle
 import com.jay.glossy.constants.MiniLyricsStyleKey
 import com.jay.glossy.constants.ShowLyricsOnPlayerKey
@@ -77,6 +74,7 @@ import com.jay.glossy.ui.component.BlurredArtworkBackdrop
 import com.jay.glossy.ui.component.BottomSheetState
 import com.jay.glossy.ui.component.LocalBottomSheetPageState
 import com.jay.glossy.ui.component.LocalMenuState
+import com.jay.glossy.ui.component.liquidGlassSurface
 import com.jay.glossy.ui.menu.PlayerMenu
 import com.jay.glossy.ui.player.CanvasArtworkPlaybackCache
 import com.jay.glossy.ui.player.CanvasArtworkPlayer
@@ -84,9 +82,13 @@ import com.jay.glossy.ui.player.CanvasResolver
 import com.jay.glossy.ui.player.PlayerCanvasGlowLyrics
 import com.jay.glossy.ui.player.PlayerSyncedLyricsView
 import com.jay.glossy.ui.player.rememberCanvasEnabled
+import com.jay.glossy.ui.player.rememberTitleActionTargets
 import com.jay.glossy.ui.utils.ShowMediaInfo
 import com.jay.glossy.utils.rememberEnumPreference
 import com.jay.glossy.utils.rememberPreference
+import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -436,6 +438,10 @@ private fun AppleMusicMainView(
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
+    val navController = LocalNavController.current
+    val glassOn by rememberPreference(LiquidGlassEnabledKey, defaultValue = false)
+    val queueTitle by playerConnection.queueTitle.collectAsStateWithLifecycle()
+    val queueSourceRoute by playerConnection.queueSourceRoute.collectAsStateWithLifecycle()
     val showLyricsOnPlayer by rememberPreference(ShowLyricsOnPlayerKey, defaultValue = false)
     val (miniLyricsStyle) = rememberEnumPreference(MiniLyricsStyleKey, defaultValue = MiniLyricsStyle.CLASSIC)
     val mediaItemsData by remember(
@@ -449,6 +455,7 @@ private fun AppleMusicMainView(
     val currentMediaIndex = mediaItemsData.currentIndex
     val localDensity = LocalDensity.current
     var bottomContentHeightDp by remember { mutableIntStateOf(330) }
+    var showTitleMenu by rememberSaveable { mutableStateOf(false) }
     
     val configuration = LocalConfiguration.current
     val screenHeight = configuration.screenHeightDp
@@ -456,6 +463,36 @@ private fun AppleMusicMainView(
 
     val safeCurrentIndex = maxOf(0, currentMediaIndex)
     val safeQueueSize = maxOf(1, mediaItems.size)
+
+    // The glass menu samples the player itself — artwork and controls — so its
+    // refraction matches what is actually behind it. The layer is recorded by
+    // the content wrapper below and read by the overlay, never by its own
+    // subtree, which keeps the sample one frame old at worst instead of
+    // feeding the menu back into itself.
+    val playerGlassBackdrop = rememberLayerBackdrop(
+        onDraw =
+            remember {
+                {
+                    drawRect(Color.Black)
+                    drawContent()
+                }
+            },
+    )
+
+    val titleTargets = rememberTitleActionTargets(
+        mediaMetadata = mediaMetadata,
+        queueTitle = queueTitle,
+        queueSourceRoute = queueSourceRoute,
+    )
+
+    // The title row is the first thing inside the measured bottom block, so
+    // lifting the menu by the block's height minus that row's leading spacer
+    // parks it directly above the song name at any screen size.
+    val titleRowSpacerDp =
+        if (showLyricsOnPlayer && miniLyricsStyle == MiniLyricsStyle.CANVAS_GLOW) 2 else 20
+    val menuBottomInset = (bottomContentHeightDp - titleRowSpacerDp + 8).coerceAtLeast(0).dp
+
+    LaunchedEffect(mediaMetadata?.id) { showTitleMenu = false }
 
     val pagerState = rememberPagerState(
         initialPage = safeCurrentIndex,
@@ -478,90 +515,110 @@ private fun AppleMusicMainView(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxSize(),
-            beyondViewportPageCount = 1,
-            // 🛠️ FIX: Unique key for each page to prevent "Key already used" crash
-            key = { idx -> "${mediaItems.getOrNull(idx)?.mediaId}_$idx" } 
-        ) { page ->
-            val track = mediaItems.getOrNull(page)
-            val isCurrentPage = page == currentMediaIndex
-            
-            AppleMusicArtworkPage(
-                track = track,
-                isCurrentPage = isCurrentPage,
-                artworkZoneHeightDp = artworkZoneHeightDp,
-                // The glow style paints the lyric on the artwork, so the page
-                // that owns the artwork draws it — and only the current page,
-                // so a swipe never leaves a stale line on a neighbouring cover.
-                showGlowLyrics =
-                    showLyricsOnPlayer && miniLyricsStyle == MiniLyricsStyle.CANVAS_GLOW,
-                positionProvider = { position },
-                onExpandLyrics = { onSelectView(AppleMusicView.LYRICS) },
-                onCanvasReady = { /* Managed internally */ }
-            )
-        }
-
-        // The frost sits between the artwork and the title block, and its height
-        // is that block's own measured height — so its ramp ends exactly at the
-        // top of the song name, whether or not lyrics are on. Measuring the
-        // block instead of guessing a height is the only way it stays right as
-        // the title wraps, the lyrics grow and the controls come and go.
-        AppleMusicBottomBlur(
-            artworkUrl = mediaMetadata?.thumbnailUrl,
-            height = bottomContentHeightDp.dp,
-            modifier = Modifier.align(Alignment.BottomCenter),
-        )
-
         Box(
             modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
+                .fillMaxSize()
+                .then(
+                    if (glassOn) Modifier.layerBackdrop(playerGlassBackdrop) else Modifier,
+                ),
         ) {
-            Column(
-                modifier = Modifier
-                    .onGloballyPositioned { coords ->
-                        bottomContentHeightDp = with(localDensity) { coords.size.height.toDp().value.toInt() }
-                    }
-            ) {
-                // The glow line is anchored to the artwork's lower edge and is
-                // meant to sit right on top of the title, so the gap above the
-                // title row collapses to almost nothing for that style; the
-                // other two need the room this used to be.
-                Spacer(
-                    modifier = Modifier.height(
-                        if (showLyricsOnPlayer && miniLyricsStyle == MiniLyricsStyle.CANVAS_GLOW) 2.dp
-                        else 20.dp
-                    )
-                )
-                // 🛠️ FIX: Passed viewState here so it reaches AppleMusicHeaderActions
-                AppleMusicMainTitleRow(
-                    viewState = viewState, 
-                    typography = typography, 
-                    bottomSheetState = bottomSheetState
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                if (showLyricsOnPlayer && miniLyricsStyle == MiniLyricsStyle.CLASSIC) {
-                    PlayerSyncedLyricsView(
-                        mediaMetadata = mediaMetadata,
-                        positionProvider = { position },
-                        onExpand = { onSelectView(AppleMusicView.LYRICS) },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                }
-                AppleMusicBottomCluster(
-                    viewState = viewState,
-                    onSelectView = onSelectView,
-                    lyricsAvailable = true, 
-                    activeColor = activePillContainer,
-                    activeContentColor = activePillContent,
-                    position = position,
-                    duration = duration
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize(),
+                beyondViewportPageCount = 1,
+                // 🛠️ FIX: Unique key for each page to prevent "Key already used" crash
+                key = { idx -> "${mediaItems.getOrNull(idx)?.mediaId}_$idx" }
+            ) { page ->
+                val track = mediaItems.getOrNull(page)
+                val isCurrentPage = page == currentMediaIndex
+
+                AppleMusicArtworkPage(
+                    track = track,
+                    isCurrentPage = isCurrentPage,
+                    artworkZoneHeightDp = artworkZoneHeightDp,
+                    // The glow style paints the lyric on the artwork, so the page
+                    // that owns the artwork draws it — and only the current page,
+                    // so a swipe never leaves a stale line on a neighbouring cover.
+                    showGlowLyrics =
+                        showLyricsOnPlayer && miniLyricsStyle == MiniLyricsStyle.CANVAS_GLOW,
+                    positionProvider = { position },
+                    onExpandLyrics = { onSelectView(AppleMusicView.LYRICS) },
+                    onCanvasReady = { /* Managed internally */ }
                 )
             }
+
+            // The frost sits between the artwork and the title block, and its height
+            // is that block's own measured height — so its ramp ends exactly at the
+            // top of the song name, whether or not lyrics are on. Measuring the
+            // block instead of guessing a height is the only way it stays right as
+            // the title wraps, the lyrics grow and the controls come and go.
+            AppleMusicBottomBlur(
+                artworkUrl = mediaMetadata?.thumbnailUrl,
+                height = bottomContentHeightDp.dp,
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .onGloballyPositioned { coords ->
+                            bottomContentHeightDp = with(localDensity) { coords.size.height.toDp().value.toInt() }
+                        }
+                ) {
+                    // The glow line is anchored to the artwork's lower edge and is
+                    // meant to sit right on top of the title, so the gap above the
+                    // title row collapses to almost nothing for that style; the
+                    // other two need the room this used to be.
+                    Spacer(
+                        modifier = Modifier.height(titleRowSpacerDp.dp)
+                    )
+                    // 🛠️ FIX: Passed viewState here so it reaches AppleMusicHeaderActions
+                    AppleMusicMainTitleRow(
+                        viewState = viewState,
+                        typography = typography,
+                        bottomSheetState = bottomSheetState,
+                        onTitleClick = { showTitleMenu = true },
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    if (showLyricsOnPlayer && miniLyricsStyle == MiniLyricsStyle.CLASSIC) {
+                        PlayerSyncedLyricsView(
+                            mediaMetadata = mediaMetadata,
+                            positionProvider = { position },
+                            onExpand = { onSelectView(AppleMusicView.LYRICS) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+                    AppleMusicBottomCluster(
+                        viewState = viewState,
+                        onSelectView = onSelectView,
+                        lyricsAvailable = true,
+                        activeColor = activePillContainer,
+                        activeContentColor = activePillContent,
+                        position = position,
+                        duration = duration
+                    )
+                }
+            }
         }
+
+        com.jay.glossy.ui.player.TitleActionsOverlay(
+            visible = showTitleMenu,
+            targets = titleTargets,
+            onNavigate = { route ->
+                showTitleMenu = false
+                navController.navigate(route)
+                bottomSheetState.collapseSoft()
+            },
+            onDismiss = { showTitleMenu = false },
+            bottomInset = menuBottomInset,
+            glassBackdrop = if (glassOn) playerGlassBackdrop else null,
+            gutter = AppleMusicGutter,
+        )
     }
 }
 
@@ -770,7 +827,8 @@ private fun AppleMusicCanvasLayer(
 private fun AppleMusicMainTitleRow(
     viewState: AppleMusicView,
     typography: AppleMusicTypography,
-    bottomSheetState: BottomSheetState
+    bottomSheetState: BottomSheetState,
+    onTitleClick: () -> Unit,
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
@@ -812,6 +870,11 @@ private fun AppleMusicMainTitleRow(
                 modifier = Modifier
                     .fillMaxWidth()
                     .basicMarquee()
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onTitleClick,
+                    )
             )
             Spacer(modifier = Modifier.height(4.dp))
             Row(

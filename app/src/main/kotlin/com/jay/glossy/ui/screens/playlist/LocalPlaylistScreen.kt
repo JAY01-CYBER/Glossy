@@ -533,6 +533,7 @@ fun LocalPlaylistScreen(
                                             title = playlist.playlist.name,
                                             items = songs.map { it.song.toMediaItem() },
                                             startIndex = index,
+                                            sourceRoute = "local_playlist/${playlist.playlist.id}",
                                         ),
                                     )
                                 },
@@ -614,7 +615,7 @@ fun LocalPlaylistScreen(
                                     onClick = {
                                         if (inSelectMode) onCheckedChange(!selection.contains(song.map.id))
                                         else if (song.song.id == mediaMetadata?.id) playerConnection.togglePlayPause()
-                                        else playerConnection.playQueue(ListQueue(title = playlist!!.playlist.name, items = songs.map { it.song.toMediaItem() }, startIndex = songs.indexOfFirst { it.map.id == song.map.id }))
+                                        else playerConnection.playQueue(ListQueue(title = playlist!!.playlist.name, items = songs.map { it.song.toMediaItem() }, startIndex = songs.indexOfFirst { it.map.id == song.map.id }, sourceRoute = "local_playlist/${playlist!!.playlist.id}"))
                                     },
                                     onLongClick = {
                                         if (!inSelectMode) {
@@ -930,10 +931,10 @@ fun LocalPlaylistHeader(
                 }
             },
             onPlay = {
-                playerConnection.playQueue(ListQueue(title = playlist.playlist.name, items = songs.map { it.song.toMediaItem() }))
+                playerConnection.playQueue(ListQueue(title = playlist.playlist.name, items = songs.map { it.song.toMediaItem() }, sourceRoute = "local_playlist/${playlist.playlist.id}"))
             },
             onShuffle = {
-                playerConnection.playQueue(ListQueue(title = playlist.playlist.name, items = songs.shuffled().map { it.song.toMediaItem() }))
+                playerConnection.playQueue(ListQueue(title = playlist.playlist.name, items = songs.shuffled().map { it.song.toMediaItem() }, sourceRoute = "local_playlist/${playlist.playlist.id}"))
             },
             onDownload = {
                 if (downloadState == Download.STATE_COMPLETED) {

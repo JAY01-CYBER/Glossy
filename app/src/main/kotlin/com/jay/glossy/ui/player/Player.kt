@@ -101,6 +101,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -123,6 +124,8 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -161,6 +164,7 @@ import coil3.request.allowHardware
 import coil3.toBitmap
 import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalDownloadUtil
+import com.jay.glossy.LocalGlassBackdrop
 import com.jay.glossy.LocalListenTogetherManager
 import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.constants.CropAlbumArtKey
@@ -336,6 +340,26 @@ fun BottomSheetPlayer(
     val playbackState by playerConnection.playbackState.collectAsState()
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
     val currentSong by playerConnection.currentSong.collectAsStateWithLifecycle(initialValue = null)
+
+    // The title-tap menu shared with the custom player designs. Legacy layouts
+    // draw their own title row, so the anchor is measured from it rather than
+    // assumed from the sheet's height.
+    var showTitleMenu by rememberSaveable { mutableStateOf(false) }
+    val queueTitle by playerConnection.queueTitle.collectAsStateWithLifecycle()
+    val queueSourceRoute by playerConnection.queueSourceRoute.collectAsStateWithLifecycle()
+    val titleTargets = rememberTitleActionTargets(mediaMetadata, queueTitle, queueSourceRoute)
+    val titleMenuGlassBackdrop = LocalGlassBackdrop.current
+    val titleMenuDensity = LocalDensity.current
+    var titleMenuAnchorPx by remember { mutableIntStateOf(0) }
+    var titleMenuRootBottomPx by remember { mutableIntStateOf(0) }
+    val titleMenuBottomInset =
+        if (titleMenuAnchorPx > 0 && titleMenuRootBottomPx > titleMenuAnchorPx) {
+            with(titleMenuDensity) { (titleMenuRootBottomPx - titleMenuAnchorPx).toDp() } + 8.dp
+        } else {
+            220.dp
+        }
+
+    LaunchedEffect(mediaMetadata?.id) { showTitleMenu = false }
     val automix by playerConnection.service.automixItems.collectAsStateWithLifecycle()
     val repeatMode by playerConnection.repeatMode.collectAsStateWithLifecycle()
     val canSkipPrevious by playerConnection.canSkipPrevious.collectAsStateWithLifecycle()
@@ -744,7 +768,14 @@ fun BottomSheetPlayer(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = 12.dp)
+                                .onGloballyPositioned { coordinates ->
+                                    titleMenuAnchorPx = coordinates.positionInRoot().y.toInt()
+                                },
+                        ) {
                             Text(
                                 text = mediaMetadata.title,
                                 style = MaterialTheme.typography.headlineSmall,
@@ -752,7 +783,13 @@ fun BottomSheetPlayer(
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.basicMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp)
+                                modifier = Modifier
+                                    .basicMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp)
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null,
+                                        onClick = { showTitleMenu = true },
+                                    )
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             if (mediaMetadata.artists.any { it.name.isNotBlank() }) {
@@ -1019,7 +1056,13 @@ fun BottomSheetPlayer(
                                 Spacer(modifier = Modifier.width(0.dp))
                             }
                         }
-                        Column(modifier = Modifier.weight(1f)) {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .onGloballyPositioned { coordinates ->
+                                    titleMenuAnchorPx = coordinates.positionInRoot().y.toInt()
+                                },
+                        ) {
                             AnimatedContent(
                                 targetState = mediaMetadata.title,
                                 transitionSpec = { fadeIn() togetherWith fadeOut() },
@@ -1038,10 +1081,7 @@ fun BottomSheetPlayer(
                                             enabled = true,
                                             indication = null,
                                             interactionSource = remember { MutableInteractionSource() },
-                                            onClick = {
-                                                val albumId = mediaMetadata.album?.id ?: currentSong?.album?.id ?: currentSong?.song?.albumId
-                                                if (albumId != null) { navController.navigate("album/$albumId"); state.collapseSoft() }
-                                            },
+                                            onClick = { showTitleMenu = true },
                                             onLongClick = {
                                                 val clip = ClipData.newPlainText(copiedTitleStr, title)
                                                 clipboardManager.setPrimaryClip(clip)
@@ -1609,6 +1649,10 @@ fun BottomSheetPlayer(
 
                     Row(
                         modifier = Modifier
+                            .onGloballyPositioned { coordinates ->
+                                titleMenuRootBottomPx =
+                                    (coordinates.positionInRoot().y + coordinates.size.height).toInt()
+                            }
                             .windowInsetsPadding(
                                 WindowInsets.systemBars.only(WindowInsetsSides.Horizontal).add(verticalWindowInsets),
                             ).padding(bottom = 24.dp)
@@ -1699,6 +1743,10 @@ fun BottomSheetPlayer(
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
+                            .onGloballyPositioned { coordinates ->
+                                titleMenuRootBottomPx =
+                                    (coordinates.positionInRoot().y + coordinates.size.height).toInt()
+                            }
                             .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
                             .padding(bottom = bottomPadding)
                             .animateContentSize(),
@@ -1788,6 +1836,24 @@ fun BottomSheetPlayer(
                     onToggleLyrics = { showInlineLyrics = !showInlineLyrics },
                 )
             }
+
+            // Legacy designs host the same title menu as the custom ones. The
+            // app-level backdrop is what their glass can sample: the sheet is
+            // drawn over the library, and its own content is not a recorded
+            // layer here.
+            TitleActionsOverlay(
+                visible = showTitleMenu,
+                targets = titleTargets,
+                onNavigate = { route ->
+                    showTitleMenu = false
+                    navController.navigate(route)
+                    state.collapseSoft()
+                },
+                onDismiss = { showTitleMenu = false },
+                bottomInset = titleMenuBottomInset,
+                glassBackdrop = titleMenuGlassBackdrop,
+                gutter = PlayerHorizontalPadding,
+            )
         } // End of APPLE_MUSIC else block
     } // End of BottomSheet trailing lambda
 } // End of BottomSheetPlayer function

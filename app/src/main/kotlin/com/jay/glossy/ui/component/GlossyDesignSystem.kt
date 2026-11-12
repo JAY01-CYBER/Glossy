@@ -72,6 +72,7 @@ import com.jay.glossy.ui.theme.GlossyDimens
 import com.jay.glossy.ui.theme.GlossyPalette
 import com.jay.glossy.ui.theme.glossyOnSwatchFor
 import com.jay.glossy.ui.theme.glossySwatchFor
+import com.kyant.backdrop.Backdrop
 
 // ============================================================================
 // Text
@@ -133,6 +134,7 @@ fun GlossyChip(
     active: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    glassBackdrop: Backdrop? = null,
 ) {
     val container by animateColorAsState(
         targetValue = if (active) GlossyPalette.Accent else GlossyPalette.Chip,
@@ -141,10 +143,28 @@ fun GlossyChip(
     // Captured before the draw phase: the palette reads are composition-only.
     val outline = GlossyPalette.ChipOutline
     val shape = RoundedCornerShape(GlossyDimens.CornerPill)
+    val backdrop = glassBackdrop
     Box(
         modifier = modifier
             .clip(shape)
-            .background(container)
+            .then(
+                if (backdrop != null) {
+                    Modifier.liquidGlassSurface(
+                        backdrop = backdrop,
+                        shape = shape,
+                        // The selected chip keeps a stronger accent wash so it
+                        // still reads as the current filter, while the glass
+                        // refraction spills through at its edges.
+                        tint = if (active) {
+                            GlossyPalette.Accent.copy(alpha = 0.82f)
+                        } else {
+                            GlossyPalette.Chip.copy(alpha = 0.58f)
+                        },
+                    )
+                } else {
+                    Modifier.background(container)
+                },
+            )
             .then(
                 if (active) Modifier else Modifier.border(1.dp, outline, shape),
             )
@@ -171,6 +191,7 @@ fun <T> GlossyChipRow(
     onValueUpdate: (T) -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: Dp = GlossyDimens.ScreenPadding,
+    glassBackdrop: Backdrop? = null,
 ) {
     Row(
         modifier = modifier
@@ -185,6 +206,7 @@ fun <T> GlossyChipRow(
                 text = label,
                 active = value == currentValue,
                 onClick = { onValueUpdate(value) },
+                glassBackdrop = glassBackdrop,
             )
         }
     }

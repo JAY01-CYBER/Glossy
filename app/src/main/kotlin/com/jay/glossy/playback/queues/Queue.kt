@@ -14,6 +14,13 @@ import com.metrolist.models.MediaMetadata
 interface Queue {
     val preloadItem: MediaMetadata?
 
+    /**
+     * In-app route of the collection this queue was started from, when that
+     * collection has a page of its own (a playlist). Ad-hoc queues such as
+     * albums, radio or a single song leave this null.
+     */
+    val sourceRoute: String? get() = null
+
     suspend fun getInitialStatus(): Status
 
     fun hasNextPage(): Boolean

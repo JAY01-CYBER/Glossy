@@ -21,15 +21,20 @@ import androidx.media3.exoplayer.offline.DownloadManager
 import androidx.media3.exoplayer.offline.DownloadNotificationHelper
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.strategy.ContentHints
+import com.jay.glossy.constants.AudioQuality
 import com.jay.glossy.constants.AudioQualityKey
 import com.jay.glossy.constants.DefaultAudioQuality
 import com.jay.glossy.db.MusicDatabase
 import com.jay.glossy.db.entities.FormatEntity
+import com.jay.glossy.db.entities.LyricsEntity
 import com.jay.glossy.db.entities.SongEntity
 import com.jay.glossy.di.DownloadCache
 import com.jay.glossy.di.PlayerCache
+import com.jay.glossy.extensions.isLosslessMaster
+import com.jay.glossy.lyrics.LyricsHelper
 import com.jay.glossy.utils.YTPlayerUtils
 import com.jay.glossy.utils.enumPreference
+import com.metrolist.models.toMediaMetadata
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -39,6 +44,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -46,6 +52,7 @@ import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import timber.log.Timber
 import java.time.LocalDateTime
+import java.util.Collections
 import java.util.concurrent.Executor
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -59,11 +66,46 @@ constructor(
     val databaseProvider: DatabaseProvider,
     @DownloadCache val downloadCache: Cache,
     @PlayerCache val playerCache: Cache,
+    private val lyricsHelper: LyricsHelper,
 ) {
     private val TAG = "DownloadUtil"
     private val connectivityManager = context.getSystemService<ConnectivityManager>()!!
     private val audioQuality by enumPreference(context, AudioQualityKey, DefaultAudioQuality)
     private val songUrlCache = HashMap<String, Pair<String, Long>>()
+
+    /**
+     * Songs whose download already resolved a stream in this process.
+     *
+     * The download's upstream is the player cache, so a lossy stream left over
+     * from earlier playback would otherwise be copied into the downloaded file
+     * even when Lossless is selected. The first spec for a song drops that
+     * entry and resolves again; later chunks reuse what the fetch just wrote.
+     */
+    private val losslessResolvedIds = Collections.synchronizedSet(mutableSetOf<String>())
+
+    private fun markLosslessResolved(mediaId: String) {
+        synchronized(losslessResolvedIds) {
+            if (losslessResolvedIds.size >= 256) {
+                losslessResolvedIds.firstOrNull()?.let(losslessResolvedIds::remove)
+            }
+            losslessResolvedIds.add(mediaId)
+        }
+    }
+
+    private fun needsFreshLosslessDownload(mediaId: String): Boolean {
+        if (audioQuality != AudioQuality.LOSSLESS) return false
+        if (mediaId in losslessResolvedIds) return false
+
+        val format =
+            runBlocking(Dispatchers.IO) {
+                database.getSongByIdBlocking(mediaId)?.format
+            }
+        if (format?.isLosslessMaster() == true) {
+            markLosslessResolved(mediaId)
+            return false
+        }
+        return true
+    }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -92,26 +134,38 @@ constructor(
             val mediaId = dataSpec.key ?: error("No media id")
             val length = if (dataSpec.length >= 0) dataSpec.length else 1
 
-            if (playerCache.isCached(mediaId, dataSpec.position, length)) {
+            val fetchMaster = needsFreshLosslessDownload(mediaId)
+            if (fetchMaster) {
+                // Drop a lossy stream cached by an earlier play so the
+                // download's upstream cannot substitute it for the master.
+                playerCache.removeResource(mediaId)
+                songUrlCache.remove(mediaId)
+            } else if (playerCache.isCached(mediaId, dataSpec.position, length)) {
                 return@Factory dataSpec
             }
 
-            songUrlCache[mediaId]?.takeIf { it.second < System.currentTimeMillis() }?.let {
+            songUrlCache[mediaId]?.takeIf { it.second > System.currentTimeMillis() }?.let {
                 return@Factory dataSpec.withUri(it.first.toUri())
             }
 
             val playbackData = runBlocking(Dispatchers.IO) {
-                val song = database.songEntity(mediaId)
+                val song = database.getSongByIdBlocking(mediaId)
                 YTPlayerUtils.playerResponseForPlayback(
                     mediaId,
                     audioQuality = audioQuality,
                     connectivityManager = connectivityManager,
                     contentHints = ContentHints(
-                        isExplicit = song?.explicit,
-                        isUploaded = song?.isUploaded,
+                        isExplicit = song?.song?.explicit,
+                        isUploaded = song?.song?.isUploaded,
                     ),
+                    title = song?.song?.title,
+                    artist = song?.artists?.joinToString(", ") { it.name },
+                    durationSeconds = song?.song?.duration?.takeIf { it > 0 } ?: 0,
                 )
             }.getOrThrow()
+            if (audioQuality == AudioQuality.LOSSLESS) {
+                markLosslessResolved(mediaId)
+            }
             val format = playbackData.format
             // A master from the lossless source is what will be written to disk,
             // so it is what the download's format row describes.
@@ -181,7 +235,8 @@ constructor(
                 "$it${separator}range=0-${actualContentLength}"
             }
 
-            songUrlCache[mediaId] = streamUrl to playbackData.streamExpiresInSeconds * 1000L
+            songUrlCache[mediaId] = streamUrl to
+                (System.currentTimeMillis() + playbackData.streamExpiresInSeconds * 1000L)
             dataSpec.withUri(streamUrl.toUri())
         }
 
@@ -215,6 +270,7 @@ constructor(
                             when (download.state) {
                                 Download.STATE_COMPLETED -> {
                                     database.updateDownloadedInfo(download.request.id, true, LocalDateTime.now())
+                                    storeLyricsForOffline(download.request.id)
                                 }
                                 Download.STATE_FAILED,
                                 Download.STATE_STOPPED,
@@ -257,6 +313,42 @@ constructor(
             result[cursor.download.request.id] = cursor.download
         }
         downloads.value = result
+    }
+
+    /**
+     * Fetches lyrics when a download finishes and stores them in the same
+     * `lyrics` table the player already reads, so the offline copy can show
+     * them without a network.
+     *
+     * The device is online when this runs — it has just finished a download —
+     * which is the one moment a lyric lookup is guaranteed to be possible.
+     * Existing lyrics are never replaced: this is a safety net for a download
+     * that has none, not a reason to overwrite a translation or a synced
+     * version the listener already has. A miss is not written back either, so a
+     * later playback can still try again once a provider is reachable.
+     */
+    private suspend fun storeLyricsForOffline(songId: String) {
+        val stored = database.lyrics(songId).first()
+        if (stored != null && stored.lyrics != LyricsEntity.LYRICS_NOT_FOUND) return
+        val metadata = database.getSongByIdBlocking(songId)?.toMediaMetadata() ?: return
+        // Podcast episodes are spoken word; racing the lyric providers for one
+        // costs a round trip per provider and can only return a miss.
+        if (metadata.isEpisode) return
+        val fetched =
+            lyricsHelper.getLyrics(
+                metadata,
+                forceRefresh = stored?.lyrics == LyricsEntity.LYRICS_NOT_FOUND,
+            )
+        if (fetched.lyrics == LyricsEntity.LYRICS_NOT_FOUND) return
+        database.query {
+            upsert(
+                LyricsEntity(
+                    id = songId,
+                    lyrics = fetched.lyrics,
+                    provider = fetched.provider,
+                ),
+            )
+        }
     }
 
     fun getDownload(songId: String): Flow<Download?> = downloads.map { it[songId] }

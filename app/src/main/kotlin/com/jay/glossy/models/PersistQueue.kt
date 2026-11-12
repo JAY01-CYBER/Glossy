@@ -16,6 +16,12 @@ data class PersistQueue(
     val position: Long,
     val queueType: QueueType = QueueType.LIST,
     val queueData: QueueData? = null,
+    /**
+     * Screen route of the playlist the queue was started from. Kept so
+     * "Go to playlist" still has a real destination after a service restart,
+     * instead of falling back to the playback queue.
+     */
+    val sourceRoute: String? = null,
 ) : Serializable
 
 sealed class QueueType : Serializable {

@@ -67,6 +67,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -91,7 +92,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -112,8 +116,10 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.jay.glossy.LocalDatabase
 import com.jay.glossy.LocalListenTogetherManager
+import com.jay.glossy.LocalNavController
 import com.jay.glossy.LocalPlayerConnection
 import com.jay.glossy.R
+import com.jay.glossy.constants.LiquidGlassEnabledKey
 import com.jay.glossy.constants.MiniLyricsStyle
 import com.jay.glossy.constants.MiniLyricsStyleKey
 import com.jay.glossy.constants.PlayerHorizontalPadding
@@ -137,6 +143,8 @@ import com.jay.glossy.utils.joinToArtistString
 import com.jay.glossy.utils.rememberEnumPreference
 import com.jay.glossy.utils.rememberPreference
 import com.jay.glossy.utils.makeTimeString
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import kotlinx.coroutines.delay
 import kotlin.math.PI
 import kotlin.math.atan2
@@ -384,6 +392,32 @@ fun VinylNowPlaying(
     )
 
     var showLyrics by rememberSaveable { mutableStateOf(false) }
+    var showTitleMenu by rememberSaveable { mutableStateOf(false) }
+    val glassOn by rememberPreference(LiquidGlassEnabledKey, defaultValue = false)
+    val navController = LocalNavController.current
+    val queueTitle by playerConnection.queueTitle.collectAsStateWithLifecycle()
+    val queueSourceRoute by playerConnection.queueSourceRoute.collectAsStateWithLifecycle()
+    val titleTargets = rememberTitleActionTargets(mediaMetadata, queueTitle, queueSourceRoute)
+    val density = LocalDensity.current
+    var titleTopPx by remember { mutableIntStateOf(0) }
+    var rootBottomPx by remember { mutableIntStateOf(0) }
+    val playerGlassBackdrop = rememberLayerBackdrop(
+        onDraw =
+            remember {
+                {
+                    drawRect(Color.Black)
+                    drawContent()
+                }
+            },
+    )
+    val menuBottomInset =
+        if (titleTopPx > 0 && rootBottomPx > titleTopPx) {
+            with(density) { (rootBottomPx - titleTopPx).toDp() } + 8.dp
+        } else {
+            260.dp
+        }
+
+    LaunchedEffect(mediaMetadata?.id) { showTitleMenu = false }
 
     // The warm base colour is Vinyl's signature look, but it must never paint
     // over the user's chosen player background: with Blur/Gradient/Mesh
@@ -400,8 +434,18 @@ fun VinylNowPlaying(
         modifier = modifier
             .fillMaxSize()
             .background(vinylBase)
-            .statusBarsPadding(),
+            .statusBarsPadding()
+            .onGloballyPositioned { coordinates ->
+                rootBottomPx = (coordinates.positionInRoot().y + coordinates.size.height).toInt()
+            },
     ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(if (glassOn) Modifier.layerBackdrop(playerGlassBackdrop) else Modifier),
+        ) {
+        // A separate wrapper from the overlay below: glass samples this
+        // subtree, so the menu must not be inside what it reads.
         if (showLyrics) {
             Box(
                 modifier = Modifier
@@ -538,23 +582,36 @@ fun VinylNowPlaying(
 
             Spacer(Modifier.height(8.dp))
 
-            Text(
-                text = mediaMetadata?.title.orEmpty(),
-                color = Color(0xFFF2E6D0),
-                fontSize = 19.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.fillMaxWidth().basicMarquee(),
-            )
-            Text(
-                text = mediaMetadata?.artists?.joinToArtistString(", ") { it.name }.orEmpty(),
-                color = VinylTextSecondary,
-                fontSize = 14.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.fillMaxWidth().basicMarquee(),
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onGloballyPositioned { coordinates ->
+                        titleTopPx = coordinates.positionInRoot().y.toInt()
+                    }
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = { showTitleMenu = true },
+                    ),
+            ) {
+                Text(
+                    text = mediaMetadata?.title.orEmpty(),
+                    color = Color(0xFFF2E6D0),
+                    fontSize = 19.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth().basicMarquee(),
+                )
+                Text(
+                    text = mediaMetadata?.artists?.joinToArtistString(", ") { it.name }.orEmpty(),
+                    color = VinylTextSecondary,
+                    fontSize = 14.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth().basicMarquee(),
+                )
+            }
 
             Spacer(Modifier.height(14.dp))
 
@@ -598,6 +655,21 @@ fun VinylNowPlaying(
 
             Spacer(Modifier.height(10.dp))
         }
+        }
+
+        TitleActionsOverlay(
+            visible = showTitleMenu,
+            targets = titleTargets,
+            onNavigate = { route ->
+                showTitleMenu = false
+                navController.navigate(route)
+                bottomSheetState.collapseSoft()
+            },
+            onDismiss = { showTitleMenu = false },
+            bottomInset = menuBottomInset,
+            glassBackdrop = if (glassOn) playerGlassBackdrop else null,
+            gutter = PlayerHorizontalPadding,
+        )
     }
 }
 
@@ -2095,12 +2167,37 @@ fun CapsuleNowPlaying(
         label = "capsuleCoverAlpha",
     )
     val queueTitle by playerConnection.queueTitle.collectAsStateWithLifecycle()
+    val queueSourceRoute by playerConnection.queueSourceRoute.collectAsStateWithLifecycle()
     val shuffleEnabled by playerConnection.shuffleModeEnabled.collectAsStateWithLifecycle()
     val repeatMode by playerConnection.repeatMode.collectAsStateWithLifecycle()
     val flags = rememberPlayerFlags()
     var showLyrics by rememberSaveable { mutableStateOf(false) }
+    var showTitleMenu by rememberSaveable { mutableStateOf(false) }
     val showLyricsOnPlayer by rememberPreference(ShowLyricsOnPlayerKey, defaultValue = false)
     val (miniLyricsStyle) = rememberEnumPreference(MiniLyricsStyleKey, defaultValue = MiniLyricsStyle.CLASSIC)
+    val glassOn by rememberPreference(LiquidGlassEnabledKey, defaultValue = false)
+    val navController = LocalNavController.current
+    val titleTargets = rememberTitleActionTargets(mediaMetadata, queueTitle, queueSourceRoute)
+    val density = LocalDensity.current
+    var titleTopPx by remember { mutableIntStateOf(0) }
+    var rootBottomPx by remember { mutableIntStateOf(0) }
+    val playerGlassBackdrop = rememberLayerBackdrop(
+        onDraw =
+            remember {
+                {
+                    drawRect(Color.Black)
+                    drawContent()
+                }
+            },
+    )
+    val menuBottomInset =
+        if (titleTopPx > 0 && rootBottomPx > titleTopPx) {
+            with(density) { (rootBottomPx - titleTopPx).toDp() } + 8.dp
+        } else {
+            220.dp
+        }
+
+    LaunchedEffect(mediaMetadata?.id) { showTitleMenu = false }
 
     // What the small centred line under the header is playing from.
     val playingFrom = queueTitle ?: mediaMetadata?.album?.title
@@ -2120,8 +2217,18 @@ fun CapsuleNowPlaying(
                     )
                 },
             )
-            .statusBarsPadding(),
+            .statusBarsPadding()
+            .onGloballyPositioned { coordinates ->
+                rootBottomPx = (coordinates.positionInRoot().y + coordinates.size.height).toInt()
+            },
     ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(if (glassOn) Modifier.layerBackdrop(playerGlassBackdrop) else Modifier),
+        ) {
+        // A separate wrapper from the overlay below: glass samples this
+        // subtree, so the menu must not be inside what it reads.
         if (showLyrics) {
             Box(
                 modifier = Modifier
@@ -2282,7 +2389,18 @@ fun CapsuleNowPlaying(
                     .padding(horizontal = 32.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column(modifier = Modifier.weight(1f)) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .onGloballyPositioned { coordinates ->
+                            titleTopPx = coordinates.positionInRoot().y.toInt()
+                        }
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = { showTitleMenu = true },
+                        ),
+                ) {
                     Text(
                         text = mediaMetadata?.title.orEmpty(),
                         color = Color.White,
@@ -2406,6 +2524,21 @@ fun CapsuleNowPlaying(
 
             Spacer(Modifier.height(8.dp))
         }
+        }
+
+        TitleActionsOverlay(
+            visible = showTitleMenu,
+            targets = titleTargets,
+            onNavigate = { route ->
+                showTitleMenu = false
+                navController.navigate(route)
+                bottomSheetState.collapseSoft()
+            },
+            onDismiss = { showTitleMenu = false },
+            bottomInset = menuBottomInset,
+            glassBackdrop = if (glassOn) playerGlassBackdrop else null,
+            gutter = 21.dp,
+        )
     }
 }
 
@@ -2472,6 +2605,8 @@ fun CinematicNowPlaying(
     val playerConnection = LocalPlayerConnection.current ?: return
     val context = LocalContext.current
     val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
+    val queueTitle by playerConnection.queueTitle.collectAsStateWithLifecycle()
+    val queueSourceRoute by playerConnection.queueSourceRoute.collectAsStateWithLifecycle()
     val shuffleEnabled by playerConnection.shuffleModeEnabled.collectAsStateWithLifecycle()
     val repeatMode by playerConnection.repeatMode.collectAsStateWithLifecycle()
     val flags = rememberPlayerFlags()
@@ -2485,8 +2620,32 @@ fun CinematicNowPlaying(
     )
     var showSleepTimer by rememberSaveable { mutableStateOf(false) }
     var showLyrics by rememberSaveable { mutableStateOf(false) }
+    var showTitleMenu by rememberSaveable { mutableStateOf(false) }
     val showLyricsOnPlayer by rememberPreference(ShowLyricsOnPlayerKey, defaultValue = false)
     val (miniLyricsStyle) = rememberEnumPreference(MiniLyricsStyleKey, defaultValue = MiniLyricsStyle.CLASSIC)
+    val glassOn by rememberPreference(LiquidGlassEnabledKey, defaultValue = false)
+    val navController = LocalNavController.current
+    val titleTargets = rememberTitleActionTargets(mediaMetadata, queueTitle, queueSourceRoute)
+    val density = LocalDensity.current
+    var titleTopPx by remember { mutableIntStateOf(0) }
+    var rootBottomPx by remember { mutableIntStateOf(0) }
+    val playerGlassBackdrop = rememberLayerBackdrop(
+        onDraw =
+            remember {
+                {
+                    drawRect(Color.Black)
+                    drawContent()
+                }
+            },
+    )
+    val menuBottomInset =
+        if (titleTopPx > 0 && rootBottomPx > titleTopPx) {
+            with(density) { (rootBottomPx - titleTopPx).toDp() } + 8.dp
+        } else {
+            250.dp
+        }
+
+    LaunchedEffect(mediaMetadata?.id) { showTitleMenu = false }
 
     if (showSleepTimer) {
         SleepTimerPrompt(onDismiss = { showSleepTimer = false })
@@ -2495,8 +2654,18 @@ fun CinematicNowPlaying(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Black),
+            .background(Color.Black)
+            .onGloballyPositioned { coordinates ->
+                rootBottomPx = (coordinates.positionInRoot().y + coordinates.size.height).toInt()
+            },
     ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(if (glassOn) Modifier.layerBackdrop(playerGlassBackdrop) else Modifier),
+        ) {
+        // A separate wrapper from the overlay below: glass samples this
+        // subtree, so the menu must not be inside what it reads.
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -2672,7 +2841,18 @@ fun CinematicNowPlaying(
                     .padding(horizontal = 25.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column(modifier = Modifier.weight(1f)) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .onGloballyPositioned { coordinates ->
+                            titleTopPx = coordinates.positionInRoot().y.toInt()
+                        }
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = { showTitleMenu = true },
+                        ),
+                ) {
                     Text(
                         text = mediaMetadata?.title.orEmpty(),
                         color = Color.White,
@@ -2794,5 +2974,20 @@ fun CinematicNowPlaying(
 
             Spacer(Modifier.height(10.dp))
         }
+        }
+
+        TitleActionsOverlay(
+            visible = showTitleMenu,
+            targets = titleTargets,
+            onNavigate = { route ->
+                showTitleMenu = false
+                navController.navigate(route)
+                bottomSheetState.collapseSoft()
+            },
+            onDismiss = { showTitleMenu = false },
+            bottomInset = menuBottomInset,
+            glassBackdrop = if (glassOn) playerGlassBackdrop else null,
+            gutter = 25.dp,
+        )
     }
 }

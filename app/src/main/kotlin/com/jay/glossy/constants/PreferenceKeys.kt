@@ -412,6 +412,18 @@ val HideYoutubeShortsKey = booleanPreferencesKey("hideYoutubeShorts")
 val ShowArtistDescriptionKey = booleanPreferencesKey("showArtistDescription")
 val ShowArtistSubscriberCountKey = booleanPreferencesKey("showArtistSubscriberCount")
 val ShowMonthlyListenersKey = booleanPreferencesKey("showMonthlyListeners")
+
+/** Whether the artist page shows its announced-release card above Top Songs. */
+val ShowUpcomingReleaseKey = booleanPreferencesKey("showUpcomingRelease")
+
+/**
+ * MusicBrainz release-group ids the listener asked to be reminded about.
+ *
+ * This is a local bookmark only: no account, notification or network write is
+ * involved, so the reminder keeps working without a signed-in account.
+ */
+val UpcomingReleaseRemindersKey = stringSetPreferencesKey("upcomingReleaseReminders")
+
 val ProxyEnabledKey = booleanPreferencesKey("proxyEnabled")
 val ProxyUrlKey = stringPreferencesKey("proxyUrl")
 val ProxyTypeKey = stringPreferencesKey("proxyType")

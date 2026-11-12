@@ -93,6 +93,7 @@ import com.jay.glossy.constants.ShowArtistDescriptionKey
 import com.jay.glossy.constants.ShowMostStatsPlaylistsKey
 import com.jay.glossy.constants.ShowArtistSubscriberCountKey
 import com.jay.glossy.constants.ShowMonthlyListenersKey
+import com.jay.glossy.constants.ShowUpcomingReleaseKey
 import com.jay.glossy.constants.ShowWrappedCardKey
 import com.jay.glossy.constants.TopSize
 import com.jay.glossy.ui.component.EnumDialog
@@ -123,6 +124,7 @@ fun ContentSettings(
     val (showArtistDescription, onShowArtistDescriptionChange) = rememberPreference(key = ShowArtistDescriptionKey, defaultValue = true)
     val (showArtistSubscriberCount, onShowArtistSubscriberCountChange) = rememberPreference(key = ShowArtistSubscriberCountKey, defaultValue = true)
     val (showMonthlyListeners, onShowMonthlyListenersChange) = rememberPreference(key = ShowMonthlyListenersKey, defaultValue = true)
+    val (showUpcomingRelease, onShowUpcomingReleaseChange) = rememberPreference(key = ShowUpcomingReleaseKey, defaultValue = true)
     val (proxyEnabled, onProxyEnabledChange) = rememberPreference(key = ProxyEnabledKey, defaultValue = false)
     val (proxyType, onProxyTypeChange) = rememberEnumPreference(key = ProxyTypeKey, defaultValue = Proxy.Type.HTTP)
     val (proxyUrl, onProxyUrlChange) = rememberPreference(key = ProxyUrlKey, defaultValue = "host:port")
@@ -1143,6 +1145,27 @@ fun ContentSettings(
                         )
                     },
                     onClick = { onShowMonthlyListenersChange(!showMonthlyListeners) }
+                ),
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.album),
+                    title = { Text(stringResource(R.string.show_upcoming_release)) },
+                    description = { Text(stringResource(R.string.show_upcoming_release_desc)) },
+                    trailingContent = {
+                        Switch(
+                            checked = showUpcomingRelease,
+                            onCheckedChange = onShowUpcomingReleaseChange,
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (showUpcomingRelease) R.drawable.check else R.drawable.close
+                                    ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                )
+                            }
+                        )
+                    },
+                    onClick = { onShowUpcomingReleaseChange(!showUpcomingRelease) }
                 )
             )
         )
